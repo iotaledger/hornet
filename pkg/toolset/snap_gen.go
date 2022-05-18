@@ -132,7 +132,7 @@ func snapshotGen(args []string) error {
 
 		outputAdded = true
 
-		return utxo.CreateOutput(&iotago.OutputID{}, iotago.EmptyBlockID(), 0, 0, &iotago.BasicOutput{
+		return utxo.CreateOutput(iotago.OutputID{}, iotago.EmptyBlockID(), 0, 0, &iotago.BasicOutput{
 			Amount: protoParas.TokenSupply - treasury,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: &address},

@@ -266,8 +266,8 @@ func staticBlockID(fill byte) iotago.BlockID {
 	return blockID
 }
 
-func staticOutputID(fill byte) *iotago.OutputID {
-	b := &iotago.OutputID{}
+func staticOutputID(fill byte) iotago.OutputID {
+	b := iotago.OutputID{}
 	for i := 0; i < len(b); i++ {
 		b[i] = fill
 	}

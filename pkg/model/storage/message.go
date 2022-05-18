@@ -161,15 +161,15 @@ func (blk *Block) TransactionEssenceTaggedData() *iotago.TaggedData {
 	return nil
 }
 
-func (blk *Block) TransactionEssenceUTXOInputs() []*iotago.OutputID {
+func (blk *Block) TransactionEssenceUTXOInputs() iotago.OutputIDs {
 
-	var inputs []*iotago.OutputID
+	var inputs iotago.OutputIDs
 	if essence := blk.TransactionEssence(); essence != nil {
 		for _, input := range essence.Inputs {
 			switch utxoInput := input.(type) {
 			case *iotago.UTXOInput:
 				id := utxoInput.ID()
-				inputs = append(inputs, &id)
+				inputs = append(inputs, id)
 			default:
 				return nil
 			}

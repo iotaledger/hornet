@@ -91,7 +91,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	require.True(t, has)
 }
 
-func CreateOutputAndAssertSerialization(t *testing.T, blockID iotago.BlockID, msIndex milestone.Index, msTimestamp uint32, outputID *iotago.OutputID, iotaOutput iotago.Output) *Output {
+func CreateOutputAndAssertSerialization(t *testing.T, blockID iotago.BlockID, msIndex milestone.Index, msTimestamp uint32, outputID iotago.OutputID, iotaOutput iotago.Output) *Output {
 	output := CreateOutput(outputID, blockID, msIndex, msTimestamp, iotaOutput)
 	outputBytes, err := output.Output().Serialize(serializer.DeSeriModeNoValidation, nil)
 	require.NoError(t, err)
@@ -118,7 +118,8 @@ func CreateSpentAndAssertSerialization(t *testing.T, output *Output) *Spent {
 
 	require.Equal(t, output, spent.Output())
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputSpent}, output.OutputID()[:]), spent.kvStorableKey())
+	outputID := output.OutputID()
+	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputSpent}, outputID[:]), spent.kvStorableKey())
 
 	value := spent.kvStorableValue()
 	require.Equal(t, transactionID[:], value[:32])

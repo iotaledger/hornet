@@ -173,10 +173,10 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	readDiff, err := utxo.MilestoneDiffWithoutLocking(msIndex)
 	require.NoError(t, err)
 
-	var sortedOutputs LexicalOrderedOutputs = LexicalOrderedOutputs(outputs)
+	var sortedOutputs = LexicalOrderedOutputs(outputs)
 	sort.Sort(sortedOutputs)
 
-	var sortedSpents LexicalOrderedSpents = LexicalOrderedSpents(spents)
+	var sortedSpents = LexicalOrderedSpents(spents)
 	sort.Sort(sortedSpents)
 
 	require.Equal(t, msIndex, readDiff.Index)

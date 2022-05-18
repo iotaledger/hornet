@@ -145,7 +145,7 @@ func (b *BlockBuilder) Build() *Block {
 					},
 				},
 			}
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, iotago.EmptyBlockID(), 0, 0, fakeInput))
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(fakeInputID, iotago.EmptyBlockID(), 0, 0, fakeInput))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -161,7 +161,7 @@ func (b *BlockBuilder) Build() *Block {
 	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
 
 	for _, output := range outputsThatCanBeConsumed {
-		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: fromAddr, OutputID: *output.OutputID(), Output: output.Output()})
+		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: fromAddr, OutputID: output.OutputID(), Output: output.Output()})
 		consumedInputs = append(consumedInputs, output)
 		consumedAmount += output.Deposit()
 

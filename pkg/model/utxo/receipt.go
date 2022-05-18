@@ -177,7 +177,7 @@ func ReceiptToOutputs(r *iotago.ReceiptMilestoneOpt, milestoneID iotago.Mileston
 		}
 
 		// outputs created by milestone receipts are identified by EmptyBlockID
-		outputs[outputIndex] = CreateOutput(&outputID, iotago.EmptyBlockID(), msIndex, msTimestamp, output)
+		outputs[outputIndex] = CreateOutput(outputID, iotago.EmptyBlockID(), msIndex, msTimestamp, output)
 	}
 	return outputs, nil
 }

@@ -7,12 +7,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func ParseOutputID(ms *marshalutil.MarshalUtil) (*iotago.OutputID, error) {
+func ParseOutputID(ms *marshalutil.MarshalUtil) (iotago.OutputID, error) {
+	o := iotago.OutputID{}
 	bytes, err := ms.ReadBytes(iotago.OutputIDLength)
 	if err != nil {
-		return nil, err
+		return o, err
 	}
-	o := &iotago.OutputID{}
 	copy(o[:], bytes)
 	return o, nil
 }

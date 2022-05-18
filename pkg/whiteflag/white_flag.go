@@ -64,9 +64,9 @@ type WhiteFlagMutations struct {
 	// The blocks which were referenced by the milestone (should be the sum of BlocksIncludedWithTransactions + BlocksExcludedWithConflictingTransactions + BlocksExcludedWithoutTransactions).
 	BlocksReferenced iotago.BlockIDs
 	// Contains the newly created Unspent Outputs by the given confirmation.
-	NewOutputs map[string]*utxo.Output
+	NewOutputs map[iotago.OutputID]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
-	NewSpents map[string]*utxo.Spent
+	NewSpents map[iotago.OutputID]*utxo.Spent
 	// The merkle tree root hash of all referenced blocks in the past cone.
 	InclusionMerkleRoot [iotago.MilestoneMerkleProofLength]byte
 	// The merkle tree root hash of all included transaction blocks.
@@ -95,8 +95,8 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 		BlocksExcludedWithConflictingTransactions: make([]BlockWithConflict, 0),
 		BlocksExcludedWithoutTransactions:         make(iotago.BlockIDs, 0),
 		BlocksReferenced:                          make(iotago.BlockIDs, 0),
-		NewOutputs:                                make(map[string]*utxo.Output),
-		NewSpents:                                 make(map[string]*utxo.Spent),
+		NewOutputs:                                make(map[iotago.OutputID]*utxo.Output),
+		NewSpents:                                 make(map[iotago.OutputID]*utxo.Spent),
 	}
 
 	semValCtx := &iotago.SemanticValidationContext{
@@ -194,7 +194,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			for _, input := range inputs {
 
 				// check if this input was already spent during the confirmation
-				_, hasSpent := wfConf.NewSpents[string(input[:])]
+				_, hasSpent := wfConf.NewSpents[input]
 				if hasSpent {
 					// UTXO already spent, so mark as conflict
 					conflict = storage.ConflictInputUTXOAlreadySpentInThisMilestone
@@ -202,7 +202,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				}
 
 				// check if this input was newly created during the confirmation
-				output, hasOutput := wfConf.NewOutputs[string(input[:])]
+				output, hasOutput := wfConf.NewOutputs[input]
 				if hasOutput {
 					// UTXO is in the current ledger mutation, so use it
 					inputOutputs = append(inputOutputs, output)
@@ -279,13 +279,13 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 		// save the inputs as spent
 		for i, input := range inputOutputs {
 			spent := utxo.NewSpent(input, transactionID, msIndex, msTimestamp)
-			wfConf.NewSpents[string(input.OutputID()[:])] = spent
+			wfConf.NewSpents[input.OutputID()] = spent
 			newSpents[i] = spent
 		}
 
 		// add new outputs
 		for _, output := range generatedOutputs {
-			wfConf.NewOutputs[string(output.OutputID()[:])] = output
+			wfConf.NewOutputs[output.OutputID()] = output
 		}
 
 		return nil

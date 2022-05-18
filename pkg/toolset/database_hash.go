@@ -84,17 +84,17 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	}
 
 	// get all UTXOs and sort them by outputID
-	var outputIDs utxo.LexicalOrderedOutputIDs
-	outputIDs, err = dbStorage.UTXOManager().UnspentOutputsIDs()
+	outputIDs, err := dbStorage.UTXOManager().UnspentOutputsIDs()
 	if err != nil {
 		return err
 	}
 
 	// sort the OutputIDs lexicographically by their ID
-	sort.Sort(outputIDs)
+	sortedOutputIDs := utxo.LexicalOrderedOutputIDs(outputIDs)
+	sort.Sort(sortedOutputIDs)
 
 	// write all unspent outputs in lexicographical order
-	for _, outputID := range outputIDs {
+	for _, outputID := range sortedOutputIDs {
 		output, err := dbStorage.UTXOManager().ReadOutputByOutputID(outputID)
 		if err != nil {
 			return err

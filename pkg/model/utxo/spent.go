@@ -31,7 +31,7 @@ func (l LexicalOrderedSpents) Swap(i, j int) {
 type Spent struct {
 	kvStorable
 
-	outputID            *iotago.OutputID
+	outputID            iotago.OutputID
 	targetTransactionID iotago.TransactionID
 	milestoneIndex      milestone.Index
 	milestoneTimestamp  uint32
@@ -43,7 +43,7 @@ func (s *Spent) Output() *Output {
 	return s.output
 }
 
-func (s *Spent) OutputID() *iotago.OutputID {
+func (s *Spent) OutputID() iotago.OutputID {
 	return s.outputID
 }
 
@@ -87,7 +87,7 @@ func NewSpent(output *Output, targetTransactionID iotago.TransactionID, confirma
 	}
 }
 
-func spentStorageKeyForOutputID(outputID *iotago.OutputID) []byte {
+func spentStorageKeyForOutputID(outputID iotago.OutputID) []byte {
 	ms := marshalutil.New(35)
 	ms.WriteByte(UTXOStoreKeyPrefixOutputSpent) // 1 byte
 	ms.WriteBytes(outputID[:])                  // 34 bytes
@@ -154,7 +154,7 @@ func (u *Manager) loadOutputOfSpent(s *Spent) error {
 	return nil
 }
 
-func (u *Manager) ReadSpentForOutputIDWithoutLocking(outputID *iotago.OutputID) (*Spent, error) {
+func (u *Manager) ReadSpentForOutputIDWithoutLocking(outputID iotago.OutputID) (*Spent, error) {
 	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		return nil, err

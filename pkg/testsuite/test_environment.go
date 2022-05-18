@@ -162,7 +162,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 			},
 		},
 	}
-	te.GenesisOutput = utxo.CreateOutput(&iotago.OutputID{}, iotago.EmptyBlockID(), 0, 0, output)
+	te.GenesisOutput = utxo.CreateOutput(iotago.OutputID{}, iotago.EmptyBlockID(), 0, 0, output)
 	err = te.storage.UTXOManager().AddUnspentOutput(te.GenesisOutput)
 	require.NoError(te.TestInterface, err)
 

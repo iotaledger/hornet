@@ -73,8 +73,8 @@ func RandAddress(addressType iotago.AddressType) iotago.Address {
 	}
 }
 
-func RandOutputID() *iotago.OutputID {
-	outputID := &iotago.OutputID{}
+func RandOutputID() iotago.OutputID {
+	outputID := iotago.OutputID{}
 	copy(outputID[:], RandBytes(iotago.OutputIDLength))
 	return outputID
 }
