@@ -152,38 +152,6 @@ func ParseOutputIDParam(c echo.Context) (iotago.OutputID, error) {
 	return outputID, nil
 }
 
-func ParseBech32AddressParam(c echo.Context, prefix iotago.NetworkPrefix) (iotago.Address, error) {
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
-	}
-
-	if hrp != prefix {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", prefix)
-	}
-
-	return bech32Address, nil
-}
-
-func ParseEd25519AddressParam(c echo.Context) (*iotago.Ed25519Address, error) {
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	addressBytes, err := iotago.DecodeHex(addressParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
-	}
-
-	if len(addressBytes) != (iotago.Ed25519AddressBytesLength) {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address length: %s", addressParam)
-	}
-
-	var address iotago.Ed25519Address
-	copy(address[:], addressBytes)
-	return &address, nil
-}
-
 func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index, error) {
 	milestoneIndex := strings.ToLower(c.Param(paramName))
 	if milestoneIndex == "" {
