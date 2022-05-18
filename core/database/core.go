@@ -22,13 +22,13 @@ import (
 )
 
 const (
-	// whether to delete the database at startup
+	// CfgTangleDeleteDatabase defines whether to delete the database at startup
 	CfgTangleDeleteDatabase = "deleteDatabase"
-	// whether to delete the database and snapshots at startup
+	// CfgTangleDeleteAll defines whether to delete the database and snapshots at startup
 	CfgTangleDeleteAll = "deleteAll"
-	// subfolder for the tangle database
+	// TangleDatabaseDirectoryName defines the subfolder for the tangle database
 	TangleDatabaseDirectoryName = "tangle"
-	// subfolder for the UTXO database
+	// UTXODatabaseDirectoryName defines the subfolder for the UTXO database
 	UTXODatabaseDirectoryName = "utxo"
 )
 

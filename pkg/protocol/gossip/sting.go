@@ -26,16 +26,16 @@ const (
 )
 
 const (
-	// The amount of bytes used for the requested block ID.
+	// RequestedBlockIDMsgBytesLength the amount of bytes used for the requested block ID.
 	RequestedBlockIDMsgBytesLength = iotago.BlockIDLength
 
-	// The amount of bytes used for the requested milestone index.
+	// RequestedMilestoneIndexMsgBytesLength the amount of bytes used for the requested milestone index.
 	RequestedMilestoneIndexMsgBytesLength = 4
 
-	// The amount of bytes used for a milestone index within a heartbeat packet.
+	// HeartbeatMilestoneIndexBytesLength the amount of bytes used for a milestone index within a heartbeat packet.
 	HeartbeatMilestoneIndexBytesLength = 4
 
-	// The index to use to request the latest milestone via a milestone request message.
+	// LatestMilestoneRequestIndex the index to use to request the latest milestone via a milestone request message.
 	LatestMilestoneRequestIndex = 0
 )
 

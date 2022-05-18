@@ -36,7 +36,7 @@ const (
 )
 
 const (
-	// force loading of a snapshot, even if a database already exists
+	// CfgSnapshotsForceLoadingSnapshot force loading of a snapshot, even if a database already exists
 	CfgSnapshotsForceLoadingSnapshot = "forceLoadingSnapshot"
 )
 

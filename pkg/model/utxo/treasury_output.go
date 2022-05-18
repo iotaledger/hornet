@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	// Returned when the state of the treasury is invalid.
+	// ErrInvalidTreasuryState returned when the state of the treasury is invalid.
 	ErrInvalidTreasuryState = errors.New("invalid treasury state")
 )
 

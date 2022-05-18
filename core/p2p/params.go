@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	// Defines the static peers this node should retain a connection to (CLI).
+	// CfgPeers defines the static peers this node should retain a connection to (CLI).
 	CfgPeers = "peers"
 )
 

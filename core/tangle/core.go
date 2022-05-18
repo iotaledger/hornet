@@ -29,9 +29,9 @@ import (
 )
 
 const (
-	// LMI is set to CMI at startup
+	// CfgTangleSyncedAtStartup LMI is set to CMI at startup
 	CfgTangleSyncedAtStartup = "syncedAtStartup"
-	// whether to revalidate the database on startup if corrupted
+	// CfgTangleRevalidateDatabase whether to revalidate the database on startup if corrupted
 	CfgTangleRevalidateDatabase = "revalidate"
 )
 

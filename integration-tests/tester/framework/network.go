@@ -18,9 +18,9 @@ import (
 type NetworkType byte
 
 const (
-	// Defines a network which consists out of autopeered nodes.
+	// NetworkTypeAutopeered defines a network which consists out of autopeered nodes.
 	NetworkTypeAutopeered NetworkType = iota
-	// Defines a network which consists out of statically peered nodes.
+	// NetworkTypeStatic defines a network which consists out of statically peered nodes.
 	NetworkTypeStatic
 )
 

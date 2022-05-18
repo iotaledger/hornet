@@ -3,17 +3,17 @@ package utxo
 const (
 	UTXOStoreKeyPrefixLedgerMilestoneIndex byte = 0
 
-	// Output and Spent storage
+	// UTXOStoreKeyPrefixOutput Output and Spent storage
 	UTXOStoreKeyPrefixOutput byte = 1
 
-	// Track spent/unspent Outputs
+	// UTXOStoreKeyPrefixOutputSpent Track spent/unspent Outputs
 	UTXOStoreKeyPrefixOutputSpent   byte = 2
 	UTXOStoreKeyPrefixOutputUnspent byte = 3
 
-	// Milestone diffs
+	// UTXOStoreKeyPrefixMilestoneDiffs Milestone diffs
 	UTXOStoreKeyPrefixMilestoneDiffs byte = 4
 
-	// Chrysalis Migration
+	// UTXOStoreKeyPrefixTreasuryOutput Chrysalis Migration
 	UTXOStoreKeyPrefixTreasuryOutput byte = 5
 	UTXOStoreKeyPrefixReceipts       byte = 6
 )

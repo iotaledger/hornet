@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	// The default REST API port of every node.
+	// RestAPIPort The default REST API port of every node.
 	RestAPIPort = 14265
 
 	GenesisAddressPublicKeyHex = "f7868ab6bb55800b77b8b74191ad8285a9bf428ace579d541fda47661803ff44"
@@ -45,8 +45,9 @@ const (
 var (
 	disabledPluginsPeer      = []string{}
 	disabledPluginsEntryNode = []string{}
-	// The seed on which the total supply resides on per default.
-	GenesisSeed    ed25519.PrivateKey
+	// GenesisSeed the seed on which the total supply resides on per default.
+	GenesisSeed ed25519.PrivateKey
+	// GenesisAddress the address computed from the GenesisSeed
 	GenesisAddress iotago.Ed25519Address
 )
 

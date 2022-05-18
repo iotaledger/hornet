@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
@@ -129,7 +129,7 @@ func configure() error {
 	}
 	if ParamsPrometheus.INXMetrics && deps.INXServer != nil {
 		deps.INXServer.ConfigurePrometheus()
-		registry.MustRegister(grpc_prometheus.DefaultServerMetrics)
+		registry.MustRegister(grpcprometheus.DefaultServerMetrics)
 	}
 	if ParamsPrometheus.MigrationMetrics {
 		if deps.ReceiptService != nil {

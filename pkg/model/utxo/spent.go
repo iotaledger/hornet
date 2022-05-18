@@ -11,7 +11,7 @@ import (
 
 type SpentConsumer func(spent *Spent) bool
 
-// LexicalOrderedSpents are spents ordered in lexical order by their outputID.
+// LexicalOrderedSpents  are spents ordered in lexical order by their outputID.
 type LexicalOrderedSpents []*Spent
 
 func (l LexicalOrderedSpents) Len() int {

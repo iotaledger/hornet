@@ -34,28 +34,28 @@ func milestoneDiffKeyForIndex(msIndex milestone.Index) []byte {
 	return m.Bytes()
 }
 
-func (d *MilestoneDiff) kvStorableKey() []byte {
-	return milestoneDiffKeyForIndex(d.Index)
+func (ms *MilestoneDiff) kvStorableKey() []byte {
+	return milestoneDiffKeyForIndex(ms.Index)
 }
 
-func (d *MilestoneDiff) kvStorableValue() []byte {
+func (ms *MilestoneDiff) kvStorableValue() []byte {
 
 	m := marshalutil.New(9)
 
-	m.WriteUint32(uint32(len(d.Outputs)))
-	for _, output := range d.sortedOutputs() {
+	m.WriteUint32(uint32(len(ms.Outputs)))
+	for _, output := range ms.sortedOutputs() {
 		m.WriteBytes(output.outputID[:])
 	}
 
-	m.WriteUint32(uint32(len(d.Spents)))
-	for _, spent := range d.sortedSpents() {
+	m.WriteUint32(uint32(len(ms.Spents)))
+	for _, spent := range ms.sortedSpents() {
 		m.WriteBytes(spent.output.outputID[:])
 	}
 
-	if d.TreasuryOutput != nil {
+	if ms.TreasuryOutput != nil {
 		m.WriteBool(true)
-		m.WriteBytes(d.TreasuryOutput.MilestoneID[:])
-		m.WriteBytes(d.SpentTreasuryOutput.MilestoneID[:])
+		m.WriteBytes(ms.TreasuryOutput.MilestoneID[:])
+		m.WriteBytes(ms.SpentTreasuryOutput.MilestoneID[:])
 		return m.Bytes()
 	}
 
@@ -65,7 +65,7 @@ func (d *MilestoneDiff) kvStorableValue() []byte {
 }
 
 // note that this method relies on the data being available within other "tables".
-func (d *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value []byte) error {
+func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value []byte) error {
 	marshalUtil := marshalutil.New(value)
 
 	outputCount, err := marshalUtil.ReadUint32()
@@ -128,7 +128,7 @@ func (d *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value [
 			}
 		}
 
-		d.TreasuryOutput = treasuryOutput
+		ms.TreasuryOutput = treasuryOutput
 
 		spentTreasuryOutputMilestoneID, err := marshalUtil.ReadBytes(iotago.MilestoneIDLength)
 		if err != nil {
@@ -140,12 +140,12 @@ func (d *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value [
 			return err
 		}
 
-		d.SpentTreasuryOutput = spentTreasuryOutput
+		ms.SpentTreasuryOutput = spentTreasuryOutput
 	}
 
-	d.Index = milestone.Index(binary.LittleEndian.Uint32(key[1:]))
-	d.Outputs = outputs
-	d.Spents = spents
+	ms.Index = milestone.Index(binary.LittleEndian.Uint32(key[1:]))
+	ms.Outputs = outputs
+	ms.Spents = spents
 
 	return nil
 }
@@ -166,7 +166,7 @@ func (ms *MilestoneDiff) sortedSpents() LexicalOrderedSpents {
 	return sortedSpents
 }
 
-// compute the sha256 of the milestone diff byte representation
+// SHA256Sum compute the sha256 of the milestone diff byte representation
 func (ms *MilestoneDiff) SHA256Sum() ([]byte, error) {
 
 	msDiffHash := sha256.New()
