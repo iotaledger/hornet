@@ -34,7 +34,9 @@ func NewStoreHealthTracker(store kvstore.KVStore, dbVersion byte) (*StoreHealthT
 	}
 
 	if dbVersion != DBVersionNone {
-		s.setDatabaseVersion(dbVersion)
+		if err := s.setDatabaseVersion(dbVersion); err != nil {
+			return nil, err
+		}
 	}
 
 	return s, nil

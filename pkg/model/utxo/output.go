@@ -126,11 +126,11 @@ func (o *Output) kvStorableValue() (value []byte) {
 	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
 	ms.WriteUint32(o.milestoneTimestamp)     // 4 bytes
 
-	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
+	outputBytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		panic(err)
 	}
-	ms.WriteBytes(bytes)
+	ms.WriteBytes(outputBytes)
 
 	return ms.Bytes()
 }

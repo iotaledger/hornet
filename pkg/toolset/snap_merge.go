@@ -22,7 +22,7 @@ func snapshotMerge(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapMerge)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapMerge)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s",
 			ToolSnapMerge,

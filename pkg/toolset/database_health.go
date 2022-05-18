@@ -20,7 +20,7 @@ func databaseHealth(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseHealth)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseHealth)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolDatabaseHealth,

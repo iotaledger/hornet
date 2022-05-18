@@ -376,12 +376,12 @@ func mergeViaAPI(
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		milestone, err := client.MilestoneByIndex(ctx, uint32(msIndex))
+		ms, err := client.MilestoneByIndex(ctx, uint32(msIndex))
 		if err != nil {
 			return nil, err
 		}
 
-		return milestone, nil
+		return ms, nil
 	}
 
 	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getBlockViaAPI)

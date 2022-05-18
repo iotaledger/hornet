@@ -193,8 +193,8 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		cachedBlock.Release(true) // block -1
 	}
 
-	for _, milestone := range milestoneBlocks {
-		dotFile += fmt.Sprintf("\"%s\" [shape=Msquare];\n", milestone)
+	for _, milestoneBlock := range milestoneBlocks {
+		dotFile += fmt.Sprintf("\"%s\" [shape=Msquare];\n", milestoneBlock)
 	}
 	for _, conflictingBlock := range conflictingBlocks {
 		dotFile += fmt.Sprintf("\"%s\" [style=filled,color=red];\n", conflictingBlock)

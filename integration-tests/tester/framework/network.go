@@ -153,12 +153,12 @@ func (n *Network) CreateNode(cfg *AppConfig, optPrvKey ...crypto.PrivKey) (*Node
 		return nil, err
 	}
 
-	peer, err := newNode(name, pid, cfg, container, n)
+	node, err := newNode(name, pid, cfg, container, n)
 	if err != nil {
 		return nil, err
 	}
-	n.Nodes = append(n.Nodes, peer)
-	return peer, nil
+	n.Nodes = append(n.Nodes, node)
+	return node, nil
 }
 
 // CreateCoordinator creates a new INX-Coordinator in the network.

@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	migratorSoftErrEncountered     prometheus.Counter
 	receiptCount                   prometheus.Counter
 	receiptMigrationEntriesApplied prometheus.Counter
 )

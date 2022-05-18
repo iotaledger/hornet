@@ -19,7 +19,7 @@ func extractP2PIdentity(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolP2PExtractIdentity)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolP2PExtractIdentity)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolP2PExtractIdentity,

@@ -73,7 +73,7 @@ func hashPasswordAndSalt(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolPwdHash)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolPwdHash)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolPwdHash,

@@ -50,7 +50,9 @@ func (psc *PeerStoreContainer) Flush() error {
 
 // Close flushes all outstanding write operations and closes the store.
 func (psc *PeerStoreContainer) Close() error {
-	psc.peerStore.Close()
+	if err := psc.peerStore.Close(); err != nil {
+		return err
+	}
 
 	if err := psc.store.Flush(); err != nil {
 		return err

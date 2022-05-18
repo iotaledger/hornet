@@ -959,8 +959,8 @@ func (m *Manager) detachEvents() {
 // the handlers are called in newly spawned goroutines.
 type netNotifiee Manager
 
-func (m *netNotifiee) Listen(net network.Network, multiaddr multiaddr.Multiaddr)      {}
-func (m *netNotifiee) ListenClose(net network.Network, multiaddr multiaddr.Multiaddr) {}
+func (m *netNotifiee) Listen(_ network.Network, _ multiaddr.Multiaddr)      {}
+func (m *netNotifiee) ListenClose(_ network.Network, _ multiaddr.Multiaddr) {}
 func (m *netNotifiee) Connected(net network.Network, conn network.Conn) {
 	if m.stopped.IsSet() {
 		return
@@ -973,5 +973,5 @@ func (m *netNotifiee) Disconnected(net network.Network, conn network.Conn) {
 	}
 	m.disconnectedChan <- &disconnectmsg{net: net, conn: conn, reason: errors.New("connection closed by libp2p network event")}
 }
-func (m *netNotifiee) OpenedStream(net network.Network, stream network.Stream) {}
-func (m *netNotifiee) ClosedStream(net network.Network, stream network.Stream) {}
+func (m *netNotifiee) OpenedStream(_ network.Network, _ network.Stream) {}
+func (m *netNotifiee) ClosedStream(_ network.Network, _ network.Stream) {}

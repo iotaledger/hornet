@@ -28,7 +28,7 @@ func databaseSnapshot(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseSnapshot)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseSnapshot)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s",
 			ToolDatabaseSnapshot,

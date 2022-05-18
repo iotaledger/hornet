@@ -28,9 +28,6 @@ const (
 	// ParameterOutputID is used to identify an output by its ID.
 	ParameterOutputID = "outputID"
 
-	// ParameterAddress is used to identify an address.
-	ParameterAddress = "address"
-
 	// ParameterMilestoneIndex is used to identify a milestone by index.
 	ParameterMilestoneIndex = "milestoneIndex"
 

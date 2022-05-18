@@ -107,7 +107,7 @@ func init() {
 	}
 }
 
-func initialize(application *app.App) error {
+func initialize(_ *app.App) error {
 
 	if toolset.ShouldHandleTools() {
 		toolset.HandleTools()

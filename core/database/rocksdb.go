@@ -9,7 +9,7 @@ import (
 
 func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Database {
 
-	events := &database.Events{
+	dbEvents := &database.Events{
 		DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
 		DatabaseCompaction: events.NewEvent(events.BoolCaller),
 	}
@@ -19,12 +19,12 @@ func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Databas
 		CoreComponent.LogPanicf("rocksdb database initialization failed: %s", err)
 	}
 
-	database := database.New(
+	return database.New(
 		path,
 		rocksdb.New(rocksDatabase),
 		database.EngineRocksDB,
 		metrics,
-		events,
+		dbEvents,
 		true,
 		func() bool {
 			if numCompactions, success := rocksDatabase.GetIntProperty("rocksdb.num-running-compactions"); success {
@@ -35,14 +35,11 @@ func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Databas
 				if running && !runningBefore {
 					// we may miss some compactions, since this is only calculated if polled.
 					metrics.CompactionCount.Inc()
-					events.DatabaseCompaction.Trigger(running)
+					dbEvents.DatabaseCompaction.Trigger(running)
 				}
 				return running
 			}
 			return false
 		},
 	)
-
-	return database
-
 }

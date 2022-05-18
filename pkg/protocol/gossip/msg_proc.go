@@ -32,7 +32,6 @@ const (
 
 var (
 	workerCount           = 64
-	ErrInvalidTimestamp   = errors.New("invalid timestamp")
 	ErrBlockNotSolid      = errors.New("block is not solid")
 	ErrBlockBelowMaxDepth = errors.New("block is below max depth")
 )
@@ -394,7 +393,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 	processRequests := func(wu *WorkUnit, block *storage.Block, isMilestonePayload bool) Requests {
 
-		var requests Requests
+		requests := Requests{}
 
 		// mark the block as received
 		request := proc.requestQueue.Received(block.BlockID())

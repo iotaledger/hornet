@@ -95,7 +95,8 @@ func (coo *MockCoo) storeBlock(iotaBlock *iotago.Block) iotago.BlockID {
 func (coo *MockCoo) bootstrap() {
 	coo.lastMilestonePayload = nil
 	coo.lastMilestoneBlockID = iotago.EmptyBlockID()
-	coo.issueMilestoneOnTips(iotago.BlockIDs{}, true)
+	_, _, err := coo.issueMilestoneOnTips(iotago.BlockIDs{}, true)
+	require.NoError(coo.te.TestInterface, err)
 }
 
 func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, parents iotago.BlockIDs, lastMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
