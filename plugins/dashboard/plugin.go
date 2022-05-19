@@ -315,12 +315,12 @@ type ServerMetrics struct {
 type MemMetrics struct {
 	Sys          uint64 `json:"sys"`
 	HeapSys      uint64 `json:"heapSys""`
-	HeapInuse    uint64 `json:"HeapInuse"`
-	HeapIdle     uint64 `json:"HeapIdle"`
+	HeapInUse    uint64 `json:"heapInUse"`
+	HeapIdle     uint64 `json:"heapIdle"`
 	HeapReleased uint64 `json:"heapReleased"`
 	HeapObjects  uint64 `json:"heapObjects"`
-	MSpanInuse   uint64 `json:"mSpanInuse"`
-	MCacheInuse  uint64 `json:"mCacheInuse"`
+	MSpanInUse   uint64 `json:"mSpanInUse"`
+	MCacheInUse  uint64 `json:"mCacheInUse"`
 	StackSys     uint64 `json:"stackSys"`
 	NumGC        uint32 `json:"numGC"`
 	LastPauseGC  uint64 `json:"lastPauseGC"`
@@ -435,12 +435,12 @@ func currentNodeStatus() *NodeStatus {
 	status.Mem = &MemMetrics{
 		Sys:          m.Sys,
 		HeapSys:      m.HeapSys,
-		HeapInuse:    m.HeapInuse,
+		HeapInUse:    m.HeapInuse,
 		HeapIdle:     m.HeapIdle,
 		HeapReleased: m.HeapReleased,
 		HeapObjects:  m.HeapObjects,
-		MSpanInuse:   m.MSpanInuse,
-		MCacheInuse:  m.MCacheInuse,
+		MSpanInUse:   m.MSpanInuse,
+		MCacheInUse:  m.MCacheInuse,
 		StackSys:     m.StackSys,
 		NumGC:        m.NumGC,
 		LastPauseGC:  m.PauseNs[(m.NumGC+255)%256],

@@ -214,12 +214,12 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 			memChartXAxis = append(memChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
 			memSys = append(memSys, memMetrics.Sys/byteMBDivider)
 			memHeapSys = append(memHeapSys, memMetrics.HeapSys/byteMBDivider)
-			memHeapInUse = append(memHeapInUse, memMetrics.HeapInuse/byteMBDivider)
+			memHeapInUse = append(memHeapInUse, memMetrics.HeapInUse/byteMBDivider)
 			memHeapIdle = append(memHeapIdle, memMetrics.HeapIdle/byteMBDivider)
 			memHeapReleased = append(memHeapReleased, memMetrics.HeapReleased/byteMBDivider)
 			memHeapObjects = append(memHeapObjects, memMetrics.HeapObjects)
-			memMSpanInUse = append(memMSpanInUse, memMetrics.MSpanInuse/byteMBDivider)
-			memMCacheInUse = append(memMCacheInUse, memMetrics.MCacheInuse/byteMBDivider)
+			memMSpanInUse = append(memMSpanInUse, memMetrics.MSpanInUse/byteMBDivider)
+			memMCacheInUse = append(memMCacheInUse, memMetrics.MCacheInUse/byteMBDivider)
 			memStackSys = append(memStackSys, memMetrics.StackSys/byteMBDivider)
 		}
 	}
