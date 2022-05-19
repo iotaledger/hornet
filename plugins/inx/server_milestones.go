@@ -122,7 +122,7 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 
 	requestedIndex := milestone.Index(req.GetMilestoneIndex())
 	requestedTimestamp := req.GetMilestoneTimestamp()
-	requestedParents := BlockIDsFromINXBlockIDs(req.GetParents())
+	requestedParents := req.UnwrapParents()
 	requestedPreviousMilestoneID := req.GetPreviousMilestoneId().Unwrap()
 
 	mutations, err := deps.Tangle.CheckSolidityAndComputeWhiteFlagMutations(ctx, requestedIndex, requestedTimestamp, requestedParents, requestedPreviousMilestoneID)

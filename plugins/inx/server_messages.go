@@ -20,26 +20,10 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func INXBlockIDsFromBlockIDs(blockIDs iotago.BlockIDs) []*inx.BlockId {
-	result := make([]*inx.BlockId, len(blockIDs))
-	for i := range blockIDs {
-		result[i] = inx.NewBlockId(blockIDs[i])
-	}
-	return result
-}
-
-func BlockIDsFromINXBlockIDs(blockIDs []*inx.BlockId) iotago.BlockIDs {
-	result := make([]iotago.BlockID, len(blockIDs))
-	for i := range blockIDs {
-		result[i] = blockIDs[i].Unwrap()
-	}
-	return result
-}
-
 func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata) (*inx.BlockMetadata, error) {
 	m := &inx.BlockMetadata{
 		BlockId: inx.NewBlockId(blockID),
-		Parents: INXBlockIDsFromBlockIDs(metadata.Parents()),
+		Parents: inx.NewBlockIds(metadata.Parents()),
 		Solid:   metadata.IsSolid(),
 	}
 
