@@ -109,7 +109,7 @@ func writeFullSnapshot() {
 	fullSnapSEPProd := func() (iotago.BlockID, error) {
 		seps++
 		if seps == 1 {
-			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
+			return iotago.EmptyBlockID(), nil
 		}
 		if seps > sepsMax {
 			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
