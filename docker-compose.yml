@@ -20,7 +20,7 @@ services:
       - "--prometheus.bindAddress=inx-mqtt:9313"
 
   inx-participation:
-    image: iotaledger/inx-participation:0.2
+    image: iotaledger/inx-participation:0.3
     restart: on-failure
     volumes:
       - ./alphanet/participation:/app/database

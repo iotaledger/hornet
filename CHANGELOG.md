@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha13] - 19.05.2022
+
+### Changes
+    - Decrease private tangle milestone interval to 5s
+
+### Fix
+    - Fix snapshot SEP producer deadlock
+    - Fix inx-participation routes
+
+### Documentation
+    - Change `messages` to `blocks` in documentation
+
+
 ## [2.0.0-alpha12] - 19.05.2022
 
 ### Changed

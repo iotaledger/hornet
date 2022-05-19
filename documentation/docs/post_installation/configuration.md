@@ -82,17 +82,17 @@ Example:
 
 ### <a id="protocol_parameters"></a> Parameters
 
-| Name            | Description                                                                                                        | Type   | Default value       |
-| --------------- | ------------------------------------------------------------------------------------------------------------------ | ------ | ------------------- |
-| version         | The protocol version this node supports                                                                            | uint   | 2                   |
-| networkName     | The network ID on which this node operates on                                                                      | string | "chrysalis-mainnet" |
-| bech32HRP       | The HRP which should be used for Bech32 addresses                                                                  | string | "iota"              |
-| minPoWScore     | The minimum PoW score required by the network                                                                      | float  | 4000.0              |
-| belowMaxDepth   | The maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy | uint   | 15                  |
-| vByteCost       | The vByte cost used for the storage deposit                                                                        | uint   | 500                 |
-| vByteFactorData | The vByte factor used for data fields                                                                              | uint   | 1                   |
-| vByteFactorKey  | The vByte factor used for key fields                                                                               | uint   | 10                  |
-| tokenSupply     | The token supply of the native protocol token                                                                      | uint   | 2779530283277761    |
+| Name            | Description                                                                                                      | Type   | Default value       |
+| --------------- | ---------------------------------------------------------------------------------------------------------------- | ------ | ------------------- |
+| version         | The protocol version this node supports                                                                          | uint   | 2                   |
+| networkName     | The network ID on which this node operates on                                                                    | string | "chrysalis-mainnet" |
+| bech32HRP       | The HRP which should be used for Bech32 addresses                                                                | string | "iota"              |
+| minPoWScore     | The minimum PoW score required by the network                                                                    | float  | 4000.0              |
+| belowMaxDepth   | The maximum allowed delta value for the OCRI of a given block in relation to the current CMI before it gets lazy | uint   | 15                  |
+| vByteCost       | The vByte cost used for the storage deposit                                                                      | uint   | 500                 |
+| vByteFactorData | The vByte factor used for data fields                                                                            | uint   | 1                   |
+| vByteFactorKey  | The vByte factor used for key fields                                                                             | uint   | 10                  |
+| tokenSupply     | The token supply of the native protocol token                                                                    | uint   | 2779530283277761    |
 
 ### <a id="protocol_basetoken"></a> BaseToken
 
@@ -206,9 +206,9 @@ Example:
 
 ## <a id="pow"></a> 5. Proof of Work
 
-| Name                | Description                                                                                              | Type   | Default value |
-| ------------------- | -------------------------------------------------------------------------------------------------------- | ------ | ------------- |
-| refreshTipsInterval | Interval for refreshing tips during PoW for spammer messages and messages passed without parents via API | string | "5s"          |
+| Name                | Description                                                                                          | Type   | Default value |
+| ------------------- | ---------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| refreshTipsInterval | Interval for refreshing tips during PoW for spammer blocks and blocks passed without parents via API | string | "5s"          |
 
 Example:
 
@@ -315,12 +315,12 @@ Example:
 
 ## <a id="tangle"></a> 8. Tangle
 
-| Name                                  | Description                                                                                                             | Type   | Default value |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
-| milestoneTimeout                      | The interval milestone timeout events are fired if no new milestones are received                                       | string | "30s"         |
-| maxDeltaBlockYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | int    | 8             |
-| maxDeltaBlockOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | int    | 13            |
-| whiteFlagParentsSolidTimeout          | Defines the the maximum duration for the parents to become solid during white flag confirmation API or INX call         | string | "2s"          |
+| Name                                    | Description                                                                                                           | Type   | Default value |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| milestoneTimeout                        | The interval milestone timeout events are fired if no new milestones are received                                     | string | "30s"         |
+| maxDeltaBlockYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given block in relation to the current CMI before it gets lazy      | int    | 8             |
+| maxDeltaBlockOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given block in relation to the current CMI before it gets semi-lazy | int    | 13            |
+| whiteFlagParentsSolidTimeout            | Defines the the maximum duration for the parents to become solid during white flag confirmation API or INX call       | string | "2s"          |
 
 Example:
 
@@ -387,19 +387,19 @@ Example:
 
 ### <a id="pruning_milestones"></a> Milestones
 
-| Name                | Description                                                                              | Type    | Default value |
-| ------------------- | ---------------------------------------------------------------------------------------- | ------- | ------------- |
-| enabled             | Whether to delete old message data from the database based on maximum milestones to keep | boolean | false         |
-| maxMilestonesToKeep | Maximum amount of milestone cones to keep in the database                                | int     | 60480         |
+| Name                | Description                                                                            | Type    | Default value |
+| ------------------- | -------------------------------------------------------------------------------------- | ------- | ------------- |
+| enabled             | Whether to delete old block data from the database based on maximum milestones to keep | boolean | false         |
+| maxMilestonesToKeep | Maximum amount of milestone cones to keep in the database                              | int     | 60480         |
 
 ### <a id="pruning_size"></a> Size
 
-| Name                | Description                                                                         | Type    | Default value |
-| ------------------- | ----------------------------------------------------------------------------------- | ------- | ------------- |
-| enabled             | Whether to delete old message data from the database based on maximum database size | boolean | true          |
-| targetSize          | Target size of the database                                                         | string  | "30GB"        |
-| thresholdPercentage | The percentage the database size gets reduced if the target size is reached         | float   | 10.0          |
-| cooldownTime        | Cooldown time between two pruning by database size events                           | string  | "5m"          |
+| Name                | Description                                                                       | Type    | Default value |
+| ------------------- | --------------------------------------------------------------------------------- | ------- | ------------- |
+| enabled             | Whether to delete old block data from the database based on maximum database size | boolean | true          |
+| targetSize          | Target size of the database                                                       | string  | "30GB"        |
+| thresholdPercentage | The percentage the database size gets reduced if the target size is reached       | float   | 10.0          |
+| cooldownTime        | Cooldown time between two pruning by database size events                         | string  | "5m"          |
 
 Example:
 
@@ -439,14 +439,14 @@ Example:
 
 ## <a id="restapi"></a> 12. RestAPI
 
-| Name                        | Description                                                                                    | Type   | Default value                                                                                                                                                                                                                                                                                                                                                                                                  |
-| --------------------------- | ---------------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| bindAddress                 | The bind address on which the REST API listens on                                              | string | "0.0.0.0:14265"                                                                                                                                                                                                                                                                                                                                                                                                |
-| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using * are allowed  | array  | /health<br>/api/v2/info<br>/api/v2/tips<br>/api/v2/messages*<br>/api/v2/transactions*<br>/api/v2/milestones*<br>/api/v2/outputs*<br>/api/v2/addresses*<br>/api/v2/treasury<br>/api/v2/receipts*<br>/api/plugins/debug/v1/*<br>/api/plugins/indexer/v1/*<br>/api/plugins/mqtt/v1<br>/api/plugins/participation/v2/events*<br>/api/plugins/participation/v2/outputs*<br>/api/plugins/participation/v2/addresses* |
-| protectedRoutes             | The HTTP REST routes which need to be called with authorization. Wildcards using * are allowed | array  | /api/v2/*<br>/api/plugins/*                                                                                                                                                                                                                                                                                                                                                                                    |
-| [jwtAuth](#restapi_jwtauth) | Configuration for JWT Auth                                                                     | object |                                                                                                                                                                                                                                                                                                                                                                                                                |
-| [pow](#restapi_pow)         | Configuration for Proof of Work                                                                | object |                                                                                                                                                                                                                                                                                                                                                                                                                |
-| [limits](#restapi_limits)   | Configuration for limits                                                                       | object |                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Name                        | Description                                                                                    | Type   | Default value                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------- | ---------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| bindAddress                 | The bind address on which the REST API listens on                                              | string | "0.0.0.0:14265"                                                                                                                                                                                                                                                                                                                                                                                              |
+| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using * are allowed  | array  | /health<br>/api/v2/info<br>/api/v2/tips<br>/api/v2/blocks*<br>/api/v2/transactions*<br>/api/v2/milestones*<br>/api/v2/outputs*<br>/api/v2/addresses*<br>/api/v2/treasury<br>/api/v2/receipts*<br>/api/plugins/debug/v1/*<br>/api/plugins/indexer/v1/*<br>/api/plugins/mqtt/v1<br>/api/plugins/participation/v2/events*<br>/api/plugins/participation/v2/outputs*<br>/api/plugins/participation/v2/addresses* |
+| protectedRoutes             | The HTTP REST routes which need to be called with authorization. Wildcards using * are allowed | array  | /api/v2/*<br>/api/plugins/*                                                                                                                                                                                                                                                                                                                                                                                  |
+| [jwtAuth](#restapi_jwtauth) | Configuration for JWT Auth                                                                     | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [pow](#restapi_pow)         | Configuration for Proof of Work                                                                | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [limits](#restapi_limits)   | Configuration for limits                                                                       | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 ### <a id="restapi_jwtauth"></a> JWT Auth
 
@@ -456,10 +456,10 @@ Example:
 
 ### <a id="restapi_pow"></a> Proof of Work
 
-| Name        | Description                                                                  | Type    | Default value |
-| ----------- | ---------------------------------------------------------------------------- | ------- | ------------- |
-| enabled     | Whether the node does PoW if messages are received via API                   | boolean | false         |
-| workerCount | The amount of workers used for calculating PoW when issuing messages via API | int     | 1             |
+| Name        | Description                                                                | Type    | Default value |
+| ----------- | -------------------------------------------------------------------------- | ------- | ------------- |
+| enabled     | Whether the node does PoW if blocks are received via API                   | boolean | false         |
+| workerCount | The amount of workers used for calculating PoW when issuing blocks via API | int     | 1             |
 
 ### <a id="restapi_limits"></a> Limits
 
@@ -478,7 +478,7 @@ Example:
         "/health",
         "/api/v2/info",
         "/api/v2/tips",
-        "/api/v2/messages*",
+        "/api/v2/blocks*",
         "/api/v2/transactions*",
         "/api/v2/milestones*",
         "/api/v2/outputs*",
@@ -539,8 +539,8 @@ Example:
 | Name                    | Description                                                                                               | Type   | Default value |
 | ----------------------- | --------------------------------------------------------------------------------------------------------- | ------ | ------------- |
 | retentionRulesTipsLimit | The maximum number of current tips for which the retention rules are checked (non-lazy)                   | int    | 100           |
-| maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first message (non-lazy)    | string | "3s"          |
-| maxChildren             | The maximum amount of references by other messages before the tip is removed from the tip pool (non-lazy) | uint   | 30            |
+| maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first block (non-lazy)      | string | "3s"          |
+| maxChildren             | The maximum amount of references by other blocks before the tip is removed from the tip pool (non-lazy)   | uint   | 30            |
 | spammerTipsThreshold    | The maximum amount of tips in a tip-pool (non-lazy) before the spammer tries to reduce these (0 = always) | int    | 0             |
 
 ### <a id="tipsel_semilazy"></a> SemiLazy
@@ -548,8 +548,8 @@ Example:
 | Name                    | Description                                                                                                 | Type   | Default value |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------- | ------ | ------------- |
 | retentionRulesTipsLimit | The maximum number of current tips for which the retention rules are checked (semi-lazy)                    | int    | 20            |
-| maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first message (semi-lazy)     | string | "3s"          |
-| maxChildren             | The maximum amount of references by other messages before the tip is removed from the tip pool (semi-lazy)  | uint   | 2             |
+| maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first block (semi-lazy)       | string | "3s"          |
+| maxChildren             | The maximum amount of references by other blocks before the tip is removed from the tip pool (semi-lazy)    | uint   | 2             |
 | spammerTipsThreshold    | The maximum amount of tips in a tip-pool (semi-lazy) before the spammer tries to reduce these (0 = disable) | int    | 30            |
 
 Example:
@@ -610,10 +610,10 @@ Example:
 ## <a id="spammer"></a> 16. Spammer
 
 | Name         | Description                                                                        | Type    | Default value                  |
-|--------------| ---------------------------------------------------------------------------------- | ------- | ------------------------------ |
-| message      | The message to embed within the spam messages                                      | string  | "We are all made of stardust." |
-| tag          | The tag of the message                                                             | string  | "HORNET Spammer"               |
-| tagSemiLazy  | The tag of the message if the semi-lazy pool is used (uses "tag" if empty)         | string  | "HORNET Spammer Semi-Lazy"     |
+| ------------ | ---------------------------------------------------------------------------------- | ------- | ------------------------------ |
+| message      | The message to embed within the spam blocks                                        | string  | "We are all made of stardust." |
+| tag          | The tag of the block                                                               | string  | "HORNET Spammer"               |
+| tagSemiLazy  | The tag of the block if the semi-lazy pool is used (uses "tag" if empty)           | string  | "HORNET Spammer Semi-Lazy"     |
 | cpuMaxUsage  | Workers remains idle for a while when cpu usage gets over this limit (0 = disable) | float   | 0.8                            |
 | bpsRateLimit | The rate limit for the spammer (0 = no limit)                                      | float   | 0.0                            |
 | workers      | The amount of parallel running spammers                                            | int     | 0                              |
@@ -758,9 +758,9 @@ Example:
 
 ### <a id="inx_pow"></a> Proof of Work
 
-| Name        | Description                                                                                                       | Type | Default value |
-| ----------- | ----------------------------------------------------------------------------------------------------------------- | ---- | ------------- |
-| workerCount | The amount of workers used for calculating PoW when issuing messages via INX. (use 0 to use the maximum possible) | int  | 0             |
+| Name        | Description                                                                                                     | Type | Default value |
+| ----------- | --------------------------------------------------------------------------------------------------------------- | ---- | ------------- |
+| workerCount | The amount of workers used for calculating PoW when issuing blocks via INX. (use 0 to use the maximum possible) | int  | 0             |
 
 Example:
 

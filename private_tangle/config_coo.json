@@ -1,7 +1,7 @@
 {
   "coordinator": {
     "stateFilePath": "state/coordinator.state",
-    "interval": "10s",
+    "interval": "5s",
     "powWorkerCount": 0,
     "checkpoints": {
       "maxTrackedBlocks": 10000

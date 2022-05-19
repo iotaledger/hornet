@@ -48,9 +48,9 @@ var ParamsRestAPI = &ParametersRestAPI{
 		"/api/plugins/debug/v1/*",
 		"/api/plugins/indexer/v1/*",
 		"/api/plugins/mqtt/v1",
-		"/api/plugins/participation/v2/events*",
-		"/api/plugins/participation/v2/outputs*",
-		"/api/plugins/participation/v2/addresses*",
+		"/api/plugins/participation/v1/events*",
+		"/api/plugins/participation/v1/outputs*",
+		"/api/plugins/participation/v1/addresses*",
 	},
 	ProtectedRoutes: []string{
 		"/api/v2/*",
