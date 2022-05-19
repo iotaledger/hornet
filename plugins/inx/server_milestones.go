@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -17,6 +18,15 @@ import (
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
+
+// milestone +1
+func cachedMilestoneFromRequestOrNil(req *inx.MilestoneRequest) *storage.CachedMilestone {
+	msIndex := milestone.Index(req.GetMilestoneIndex())
+	if msIndex == 0 {
+		return deps.Storage.CachedMilestoneOrNil(req.GetMilestoneId().Unwrap())
+	}
+	return deps.Storage.CachedMilestoneByIndexOrNil(msIndex)
+}
 
 func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, error) {
 	defer ms.Release(true) // milestone -1
@@ -42,23 +52,13 @@ func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
 	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone + 1
 }
 
-func milestoneForID(milestoneID iotago.MilestoneID) (*inx.Milestone, error) {
-	cachedMilestone := deps.Storage.CachedMilestoneOrNil(milestoneID) // milestone +1
-	if cachedMilestone == nil {
-		return nil, status.Errorf(codes.NotFound, "milestone %s not found", iotago.EncodeHex(milestoneID[:]))
-	}
-	defer cachedMilestone.Release(true) // milestone -1
-
-	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone + 1
-}
-
 func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*inx.Milestone, error) {
-	msIndex := milestone.Index(req.GetMilestoneIndex())
-	if msIndex == 0 {
-		return milestoneForID(req.GetMilestoneId().Unwrap())
+	cachedMilestone := cachedMilestoneFromRequestOrNil(req) // milestone +1
+	if cachedMilestone == nil {
+		return nil, status.Error(codes.NotFound, "milestone not found")
 	}
-
-	return milestoneForIndex(msIndex)
+	defer cachedMilestone.Release()                              // milestone -1
+	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
 }
 
 func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestoneServer) error {
@@ -145,4 +145,95 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 		MilestoneInclusionMerkleRoot: mutations.InclusionMerkleRoot[:],
 		MilestoneAppliedMerkleRoot:   mutations.AppliedMerkleRoot[:],
 	}, nil
+}
+
+func (s *INXServer) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_ReadMilestoneConeServer) error {
+	cachedMilestone := cachedMilestoneFromRequestOrNil(req) // milestone +1
+	if cachedMilestone == nil {
+		return status.Error(codes.NotFound, "milestone not found")
+	}
+	defer cachedMilestone.Release(true) // milestone -1
+
+	return milestoneCone(cachedMilestone.Milestone().Index(), cachedMilestone.Milestone().Parents(), func(metadata *storage.BlockMetadata) error {
+		cachedBlock := deps.Storage.CachedBlockOrNil(metadata.BlockID()) // block + 1
+		if cachedBlock == nil {
+			return status.Errorf(codes.Internal, "block %s not found", metadata.BlockID().ToHex())
+		}
+		defer cachedBlock.Release(true)
+
+		meta, err := INXNewBlockMetadata(metadata.BlockID(), metadata)
+		if err != nil {
+			return err
+		}
+
+		data := cachedBlock.Block().Data()
+		payload := &inx.BlockWithMetadata{
+			Metadata: meta,
+			Block: &inx.RawBlock{
+				Data: make([]byte, len(data)),
+			},
+		}
+		copy(payload.Block.Data[:], data[:])
+		return srv.Send(payload)
+	})
+}
+
+func (s *INXServer) ReadMilestoneConeMetadata(req *inx.MilestoneRequest, srv inx.INX_ReadMilestoneConeMetadataServer) error {
+	cachedMilestone := cachedMilestoneFromRequestOrNil(req) // milestone +1
+	if cachedMilestone == nil {
+		return status.Error(codes.NotFound, "milestone not found")
+	}
+	defer cachedMilestone.Release(true) // milestone -1
+
+	return milestoneCone(cachedMilestone.Milestone().Index(), cachedMilestone.Milestone().Parents(), func(metadata *storage.BlockMetadata) error {
+		payload, err := INXNewBlockMetadata(metadata.BlockID(), metadata)
+		if err != nil {
+			return err
+		}
+		return srv.Send(payload)
+	})
+}
+
+func milestoneCone(index milestone.Index, parents iotago.BlockIDs, consumer func(metadata *storage.BlockMetadata) error) error {
+
+	if index > deps.SyncManager.ConfirmedMilestoneIndex() {
+		return status.Errorf(codes.InvalidArgument, "milestone %d not confirmed yet", index)
+	}
+
+	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(deps.Storage, storage.NewMetadataMemcache(deps.Storage.CachedBlockMetadata))
+	defer memcachedTraverserStorage.Cleanup(true)
+
+	if err := dag.TraverseParents(
+		Plugin.Daemon().ContextStopped(),
+		memcachedTraverserStorage,
+		parents,
+		// traversal stops if no more blocks pass the given condition
+		// Caution: condition func is not in DFS order
+		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedBlockMeta.Release(true) // meta -1
+			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
+				if at < index {
+					return false, nil
+				}
+			}
+			return true, nil
+		},
+		// consumer
+		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
+			defer cachedBlockMeta.Release(true)
+			return consumer(cachedBlockMeta.Metadata())
+		},
+		// called on missing parents
+		// return error on missing parents
+		nil,
+		// called on solid entry points
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
+		false); err != nil {
+		if errors.Is(err, common.ErrOperationAborted) {
+			return status.Errorf(codes.Unavailable, "traverse parents failed, error: %s", err)
+		}
+		return status.Errorf(codes.Internal, "traverse parents failed, error: %s", err)
+	}
+	return nil
 }
