@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha12] - 19.05.2022
+
+### Changed
+    - Don't mount profiles.json in docker-compose.yml
+    - Output metadata & iota.go updates (#1494) 
+    - Move several packages to hive.go (#1495)
+    - Do not load messages on pruning (#1499)
+    - Remove participation plugin (#1501)
+    - Add inx-participation (#1502)
+    - Add reflection based config (#1506)
+    - Rename Messages to Blocks (#1508) 
+    - Use iotago.BlockID instead of hornet.BlockID (#1509) 
+    - Add INX milestone cone functions (#1511)
+    - Code cleanup (#1510)
+    - Moved INX examples to iotaledger/inx repository
+
+### Documentation
+    - Removed APT page (#1490)
+    - Updated API reference links (#1491)
+
+
 ## [2.0.0-alpha11] - 03.05.2022
 
 ### Changed

@@ -314,7 +314,7 @@ type ServerMetrics struct {
 // MemMetrics represents memory metrics.
 type MemMetrics struct {
 	Sys          uint64 `json:"sys"`
-	HeapSys      uint64 `json:"heapSys""`
+	HeapSys      uint64 `json:"heapSys"`
 	HeapInUse    uint64 `json:"heapInUse"`
 	HeapIdle     uint64 `json:"heapIdle"`
 	HeapReleased uint64 `json:"heapReleased"`
