@@ -20,26 +20,10 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func INXBlockIDsFromBlockIDs(blockIDs iotago.BlockIDs) []*inx.BlockId {
-	result := make([]*inx.BlockId, len(blockIDs))
-	for i := range blockIDs {
-		result[i] = inx.NewBlockId(blockIDs[i])
-	}
-	return result
-}
-
-func BlockIDsFromINXBlockIDs(blockIDs []*inx.BlockId) iotago.BlockIDs {
-	result := make([]iotago.BlockID, len(blockIDs))
-	for i := range blockIDs {
-		result[i] = blockIDs[i].Unwrap()
-	}
-	return result
-}
-
 func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata) (*inx.BlockMetadata, error) {
 	m := &inx.BlockMetadata{
 		BlockId: inx.NewBlockId(blockID),
-		Parents: INXBlockIDsFromBlockIDs(metadata.Parents()),
+		Parents: inx.NewBlockIds(metadata.Parents()),
 		Solid:   metadata.IsSolid(),
 	}
 
@@ -109,6 +93,13 @@ func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (
 	blkId := blockID.Unwrap()
 	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(blkId) // meta +1
 	if cachedBlockMeta == nil {
+		isSolidEntryPoint, err := deps.Storage.SolidEntryPointsContain(blkId)
+		if err != nil && isSolidEntryPoint {
+			return &inx.BlockMetadata{
+				BlockId: blockID,
+				Solid:   true,
+			}, nil
+		}
 		return nil, status.Errorf(codes.NotFound, "block metadata %s not found", blkId.ToHex())
 	}
 	defer cachedBlockMeta.Release(true) // meta -1

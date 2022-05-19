@@ -10,26 +10,23 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func NewLedgerOutput(o *utxo.Output) (*inx.LedgerOutput, error) {
-	outputBytes, err := o.Output().Serialize(serializer.DeSeriModeNoValidation, nil)
+	output, err := inx.WrapOutput(o.Output())
 	if err != nil {
 		return nil, err
 	}
-	l := &inx.LedgerOutput{
+	return &inx.LedgerOutput{
 		OutputId:                 inx.NewOutputId(o.OutputID()),
 		BlockId:                  inx.NewBlockId(o.BlockID()),
 		MilestoneIndexBooked:     uint32(o.MilestoneIndex()),
 		MilestoneTimestampBooked: o.MilestoneTimestamp(),
-		Output:                   make([]byte, len(outputBytes)),
-	}
-	copy(l.Output, outputBytes)
-	return l, nil
+		Output:                   output,
+	}, nil
 }
 
 func NewLedgerSpent(s *utxo.Spent) (*inx.LedgerSpent, error) {

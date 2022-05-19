@@ -30,8 +30,27 @@ func main() {
 
 	client := inx.NewINXClient(conn)
 
-	filter := &inx.BlockFilter{}
-	stream, err := client.ListenToBlocks(context.Background(), filter)
+	stream, err := client.ListenToConfirmedMilestone(context.Background(), &inx.NoParams{})
+	if err != nil {
+		panic(err)
+	}
+	for {
+		milestone, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
+		printMilestoneCone(client, milestone)
+	}
+}
+
+func printMilestoneCone(client inx.INXClient, milestone *inx.Milestone) {
+	req := &inx.MilestoneRequest{
+		MilestoneIndex: milestone.GetMilestoneInfo().GetMilestoneIndex(),
+	}
+	stream, err := client.ReadMilestoneCone(context.Background(), req)
 	if err != nil {
 		panic(err)
 	}
@@ -43,11 +62,14 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		block := payload.MustUnwrapBlock(serializer.DeSeriModeNoValidation, nil)
-		jsonBlock, err := json.Marshal(block)
+		block, err := payload.UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Rec: %s => %s\n", payload.UnwrapBlockID().ToHex(), string(jsonBlock))
+		jsonBlock, err := json.MarshalIndent(block, "", "  ")
+		if err != nil {
+			panic(err)
+		}
+		println(string(jsonBlock))
 	}
 }
