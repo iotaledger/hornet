@@ -94,8 +94,11 @@ func newSEPsProducer(
 	binder := producerFromChannels(prodChan, errChan)
 	return func() (iotago.BlockID, error) {
 		obj, err := binder()
-		if obj == nil || err != nil {
+		if err != nil {
 			return iotago.EmptyBlockID(), err
+		}
+		if obj == nil {
+			return iotago.EmptyBlockID(), ErrNoMoreSEPToProduce
 		}
 		return obj.(iotago.BlockID), nil
 	}
@@ -574,8 +577,11 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 		binder := producerFromChannels(prodChan, nil)
 		return func() (iotago.BlockID, error) {
 			obj, err := binder()
-			if obj == nil || err != nil {
+			if err != nil {
 				return iotago.EmptyBlockID(), err
+			}
+			if obj == nil {
+				return iotago.EmptyBlockID(), ErrNoMoreSEPToProduce
 			}
 			sepsCount++
 			return obj.(iotago.BlockID), nil
