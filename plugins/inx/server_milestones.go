@@ -57,7 +57,7 @@ func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) 
 	if cachedMilestone == nil {
 		return nil, status.Error(codes.NotFound, "milestone not found")
 	}
-	defer cachedMilestone.Release()                              // milestone -1
+	defer cachedMilestone.Release(true)                          // milestone -1
 	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
 }
 
