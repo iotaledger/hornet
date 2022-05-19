@@ -17,10 +17,8 @@ import (
 )
 
 const (
-	// The supported snapshot file version.
+	// SupportedFormatVersion defines the supported snapshot file version.
 	SupportedFormatVersion byte = 2
-	// The length of a solid entry point hash.
-	SolidEntryPointHashLength = iotago.BlockIDLength
 
 	// The offset of counters within a snapshot file:
 	// version + type + timestamp + network-id + sep-ms-index + ledger-ms-index
@@ -29,15 +27,15 @@ const (
 )
 
 var (
-	// Returned when an output producer has not been provided.
+	// ErrOutputProducerNotProvided is returned when an output producer has not been provided.
 	ErrOutputProducerNotProvided = errors.New("output producer is not provided")
-	// Returned when an output consumer has not been provided.
+	// ErrOutputConsumerNotProvided is returned when an output consumer has not been provided.
 	ErrOutputConsumerNotProvided = errors.New("output consumer is not provided")
-	// Returned when the treasury output for a full snapshot has not been provided.
+	// ErrTreasuryOutputNotProvided is returned when the treasury output for a full snapshot has not been provided.
 	ErrTreasuryOutputNotProvided = errors.New("treasury output is not provided")
-	// Returned when a treasury output consumer has not been provided.
+	// ErrTreasuryOutputConsumerNotProvided is returned when a treasury output consumer has not been provided.
 	ErrTreasuryOutputConsumerNotProvided = errors.New("treasury output consumer is not provided")
-	// Returned if specified snapshots are not mergeable.
+	// ErrSnapshotsNotMergeable is returned if specified snapshots are not mergeable.
 	ErrSnapshotsNotMergeable = errors.New("snapshot files not mergeable")
 )
 

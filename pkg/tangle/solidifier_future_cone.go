@@ -42,8 +42,8 @@ func (s *FutureConeSolidifier) Cleanup(forceRelease bool) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.memcachedTraverserStorage.Cleanup(true)
-	s.metadataMemcache.Cleanup(true)
+	s.memcachedTraverserStorage.Cleanup(forceRelease)
+	s.metadataMemcache.Cleanup(forceRelease)
 }
 
 // SolidifyBlockAndFutureCone updates the solidity of the block and its future cone (blocks approving the given block).

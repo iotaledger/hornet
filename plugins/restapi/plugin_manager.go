@@ -17,7 +17,7 @@ type RestPluginManager struct {
 func newRestPluginManager(e *echo.Echo) *RestPluginManager {
 	return &RestPluginManager{
 		plugins: []string{},
-		proxy:   restapipkg.NewDynamicProxy(deps.Echo, "/api/plugins"),
+		proxy:   restapipkg.NewDynamicProxy(e, "/api/plugins"),
 	}
 }
 func (p *RestPluginManager) Plugins() []string {
@@ -47,7 +47,7 @@ func (p *RestPluginManager) AddPlugin(pluginRoute string) *echo.Group {
 }
 
 // AddPluginProxy adds a plugin route to the RouteInfo endpoint and configures a remote proxy for this route.
-func (p *RestPluginManager) AddPluginProxy(pluginRoute string, host string, port uint32) {
+func (p *RestPluginManager) AddPluginProxy(pluginRoute string, host string, port uint32) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -62,7 +62,7 @@ func (p *RestPluginManager) AddPluginProxy(pluginRoute string, host string, port
 		p.plugins = append(p.plugins, pluginRoute)
 	}
 	// existing proxies get overwritten (necessary if last plugin was not cleaned up properly)
-	p.proxy.AddReverseProxy(pluginRoute, host, port)
+	return p.proxy.AddReverseProxy(pluginRoute, host, port)
 }
 
 // RemovePlugin removes a plugin route to the RouteInfo endpoint.

@@ -32,7 +32,6 @@ const (
 
 var (
 	workerCount           = 64
-	ErrInvalidTimestamp   = errors.New("invalid timestamp")
 	ErrBlockNotSolid      = errors.New("block is not solid")
 	ErrBlockBelowMaxDepth = errors.New("block is below max depth")
 )
@@ -291,7 +290,7 @@ func (proc *MessageProcessor) workUnitFor(receivedBlockBytes []byte) (cachedWork
 
 // processes the given milestone request by parsing it and then replying to the peer with it.
 func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) {
-	msIndex, err := ExtractRequestedMilestoneIndex(data)
+	msIndex, err := extractRequestedMilestoneIndex(data)
 	if err != nil {
 		proc.serverMetrics.InvalidRequests.Inc()
 
@@ -301,7 +300,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	}
 
 	// peers can request the latest milestone we know
-	if msIndex == LatestMilestoneRequestIndex {
+	if msIndex == latestMilestoneRequestIndex {
 		msIndex = proc.syncManager.LatestMilestoneIndex()
 	}
 
@@ -324,7 +323,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 		return
 	}
 
-	msg, err := NewBlockMessage(requestedData)
+	msg, err := newBlockMessage(requestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -365,7 +364,7 @@ func (proc *MessageProcessor) processBlockRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	msg, err := NewBlockMessage(requestedData)
+	msg, err := newBlockMessage(requestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -394,7 +393,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 	processRequests := func(wu *WorkUnit, block *storage.Block, isMilestonePayload bool) Requests {
 
-		var requests Requests
+		requests := Requests{}
 
 		// mark the block as received
 		request := proc.requestQueue.Received(block.BlockID())

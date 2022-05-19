@@ -25,7 +25,7 @@ func snapshotHash(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapHash)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapHash)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
 			ToolSnapHash,

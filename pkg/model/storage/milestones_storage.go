@@ -281,30 +281,6 @@ func NewMilestone(milestonePayload *iotago.Milestone, deSeriMode serializer.DeSe
 	return ms, nil
 }
 
-func MilestoneFromBytes(data []byte, deSeriMode serializer.DeSerializationMode) (*Milestone, error) {
-
-	milestonePayload := &iotago.Milestone{}
-	if _, err := milestonePayload.Deserialize(data, deSeriMode, nil); err != nil {
-		return nil, err
-	}
-
-	msID, err := milestonePayload.ID()
-	if err != nil {
-		return nil, err
-	}
-
-	ms := &Milestone{
-		milestoneID: msID,
-		data:        data,
-	}
-
-	ms.milestoneOnce.Do(func() {
-		ms.payload = milestonePayload
-	})
-
-	return ms, nil
-}
-
 func (ms *Milestone) MilestoneID() iotago.MilestoneID {
 	return ms.milestoneID
 }

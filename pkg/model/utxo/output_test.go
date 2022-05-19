@@ -124,7 +124,7 @@ func CreateSpentAndAssertSerialization(t *testing.T, output *Output) *Spent {
 	value := spent.kvStorableValue()
 	require.Equal(t, transactionID[:], value[:32])
 	require.Equal(t, confirmationIndex, milestone.Index(binary.LittleEndian.Uint32(value[32:36])))
-	require.Equal(t, uint32(confirmationTimestamp), binary.LittleEndian.Uint32(value[36:40]))
+	require.Equal(t, confirmationTimestamp, binary.LittleEndian.Uint32(value[36:40]))
 
 	return spent
 }

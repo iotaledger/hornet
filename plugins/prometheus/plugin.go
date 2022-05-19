@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
@@ -32,10 +32,10 @@ import (
 	"github.com/iotaledger/hive.go/app"
 )
 
-// RouteMetrics is the route for getting the prometheus metrics.
+// routeMetrics is the route for getting the prometheus metrics.
 // GET returns metrics.
 const (
-	RouteMetrics = "/metrics"
+	routeMetrics = "/metrics"
 )
 
 func init() {
@@ -56,7 +56,6 @@ var (
 	Plugin *app.Plugin
 	deps   dependencies
 
-	server   *http.Server
 	registry = prometheus.NewRegistry()
 	collects []func()
 )
@@ -129,7 +128,7 @@ func configure() error {
 	}
 	if ParamsPrometheus.INXMetrics && deps.INXServer != nil {
 		deps.INXServer.ConfigurePrometheus()
-		registry.MustRegister(grpc_prometheus.DefaultServerMetrics)
+		registry.MustRegister(grpcprometheus.DefaultServerMetrics)
 	}
 	if ParamsPrometheus.MigrationMetrics {
 		if deps.ReceiptService != nil {
@@ -188,7 +187,7 @@ func run() error {
 	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(ctx context.Context) {
 		Plugin.LogInfo("Starting Prometheus exporter ... done")
 
-		deps.PrometheusEcho.GET(RouteMetrics, func(c echo.Context) error {
+		deps.PrometheusEcho.GET(routeMetrics, func(c echo.Context) error {
 			for _, collect := range collects {
 				collect()
 			}

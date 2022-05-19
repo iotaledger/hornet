@@ -4,14 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/serializer/v2"
-)
-
-var (
-	ErrParseSnapshotInfoFailed = errors.New("Parsing of snapshot info failed")
 )
 
 type SnapshotInfo struct {
@@ -43,7 +37,7 @@ func (s *Storage) PrintSnapshotInfo() {
 	}
 }
 
-func (i *SnapshotInfo) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
+func (i *SnapshotInfo) Deserialize(data []byte, _ serializer.DeSerializationMode, _ interface{}) (int, error) {
 
 	var (
 		snapshotIndex   uint32
@@ -81,7 +75,7 @@ func (i *SnapshotInfo) Deserialize(data []byte, deSeriMode serializer.DeSerializ
 	return offset, nil
 }
 
-func (i *SnapshotInfo) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
+func (i *SnapshotInfo) Serialize(_ serializer.DeSerializationMode, _ interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
 		WriteNum(i.NetworkID, func(err error) error {
 			return fmt.Errorf("unable to serialize network ID: %w", err)

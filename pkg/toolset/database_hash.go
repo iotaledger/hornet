@@ -209,7 +209,7 @@ func databaseLedgerHash(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseLedgerHash)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseLedgerHash)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolDatabaseLedgerHash,

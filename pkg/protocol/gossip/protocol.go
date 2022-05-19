@@ -49,7 +49,7 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 		Parser: protocol.New(gossipMessageRegistry),
 		PeerID: peerID,
 		Events: &ProtocolEvents{
-			HeartbeatUpdated: events.NewEvent(HeartbeatCaller),
+			HeartbeatUpdated: events.NewEvent(heartbeatCaller),
 			// we need this because protocol.Protocol doesn't emit
 			// events for sent messages anymore.
 			Sent:   sentEvents,
@@ -157,7 +157,7 @@ func (p *Protocol) Send(message []byte) error {
 
 // SendBlock sends a storage.Block to the given peer.
 func (p *Protocol) SendBlock(blockData []byte) {
-	blockMessage, err := NewBlockMessage(blockData)
+	blockMessage, err := newBlockMessage(blockData)
 	if err != nil {
 		return
 	}
@@ -166,7 +166,7 @@ func (p *Protocol) SendBlock(blockData []byte) {
 
 // SendHeartbeat sends a Heartbeat to the given peer.
 func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex milestone.Index, latestMsIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) {
-	heartbeatData, err := NewHeartbeatMessage(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
+	heartbeatData, err := newHeartbeatMessage(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
 	if err != nil {
 		return
 	}
@@ -175,7 +175,7 @@ func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex mi
 
 // SendBlockRequest sends a block request message to the given peer.
 func (p *Protocol) SendBlockRequest(requestedBlockID iotago.BlockID) {
-	blockRequestMessage, err := NewBlockRequestMessage(requestedBlockID)
+	blockRequestMessage, err := newBlockRequestMessage(requestedBlockID)
 	if err != nil {
 		return
 	}
@@ -184,7 +184,7 @@ func (p *Protocol) SendBlockRequest(requestedBlockID iotago.BlockID) {
 
 // SendMilestoneRequest sends a milestone request to the given peer.
 func (p *Protocol) SendMilestoneRequest(index milestone.Index) {
-	milestoneRequestMessage, err := NewMilestoneRequestMessage(index)
+	milestoneRequestMessage, err := newMilestoneRequestMessage(index)
 	if err != nil {
 		return
 	}
@@ -193,7 +193,7 @@ func (p *Protocol) SendMilestoneRequest(index milestone.Index) {
 
 // SendLatestMilestoneRequest sends a storage.Milestone request which requests the latest known milestone from the given peer.
 func (p *Protocol) SendLatestMilestoneRequest() {
-	p.SendMilestoneRequest(LatestMilestoneRequestIndex)
+	p.SendMilestoneRequest(latestMilestoneRequestIndex)
 }
 
 // HasDataForMilestone tells whether the underlying peer given the latest heartbeat message, has the cone data for the given milestone.

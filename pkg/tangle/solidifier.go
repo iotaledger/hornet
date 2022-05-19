@@ -232,12 +232,14 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	if err != nil {
 		// Milestone not found
 		t.LogPanic(storage.ErrMilestoneNotFound)
+		return
 	}
 
 	cachedMilestoneToSolidify := t.storage.CachedMilestoneByIndexOrNil(milestoneIndexToSolidify)
 	if cachedMilestoneToSolidify == nil {
 		// Milestone not found
 		t.LogPanic(storage.ErrMilestoneNotFound)
+		return
 	}
 
 	// Release shouldn't be forced, to cache the latest milestones

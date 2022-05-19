@@ -45,35 +45,35 @@ func storageMilestoneByID(c echo.Context) (*storage.Milestone, error) {
 }
 
 func milestoneByIndex(c echo.Context) (*iotago.Milestone, error) {
-	milestone, err := storageMilestoneByIndex(c)
+	ms, err := storageMilestoneByIndex(c)
 	if err != nil {
 		return nil, err
 	}
-	return milestone.Milestone(), nil
+	return ms.Milestone(), nil
 }
 
 func milestoneByID(c echo.Context) (*iotago.Milestone, error) {
-	milestone, err := storageMilestoneByID(c)
+	ms, err := storageMilestoneByID(c)
 	if err != nil {
 		return nil, err
 	}
-	return milestone.Milestone(), nil
+	return ms.Milestone(), nil
 }
 
 func milestoneBytesByIndex(c echo.Context) ([]byte, error) {
-	milestone, err := storageMilestoneByIndex(c)
+	ms, err := storageMilestoneByIndex(c)
 	if err != nil {
 		return nil, err
 	}
-	return milestone.Data(), nil
+	return ms.Data(), nil
 }
 
 func milestoneBytesByID(c echo.Context) ([]byte, error) {
-	milestone, err := storageMilestoneByID(c)
+	ms, err := storageMilestoneByID(c)
 	if err != nil {
 		return nil, err
 	}
-	return milestone.Data(), nil
+	return ms.Data(), nil
 }
 
 func milestoneUTXOChanges(msIndex milestone.Index) (*milestoneUTXOChangesResponse, error) {
@@ -113,10 +113,10 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 }
 
 func milestoneUTXOChangesByID(c echo.Context) (*milestoneUTXOChangesResponse, error) {
-	milestone, err := storageMilestoneByID(c)
+	ms, err := storageMilestoneByID(c)
 	if err != nil {
 		return nil, err
 	}
 
-	return milestoneUTXOChanges(milestone.Index())
+	return milestoneUTXOChanges(ms.Index())
 }

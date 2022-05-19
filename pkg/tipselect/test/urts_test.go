@@ -148,7 +148,8 @@ func TestTipSelect(t *testing.T) {
 			// Issue a new milestone every 10 blocks
 			conf, _ := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockMeta.BlockID()}, false)
 			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), conf.Mutations.BlocksReferenced, conf.MilestoneIndex)
-			ts.UpdateScores()
+			_, err := ts.UpdateScores()
+			require.NoError(t, err)
 		}
 	}
 

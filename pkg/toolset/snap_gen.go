@@ -24,7 +24,7 @@ func snapshotGen(args []string) error {
 	outputFilePathFlag := fs.String(FlagToolOutputPath, "", "the file path to the generated snapshot file")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapGen)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapGen)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s",
 			ToolSnapGen,

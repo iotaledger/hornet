@@ -24,8 +24,8 @@ type LocalPeerContainer struct {
 }
 
 // Local returns the local hive.go peer from the container.
-func (lpc *LocalPeerContainer) Local() *peer.Local {
-	return lpc.peerLocal
+func (l *LocalPeerContainer) Local() *peer.Local {
+	return l.peerLocal
 }
 
 // GetEntryNodeMultiAddress returns the multiaddress for the autopeering entry node.

@@ -28,9 +28,6 @@ const (
 	// ParameterOutputID is used to identify an output by its ID.
 	ParameterOutputID = "outputID"
 
-	// ParameterAddress is used to identify an address.
-	ParameterAddress = "address"
-
 	// ParameterMilestoneIndex is used to identify a milestone by index.
 	ParameterMilestoneIndex = "milestoneIndex"
 
@@ -47,9 +44,6 @@ const (
 var (
 	// ErrInvalidParameter defines the invalid parameter error.
 	ErrInvalidParameter = echo.NewHTTPError(http.StatusBadRequest, "invalid parameter")
-
-	// ErrServiceNotImplemented defines the service not implemented error.
-	ErrServiceNotImplemented = echo.NewHTTPError(http.StatusNotImplemented, "service not implemented")
 
 	// ErrNotAcceptable defines the not acceptable error.
 	ErrNotAcceptable = echo.NewHTTPError(http.StatusNotAcceptable)
@@ -150,38 +144,6 @@ func ParseOutputIDParam(c echo.Context) (iotago.OutputID, error) {
 		return iotago.OutputID{}, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 	return outputID, nil
-}
-
-func ParseBech32AddressParam(c echo.Context, prefix iotago.NetworkPrefix) (iotago.Address, error) {
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
-	}
-
-	if hrp != prefix {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", prefix)
-	}
-
-	return bech32Address, nil
-}
-
-func ParseEd25519AddressParam(c echo.Context) (*iotago.Ed25519Address, error) {
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	addressBytes, err := iotago.DecodeHex(addressParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
-	}
-
-	if len(addressBytes) != (iotago.Ed25519AddressBytesLength) {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address length: %s", addressParam)
-	}
-
-	var address iotago.Ed25519Address
-	copy(address[:], addressBytes)
-	return &address, nil
 }
 
 func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index, error) {

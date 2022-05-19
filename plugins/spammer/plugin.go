@@ -68,7 +68,7 @@ var (
 	processID        atomic.Uint32
 	spammerWaitGroup sync.WaitGroup
 
-	// events of the spammer
+	// Events are the events of the spammer
 	Events = &spammer.SpammerEvents{
 		SpamPerformed:         events.NewEvent(spammer.SpamStatsCaller),
 		AvgSpamMetricsUpdated: events.NewEvent(spammer.AvgSpamMetricsCaller),

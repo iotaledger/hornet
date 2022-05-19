@@ -106,7 +106,7 @@ func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (
 	return INXNewBlockMetadata(cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
 }
 
-func (s *INXServer) ListenToBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToBlocksServer) error {
+func (s *INXServer) ListenToBlocks(_ *inx.BlockFilter, srv inx.INX_ListenToBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedBlock := task.Param(0).(*storage.CachedBlock)
@@ -131,7 +131,7 @@ func (s *INXServer) ListenToBlocks(filter *inx.BlockFilter, srv inx.INX_ListenTo
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToSolidBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToSolidBlocksServer) error {
+func (s *INXServer) ListenToSolidBlocks(_ *inx.BlockFilter, srv inx.INX_ListenToSolidBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		blockMeta := task.Param(0).(*storage.CachedMetadata)
@@ -161,7 +161,7 @@ func (s *INXServer) ListenToSolidBlocks(filter *inx.BlockFilter, srv inx.INX_Lis
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToReferencedBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToReferencedBlocksServer) error {
+func (s *INXServer) ListenToReferencedBlocks(_ *inx.BlockFilter, srv inx.INX_ListenToReferencedBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		blockMeta := task.Param(0).(*storage.CachedMetadata)

@@ -13,10 +13,10 @@ var (
 func init() {
 	definitions := []*hiveproto.Definition{
 		tlv.HeaderMessageDefinition,
-		MilestoneRequestMessageDefinition,
-		BlockMessageDefinition,
-		BlockRequestMessageDefinition,
-		HeartbeatMessageDefinition,
+		milestoneRequestMessageDefinition,
+		blockMessageDefinition,
+		blockRequestMessageDefinition,
+		heartbeatMessageDefinition,
 	}
 	gossipMessageRegistry = hiveproto.NewRegistry(definitions)
 }

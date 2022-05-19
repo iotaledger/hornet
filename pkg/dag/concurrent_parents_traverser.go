@@ -223,7 +223,9 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 
 		if contains {
 			if t.onSolidEntryPoint != nil {
-				t.onSolidEntryPoint(currentBlockID)
+				if err := t.onSolidEntryPoint(currentBlockID); err != nil {
+					return err
+				}
 			}
 
 			if !t.traverseSolidEntryPoints {

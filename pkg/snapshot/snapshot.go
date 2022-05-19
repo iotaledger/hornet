@@ -170,6 +170,7 @@ func (s *SnapshotManager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.I
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		s.LogPanic("No snapshotInfo found!")
+		return false
 	}
 
 	if (confirmedMilestoneIndex < s.snapshotDepth+s.snapshotInterval) || (confirmedMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {

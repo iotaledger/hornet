@@ -215,7 +215,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips iotago.BlockIDs, 
 	currentIndex := te.syncManager.ConfirmedMilestoneIndex()
 	te.VerifyLMI(currentIndex)
 
-	milestone, _, err := te.coo.issueMilestoneOnTips(tips, true)
+	ms, _, err := te.coo.issueMilestoneOnTips(tips, true)
 	require.NoError(te.TestInterface, err)
-	return te.ConfirmMilestone(milestone, createConfirmationGraph)
+	return te.ConfirmMilestone(ms, createConfirmationGraph)
 }

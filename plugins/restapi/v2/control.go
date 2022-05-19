@@ -83,7 +83,7 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 	var fullSnapshotFilePath, deltaSnapshotFilePath string
 
 	if request.FullIndex != nil {
-		fullIndex = milestone.Index(*request.FullIndex)
+		fullIndex = *request.FullIndex
 		fullSnapshotFilePath = filepath.Join(filepath.Dir(deps.SnapshotsFullPath), fmt.Sprintf("full_snapshot_%d.bin", fullIndex))
 
 		if err := deps.SnapshotManager.CreateFullSnapshot(Plugin.Daemon().ContextStopped(), fullIndex, fullSnapshotFilePath, false); err != nil {
@@ -92,7 +92,7 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 	}
 
 	if request.DeltaIndex != nil {
-		deltaIndex = milestone.Index(*request.DeltaIndex)
+		deltaIndex = *request.DeltaIndex
 		deltaSnapshotFilePath = filepath.Join(filepath.Dir(deps.SnapshotsDeltaPath), fmt.Sprintf("delta_snapshot_%d.bin", deltaIndex))
 
 		// if no full snapshot was created, the last existing full snapshot will be used

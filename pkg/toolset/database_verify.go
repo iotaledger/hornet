@@ -29,7 +29,7 @@ func databaseVerify(args []string) error {
 	genesisSnapshotFilePathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the genesis snapshot file")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseVerify)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseVerify)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s",
 			ToolDatabaseVerify,
@@ -67,7 +67,9 @@ func databaseVerify(args []string) error {
 	}
 	defer func() {
 		tangleStoreSource.ShutdownStorages()
-		tangleStoreSource.FlushAndCloseStores()
+		if err := tangleStoreSource.FlushAndCloseStores(); err != nil {
+			panic(err)
+		}
 	}()
 
 	milestoneManager, err := getMilestoneManagerFromConfigFile(*configFilePathFlag)
@@ -116,7 +118,9 @@ func verifyDatabase(
 	}
 	defer func() {
 		tangleStoreTemp.ShutdownStorages()
-		tangleStoreTemp.FlushAndCloseStores()
+		if err := tangleStoreTemp.FlushAndCloseStores(); err != nil {
+			panic(err)
+		}
 	}()
 
 	// load the genesis ledger state into the temporary storage (SEP and ledger state only)
@@ -378,7 +382,7 @@ func compareLedgerState(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.M
 	if err != nil {
 		return err
 	}
-	ledgerStateTemp, err := utxoManagerSource.LedgerStateSHA256Sum()
+	ledgerStateTemp, err := utxoManagerTemp.LedgerStateSHA256Sum()
 	if err != nil {
 		return err
 	}

@@ -178,26 +178,6 @@ func (blk *Block) TransactionEssenceUTXOInputs() iotago.OutputIDs {
 	return inputs
 }
 
-func (blk *Block) SignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Signature {
-
-	if transaction := blk.Transaction(); transaction != nil {
-		switch unlockBlock := transaction.Unlocks[inputIndex].(type) {
-		case *iotago.SignatureUnlock:
-			switch signature := unlockBlock.Signature.(type) {
-			case *iotago.Ed25519Signature:
-				return signature
-			default:
-				return nil
-			}
-		case *iotago.ReferenceUnlock:
-			return blk.SignatureForInputIndex(unlockBlock.Reference)
-		default:
-			return nil
-		}
-	}
-	return nil
-}
-
 // ObjectStorage interface
 
 func (blk *Block) Update(_ objectstorage.StorableObject) {

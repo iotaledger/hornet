@@ -79,7 +79,7 @@ type dependencies struct {
 	AutopeeringManager        *autopeering.AutopeeringManager
 }
 
-func preProvide(c *dig.Container, application *app.App, initConfig *app.InitConfig) error {
+func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error {
 
 	pluginEnabled := true
 

@@ -18,7 +18,7 @@ func snapshotInfo(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapInfo)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapInfo)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolSnapInfo,

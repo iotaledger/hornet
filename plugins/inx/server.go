@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 
 	inx "github.com/iotaledger/inx/go"
@@ -17,8 +17,8 @@ const (
 
 func newINXServer() *INXServer {
 	grpcServer := grpc.NewServer(
-		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
-		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+		grpc.StreamInterceptor(grpcprometheus.StreamServerInterceptor),
+		grpc.UnaryInterceptor(grpcprometheus.UnaryServerInterceptor),
 	)
 	s := &INXServer{grpcServer: grpcServer}
 	inx.RegisterINXServer(grpcServer, s)
@@ -31,7 +31,7 @@ type INXServer struct {
 }
 
 func (s *INXServer) ConfigurePrometheus() {
-	grpc_prometheus.Register(s.grpcServer)
+	grpcprometheus.Register(s.grpcServer)
 }
 
 func (s *INXServer) Start() {

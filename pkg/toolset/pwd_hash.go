@@ -31,7 +31,7 @@ func readPasswordFromStdin() ([]byte, error) {
 	var password []byte
 
 	// get terminal state to be able to restore it in case of an interrupt
-	originalTerminalState, err := term.GetState(int(syscall.Stdin))
+	originalTerminalState, err := term.GetState(syscall.Stdin)
 	if err != nil {
 		return nil, errors.New("failed to get terminal state")
 	}
@@ -41,19 +41,19 @@ func readPasswordFromStdin() ([]byte, error) {
 	go func() {
 		<-signalChan
 		// reset the terminal to the original state if we receive an interrupt
-		_ = term.Restore(int(syscall.Stdin), originalTerminalState)
+		_ = term.Restore(syscall.Stdin, originalTerminalState)
 		fmt.Println("\naborted... Bye!")
 		os.Exit(1)
 	}()
 
 	fmt.Print("Enter a password: ")
-	password, err = term.ReadPassword(int(syscall.Stdin))
+	password, err = term.ReadPassword(syscall.Stdin)
 	if err != nil {
 		return nil, fmt.Errorf("read password failed: %w", err)
 	}
 
 	fmt.Print("\nRe-enter your password: ")
-	passwordReenter, err := term.ReadPassword(int(syscall.Stdin))
+	passwordReenter, err := term.ReadPassword(syscall.Stdin)
 	if err != nil {
 		return nil, fmt.Errorf("read password failed: %w", err)
 	}
@@ -73,7 +73,7 @@ func hashPasswordAndSalt(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolPwdHash)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolPwdHash)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolPwdHash,

@@ -26,53 +26,53 @@ const (
 )
 
 const (
-	// The amount of bytes used for the requested block ID.
-	RequestedBlockIDMsgBytesLength = iotago.BlockIDLength
+	// requestedBlockIDMsgBytesLength defines the amount of bytes used for the requested block ID.
+	requestedBlockIDMsgBytesLength = iotago.BlockIDLength
 
-	// The amount of bytes used for the requested milestone index.
-	RequestedMilestoneIndexMsgBytesLength = 4
+	// requestedMilestoneIndexMsgBytesLength defines the amount of bytes used for the requested milestone index.
+	requestedMilestoneIndexMsgBytesLength = 4
 
-	// The amount of bytes used for a milestone index within a heartbeat packet.
-	HeartbeatMilestoneIndexBytesLength = 4
+	// heartbeatMilestoneIndexBytesLength defines the amount of bytes used for a milestone index within a heartbeat packet.
+	heartbeatMilestoneIndexBytesLength = 4
 
-	// The index to use to request the latest milestone via a milestone request message.
-	LatestMilestoneRequestIndex = 0
+	// latestMilestoneRequestIndex defines the index to use to request the latest milestone via a milestone request message.
+	latestMilestoneRequestIndex = 0
 )
 
 var (
-	// BlockMessageDefinition defines a block message's format.
-	BlockMessageDefinition = &message.Definition{
+	// blockMessageDefinition defines a block message's format.
+	blockMessageDefinition = &message.Definition{
 		ID:             MessageTypeBlock,
 		MaxBytesLength: iotago.BlockBinSerializedMaxSize,
 		VariableLength: true,
 	}
 
-	// The requested block ID gossipping packet.
+	// blockRequestMessageDefinition defines the requested block ID gossipping packet.
 	// Contains only an ID of a requested block payload.
-	BlockRequestMessageDefinition = &message.Definition{
+	blockRequestMessageDefinition = &message.Definition{
 		ID:             MessageTypeBlockRequest,
-		MaxBytesLength: RequestedBlockIDMsgBytesLength,
+		MaxBytesLength: requestedBlockIDMsgBytesLength,
 		VariableLength: false,
 	}
 
-	// The heartbeat packet containing the current solid, pruned and latest milestone index,
+	// heartbeatMessageDefinition defines the heartbeat packet containing the current solid, pruned and latest milestone index,
 	// number of connected peers and number of synced peers.
-	HeartbeatMessageDefinition = &message.Definition{
+	heartbeatMessageDefinition = &message.Definition{
 		ID:             MessageTypeHeartbeat,
-		MaxBytesLength: HeartbeatMilestoneIndexBytesLength*3 + 2,
+		MaxBytesLength: heartbeatMilestoneIndexBytesLength*3 + 2,
 		VariableLength: false,
 	}
 
-	// The requested milestone index packet.
-	MilestoneRequestMessageDefinition = &message.Definition{
+	// milestoneRequestMessageDefinition defines the requested milestone index packet.
+	milestoneRequestMessageDefinition = &message.Definition{
 		ID:             MessageTypeMilestoneRequest,
-		MaxBytesLength: RequestedMilestoneIndexMsgBytesLength,
+		MaxBytesLength: requestedMilestoneIndexMsgBytesLength,
 		VariableLength: false,
 	}
 )
 
-// NewBlockMessage creates a new block message.
-func NewBlockMessage(blockData []byte) ([]byte, error) {
+// newBlockMessage creates a new block message.
+func newBlockMessage(blockData []byte) ([]byte, error) {
 	blockBytesLength := uint16(len(blockData))
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+blockBytesLength))
 
@@ -87,24 +87,24 @@ func NewBlockMessage(blockData []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// NewBlockRequestMessage creates a block request message.
-func NewBlockRequestMessage(requestedBlockID iotago.BlockID) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+BlockRequestMessageDefinition.MaxBytesLength))
-	if err := tlv.WriteHeader(buf, MessageTypeBlockRequest, BlockRequestMessageDefinition.MaxBytesLength); err != nil {
+// newBlockRequestMessage creates a block request message.
+func newBlockRequestMessage(requestedBlockID iotago.BlockID) ([]byte, error) {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+blockRequestMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeBlockRequest, blockRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(buf, binary.LittleEndian, requestedBlockID[:RequestedBlockIDMsgBytesLength]); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, requestedBlockID[:requestedBlockIDMsgBytesLength]); err != nil {
 		return nil, err
 	}
 
 	return buf.Bytes(), nil
 }
 
-// NewHeartbeatMessage creates a new heartbeat message.
-func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedPeers uint8, syncedPeers uint8) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+HeartbeatMessageDefinition.MaxBytesLength))
-	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, HeartbeatMessageDefinition.MaxBytesLength); err != nil {
+// newHeartbeatMessage creates a new heartbeat message.
+func newHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedPeers uint8, syncedPeers uint8) ([]byte, error) {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+heartbeatMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, heartbeatMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
@@ -131,10 +131,10 @@ func NewHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneInd
 	return buf.Bytes(), nil
 }
 
-// NewMilestoneRequestMessage creates a new milestone request message.
-func NewMilestoneRequestMessage(requestedMilestoneIndex milestone.Index) ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+MilestoneRequestMessageDefinition.MaxBytesLength))
-	if err := tlv.WriteHeader(buf, MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition.MaxBytesLength); err != nil {
+// newMilestoneRequestMessage creates a new milestone request message.
+func newMilestoneRequestMessage(requestedMilestoneIndex milestone.Index) ([]byte, error) {
+	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+milestoneRequestMessageDefinition.MaxBytesLength))
+	if err := tlv.WriteHeader(buf, MessageTypeMilestoneRequest, milestoneRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
 	}
 
@@ -145,8 +145,8 @@ func NewMilestoneRequestMessage(requestedMilestoneIndex milestone.Index) ([]byte
 	return buf.Bytes(), nil
 }
 
-// ExtractRequestedMilestoneIndex extracts the requested milestone index from the given source.
-func ExtractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
+// extractRequestedMilestoneIndex extracts the requested milestone index from the given source.
+func extractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
 	if len(source) != serializer.UInt32ByteSize {
 		return 0, ErrInvalidSourceLength
 	}
@@ -176,6 +176,6 @@ func ParseHeartbeat(data []byte) *Heartbeat {
 	}
 }
 
-func HeartbeatCaller(handler interface{}, params ...interface{}) {
+func heartbeatCaller(handler interface{}, params ...interface{}) {
 	handler.(func(heartbeat *Heartbeat))(params[0].(*Heartbeat))
 }

@@ -38,11 +38,6 @@ func ProtocolCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*Protocol))(params[0].(*Protocol))
 }
 
-// StreamCaller gets called with a network.Stream.
-func StreamCaller(handler interface{}, params ...interface{}) {
-	handler.(func(network.Stream))(params[0].(network.Stream))
-}
-
 // StreamCancelCaller gets called with a network.Stream and its cancel reason.
 func StreamCancelCaller(handler interface{}, params ...interface{}) {
 	handler.(func(network.Stream, StreamCancelReason))(params[0].(network.Stream), params[1].(StreamCancelReason))
@@ -61,9 +56,6 @@ const (
 	// StreamCancelReasonNoUnknownPeerSlotAvailable defines a stream cancellation
 	// because no more unknown peers slot were available.
 	StreamCancelReasonNoUnknownPeerSlotAvailable StreamCancelReason = "no unknown peer slot available"
-	// StreamCancelReasonHostShutdown defines a stream cancellation
-	// because the host is shutting down.
-	StreamCancelReasonHostShutdown StreamCancelReason = "host shutdown"
 )
 
 var (

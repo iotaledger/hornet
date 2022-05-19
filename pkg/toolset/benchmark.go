@@ -165,7 +165,7 @@ func benchmarkCPU(args []string) error {
 				time.Sleep(printStatusInterval)
 
 				elapsed := time.Since(ts)
-				percentage, remaining := utils.EstimateRemainingTime(ts, int64(elapsed.Milliseconds()), int64(duration.Milliseconds()))
+				percentage, remaining := utils.EstimateRemainingTime(ts, elapsed.Milliseconds(), duration.Milliseconds())
 				megahashesPerSecond := float64(counter) / (elapsed.Seconds() * 1000000)
 				fmt.Printf("Average CPU speed: %0.2fMH/s (%d thread(s), %0.2f%%. %v left...)\n", megahashesPerSecond, threads, percentage, remaining.Truncate(time.Second))
 			}

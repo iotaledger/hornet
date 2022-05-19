@@ -14,9 +14,6 @@ import (
 )
 
 var (
-	// ErrInvalidAddressSize is returned if the size of the given address is incorrect.
-	ErrInvalidAddressSize = errors.New("invalid address size")
-
 	// ErrOutputsSumNotEqualTotalSupply is returned if the sum of the output deposits is not equal the total supply of tokens.
 	ErrOutputsSumNotEqualTotalSupply = errors.New("accumulated output balance is not equal to total supply")
 )

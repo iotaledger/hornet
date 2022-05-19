@@ -75,7 +75,7 @@ func generateEd25519Key(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolEd25519Key)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolEd25519Key)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolEd25519Key,
@@ -142,7 +142,7 @@ func generateEd25519Address(args []string) error {
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolEd25519Addr)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolEd25519Addr)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
 			ToolEd25519Addr,

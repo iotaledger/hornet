@@ -9,17 +9,15 @@ import (
 
 func newMapDB(metrics *metrics.DatabaseMetrics) *database.Database {
 
-	events := &database.Events{
-		DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
-		DatabaseCompaction: events.NewEvent(events.BoolCaller),
-	}
-
 	return database.New(
 		"",
 		mapdb.NewMapDB(),
 		database.EngineMapDB,
 		metrics,
-		events,
+		&database.Events{
+			DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
+			DatabaseCompaction: events.NewEvent(events.BoolCaller),
+		},
 		false,
 		nil,
 	)

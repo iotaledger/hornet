@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	// the ed25519 public key of the coordinator in hex representation.
+	// CfgProtocolPublicKeyRangesJSON defines the ed25519 public key of the coordinator in hex representation.
 	CfgProtocolPublicKeyRangesJSON = "publicKeyRanges"
 )
 

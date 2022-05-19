@@ -21,12 +21,6 @@ type address struct {
 	Balance uint64 `json:"balance"`
 }
 
-// addressesResponse defines the response of a GET debug addresses REST API call.
-type addressesResponse struct {
-	// The addresses (type + hex encoded address).
-	Addresses []*address `json:"addresses"`
-}
-
 // outputIDsResponse defines the response of a GET debug milestone diff REST API call.
 type milestoneDiffResponse struct {
 	// The index of the milestone.
