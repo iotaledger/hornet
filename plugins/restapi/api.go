@@ -126,16 +126,16 @@ var dashboardAllowedRoutes = map[string][]string{
 		"/api/v2/transactions",
 		"/api/plugins/indexer/v1",
 		"/api/plugins/spammer/v1",
-		"/api/plugins/participation/v2/events",
+		"/api/plugins/participation/v1/events",
 	},
 	http.MethodPost: {
 		"/api/v2/peers",
 		"/api/plugins/spammer/v1",
-		"/api/plugins/participation/v2/admin/events",
+		"/api/plugins/participation/v1/admin/events",
 	},
 	http.MethodDelete: {
 		"/api/v2/peers",
-		"/api/plugins/participation/v2/admin/events",
+		"/api/plugins/participation/v1/admin/events",
 	},
 }
 
