@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	// ErrCritical returned when a critical error stops the execution of a task.
+	// ErrCritical is returned when a critical error stops the execution of a task.
 	ErrCritical = errors.New("critical error")
 )
 

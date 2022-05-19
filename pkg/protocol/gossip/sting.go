@@ -26,16 +26,16 @@ const (
 )
 
 const (
-	// requestedBlockIDMsgBytesLength the amount of bytes used for the requested block ID.
+	// requestedBlockIDMsgBytesLength defines the amount of bytes used for the requested block ID.
 	requestedBlockIDMsgBytesLength = iotago.BlockIDLength
 
-	// requestedMilestoneIndexMsgBytesLength the amount of bytes used for the requested milestone index.
+	// requestedMilestoneIndexMsgBytesLength defines the amount of bytes used for the requested milestone index.
 	requestedMilestoneIndexMsgBytesLength = 4
 
-	// heartbeatMilestoneIndexBytesLength the amount of bytes used for a milestone index within a heartbeat packet.
+	// heartbeatMilestoneIndexBytesLength defines the amount of bytes used for a milestone index within a heartbeat packet.
 	heartbeatMilestoneIndexBytesLength = 4
 
-	// latestMilestoneRequestIndex the index to use to request the latest milestone via a milestone request message.
+	// latestMilestoneRequestIndex defines the index to use to request the latest milestone via a milestone request message.
 	latestMilestoneRequestIndex = 0
 )
 
@@ -47,7 +47,7 @@ var (
 		VariableLength: true,
 	}
 
-	// blockRequestMessageDefinition the requested block ID gossipping packet.
+	// blockRequestMessageDefinition defines the requested block ID gossipping packet.
 	// Contains only an ID of a requested block payload.
 	blockRequestMessageDefinition = &message.Definition{
 		ID:             MessageTypeBlockRequest,
@@ -55,7 +55,7 @@ var (
 		VariableLength: false,
 	}
 
-	// heartbeatMessageDefinition the heartbeat packet containing the current solid, pruned and latest milestone index,
+	// heartbeatMessageDefinition defines the heartbeat packet containing the current solid, pruned and latest milestone index,
 	// number of connected peers and number of synced peers.
 	heartbeatMessageDefinition = &message.Definition{
 		ID:             MessageTypeHeartbeat,
@@ -63,7 +63,7 @@ var (
 		VariableLength: false,
 	}
 
-	// milestoneRequestMessageDefinition the requested milestone index packet.
+	// milestoneRequestMessageDefinition defines the requested milestone index packet.
 	milestoneRequestMessageDefinition = &message.Definition{
 		ID:             MessageTypeMilestoneRequest,
 		MaxBytesLength: requestedMilestoneIndexMsgBytesLength,
