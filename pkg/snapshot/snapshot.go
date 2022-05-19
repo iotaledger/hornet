@@ -36,7 +36,7 @@ var (
 	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
 	// ErrInvalidSnapshotAvailabilityState is returned when a delta snapshot is available, but no full snapshot is found.
 	ErrInvalidSnapshotAvailabilityState = errors.New("invalid snapshot files availability")
-	// ErrNoMoreSEPToProduce is return when there are no more solid entry points to produce.
+	// ErrNoMoreSEPToProduce is returned when there are no more solid entry points to produce.
 	ErrNoMoreSEPToProduce = errors.New("no more SEP to produce")
 
 	ErrNoSnapshotSpecified                   = errors.New("no snapshot file was specified in the config")
