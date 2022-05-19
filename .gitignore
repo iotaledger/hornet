@@ -39,6 +39,7 @@ hornet.log
 integration-tests/logs/*.log
 integration-tests/logs/*.html
 integration-tests/logs/*.profile
+vis_[0-9]*.html
 
 # coordinator files
 coordinator.state

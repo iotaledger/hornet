@@ -18,7 +18,7 @@ func storageBlockByTransactionID(c echo.Context) (*storage.Block, error) {
 	}
 
 	// Get the first output of that transaction (using index 0)
-	outputID := &iotago.OutputID{}
+	outputID := iotago.OutputID{}
 	copy(outputID[:], transactionID[:])
 
 	output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(outputID)

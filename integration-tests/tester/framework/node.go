@@ -118,7 +118,7 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 						Data: []byte(data)},
 				}
 
-				if _, err := p.DebugNodeAPIClient.SubmitMessage(context.Background(), iotaBlock, p.Config.Protocol.ProtocolParameters()); err != nil {
+				if _, err := p.DebugNodeAPIClient.SubmitBlock(context.Background(), iotaBlock, p.Config.Protocol.ProtocolParameters()); err != nil {
 					spamErr = err
 					return
 				}

@@ -10,7 +10,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -116,42 +115,41 @@ func GetRequestContentType(c echo.Context, supportedContentTypes ...string) (str
 	return "", echo.ErrUnsupportedMediaType
 }
 
-func ParseBlockIDParam(c echo.Context) (hornet.BlockID, error) {
+func ParseBlockIDParam(c echo.Context) (iotago.BlockID, error) {
 	blockIDHex := strings.ToLower(c.Param(ParameterBlockID))
 
-	blockID, err := hornet.BlockIDFromHex(blockIDHex)
+	blockID, err := iotago.BlockIDFromHexString(blockIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid block ID: %s, error: %s", blockIDHex, err)
+		return iotago.EmptyBlockID(), errors.WithMessagef(ErrInvalidParameter, "invalid block ID: %s, error: %s", blockIDHex, err)
 	}
 	return blockID, nil
 }
 
-func ParseTransactionIDParam(c echo.Context) (*iotago.TransactionID, error) {
+func ParseTransactionIDParam(c echo.Context) (iotago.TransactionID, error) {
+	transactionID := iotago.TransactionID{}
 	transactionIDHex := strings.ToLower(c.Param(ParameterTransactionID))
 
 	transactionIDBytes, err := iotago.DecodeHex(transactionIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid transaction ID: %s, error: %s", transactionIDHex, err)
+		return transactionID, errors.WithMessagef(ErrInvalidParameter, "invalid transaction ID: %s, error: %s", transactionIDHex, err)
 	}
 
 	if len(transactionIDBytes) != iotago.TransactionIDLength {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid transaction ID: %s, invalid length: %d", transactionIDHex, len(transactionIDBytes))
+		return transactionID, errors.WithMessagef(ErrInvalidParameter, "invalid transaction ID: %s, invalid length: %d", transactionIDHex, len(transactionIDBytes))
 	}
 
-	var transactionID iotago.TransactionID
 	copy(transactionID[:], transactionIDBytes)
-	return &transactionID, nil
+	return transactionID, nil
 }
 
-func ParseOutputIDParam(c echo.Context) (*iotago.OutputID, error) {
+func ParseOutputIDParam(c echo.Context) (iotago.OutputID, error) {
 	outputIDParam := strings.ToLower(c.Param(ParameterOutputID))
 
 	outputID, err := iotago.OutputIDFromHex(outputIDParam)
 	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
+		return iotago.OutputID{}, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
-
-	return &outputID, nil
+	return outputID, nil
 }
 
 func ParseBech32AddressParam(c echo.Context, prefix iotago.NetworkPrefix) (iotago.Address, error) {

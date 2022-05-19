@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/gohornet/hornet/pkg/daemon"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/events"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -55,7 +55,6 @@ func runVisualizerFeed() {
 			for i, parent := range block.Parents() {
 				parentsHex[i] = parent.ToHex()[:VisualizerIDLength]
 			}
-
 			hub.BroadcastMsg(
 				&Msg{
 					Type: MsgTypeVertex,
@@ -78,7 +77,6 @@ func runVisualizerFeed() {
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
-
 			hub.BroadcastMsg(
 				&Msg{
 					Type: MsgTypeSolidInfo,
@@ -90,7 +88,7 @@ func runVisualizerFeed() {
 		})
 	})
 
-	onReceivedNewMilestoneBlock := events.NewClosure(func(blockID hornet.BlockID) {
+	onReceivedNewMilestoneBlock := events.NewClosure(func(blockID iotago.BlockID) {
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}

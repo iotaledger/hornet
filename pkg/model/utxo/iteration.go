@@ -144,7 +144,7 @@ func (u *Manager) ForEachUnspentOutputID(consumer OutputIDConsumer, options ...U
 func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
 
 	var innerErr error
-	if err := u.ForEachUnspentOutputID(func(outputID *iotago.OutputID) bool {
+	if err := u.ForEachUnspentOutputID(func(outputID iotago.OutputID) bool {
 		outputKey := outputStorageKeyForOutputID(outputID)
 
 		value, err := u.utxoStorage.Get(outputKey)
@@ -167,9 +167,9 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 	return innerErr
 }
 
-func (u *Manager) UnspentOutputsIDs(options ...UTXOIterateOption) ([]*iotago.OutputID, error) {
-	var outputIDs []*iotago.OutputID
-	consumerFunc := func(outputID *iotago.OutputID) bool {
+func (u *Manager) UnspentOutputsIDs(options ...UTXOIterateOption) (iotago.OutputIDs, error) {
+	var outputIDs iotago.OutputIDs
+	consumerFunc := func(outputID iotago.OutputID) bool {
 		outputIDs = append(outputIDs, outputID)
 		return true
 	}

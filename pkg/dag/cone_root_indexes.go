@@ -1,21 +1,20 @@
 package dag
 
 import (
-	"bytes"
 	"context"
 	"math"
 
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // updateOutdatedConeRootIndexes updates the cone root indexes of the given blocks.
 // the "outdatedBlockIDs" should be ordered from oldest to latest to avoid recursion.
-func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, outdatedBlockIDs hornet.BlockIDs, cmi milestone.Index) error {
+func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, outdatedBlockIDs iotago.BlockIDs, cmi milestone.Index) error {
 	for _, outdatedBlockID := range outdatedBlockIDs {
 		cachedBlockMeta, err := parentsTraverserStorage.CachedBlockMetadata(outdatedBlockID)
 		if err != nil {
@@ -58,7 +57,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 
 	// collect all parents in the cone that are not referenced,
 	// are no solid entry points and have no recent calculation index
-	var outdatedBlockIDs hornet.BlockIDs
+	var outdatedBlockIDs iotago.BlockIDs
 
 	startBlockID := cachedBlockMeta.Metadata().BlockID()
 
@@ -81,7 +80,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 				return false, nil
 			}
 
-			if bytes.Equal(startBlockID, cachedBlockMeta.Metadata().BlockID()) {
+			if startBlockID == cachedBlockMeta.Metadata().BlockID() {
 				// do not update indexes for the start block
 				return true, nil
 			}
@@ -100,7 +99,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			if bytes.Equal(startBlockID, cachedBlockMeta.Metadata().BlockID()) {
+			if startBlockID == cachedBlockMeta.Metadata().BlockID() {
 				// skip the start block, so it doesn't get added to the outdatedBlockIDs
 				return nil
 			}
@@ -112,7 +111,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(blockID hornet.BlockID) error {
+		func(blockID iotago.BlockID) error {
 			// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 			entryPointIndex, _, err := parentsTraverserStorage.SolidEntryPointsIndex(blockID)
 			if err != nil {
@@ -154,8 +153,8 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 // we have to walk the future cone, and update the past cone of all blocks that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same blocks multiple times.
-func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorage, blockIDs hornet.BlockIDs, cmi milestone.Index) error {
-	traversed := map[string]struct{}{}
+func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorage, blockIDs iotago.BlockIDs, cmi milestone.Index) error {
+	traversed := map[iotago.BlockID]struct{}{}
 
 	t := NewChildrenTraverser(traverserStorage)
 
@@ -169,7 +168,7 @@ func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorag
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 
-				_, previouslyTraversed := traversed[cachedBlockMeta.Metadata().BlockID().ToMapKey()]
+				_, previouslyTraversed := traversed[cachedBlockMeta.Metadata().BlockID()]
 
 				// only traverse this block if it was not traversed before and is solid
 				return !previouslyTraversed && cachedBlockMeta.Metadata().IsSolid(), nil
@@ -177,7 +176,7 @@ func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorag
 			// consumer
 			func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
-				traversed[cachedBlockMeta.Metadata().BlockID().ToMapKey()] = struct{}{}
+				traversed[cachedBlockMeta.Metadata().BlockID()] = struct{}{}
 
 				// updates the cone root indexes of the outdated past cone for this block
 				if _, _, err := ConeRootIndexes(ctx, traverserStorage, cachedBlockMeta.Retain(), cmi); err != nil { // meta pass +1

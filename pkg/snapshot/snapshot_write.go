@@ -13,7 +13,6 @@ import (
 	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -93,12 +92,12 @@ func newSEPsProducer(
 	}()
 
 	binder := producerFromChannels(prodChan, errChan)
-	return func() (hornet.BlockID, error) {
+	return func() (iotago.BlockID, error) {
 		obj, err := binder()
 		if obj == nil || err != nil {
-			return nil, err
+			return iotago.EmptyBlockID(), err
 		}
-		return obj.(hornet.BlockID), nil
+		return obj.(iotago.BlockID), nil
 	}
 }
 
@@ -226,7 +225,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 				}
 				return nil
 			},
-			func(id hornet.BlockID) error {
+			func(id iotago.BlockID) error {
 				// we don't care about solid entry points
 				return nil
 			}, nil, nil,
@@ -573,13 +572,13 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 		}()
 
 		binder := producerFromChannels(prodChan, nil)
-		return func() (hornet.BlockID, error) {
+		return func() (iotago.BlockID, error) {
 			obj, err := binder()
 			if obj == nil || err != nil {
-				return nil, err
+				return iotago.EmptyBlockID(), err
 			}
 			sepsCount++
-			return obj.(hornet.BlockID), nil
+			return obj.(iotago.BlockID), nil
 		}
 	}()
 
@@ -728,9 +727,9 @@ func CreateSnapshotFromStorage(
 	// create a prepped solid entry point producer which counts how many went through
 	sepsCount := 0
 	sepProducer := newSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
-	countingSepProducer := func() (hornet.BlockID, error) {
+	countingSepProducer := func() (iotago.BlockID, error) {
 		sep, err := sepProducer()
-		if sep != nil {
+		if err != nil {
 			sepsCount++
 		}
 		return sep, err

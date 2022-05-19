@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"time"
 
 	"github.com/pkg/errors"
@@ -15,10 +14,8 @@ import (
 
 	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -84,18 +81,14 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		}
 	}
 
-	// get all UTXOs and sort them by outputID
-	var outputIDs utxo.LexicalOrderedOutputIDs
-	outputIDs, err = dbStorage.UTXOManager().UnspentOutputsIDs()
+	// get all UTXOs
+	outputIDs, err := dbStorage.UTXOManager().UnspentOutputsIDs()
 	if err != nil {
 		return err
 	}
 
-	// sort the OutputIDs lexicographically by their ID
-	sort.Sort(outputIDs)
-
 	// write all unspent outputs in lexicographical order
-	for _, outputID := range outputIDs {
+	for _, outputID := range outputIDs.RemoveDupsAndSort() {
 		output, err := dbStorage.UTXOManager().ReadOutputByOutputID(outputID)
 		if err != nil {
 			return err
@@ -110,16 +103,14 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	// calculate sha256 hash of the current ledger state
 	snapshotHashSumWithoutSEPs := lsHash.Sum(nil)
 
-	var solidEntryPoints hornet.LexicalOrderedBlockIDs
+	var solidEntryPoints iotago.BlockIDs
 	dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
 		solidEntryPoints = append(solidEntryPoints, sep.BlockID)
 		return true
 	})
-	// sort the solid entry points lexicographically by their BlockID
-	sort.Sort(solidEntryPoints)
 
 	// write all solid entry points in lexicographical order
-	for _, solidEntryPoint := range solidEntryPoints {
+	for _, solidEntryPoint := range solidEntryPoints.RemoveDupsAndSort() {
 		sepBytes, err := solidEntryPoint.MarshalBinary()
 		if err != nil {
 			return fmt.Errorf("unable to serialize solid entry point %s: %w", solidEntryPoint.ToHex(), err)

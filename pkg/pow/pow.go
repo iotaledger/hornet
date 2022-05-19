@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -22,7 +21,7 @@ const (
 type proofOfWorkFunc func(ctx context.Context, data []byte, parallelism ...int) (uint64, error)
 
 // RefreshTipsFunc refreshes tips of the block if PoW takes longer than a configured duration.
-type RefreshTipsFunc = func() (tips hornet.BlockIDs, err error)
+type RefreshTipsFunc = func() (tips iotago.BlockIDs, err error)
 
 // Handler handles PoW requests of the node and uses local PoW.
 // It refreshes the tips of blocks during PoW.
@@ -103,7 +102,7 @@ func (h *Handler) DoPoW(ctx context.Context, block *iotago.Block, parallelism in
 				if err != nil {
 					return 0, err
 				}
-				block.Parents = tips.ToSliceOfArrays()
+				block.Parents = tips
 
 				// replace the powData to update the new tips
 				powData, err = getPoWData(block)

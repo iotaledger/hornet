@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type TipScore int
@@ -41,7 +41,7 @@ func NewTipScoreCalculator(storage *storage.Storage, maxDeltaBlockYoungestConeRo
 	}
 }
 
-func (t *TipScoreCalculator) TipScore(ctx context.Context, blockID hornet.BlockID, cmi milestone.Index) (TipScore, error) {
+func (t *TipScoreCalculator) TipScore(ctx context.Context, blockID iotago.BlockID, cmi milestone.Index) (TipScore, error) {
 	cachedBlockMeta := t.storage.CachedBlockMetadataOrNil(blockID) // meta +1
 	if cachedBlockMeta == nil {
 		return TipScoreNotFound, nil

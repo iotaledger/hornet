@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	"crypto/ed25519"
 	"fmt"
 
@@ -41,7 +40,7 @@ func (hd *HDWallet) BookSpents(spentOutputs []*utxo.Output) {
 func (hd *HDWallet) BookSpent(spentOutput *utxo.Output) {
 	newUtxo := make([]*utxo.Output, 0)
 	for _, u := range hd.utxo {
-		if bytes.Equal(u.OutputID()[:], spentOutput.OutputID()[:]) {
+		if u.OutputID() == spentOutput.OutputID() {
 			fmt.Printf("%s spent %s\n", hd.name, u.OutputID().ToHex())
 			continue
 		}

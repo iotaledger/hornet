@@ -7,7 +7,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/daemon"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -15,6 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hive.go/workerpool"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func (t *Tangle) ConfigureTangleProcessor() {
@@ -32,7 +32,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	t.processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.processValidMilestone(task.Param(0).(hornet.BlockID), task.Param(1).(*storage.CachedMilestone), task.Param(2).(bool)) // milestone pass +1
+		t.processValidMilestone(task.Param(0).(iotago.BlockID), task.Param(1).(*storage.CachedMilestone), task.Param(2).(bool)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.processValidMilestoneWorkerCount), workerpool.QueueSize(t.processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -84,7 +84,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.messageProcessor.Broadcast(cachedBlockMeta) // meta pass +1
 	})
 
-	onReceivedValidMilestone := events.NewClosure(func(blockID hornet.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
+	onReceivedValidMilestone := events.NewClosure(func(blockID iotago.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
 
 		if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 			// do not process the milestone if the node was shut down
@@ -241,7 +241,7 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 	// with the block it issued itself because the block may be not solid yet and therefore their database entries
 	// are not created yet.
 	t.Events.ProcessedBlock.Trigger(incomingBlock.BlockID())
-	t.blockProcessedSyncEvent.Trigger(incomingBlock.BlockID().ToMapKey())
+	t.blockProcessedSyncEvent.Trigger(incomingBlock.BlockID())
 
 	for _, request := range requests {
 		// mark the received request as processed
@@ -259,23 +259,23 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 }
 
 // RegisterBlockProcessedEvent returns a channel that gets closed when the block is processed.
-func (t *Tangle) RegisterBlockProcessedEvent(blockID hornet.BlockID) chan struct{} {
-	return t.blockProcessedSyncEvent.RegisterEvent(blockID.ToMapKey())
+func (t *Tangle) RegisterBlockProcessedEvent(blockID iotago.BlockID) chan struct{} {
+	return t.blockProcessedSyncEvent.RegisterEvent(blockID)
 }
 
 // DeregisterBlockProcessedEvent removes a registered event to free the memory if not used.
-func (t *Tangle) DeregisterBlockProcessedEvent(blockID hornet.BlockID) {
-	t.blockProcessedSyncEvent.DeregisterEvent(blockID.ToMapKey())
+func (t *Tangle) DeregisterBlockProcessedEvent(blockID iotago.BlockID) {
+	t.blockProcessedSyncEvent.DeregisterEvent(blockID)
 }
 
 // RegisterBlockSolidEvent returns a channel that gets closed when the block is marked as solid.
-func (t *Tangle) RegisterBlockSolidEvent(blockID hornet.BlockID) chan struct{} {
-	return t.blockSolidSyncEvent.RegisterEvent(blockID.ToMapKey())
+func (t *Tangle) RegisterBlockSolidEvent(blockID iotago.BlockID) chan struct{} {
+	return t.blockSolidSyncEvent.RegisterEvent(blockID)
 }
 
 // DeregisterBlockSolidEvent removes a registered event to free the memory if not used.
-func (t *Tangle) DeregisterBlockSolidEvent(blockID hornet.BlockID) {
-	t.blockSolidSyncEvent.DeregisterEvent(blockID.ToMapKey())
+func (t *Tangle) DeregisterBlockSolidEvent(blockID iotago.BlockID) {
+	t.blockSolidSyncEvent.DeregisterEvent(blockID)
 }
 
 // RegisterMilestoneConfirmedEvent returns a channel that gets closed when the milestone is confirmed.

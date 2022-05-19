@@ -3,7 +3,6 @@ package utxo
 import (
 	"encoding/binary"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
@@ -177,8 +176,8 @@ func ReceiptToOutputs(r *iotago.ReceiptMilestoneOpt, milestoneID iotago.Mileston
 			},
 		}
 
-		// outputs created by milestone receipts are identified by NullBlockID
-		outputs[outputIndex] = CreateOutput(&outputID, hornet.NullBlockID(), msIndex, msTimestamp, output)
+		// outputs created by milestone receipts are identified by EmptyBlockID
+		outputs[outputIndex] = CreateOutput(outputID, iotago.EmptyBlockID(), msIndex, msTimestamp, output)
 	}
 	return outputs, nil
 }

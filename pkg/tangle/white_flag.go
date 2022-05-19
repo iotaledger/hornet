@@ -7,7 +7,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -24,7 +23,7 @@ var (
 // with given milestone index, timestamp and previousMilestoneID.
 // Attention: this call puts missing parents of the cone as undiscardable requests into the request queue.
 // Therefore the caller needs to be trustful (e.g. coordinator plugin).
-func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.BlockIDs, previousMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
+func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, index milestone.Index, timestamp uint32, parents iotago.BlockIDs, previousMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
 
 	// check if the requested milestone index would be the next one
 	if index > t.syncManager.ConfirmedMilestoneIndex()+1 {

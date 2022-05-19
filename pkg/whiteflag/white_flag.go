@@ -10,7 +10,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -44,30 +43,30 @@ type Confirmation struct {
 	// The milestone ID of the milestone that got confirmed.
 	MilestoneID iotago.MilestoneID
 	// The parents of the milestone that got confirmed.
-	MilestoneParents hornet.BlockIDs
+	MilestoneParents iotago.BlockIDs
 	// The ledger mutations and referenced blocks of this milestone.
 	Mutations *WhiteFlagMutations
 }
 
 type BlockWithConflict struct {
-	BlockID  hornet.BlockID
+	BlockID  iotago.BlockID
 	Conflict storage.Conflict
 }
 
 // WhiteFlagMutations contains the ledger mutations and referenced blocks applied to a cone under the "white-flag" approach.
 type WhiteFlagMutations struct {
 	// The blocks which mutate the ledger in the order in which they were applied.
-	BlocksIncludedWithTransactions hornet.BlockIDs
+	BlocksIncludedWithTransactions iotago.BlockIDs
 	// The blocks which were excluded as they were conflicting with the mutations.
 	BlocksExcludedWithConflictingTransactions []BlockWithConflict
 	// The blocks which were excluded because they did not include a value transaction.
-	BlocksExcludedWithoutTransactions hornet.BlockIDs
+	BlocksExcludedWithoutTransactions iotago.BlockIDs
 	// The blocks which were referenced by the milestone (should be the sum of BlocksIncludedWithTransactions + BlocksExcludedWithConflictingTransactions + BlocksExcludedWithoutTransactions).
-	BlocksReferenced hornet.BlockIDs
+	BlocksReferenced iotago.BlockIDs
 	// Contains the newly created Unspent Outputs by the given confirmation.
-	NewOutputs map[string]*utxo.Output
+	NewOutputs map[iotago.OutputID]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
-	NewSpents map[string]*utxo.Spent
+	NewSpents map[iotago.OutputID]*utxo.Spent
 	// The merkle tree root hash of all referenced blocks in the past cone.
 	InclusionMerkleRoot [iotago.MilestoneMerkleProofLength]byte
 	// The merkle tree root hash of all included transaction blocks.
@@ -87,17 +86,17 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	cachedBlockFunc storage.CachedBlockFunc,
 	msIndex milestone.Index,
 	msTimestamp uint32,
-	parents hornet.BlockIDs,
+	parents iotago.BlockIDs,
 	previousMilestoneID iotago.MilestoneID,
 	traversalCondition dag.Predicate) (*WhiteFlagMutations, error) {
 
 	wfConf := &WhiteFlagMutations{
-		BlocksIncludedWithTransactions:            make(hornet.BlockIDs, 0),
+		BlocksIncludedWithTransactions:            make(iotago.BlockIDs, 0),
 		BlocksExcludedWithConflictingTransactions: make([]BlockWithConflict, 0),
-		BlocksExcludedWithoutTransactions:         make(hornet.BlockIDs, 0),
-		BlocksReferenced:                          make(hornet.BlockIDs, 0),
-		NewOutputs:                                make(map[string]*utxo.Output),
-		NewSpents:                                 make(map[string]*utxo.Spent),
+		BlocksExcludedWithoutTransactions:         make(iotago.BlockIDs, 0),
+		BlocksReferenced:                          make(iotago.BlockIDs, 0),
+		NewOutputs:                                make(map[iotago.OutputID]*utxo.Output),
+		NewSpents:                                 make(map[iotago.OutputID]*utxo.Spent),
 	}
 
 	semValCtx := &iotago.SemanticValidationContext{
@@ -120,34 +119,35 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	seenPreviousMilestoneID := isFirstMilestone
 	internalTraversalCondition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 		if !seenPreviousMilestoneID && cachedBlockMeta.Metadata().IsMilestone() {
-			blockMilestone, err := cachedBlockFunc(cachedBlockMeta.Metadata().BlockID()) // block +1
+			blockID := cachedBlockMeta.Metadata().BlockID()
+			blockMilestone, err := cachedBlockFunc(blockID) // block +1
 			if err != nil {
 				return false, err
 			}
 			if blockMilestone == nil {
-				return false, fmt.Errorf("ComputeWhiteFlagMutations: block not found for milestone block ID: %v", cachedBlockMeta.Metadata().BlockID().ToHex())
+				return false, fmt.Errorf("ComputeWhiteFlagMutations: block not found for milestone block ID: %v", blockID.ToHex())
 			}
 			defer blockMilestone.Release(true) // block -1
 
 			milestonePayload := blockMilestone.Block().Milestone()
 			if milestonePayload == nil {
-				return false, fmt.Errorf("ComputeWhiteFlagMutations: block for milestone block ID does not contain a milestone payload: %v", cachedBlockMeta.Metadata().BlockID().ToHex())
+				return false, fmt.Errorf("ComputeWhiteFlagMutations: block for milestone block ID does not contain a milestone payload: %v", blockID.ToHex())
 			}
 
-			msIDPtr, err := milestonePayload.ID()
+			msID, err := milestonePayload.ID()
 			if err != nil {
 				return false, err
 			}
 
 			// Compare this milestones ID with the previousMilestoneID
-			seenPreviousMilestoneID = *msIDPtr == previousMilestoneID
+			seenPreviousMilestoneID = msID == previousMilestoneID
 			if seenPreviousMilestoneID {
 				// Check that the milestone timestamp has increased
 				if milestonePayload.Timestamp >= msTimestamp {
-					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone timestamp is smaller or equal to previous milestone timestamp (old: %d, new: %d): %v", milestonePayload.Timestamp, msTimestamp, cachedBlockMeta.Metadata().BlockID().ToHex())
+					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone timestamp is smaller or equal to previous milestone timestamp (old: %d, new: %d): %v", milestonePayload.Timestamp, msTimestamp, blockID.ToHex())
 				}
 				if (milestonePayload.Index + 1) != uint32(msIndex) {
-					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone index did not increase by one compared to previous milestone index (old: %d, new: %d): %v", milestonePayload.Index, msIndex, cachedBlockMeta.Metadata().BlockID().ToHex())
+					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone index did not increase by one compared to previous milestone index (old: %d, new: %d): %v", milestonePayload.Index, msIndex, blockID.ToHex())
 				}
 			}
 		}
@@ -166,7 +166,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			return err
 		}
 		if cachedBlock == nil {
-			return fmt.Errorf("%w: block %s of candidate block %s doesn't exist", common.ErrBlockNotFound, blockID.ToHex(), blockID.ToHex())
+			return fmt.Errorf("%w: block of candidate block %s not found", common.ErrBlockNotFound, blockID.ToHex())
 		}
 		defer cachedBlock.Release(true) // block -1
 
@@ -194,7 +194,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			for _, input := range inputs {
 
 				// check if this input was already spent during the confirmation
-				_, hasSpent := wfConf.NewSpents[string(input[:])]
+				_, hasSpent := wfConf.NewSpents[input]
 				if hasSpent {
 					// UTXO already spent, so mark as conflict
 					conflict = storage.ConflictInputUTXOAlreadySpentInThisMilestone
@@ -202,7 +202,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				}
 
 				// check if this input was newly created during the confirmation
-				output, hasOutput := wfConf.NewOutputs[string(input[:])]
+				output, hasOutput := wfConf.NewOutputs[input]
 				if hasOutput {
 					// UTXO is in the current ledger mutation, so use it
 					inputOutputs = append(inputOutputs, output)
@@ -279,13 +279,13 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 		// save the inputs as spent
 		for i, input := range inputOutputs {
 			spent := utxo.NewSpent(input, transactionID, msIndex, msTimestamp)
-			wfConf.NewSpents[string(input.OutputID()[:])] = spent
+			wfConf.NewSpents[input.OutputID()] = spent
 			newSpents[i] = spent
 		}
 
 		// add new outputs
 		for _, output := range generatedOutputs {
-			wfConf.NewOutputs[string(output.OutputID()[:])] = output
+			wfConf.NewOutputs[output.OutputID()] = output
 		}
 
 		return nil

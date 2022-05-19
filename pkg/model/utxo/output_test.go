@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo/utils"
 	"github.com/iotaledger/hive.go/byteutils"
@@ -92,7 +91,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	require.True(t, has)
 }
 
-func CreateOutputAndAssertSerialization(t *testing.T, blockID hornet.BlockID, msIndex milestone.Index, msTimestamp uint32, outputID *iotago.OutputID, iotaOutput iotago.Output) *Output {
+func CreateOutputAndAssertSerialization(t *testing.T, blockID iotago.BlockID, msIndex milestone.Index, msTimestamp uint32, outputID iotago.OutputID, iotaOutput iotago.Output) *Output {
 	output := CreateOutput(outputID, blockID, msIndex, msTimestamp, iotaOutput)
 	outputBytes, err := output.Output().Serialize(serializer.DeSeriModeNoValidation, nil)
 	require.NoError(t, err)
@@ -100,7 +99,7 @@ func CreateOutputAndAssertSerialization(t *testing.T, blockID hornet.BlockID, ms
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:]), output.kvStorableKey())
 
 	value := output.kvStorableValue()
-	require.Equal(t, blockID, hornet.BlockIDFromSlice(value[:32]))
+	require.Equal(t, blockID[:], value[:32])
 	require.Equal(t, uint32(msIndex), binary.LittleEndian.Uint32(value[32:36]))
 	require.Equal(t, msTimestamp, binary.LittleEndian.Uint32(value[36:40]))
 	require.Equal(t, outputBytes, value[40:])
@@ -109,7 +108,7 @@ func CreateOutputAndAssertSerialization(t *testing.T, blockID hornet.BlockID, ms
 }
 
 func CreateSpentAndAssertSerialization(t *testing.T, output *Output) *Spent {
-	transactionID := &iotago.TransactionID{}
+	transactionID := iotago.TransactionID{}
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
 	confirmationIndex := milestone.Index(6788362)
@@ -119,7 +118,8 @@ func CreateSpentAndAssertSerialization(t *testing.T, output *Output) *Spent {
 
 	require.Equal(t, output, spent.Output())
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputSpent}, output.OutputID()[:]), spent.kvStorableKey())
+	outputID := output.OutputID()
+	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputSpent}, outputID[:]), spent.kvStorableKey())
 
 	value := spent.kvStorableValue()
 	require.Equal(t, transactionID[:], value[:32])

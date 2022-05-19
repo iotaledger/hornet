@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -29,8 +28,10 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func randBlockID() hornet.BlockID {
-	return hornet.BlockID(randBytes(iotago.BlockIDLength))
+func randBlockID() iotago.BlockID {
+	blockID := iotago.BlockID{}
+	copy(blockID[:], randBytes(iotago.BlockIDLength))
+	return blockID
 }
 
 func TestVisualizer(t *testing.T) {
@@ -47,19 +48,19 @@ func TestVisualizer(t *testing.T) {
 		v := Vertex{BlockID: randBlockID().ToHex()}
 		if i <= getFromLast {
 			// only one parent at the beginning
-			v.Parents = hornet.BlockIDs{hornet.NullBlockID()}.ToHex()
+			v.Parents = iotago.BlockIDs{iotago.EmptyBlockID()}.ToHex()
 			vertices = append(vertices, v)
 			continue
 		}
 
 		l := len(vertices)
-		parents := hornet.BlockIDs{}
+		parents := iotago.BlockIDs{}
 		for j := 2; j <= 2+rand.Intn(7); j++ {
-			blockID, err := hornet.BlockIDFromHex(vertices[l-1-rand.Intn(getFromLast)].BlockID)
+			blockID, err := iotago.BlockIDFromHexString(vertices[l-1-rand.Intn(getFromLast)].BlockID)
 			assert.NoError(t, err)
 			parents = append(parents, blockID)
 		}
-		parents = parents.RemoveDupsAndSortByLexicalOrder()
+		parents = parents.RemoveDupsAndSort()
 		v.Parents = parents.ToHex()
 		vertices = append(vertices, v)
 	}

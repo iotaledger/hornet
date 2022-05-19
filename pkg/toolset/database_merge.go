@@ -19,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -213,13 +212,13 @@ func copyMilestoneCone(
 				return false, nil
 			}
 		}
-
-		cachedBlock, err := cachedBlockFuncSource(cachedBlockMeta.Metadata().BlockID()) // block +1
+		blockID := cachedBlockMeta.Metadata().BlockID()
+		cachedBlock, err := cachedBlockFuncSource(blockID) // block +1
 		if err != nil {
 			return false, err
 		}
 		if cachedBlock == nil {
-			return false, fmt.Errorf("block not found: %s", cachedBlockMeta.Metadata().BlockID().ToHex())
+			return false, fmt.Errorf("block not found: %s", blockID.ToHex())
 		}
 		defer cachedBlock.Release(true) // block -1
 
@@ -252,7 +251,7 @@ func copyMilestoneCone(
 	// traverse the milestone and collect all blocks that were referenced by this milestone or newer
 	if err := parentsTraverserInterface.Traverse(
 		ctx,
-		hornet.BlockIDsFromSliceOfArrays(milestonePayload.Parents),
+		milestonePayload.Parents,
 		condition,
 		nil,
 		// called on missing parents
@@ -361,11 +360,11 @@ func mergeViaAPI(
 	chronicleMode bool,
 	apiParallelism int) error {
 
-	getBlockViaAPI := func(blockID hornet.BlockID) (*iotago.Block, error) {
+	getBlockViaAPI := func(blockID iotago.BlockID) (*iotago.Block, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		block, err := client.BlockByBlockID(ctx, blockID.ToArray(), protoParas)
+		block, err := client.BlockByBlockID(ctx, blockID, protoParas)
 		if err != nil {
 			return nil, err
 		}
@@ -605,7 +604,7 @@ func getNodeHTTPAPIClient(nodeURL string, chronicleMode bool, chronicleKeyspace 
 	return client
 }
 
-type GetBlockFunc func(blockID hornet.BlockID) (*iotago.Block, error)
+type GetBlockFunc func(blockID iotago.BlockID) (*iotago.Block, error)
 
 // ProxyStorage is used to temporarily store changes to an intermediate storage,
 // which then can be merged with the target store in a single commit.
@@ -638,7 +637,7 @@ func NewProxyStorage(
 }
 
 // block +1
-func (s *ProxyStorage) CachedBlock(blockID hornet.BlockID) (*storage.CachedBlock, error) {
+func (s *ProxyStorage) CachedBlock(blockID iotago.BlockID) (*storage.CachedBlock, error) {
 	if !s.storeTarget.ContainsBlock(blockID) {
 		if !s.storeProxy.ContainsBlock(blockID) {
 			block, err := s.getBlockFunc(blockID)
@@ -665,7 +664,7 @@ func (s *ProxyStorage) CachedBlock(blockID hornet.BlockID) (*storage.CachedBlock
 }
 
 // meta +1
-func (s *ProxyStorage) CachedBlockMetadata(blockID hornet.BlockID) (*storage.CachedMetadata, error) {
+func (s *ProxyStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.CachedMetadata, error) {
 	cachedBlock, err := s.CachedBlock(blockID) // block +1
 	if err != nil {
 		return nil, err
@@ -677,11 +676,11 @@ func (s *ProxyStorage) CachedBlockMetadata(blockID hornet.BlockID) (*storage.Cac
 	return cachedBlock.CachedMetadata(), nil // meta +1
 }
 
-func (s *ProxyStorage) SolidEntryPointsContain(blockID hornet.BlockID) (bool, error) {
+func (s *ProxyStorage) SolidEntryPointsContain(blockID iotago.BlockID) (bool, error) {
 	return s.storeTarget.SolidEntryPointsContain(blockID)
 }
 
-func (s *ProxyStorage) SolidEntryPointsIndex(blockID hornet.BlockID) (milestone.Index, bool, error) {
+func (s *ProxyStorage) SolidEntryPointsIndex(blockID iotago.BlockID) (milestone.Index, bool, error) {
 	return s.storeTarget.SolidEntryPointsIndex(blockID)
 }
 
@@ -706,10 +705,10 @@ func (s *ProxyStorage) StoreBlockIfAbsent(block *storage.Block) (cachedBlock *st
 	return s.storeProxy.StoreBlockIfAbsent(block)
 }
 
-func (s *ProxyStorage) StoreChild(parentBlockID hornet.BlockID, childBlockID hornet.BlockID) *storage.CachedChild {
+func (s *ProxyStorage) StoreChild(parentBlockID iotago.BlockID, childBlockID iotago.BlockID) *storage.CachedChild {
 	return s.storeProxy.StoreChild(parentBlockID, childBlockID)
 }
 
-func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, blockID hornet.BlockID) (*storage.CachedMilestone, bool) {
+func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, blockID iotago.BlockID) (*storage.CachedMilestone, bool) {
 	return s.storeProxy.StoreMilestoneIfAbsent(milestone, blockID)
 }

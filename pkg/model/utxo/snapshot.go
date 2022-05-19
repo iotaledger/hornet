@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -17,7 +16,7 @@ import (
 func (o *Output) SnapshotBytes() []byte {
 	m := marshalutil.New()
 	m.WriteBytes(o.outputID[:])
-	m.WriteBytes(o.blockID)
+	m.WriteBytes(o.blockID[:])
 	m.WriteUint32(uint32(o.milestoneIndex))
 	m.WriteUint32(o.milestoneTimestamp)
 
@@ -77,7 +76,7 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("invalid LS output length: %w", err)
 	}
 
-	return CreateOutput(&outputID, hornet.BlockIDFromArray(blockID), milestone.Index(confirmationIndex), milestoneTimestamp, output), nil
+	return CreateOutput(outputID, blockID, milestone.Index(confirmationIndex), milestoneTimestamp, output), nil
 }
 
 func (s *Spent) SnapshotBytes() []byte {
@@ -93,7 +92,7 @@ func SpentFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolPa
 		return nil, err
 	}
 
-	transactionID := &iotago.TransactionID{}
+	transactionID := iotago.TransactionID{}
 	if _, err := io.ReadFull(reader, transactionID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS target transaction ID: %w", err)
 	}

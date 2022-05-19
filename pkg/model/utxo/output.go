@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
@@ -13,23 +12,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// LexicalOrderedOutputIDs are ordered in lexical order by their ID.
-type LexicalOrderedOutputIDs []*iotago.OutputID
-
-func (l LexicalOrderedOutputIDs) Len() int {
-	return len(l)
-}
-
-func (l LexicalOrderedOutputIDs) Less(i, j int) bool {
-	return bytes.Compare(l[i][:], l[j][:]) < 0
-}
-
-func (l LexicalOrderedOutputIDs) Swap(i, j int) {
-	l[i], l[j] = l[j], l[i]
-}
-
-// LexicalOrderedOutputs are outputs
-// ordered in lexical order by their outputID.
+// LexicalOrderedOutputs are outputs ordered in lexical order by their outputID.
 type LexicalOrderedOutputs []*Output
 
 func (l LexicalOrderedOutputs) Len() int {
@@ -47,15 +30,15 @@ func (l LexicalOrderedOutputs) Swap(i, j int) {
 type Output struct {
 	kvStorable
 
-	outputID           *iotago.OutputID
-	blockID            hornet.BlockID
+	outputID           iotago.OutputID
+	blockID            iotago.BlockID
 	milestoneIndex     milestone.Index
 	milestoneTimestamp uint32
 
 	output iotago.Output
 }
 
-func (o *Output) OutputID() *iotago.OutputID {
+func (o *Output) OutputID() iotago.OutputID {
 	return o.outputID
 }
 
@@ -63,7 +46,7 @@ func (o *Output) mapKey() string {
 	return string(o.outputID[:])
 }
 
-func (o *Output) BlockID() hornet.BlockID {
+func (o *Output) BlockID() iotago.BlockID {
 	return o.blockID
 }
 
@@ -92,12 +75,12 @@ type Outputs []*Output
 func (o Outputs) ToOutputSet() iotago.OutputSet {
 	outputSet := make(iotago.OutputSet)
 	for _, output := range o {
-		outputSet[*output.outputID] = output.output
+		outputSet[output.outputID] = output.output
 	}
 	return outputSet
 }
 
-func CreateOutput(outputID *iotago.OutputID, blockID hornet.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
+func CreateOutput(outputID iotago.OutputID, blockID iotago.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
 	return &Output{
 		outputID:           outputID,
 		blockID:            blockID,
@@ -107,7 +90,7 @@ func CreateOutput(outputID *iotago.OutputID, blockID hornet.BlockID, milestoneIn
 	}
 }
 
-func NewOutput(blockID hornet.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(blockID iotago.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	txID, err := transaction.ID()
 	if err != nil {
@@ -119,14 +102,14 @@ func NewOutput(blockID hornet.BlockID, milestoneIndex milestone.Index, milestone
 		return nil, errors.New("output not found")
 	}
 	output = transaction.Essence.Outputs[int(index)]
-	outputID := iotago.OutputIDFromTransactionIDAndIndex(*txID, index)
+	outputID := iotago.OutputIDFromTransactionIDAndIndex(txID, index)
 
-	return CreateOutput(&outputID, blockID, milestoneIndex, milestoneTimestamp, output), nil
+	return CreateOutput(outputID, blockID, milestoneIndex, milestoneTimestamp, output), nil
 }
 
 //- kvStorable
 
-func outputStorageKeyForOutputID(outputID *iotago.OutputID) []byte {
+func outputStorageKeyForOutputID(outputID iotago.OutputID) []byte {
 	ms := marshalutil.New(35)
 	ms.WriteByte(UTXOStoreKeyPrefixOutput) // 1 byte
 	ms.WriteBytes(outputID[:])             // 34 bytes
@@ -139,7 +122,7 @@ func (o *Output) kvStorableKey() (key []byte) {
 
 func (o *Output) kvStorableValue() (value []byte) {
 	ms := marshalutil.New(40)
-	ms.WriteBytes(o.blockID)                 // 32 bytes
+	ms.WriteBytes(o.blockID[:])              // 32 bytes
 	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
 	ms.WriteUint32(o.milestoneTimestamp)     // 4 bytes
 
@@ -215,7 +198,7 @@ func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
 
 //- Manager
 
-func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.OutputID) (*Output, error) {
+func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID iotago.OutputID) (*Output, error) {
 	key := outputStorageKeyForOutputID(outputID)
 	value, err := u.utxoStorage.Get(key)
 	if err != nil {
@@ -229,7 +212,7 @@ func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.OutputID) 
 	return output, nil
 }
 
-func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID *iotago.OutputID) ([]byte, error) {
+func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID iotago.OutputID) ([]byte, error) {
 	key := outputStorageKeyForOutputID(outputID)
 	value, err := u.utxoStorage.Get(key)
 	if err != nil {
@@ -244,7 +227,7 @@ func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID *iotago.Ou
 	return value[offset:], nil
 }
 
-func (u *Manager) ReadOutputByOutputID(outputID *iotago.OutputID) (*Output, error) {
+func (u *Manager) ReadOutputByOutputID(outputID iotago.OutputID) (*Output, error) {
 
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()

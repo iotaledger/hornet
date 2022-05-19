@@ -10,10 +10,10 @@ import (
 	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/protocol"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -174,7 +174,7 @@ func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex mi
 }
 
 // SendBlockRequest sends a block request message to the given peer.
-func (p *Protocol) SendBlockRequest(requestedBlockID hornet.BlockID) {
+func (p *Protocol) SendBlockRequest(requestedBlockID iotago.BlockID) {
 	blockRequestMessage, err := NewBlockRequestMessage(requestedBlockID)
 	if err != nil {
 		return

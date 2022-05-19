@@ -13,7 +13,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -145,7 +144,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SEP
-	te.storage.SolidEntryPointsAddWithoutLocking(hornet.NullBlockID(), 0)
+	te.storage.SolidEntryPointsAddWithoutLocking(iotago.EmptyBlockID(), 0)
 
 	// Initialize SyncManager
 	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), milestone.Index(belowMaxDepth))
@@ -163,7 +162,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 			},
 		},
 	}
-	te.GenesisOutput = utxo.CreateOutput(&iotago.OutputID{}, hornet.NullBlockID(), 0, 0, output)
+	te.GenesisOutput = utxo.CreateOutput(iotago.OutputID{}, iotago.EmptyBlockID(), 0, 0, output)
 	err = te.storage.UTXOManager().AddUnspentOutput(te.GenesisOutput)
 	require.NoError(te.TestInterface, err)
 
@@ -179,7 +178,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.VerifyCMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
-		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{}, false)
+		_, confStats := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{}, false)
 		require.Equal(te.TestInterface, 1, confStats.BlocksReferenced)                  // 1 for previous milestone
 		require.Equal(te.TestInterface, 1, confStats.BlocksExcludedWithoutTransactions) // 1 for previous milestone
 		require.Equal(te.TestInterface, 0, confStats.BlocksIncludedWithTransactions)
@@ -229,11 +228,11 @@ func (te *TestEnvironment) LastPreviousMilestoneID() iotago.MilestoneID {
 	return te.coo.LastPreviousMilestoneID()
 }
 
-func (te *TestEnvironment) LastMilestoneBlockID() hornet.BlockID {
+func (te *TestEnvironment) LastMilestoneBlockID() iotago.BlockID {
 	return te.coo.LastMilestoneBlockID()
 }
 
-func (te *TestEnvironment) LastMilestoneParents() hornet.BlockIDs {
+func (te *TestEnvironment) LastMilestoneParents() iotago.BlockIDs {
 	return te.coo.LastMilestoneParents()
 }
 
@@ -259,7 +258,7 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	}
 }
 
-func (te *TestEnvironment) NewTestBlock(index int, parents hornet.BlockIDs) *storage.BlockMetadata {
+func (te *TestEnvironment) NewTestBlock(index int, parents iotago.BlockIDs) *storage.BlockMetadata {
 	block := te.NewBlockBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
 	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(block.StoredBlockID()) // meta +1
 	defer cachedBlockMeta.Release(true)                                             // meta -1
@@ -274,21 +273,21 @@ func (te *TestEnvironment) BuildTangle(initBlocksCount int,
 	minBlocksPerMilestone int,
 	maxBlocksPerMilestone int,
 	onNewBlock func(cmi milestone.Index, blockMetadata *storage.BlockMetadata),
-	milestoneTipSelectFunc func(blocksIDs hornet.BlockIDs, blockIDsPerMilestones []hornet.BlockIDs) hornet.BlockIDs,
-	onNewMilestone func(msIndex milestone.Index, blockIDs hornet.BlockIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats)) (blockIDs hornet.BlockIDs, blockIDsPerMilestones []hornet.BlockIDs) {
+	milestoneTipSelectFunc func(blocksIDs iotago.BlockIDs, blockIDsPerMilestones []iotago.BlockIDs) iotago.BlockIDs,
+	onNewMilestone func(msIndex milestone.Index, blockIDs iotago.BlockIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats)) (blockIDs iotago.BlockIDs, blockIDsPerMilestones []iotago.BlockIDs) {
 
 	blockTotalCount := 0
-	blockIDs = hornet.BlockIDs{}
-	blockIDsPerMilestones = make([]hornet.BlockIDs, 0)
+	blockIDs = iotago.BlockIDs{}
+	blockIDsPerMilestones = make([]iotago.BlockIDs, 0)
 
-	getParents := func() hornet.BlockIDs {
+	getParents := func() iotago.BlockIDs {
 
 		if len(blockIDs) < initBlocksCount {
 			// reference the first milestone at the beginning
-			return hornet.BlockIDs{te.LastMilestoneBlockID()}
+			return iotago.BlockIDs{te.LastMilestoneBlockID()}
 		}
 
-		parents := hornet.BlockIDs{}
+		parents := iotago.BlockIDs{}
 		for j := 2; j <= 2+rand.Intn(7); j++ {
 			msIndex := rand.Intn(belowMaxDepth)
 			if msIndex > len(blockIDsPerMilestones)-1 {
@@ -303,12 +302,12 @@ func (te *TestEnvironment) BuildTangle(initBlocksCount int,
 			parents = append(parents, milestoneBlocks[rand.Intn(len(milestoneBlocks))])
 		}
 
-		return parents.RemoveDupsAndSortByLexicalOrder()
+		return parents.RemoveDupsAndSort()
 	}
 
 	// build a tangle
 	for msIndex := 2; msIndex < milestonesCount; msIndex++ {
-		blockIDsPerMilestones = append(blockIDsPerMilestones, hornet.BlockIDs{})
+		blockIDsPerMilestones = append(blockIDsPerMilestones, iotago.BlockIDs{})
 
 		cmi := te.SyncManager().ConfirmedMilestoneIndex()
 

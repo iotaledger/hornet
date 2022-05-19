@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
@@ -24,7 +23,7 @@ func blankMilestone(index uint32) *iotago.Milestone {
 	return &iotago.Milestone{
 		Index:     index,
 		Timestamp: 0,
-		Parents: iotago.MilestoneParentBlockIDs{
+		Parents: iotago.BlockIDs{
 			static32ByteID(0),
 			static32ByteID(1),
 		},
@@ -107,13 +106,13 @@ func writeFullSnapshot() {
 	defer func() { _ = full.Close() }()
 
 	var seps, sepsMax = 0, 10
-	fullSnapSEPProd := func() (hornet.BlockID, error) {
+	fullSnapSEPProd := func() (iotago.BlockID, error) {
 		seps++
 		if seps == 1 {
-			return hornet.NullBlockID(), nil
+			return iotago.EmptyBlockID(), nil
 		}
 		if seps > sepsMax {
-			return nil, nil
+			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 		}
 		return randBlockID(), nil
 	}
@@ -209,10 +208,10 @@ func writeDeltaSnapshot() {
 	defer func() { _ = delta.Close() }()
 
 	var seps, sepsMax = 0, 10
-	deltaSnapSEPProd := func() (hornet.BlockID, error) {
+	deltaSnapSEPProd := func() (iotago.BlockID, error) {
 		seps++
 		if seps > sepsMax {
-			return nil, nil
+			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 		}
 		return randBlockID(), nil
 	}
@@ -237,8 +236,8 @@ func must(err error) {
 	}
 }
 
-func randBlockID() hornet.BlockID {
-	b := make(hornet.BlockID, 32)
+func randBlockID() iotago.BlockID {
+	b := iotago.BlockID{}
 	_, err := rand.Read(b[:])
 	must(err)
 	return b
@@ -260,12 +259,15 @@ func static32ByteID(fill byte) [32]byte {
 	return b
 }
 
-func staticBlockID(fill byte) hornet.BlockID {
-	return hornet.BlockIDFromArray(static32ByteID(fill))
+func staticBlockID(fill byte) iotago.BlockID {
+	bytes := static32ByteID(fill)
+	blockID := iotago.BlockID{}
+	copy(blockID[:], bytes[:])
+	return blockID
 }
 
-func staticOutputID(fill byte) *iotago.OutputID {
-	b := &iotago.OutputID{}
+func staticOutputID(fill byte) iotago.OutputID {
+	b := iotago.OutputID{}
 	for i := 0; i < len(b); i++ {
 		b[i] = fill
 	}
@@ -298,7 +300,7 @@ func utxoOutput(fill byte, amount uint64, msIndex milestone.Index) *utxo.Output 
 
 func utxoSpent(fill byte, amount uint64, msIndexCreated milestone.Index, msIndexSpent milestone.Index) *utxo.Spent {
 	r := static32ByteID(fill)
-	txID := &iotago.TransactionID{}
+	txID := iotago.TransactionID{}
 	copy(txID[:], r[:])
 	return utxo.NewSpent(utxoOutput(fill, amount, msIndexCreated), txID, msIndexSpent, 0)
 }

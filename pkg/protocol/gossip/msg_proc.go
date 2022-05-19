@@ -10,7 +10,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -221,7 +220,7 @@ func (proc *MessageProcessor) Emit(block *storage.Block) error {
 
 	cmi := proc.syncManager.ConfirmedMilestoneIndex()
 
-	checkParentFunc := func(blockID hornet.BlockID) error {
+	checkParentFunc := func(blockID iotago.BlockID) error {
 		cachedBlockMeta := proc.storage.CachedBlockMetadataOrNil(blockID) // meta +1
 		if cachedBlockMeta == nil {
 			// parent not found
@@ -351,8 +350,9 @@ func (proc *MessageProcessor) processBlockRequest(p *Protocol, data []byte) {
 	if len(data) != iotago.BlockIDLength {
 		return
 	}
-
-	cachedBlock := proc.storage.CachedBlockOrNil(hornet.BlockIDFromSlice(data)) // block +1
+	blockID := iotago.BlockID{}
+	copy(blockID[:], data)
+	cachedBlock := proc.storage.CachedBlockOrNil(blockID) // block +1
 	if cachedBlock == nil {
 		// can't reply if we don't have the requested block
 		return

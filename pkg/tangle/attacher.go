@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/iotaledger/hive.go/events"
@@ -84,20 +83,20 @@ func (t *Tangle) BlockAttacher(opts ...BlockAttacherOption) *BlockAttacher {
 	}
 }
 
-func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block) (hornet.BlockID, error) {
+func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block) (iotago.BlockID, error) {
 
 	var tipSelFunc pow.RefreshTipsFunc
 
 	if len(iotaBlock.Parents) == 0 {
 		if a.opts.tipSelFunc == nil {
-			return nil, errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents given and node tipselection disabled")
+			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents given and node tipselection disabled")
 		}
 		tipSelFunc = a.opts.tipSelFunc
 		tips, err := a.opts.tipSelFunc()
 		if err != nil {
-			return nil, errors.WithMessage(ErrBlockAttacherAttachingNotPossible, err.Error())
+			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherAttachingNotPossible, err.Error())
 		}
-		iotaBlock.Parents = tips.ToSliceOfArrays()
+		iotaBlock.Parents = tips
 	}
 
 	switch iotaBlock.Payload.(type) {
@@ -110,12 +109,12 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 		if iotaBlock.Nonce == 0 {
 			score, err := iotaBlock.POW()
 			if err != nil {
-				return nil, errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
+				return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
 			}
 
 			if score < a.tangle.protoParas.MinPoWScore {
 				if a.opts.powHandler == nil {
-					return nil, ErrBlockAttacherPoWNotAvailable
+					return iotago.EmptyBlockID(), ErrBlockAttacherPoWNotAvailable
 				}
 
 				powCtx, ctxCancel := context.WithCancel(ctx)
@@ -129,7 +128,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 				ts := time.Now()
 				blockSize, err := a.opts.powHandler.DoPoW(powCtx, iotaBlock, powWorkerCount, tipSelFunc)
 				if err != nil {
-					return nil, err
+					return iotago.EmptyBlockID(), err
 				}
 				if a.opts.powMetrics != nil {
 					a.opts.powMetrics.PoWCompleted(blockSize, time.Since(ts))
@@ -140,14 +139,14 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 
 	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, a.tangle.protoParas)
 	if err != nil {
-		return nil, errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
+		return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
 	}
 
 	blockProcessedChan := a.tangle.RegisterBlockProcessedEvent(block.BlockID())
 
 	if err := a.tangle.messageProcessor.Emit(block); err != nil {
 		a.tangle.DeregisterBlockProcessedEvent(block.BlockID())
-		return nil, errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
+		return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
 	}
 
 	// wait for at most "blockProcessedTimeout" for the block to be processed

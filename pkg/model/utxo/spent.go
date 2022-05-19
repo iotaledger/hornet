@@ -3,7 +3,6 @@ package utxo
 import (
 	"bytes"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
@@ -12,8 +11,7 @@ import (
 
 type SpentConsumer func(spent *Spent) bool
 
-// LexicalOrderedOutputs are spents
-// ordered in lexical order by their outputID.
+// LexicalOrderedSpents are spents ordered in lexical order by their outputID.
 type LexicalOrderedSpents []*Spent
 
 func (l LexicalOrderedSpents) Len() int {
@@ -32,8 +30,8 @@ func (l LexicalOrderedSpents) Swap(i, j int) {
 type Spent struct {
 	kvStorable
 
-	outputID            *iotago.OutputID
-	targetTransactionID *iotago.TransactionID
+	outputID            iotago.OutputID
+	targetTransactionID iotago.TransactionID
 	milestoneIndex      milestone.Index
 	milestoneTimestamp  uint32
 
@@ -44,7 +42,7 @@ func (s *Spent) Output() *Output {
 	return s.output
 }
 
-func (s *Spent) OutputID() *iotago.OutputID {
+func (s *Spent) OutputID() iotago.OutputID {
 	return s.outputID
 }
 
@@ -52,7 +50,7 @@ func (s *Spent) mapKey() string {
 	return string(s.outputID[:])
 }
 
-func (s *Spent) BlockID() hornet.BlockID {
+func (s *Spent) BlockID() iotago.BlockID {
 	return s.output.BlockID()
 }
 
@@ -64,7 +62,7 @@ func (s *Spent) Deposit() uint64 {
 	return s.output.Deposit()
 }
 
-func (s *Spent) TargetTransactionID() *iotago.TransactionID {
+func (s *Spent) TargetTransactionID() iotago.TransactionID {
 	return s.targetTransactionID
 }
 
@@ -78,7 +76,7 @@ func (s *Spent) MilestoneTimestamp() uint32 {
 
 type Spents []*Spent
 
-func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirmationIndex milestone.Index, confirmationTimestamp uint32) *Spent {
+func NewSpent(output *Output, targetTransactionID iotago.TransactionID, confirmationIndex milestone.Index, confirmationTimestamp uint32) *Spent {
 	return &Spent{
 		outputID:            output.outputID,
 		output:              output,
@@ -88,7 +86,7 @@ func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirm
 	}
 }
 
-func spentStorageKeyForOutputID(outputID *iotago.OutputID) []byte {
+func spentStorageKeyForOutputID(outputID iotago.OutputID) []byte {
 	ms := marshalutil.New(35)
 	ms.WriteByte(UTXOStoreKeyPrefixOutputSpent) // 1 byte
 	ms.WriteBytes(outputID[:])                  // 34 bytes
@@ -155,7 +153,7 @@ func (u *Manager) loadOutputOfSpent(s *Spent) error {
 	return nil
 }
 
-func (u *Manager) ReadSpentForOutputIDWithoutLocking(outputID *iotago.OutputID) (*Spent, error) {
+func (u *Manager) ReadSpentForOutputIDWithoutLocking(outputID iotago.OutputID) (*Spent, error) {
 	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		return nil, err

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -32,10 +31,10 @@ func TestConeRootIndexes(t *testing.T) {
 	// build a tangle with 30 milestones and 10 - 100 blocks between the milestones
 	_, _ = te.BuildTangle(initBlocksCount, BelowMaxDepth, milestonesCount, minBlocksPerMilestone, maxBlocksPerMilestone,
 		nil,
-		func(blockIDs hornet.BlockIDs, blockIDsPerMilestones []hornet.BlockIDs) hornet.BlockIDs {
-			return hornet.BlockIDs{blockIDs[len(blockIDs)-1]}
+		func(blockIDs iotago.BlockIDs, blockIDsPerMilestones []iotago.BlockIDs) iotago.BlockIDs {
+			return iotago.BlockIDs{blockIDs[len(blockIDs)-1]}
 		},
-		func(msIndex milestone.Index, blockIDs hornet.BlockIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
+		func(msIndex milestone.Index, blockIDs iotago.BlockIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
 			cmi := latestMilestone.Milestone().Index()
 
@@ -60,8 +59,8 @@ func TestConeRootIndexes(t *testing.T) {
 	cmi := latestMilestone.Milestone().Index()
 
 	// Use Null hash and last milestone hash as parents
-	parents := append(latestMilestone.Milestone().Parents(), hornet.NullBlockID())
-	block := te.NewBlockBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
+	parents := append(latestMilestone.Milestone().Parents(), iotago.EmptyBlockID())
+	block := te.NewBlockBuilder("below max depth").Parents(parents.RemoveDupsAndSort()).BuildTaggedData().Store()
 
 	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(block.StoredBlockID())
 	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)

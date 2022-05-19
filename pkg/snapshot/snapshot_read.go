@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -51,7 +50,7 @@ func newSEPsConsumer(dbStorage *storage.Storage, header *ReadFileHeader) SEPCons
 	// of the snapshot milestone will be below max depth anyway.
 	// this information was included in pre Chrysalis Phase 2 snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
-	return func(solidEntryPointBlockID hornet.BlockID) error {
+	return func(solidEntryPointBlockID iotago.BlockID) error {
 		dbStorage.SolidEntryPointsAddWithoutLocking(solidEntryPointBlockID, header.SEPMilestoneIndex)
 		return nil
 	}

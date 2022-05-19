@@ -6,12 +6,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-type OutputIDConsumer func(outputID *iotago.OutputID) bool
+type OutputIDConsumer func(outputID iotago.OutputID) bool
 type OutputConsumer func(output *Output) bool
 
 type lookupKey []byte
 
-func lookupKeyUnspentOutput(outputID *iotago.OutputID) lookupKey {
+func lookupKeyUnspentOutput(outputID iotago.OutputID) lookupKey {
 	ms := marshalutil.New(35)
 	ms.WriteByte(UTXOStoreKeyPrefixOutputUnspent) // 1 byte
 	ms.WriteBytes(outputID[:])                    // 34 bytes
@@ -22,11 +22,11 @@ func (o *Output) unspentLookupKey() lookupKey {
 	return lookupKeyUnspentOutput(o.outputID)
 }
 
-func outputIDFromDatabaseKey(key lookupKey) (*iotago.OutputID, error) {
+func outputIDFromDatabaseKey(key lookupKey) (iotago.OutputID, error) {
 	ms := marshalutil.New([]byte(key))
 	_, err := ms.ReadByte() // prefix
 	if err != nil {
-		return nil, err
+		return iotago.OutputID{}, err
 	}
 
 	return ParseOutputID(ms)
@@ -44,7 +44,7 @@ func deleteOutputLookups(output *Output, mutations kvstore.BatchedMutations) err
 	return mutations.Delete(output.unspentLookupKey())
 }
 
-func (u *Manager) IsOutputIDUnspentWithoutLocking(outputID *iotago.OutputID) (bool, error) {
+func (u *Manager) IsOutputIDUnspentWithoutLocking(outputID iotago.OutputID) (bool, error) {
 	return u.utxoStorage.Has(lookupKeyUnspentOutput(outputID))
 }
 

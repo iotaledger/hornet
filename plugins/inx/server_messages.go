@@ -9,7 +9,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -18,27 +17,28 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
 	inx "github.com/iotaledger/inx/go"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func INXBlockIDsFromBlockIDs(blockIDs hornet.BlockIDs) []*inx.BlockId {
+func INXBlockIDsFromBlockIDs(blockIDs iotago.BlockIDs) []*inx.BlockId {
 	result := make([]*inx.BlockId, len(blockIDs))
 	for i := range blockIDs {
-		result[i] = inx.NewBlockId(blockIDs[i].ToArray())
+		result[i] = inx.NewBlockId(blockIDs[i])
 	}
 	return result
 }
 
-func BlockIDsFromINXBlockIDs(blockIDs []*inx.BlockId) hornet.BlockIDs {
-	result := make([]hornet.BlockID, len(blockIDs))
+func BlockIDsFromINXBlockIDs(blockIDs []*inx.BlockId) iotago.BlockIDs {
+	result := make([]iotago.BlockID, len(blockIDs))
 	for i := range blockIDs {
-		result[i] = hornet.BlockIDFromArray(blockIDs[i].Unwrap())
+		result[i] = blockIDs[i].Unwrap()
 	}
 	return result
 }
 
-func INXNewBlockMetadata(blockID hornet.BlockID, metadata *storage.BlockMetadata) (*inx.BlockMetadata, error) {
+func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata) (*inx.BlockMetadata, error) {
 	m := &inx.BlockMetadata{
-		BlockId: inx.NewBlockId(blockID.ToArray()),
+		BlockId: inx.NewBlockId(blockID),
 		Parents: INXBlockIDsFromBlockIDs(metadata.Parents()),
 		Solid:   metadata.IsSolid(),
 	}
@@ -96,18 +96,20 @@ func INXNewBlockMetadata(blockID hornet.BlockID, metadata *storage.BlockMetadata
 }
 
 func (s *INXServer) ReadBlock(_ context.Context, blockID *inx.BlockId) (*inx.RawBlock, error) {
-	cachedBlock := deps.Storage.CachedBlockOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // block +1
+	blkId := blockID.Unwrap()
+	cachedBlock := deps.Storage.CachedBlockOrNil(blkId) // block +1
 	if cachedBlock == nil {
-		return nil, status.Errorf(codes.NotFound, "block %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
+		return nil, status.Errorf(codes.NotFound, "block %s not found", blkId.ToHex())
 	}
 	defer cachedBlock.Release(true) // block -1
 	return inx.WrapBlock(cachedBlock.Block().Block())
 }
 
 func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (*inx.BlockMetadata, error) {
-	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // meta +1
+	blkId := blockID.Unwrap()
+	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(blkId) // meta +1
 	if cachedBlockMeta == nil {
-		return nil, status.Errorf(codes.NotFound, "block metadata %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
+		return nil, status.Errorf(codes.NotFound, "block metadata %s not found", blkId.ToHex())
 	}
 	defer cachedBlockMeta.Release(true) // meta -1
 	return INXNewBlockMetadata(cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
@@ -119,7 +121,7 @@ func (s *INXServer) ListenToBlocks(filter *inx.BlockFilter, srv inx.INX_ListenTo
 		cachedBlock := task.Param(0).(*storage.CachedBlock)
 		defer cachedBlock.Release(true) // block -1
 
-		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID().ToArray(), cachedBlock.Block().Data())
+		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID(), cachedBlock.Block().Data())
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -211,5 +213,5 @@ func (s *INXServer) SubmitBlock(context context.Context, rawBlock *inx.RawBlock)
 	if err != nil {
 		return nil, err
 	}
-	return inx.NewBlockId(blockID.ToArray()), nil
+	return inx.NewBlockId(blockID), nil
 }

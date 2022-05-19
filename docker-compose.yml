@@ -1,7 +1,7 @@
 version: '3'
 services:
   inx-indexer:
-    image: iotaledger/inx-indexer:0.5
+    image: iotaledger/inx-indexer:0.6
     restart: on-failure
     volumes:
       - ./alphanet/indexer:/app/database
@@ -11,16 +11,16 @@ services:
       - "--prometheus.bindAddress=inx-indexer:9312"
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.5
+    image: iotaledger/inx-mqtt:0.6
     restart: on-failure
     command:
       - "--inx.address=hornet:9029"
       - "--mqtt.websocket.bindAddress=inx-mqtt:1888"
-      - "--prometheus.enabled=true"
+      - "--app.enablePlugins=Prometheus"
       - "--prometheus.bindAddress=inx-mqtt:9313"
 
   inx-participation:
-    image: iotaledger/inx-participation:0.1
+    image: iotaledger/inx-participation:0.2
     restart: on-failure
     volumes:
       - ./alphanet/participation:/app/database

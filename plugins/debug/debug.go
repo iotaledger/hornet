@@ -8,12 +8,12 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
@@ -241,9 +241,10 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 		// consumer
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 			cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
+				id := metadata.BlockID()
 				tanglePath = append(tanglePath,
 					&blockWithParents{
-						BlockID: metadata.BlockID().ToHex(),
+						BlockID: id.ToHex(),
 						Parents: metadata.Parents().ToHex(),
 					},
 				)
@@ -255,7 +256,7 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(blockID hornet.BlockID) error {
+		func(blockID iotago.BlockID) error {
 			entryPoints = append(entryPoints, &entryPoint{BlockID: blockID.ToHex(), ReferencedByMilestone: entryPointIndex})
 			return nil
 		},

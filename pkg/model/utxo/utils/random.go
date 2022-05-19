@@ -4,7 +4,6 @@ import (
 	"math/big"
 	"math/rand"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -24,12 +23,14 @@ func Rand32ByteHash() [32]byte {
 	return h
 }
 
-func RandBlockID() hornet.BlockID {
-	return RandBytes(iotago.BlockIDLength)
+func RandBlockID() iotago.BlockID {
+	blockID := iotago.BlockID{}
+	copy(blockID[:], RandBytes(iotago.BlockIDLength))
+	return blockID
 }
 
-func RandTransactionID() *iotago.TransactionID {
-	transactionID := &iotago.TransactionID{}
+func RandTransactionID() iotago.TransactionID {
+	transactionID := iotago.TransactionID{}
 	copy(transactionID[:], RandBytes(iotago.TransactionIDLength))
 	return transactionID
 }
@@ -72,8 +73,8 @@ func RandAddress(addressType iotago.AddressType) iotago.Address {
 	}
 }
 
-func RandOutputID() *iotago.OutputID {
-	outputID := &iotago.OutputID{}
+func RandOutputID() iotago.OutputID {
+	outputID := iotago.OutputID{}
 	copy(outputID[:], RandBytes(iotago.OutputIDLength))
 	return outputID
 }

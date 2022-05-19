@@ -8,7 +8,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -79,16 +78,16 @@ func ConfirmMilestone(
 	utxoManager.WriteLockLedger()
 	defer utxoManager.WriteUnlockLedger()
 
-	msIDPtr, err := milestonePayload.ID()
+	msID, err := milestonePayload.ID()
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to compute milestone Id: %w", err)
 	}
 
-	milestoneID := *msIDPtr
+	milestoneID := msID
 	previousMilestoneID := milestonePayload.PreviousMilestoneID
 	milestoneIndex := milestone.Index(milestonePayload.Index)
 	milestoneTimestamp := milestonePayload.Timestamp
-	milestoneParents := hornet.BlockIDsFromSliceOfArrays(milestonePayload.Parents)
+	milestoneParents := milestonePayload.Parents
 
 	timeStart := time.Now()
 
@@ -195,7 +194,7 @@ func ConfirmMilestone(
 	timeConfirmation := time.Now()
 
 	// load the block for the given id
-	forBlockMetadataWithBlockID := func(blockID hornet.BlockID, do func(meta *storage.CachedMetadata)) error {
+	forBlockMetadataWithBlockID := func(blockID iotago.BlockID, do func(meta *storage.CachedMetadata)) error {
 		cachedBlockMeta, err := parentsTraverserStorage.CachedBlockMetadata(blockID) // meta +1
 		if err != nil {
 			return fmt.Errorf("confirmMilestone: get block failed: %v, Error: %w", blockID.ToHex(), err)

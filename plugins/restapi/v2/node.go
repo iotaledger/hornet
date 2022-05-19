@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 //nolint:unparam // even if the error is never used, the structure of all routes should be the same
@@ -90,7 +90,7 @@ func tips(c echo.Context) (*tipsResponse, error) {
 		}
 	}
 
-	var tips hornet.BlockIDs
+	var tips iotago.BlockIDs
 	var err error
 
 	if !spammerTips {

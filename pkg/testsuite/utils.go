@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
@@ -21,7 +20,7 @@ type BlockBuilder struct {
 	tag     string
 	tagData []byte
 
-	parents hornet.BlockIDs
+	parents iotago.BlockIDs
 
 	fromWallet *utils.HDWallet
 	toWallet   *utils.HDWallet
@@ -41,7 +40,7 @@ type Block struct {
 	remainderOutput *utxo.Output
 
 	booked        bool
-	storedBlockID hornet.BlockID
+	storedBlockID iotago.BlockID
 }
 
 func (te *TestEnvironment) NewBlockBuilder(optionalTag ...string) *BlockBuilder {
@@ -56,10 +55,10 @@ func (te *TestEnvironment) NewBlockBuilder(optionalTag ...string) *BlockBuilder 
 }
 
 func (b *BlockBuilder) LatestMilestoneAsParents() *BlockBuilder {
-	return b.Parents(hornet.BlockIDs{b.te.coo.lastMilestoneBlockID})
+	return b.Parents(iotago.BlockIDs{b.te.coo.lastMilestoneBlockID})
 }
 
-func (b *BlockBuilder) Parents(parents hornet.BlockIDs) *BlockBuilder {
+func (b *BlockBuilder) Parents(parents iotago.BlockIDs) *BlockBuilder {
 	b.parents = parents
 	return b
 }
@@ -98,15 +97,8 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 
 	require.NotEmpty(b.te.TestInterface, b.tag)
 
-	parents := [][]byte{}
-	require.NotNil(b.te.TestInterface, b.parents)
-	for _, parent := range b.parents {
-		require.NotNil(b.te.TestInterface, parent)
-		parents = append(parents, parent[:])
-	}
-
 	iotaBlock, err := builder.NewBlockBuilder(b.te.protoParas.Version).
-		Parents(parents).
+		ParentsBlockIDs(b.parents).
 		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
 	require.NoError(b.te.TestInterface, err)
@@ -153,7 +145,7 @@ func (b *BlockBuilder) Build() *Block {
 					},
 				},
 			}
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, hornet.NullBlockID(), 0, 0, fakeInput))
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(fakeInputID, iotago.EmptyBlockID(), 0, 0, fakeInput))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -169,7 +161,7 @@ func (b *BlockBuilder) Build() *Block {
 	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
 
 	for _, output := range outputsThatCanBeConsumed {
-		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: fromAddr, OutputID: *output.OutputID(), Output: output.Output()})
+		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: fromAddr, OutputID: output.OutputID(), Output: output.Output()})
 		consumedInputs = append(consumedInputs, output)
 		consumedAmount += output.Deposit()
 
@@ -201,7 +193,7 @@ func (b *BlockBuilder) Build() *Block {
 	require.NotNil(b.te.TestInterface, b.parents)
 
 	iotaBlock, err := builder.NewBlockBuilder(b.te.protoParas.Version).
-		Parents(b.parents.ToSliceOfSlices()).
+		ParentsBlockIDs(b.parents).
 		Payload(transaction).Build()
 	require.NoError(b.te.TestInterface, err)
 
@@ -253,7 +245,7 @@ func (b *BlockBuilder) Build() *Block {
 }
 
 func (m *Block) Store() *Block {
-	require.Nil(m.builder.te.TestInterface, m.storedBlockID)
+	require.True(m.builder.te.TestInterface, m.storedBlockID.Empty())
 	m.storedBlockID = m.builder.te.StoreBlock(m.block).Block().BlockID()
 	return m
 }
@@ -287,7 +279,7 @@ func (m *Block) StoredBlock() *storage.Block {
 	return m.block
 }
 
-func (m *Block) StoredBlockID() hornet.BlockID {
+func (m *Block) StoredBlockID() iotago.BlockID {
 	require.NotNil(m.builder.te.TestInterface, m.storedBlockID)
 	return m.storedBlockID
 }

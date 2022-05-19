@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/kvstore"
@@ -21,7 +20,7 @@ func BlockMetadataCaller(handler interface{}, params ...interface{}) {
 }
 
 func BlockIDCaller(handler interface{}, params ...interface{}) {
-	handler.(func(blockID hornet.BlockID))(params[0].(hornet.BlockID))
+	handler.(func(blockID iotago.BlockID))(params[0].(iotago.BlockID))
 }
 
 func NewBlockCaller(handler interface{}, params ...interface{}) {
@@ -165,9 +164,9 @@ func (c *CachedBlock) Release(force ...bool) {
 
 func BlockFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	block := &Block{
-		blockID: hornet.BlockIDFromSlice(key[:iotago.BlockIDLength]),
-		data:    data,
+		data: data,
 	}
+	copy(block.blockID[:], key[:iotago.BlockIDLength])
 
 	return block, nil
 }
@@ -235,14 +234,14 @@ func (s *Storage) configureBlockStorage(store kvstore.KVStore, opts *profile.Cac
 
 // CachedBlockOrNil returns a cached block object.
 // block +1
-func (s *Storage) CachedBlockOrNil(blockID hornet.BlockID) *CachedBlock {
-	cachedBlock := s.blocksStorage.Load(blockID) // block +1
+func (s *Storage) CachedBlockOrNil(blockID iotago.BlockID) *CachedBlock {
+	cachedBlock := s.blocksStorage.Load(blockID[:]) // block +1
 	if !cachedBlock.Exists() {
 		cachedBlock.Release(true) // block -1
 		return nil
 	}
 
-	cachedBlockMeta := s.metadataStorage.Load(blockID) // meta +1
+	cachedBlockMeta := s.metadataStorage.Load(blockID[:]) // meta +1
 	if !cachedBlockMeta.Exists() {
 		cachedBlock.Release(true)     // block -1
 		cachedBlockMeta.Release(true) // meta -1
@@ -257,12 +256,12 @@ func (s *Storage) CachedBlockOrNil(blockID hornet.BlockID) *CachedBlock {
 
 // CachedBlock returns a cached block object.
 // block +1
-func (s *Storage) CachedBlock(blockID hornet.BlockID) (*CachedBlock, error) {
+func (s *Storage) CachedBlock(blockID iotago.BlockID) (*CachedBlock, error) {
 	return s.CachedBlockOrNil(blockID), nil // block +1
 }
 
 // Block returns an iotago block object.
-func (s *Storage) Block(blockID hornet.BlockID) (*iotago.Block, error) {
+func (s *Storage) Block(blockID iotago.BlockID) (*iotago.Block, error) {
 	cachedBlock, err := s.CachedBlock(blockID)
 	if err != nil {
 		return nil, err
@@ -278,8 +277,8 @@ func (s *Storage) Block(blockID hornet.BlockID) (*iotago.Block, error) {
 
 // CachedBlockMetadataOrNil returns a cached metadata object.
 // meta +1
-func (s *Storage) CachedBlockMetadataOrNil(blockID hornet.BlockID) *CachedMetadata {
-	cachedBlockMeta := s.metadataStorage.Load(blockID) // meta +1
+func (s *Storage) CachedBlockMetadataOrNil(blockID iotago.BlockID) *CachedMetadata {
+	cachedBlockMeta := s.metadataStorage.Load(blockID[:]) // meta +1
 	if !cachedBlockMeta.Exists() {
 		cachedBlockMeta.Release(true) // meta -1
 		return nil
@@ -289,13 +288,13 @@ func (s *Storage) CachedBlockMetadataOrNil(blockID hornet.BlockID) *CachedMetada
 
 // CachedBlockMetadata returns a cached metadata object.
 // meta +1
-func (s *Storage) CachedBlockMetadata(blockID hornet.BlockID) (*CachedMetadata, error) {
+func (s *Storage) CachedBlockMetadata(blockID iotago.BlockID) (*CachedMetadata, error) {
 	return s.CachedBlockMetadataOrNil(blockID), nil
 }
 
 // StoredMetadataOrNil returns a metadata object without accessing the cache layer.
-func (s *Storage) StoredMetadataOrNil(blockID hornet.BlockID) *BlockMetadata {
-	storedMeta := s.metadataStorage.LoadObjectFromStore(blockID)
+func (s *Storage) StoredMetadataOrNil(blockID iotago.BlockID) *BlockMetadata {
+	storedMeta := s.metadataStorage.LoadObjectFromStore(blockID[:])
 	if storedMeta == nil {
 		return nil
 	}
@@ -303,18 +302,18 @@ func (s *Storage) StoredMetadataOrNil(blockID hornet.BlockID) *BlockMetadata {
 }
 
 // ContainsBlock returns if the given block exists in the cache/persistence layer.
-func (s *Storage) ContainsBlock(blockID hornet.BlockID, readOptions ...ReadOption) bool {
-	return s.blocksStorage.Contains(blockID, readOptions...)
+func (s *Storage) ContainsBlock(blockID iotago.BlockID, readOptions ...ReadOption) bool {
+	return s.blocksStorage.Contains(blockID[:], readOptions...)
 }
 
 // BlockExistsInStore returns if the given block exists in the persistence layer.
-func (s *Storage) BlockExistsInStore(blockID hornet.BlockID) bool {
-	return s.blocksStorage.ObjectExistsInStore(blockID)
+func (s *Storage) BlockExistsInStore(blockID iotago.BlockID) bool {
+	return s.blocksStorage.ObjectExistsInStore(blockID[:])
 }
 
 // BlockMetadataExistsInStore returns if the given block metadata exists in the persistence layer.
-func (s *Storage) BlockMetadataExistsInStore(blockID hornet.BlockID) bool {
-	return s.metadataStorage.ObjectExistsInStore(blockID)
+func (s *Storage) BlockMetadataExistsInStore(blockID iotago.BlockID) bool {
+	return s.metadataStorage.ObjectExistsInStore(blockID[:])
 }
 
 // StoreBlockIfAbsent returns a cached object and stores the block in the persistence layer if it was absent.
@@ -341,57 +340,65 @@ func (s *Storage) StoreBlockIfAbsent(block *Block) (cachedBlock *CachedBlock, ne
 
 	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
 	if !newlyAdded {
-		cachedBlockMeta = s.metadataStorage.Load(block.BlockID()) // meta +1
+		cachedBlockMeta = s.metadataStorage.Load(block.blockID[:]) // meta +1
 	}
 
 	return &CachedBlock{block: cachedBlockData, metadata: cachedBlockMeta}, newlyAdded
 }
 
 // BlockIDConsumer consumes the given block ID during looping through all blocks.
-type BlockIDConsumer func(blockID hornet.BlockID) bool
+type BlockIDConsumer func(blockID iotago.BlockID) bool
 
 // ForEachBlockID loops over all block IDs.
 func (s *Storage) ForEachBlockID(consumer BlockIDConsumer, iteratorOptions ...IteratorOption) {
 
-	s.blocksStorage.ForEachKeyOnly(func(blockID []byte) bool {
-		return consumer(hornet.BlockIDFromSlice(blockID))
+	s.blocksStorage.ForEachKeyOnly(func(key []byte) bool {
+		blockID := iotago.BlockID{}
+		copy(blockID[:], key)
+		return consumer(blockID)
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
 
 // ForEachBlockID loops over all block IDs.
 func (ns *NonCachedStorage) ForEachBlockID(consumer BlockIDConsumer, iteratorOptions ...IteratorOption) {
 
-	ns.storage.blocksStorage.ForEachKeyOnly(func(blockID []byte) bool {
-		return consumer(hornet.BlockIDFromSlice(blockID))
+	ns.storage.blocksStorage.ForEachKeyOnly(func(key []byte) bool {
+		blockID := iotago.BlockID{}
+		copy(blockID[:], key)
+		return consumer(blockID)
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // ForEachBlockMetadataBlockID loops over all block metadata block IDs.
 func (s *Storage) ForEachBlockMetadataBlockID(consumer BlockIDConsumer, iteratorOptions ...IteratorOption) {
 
-	s.metadataStorage.ForEachKeyOnly(func(blockID []byte) bool {
-		return consumer(hornet.BlockIDFromSlice(blockID))
+	s.metadataStorage.ForEachKeyOnly(func(key []byte) bool {
+		blockID := iotago.BlockID{}
+		copy(blockID[:], key)
+		return consumer(blockID)
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
 
 // ForEachBlockMetadataBlockID loops over all block metadata block IDs.
 func (ns *NonCachedStorage) ForEachBlockMetadataBlockID(consumer BlockIDConsumer, iteratorOptions ...IteratorOption) {
 
-	ns.storage.metadataStorage.ForEachKeyOnly(func(blockID []byte) bool {
-		return consumer(hornet.BlockIDFromSlice(blockID))
+	ns.storage.metadataStorage.ForEachKeyOnly(func(key []byte) bool {
+		blockID := iotago.BlockID{}
+		copy(blockID[:], key)
+		return consumer(blockID)
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // DeleteBlock deletes the block and metadata in the cache/persistence layer.
-func (s *Storage) DeleteBlock(blockID hornet.BlockID) {
+func (s *Storage) DeleteBlock(blockID iotago.BlockID) {
 	// meta has to be deleted before the block, otherwise we could run into a data race in the object storage
-	s.metadataStorage.Delete(blockID)
-	s.blocksStorage.Delete(blockID)
+	s.metadataStorage.Delete(blockID[:])
+	s.blocksStorage.Delete(blockID[:])
 }
 
 // DeleteBlockMetadata deletes the metadata in the cache/persistence layer.
-func (s *Storage) DeleteBlockMetadata(blockID hornet.BlockID) {
-	s.metadataStorage.Delete(blockID)
+func (s *Storage) DeleteBlockMetadata(blockID iotago.BlockID) {
+	s.metadataStorage.Delete(blockID[:])
 }
 
 // ShutdownBlocksStorage shuts down the blocks storage.

@@ -7,13 +7,13 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // ShortenedHash returns a shortened hex encoded hash for the given hash.
 // this is used for the dot file.
-func ShortenedHash(hash hornet.BlockID) string {
+func ShortenedHash(hash iotago.BlockID) string {
 	hexHash := hash.ToHex()
 	return hexHash[0:4] + "..." + hexHash[len(hexHash)-4:]
 }

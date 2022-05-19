@@ -1,21 +1,19 @@
 package storage
 
-import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
-)
+import iotago "github.com/iotaledger/iota.go/v3"
 
-type CachedBlockFunc func(blockID hornet.BlockID) (*CachedBlock, error)
+type CachedBlockFunc func(blockID iotago.BlockID) (*CachedBlock, error)
 
 type BlocksMemcache struct {
 	cachedBlockFunc CachedBlockFunc
-	cachedBlocks    map[string]*CachedBlock
+	cachedBlocks    map[iotago.BlockID]*CachedBlock
 }
 
 // NewBlocksMemcache creates a new BlocksMemcache instance.
 func NewBlocksMemcache(cachedBlockFunc CachedBlockFunc) *BlocksMemcache {
 	return &BlocksMemcache{
 		cachedBlockFunc: cachedBlockFunc,
-		cachedBlocks:    make(map[string]*CachedBlock),
+		cachedBlocks:    make(map[iotago.BlockID]*CachedBlock),
 	}
 }
 
@@ -27,18 +25,16 @@ func (c *BlocksMemcache) Cleanup(forceRelease bool) {
 	for _, cachedBlock := range c.cachedBlocks {
 		cachedBlock.Release(forceRelease) // block -1
 	}
-	c.cachedBlocks = make(map[string]*CachedBlock)
+	c.cachedBlocks = make(map[iotago.BlockID]*CachedBlock)
 }
 
 // CachedBlock returns a cached block object.
 // block +1
-func (c *BlocksMemcache) CachedBlock(blockID hornet.BlockID) (*CachedBlock, error) {
-	blockIDMapKey := blockID.ToMapKey()
-
+func (c *BlocksMemcache) CachedBlock(blockID iotago.BlockID) (*CachedBlock, error) {
 	var err error
 
 	// load up block
-	cachedBlock, exists := c.cachedBlocks[blockIDMapKey]
+	cachedBlock, exists := c.cachedBlocks[blockID]
 	if !exists {
 		cachedBlock, err = c.cachedBlockFunc(blockID) // block +1 (this is the one that gets cleared by "Cleanup")
 		if err != nil {
@@ -49,7 +45,7 @@ func (c *BlocksMemcache) CachedBlock(blockID hornet.BlockID) (*CachedBlock, erro
 		}
 
 		// add the cachedObject to the map, it will be released by calling "Cleanup" at the end
-		c.cachedBlocks[blockIDMapKey] = cachedBlock
+		c.cachedBlocks[blockID] = cachedBlock
 	}
 
 	return cachedBlock.Retain(), nil // block +1

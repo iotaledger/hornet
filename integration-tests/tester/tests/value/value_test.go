@@ -91,7 +91,7 @@ func TestValue(t *testing.T) {
 
 	log.Println("checking that the transaction gets confirmed...")
 	require.Eventually(t, func() bool {
-		blockMeta, err := n.Coordinator().DebugNodeAPIClient.BlockMetadataByBlockID(context.Background(), *submittedBlockID)
+		blockMeta, err := n.Coordinator().DebugNodeAPIClient.BlockMetadataByBlockID(context.Background(), submittedBlockID)
 		if err != nil {
 			return false
 		}

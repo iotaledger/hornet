@@ -11,7 +11,6 @@ import (
 	databasecore "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -108,8 +107,8 @@ func getStorageMilestoneRange(tangleStore *storage.Storage) (milestone.Index, mi
 
 type StoreBlockInterface interface {
 	StoreBlockIfAbsent(block *storage.Block) (cachedBlock *storage.CachedBlock, newlyAdded bool)
-	StoreChild(parentBlockID hornet.BlockID, childBlockID hornet.BlockID) *storage.CachedChild
-	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blockID hornet.BlockID) (*storage.CachedMilestone, bool)
+	StoreChild(parentBlockID iotago.BlockID, childBlockID iotago.BlockID) *storage.CachedChild
+	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blockID iotago.BlockID) (*storage.CachedMilestone, bool)
 }
 
 // storeBlock adds a new block to the storage,

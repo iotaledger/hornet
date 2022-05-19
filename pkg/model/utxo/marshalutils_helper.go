@@ -1,39 +1,40 @@
 package utxo
 
 import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func ParseOutputID(ms *marshalutil.MarshalUtil) (*iotago.OutputID, error) {
+func ParseOutputID(ms *marshalutil.MarshalUtil) (iotago.OutputID, error) {
+	o := iotago.OutputID{}
 	bytes, err := ms.ReadBytes(iotago.OutputIDLength)
 	if err != nil {
-		return nil, err
+		return o, err
 	}
-	o := &iotago.OutputID{}
 	copy(o[:], bytes)
 	return o, nil
 }
 
-func parseTransactionID(ms *marshalutil.MarshalUtil) (*iotago.TransactionID, error) {
+func parseTransactionID(ms *marshalutil.MarshalUtil) (iotago.TransactionID, error) {
+	t := iotago.TransactionID{}
 	bytes, err := ms.ReadBytes(iotago.TransactionIDLength)
 	if err != nil {
-		return nil, err
+		return t, err
 	}
-	t := &iotago.TransactionID{}
 	copy(t[:], bytes)
 	return t, nil
 }
 
-func ParseBlockID(ms *marshalutil.MarshalUtil) (hornet.BlockID, error) {
+func ParseBlockID(ms *marshalutil.MarshalUtil) (iotago.BlockID, error) {
 	bytes, err := ms.ReadBytes(iotago.BlockIDLength)
 	if err != nil {
-		return nil, err
+		return iotago.EmptyBlockID(), err
 	}
-	return hornet.BlockIDFromSlice(bytes), nil
+	blockID := iotago.BlockID{}
+	copy(blockID[:], bytes)
+	return blockID, nil
 }
 
 func parseMilestoneIndex(ms *marshalutil.MarshalUtil) (milestone.Index, error) {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -14,7 +13,7 @@ type Block struct {
 	objectstorage.StorableObjectFlags
 
 	// Key
-	blockID hornet.BlockID
+	blockID iotago.BlockID
 
 	// Value
 	data      []byte
@@ -29,11 +28,10 @@ func NewBlock(iotaBlock *iotago.Block, deSeriMode serializer.DeSerializationMode
 		return nil, err
 	}
 
-	blockHash, err := iotaBlock.ID()
+	blockID, err := iotaBlock.ID()
 	if err != nil {
 		return nil, err
 	}
-	blockID := hornet.BlockIDFromArray(*blockHash)
 
 	block := &Block{blockID: blockID, data: data}
 
@@ -51,11 +49,10 @@ func BlockFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, prot
 		return nil, err
 	}
 
-	blockHash, err := iotaBlock.ID()
+	blockID, err := iotaBlock.ID()
 	if err != nil {
 		return nil, err
 	}
-	blockID := hornet.BlockIDFromArray(*blockHash)
 
 	block := &Block{blockID: blockID, data: data}
 
@@ -66,7 +63,7 @@ func BlockFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, prot
 	return block, nil
 }
 
-func (blk *Block) BlockID() hornet.BlockID {
+func (blk *Block) BlockID() iotago.BlockID {
 	return blk.blockID
 }
 
@@ -91,8 +88,8 @@ func (blk *Block) ProtocolVersion() byte {
 	return blk.Block().ProtocolVersion
 }
 
-func (blk *Block) Parents() hornet.BlockIDs {
-	return hornet.BlockIDsFromSliceOfArrays(blk.Block().Parents)
+func (blk *Block) Parents() iotago.BlockIDs {
+	return blk.Block().Parents
 }
 
 func (blk *Block) IsMilestone() bool {
@@ -164,15 +161,15 @@ func (blk *Block) TransactionEssenceTaggedData() *iotago.TaggedData {
 	return nil
 }
 
-func (blk *Block) TransactionEssenceUTXOInputs() []*iotago.OutputID {
+func (blk *Block) TransactionEssenceUTXOInputs() iotago.OutputIDs {
 
-	var inputs []*iotago.OutputID
+	var inputs iotago.OutputIDs
 	if essence := blk.TransactionEssence(); essence != nil {
 		for _, input := range essence.Inputs {
 			switch utxoInput := input.(type) {
 			case *iotago.UTXOInput:
 				id := utxoInput.ID()
-				inputs = append(inputs, &id)
+				inputs = append(inputs, id)
 			default:
 				return nil
 			}
@@ -208,7 +205,7 @@ func (blk *Block) Update(_ objectstorage.StorableObject) {
 }
 
 func (blk *Block) ObjectStorageKey() []byte {
-	return blk.blockID
+	return blk.blockID[:]
 }
 
 func (blk *Block) ObjectStorageValue() []byte {

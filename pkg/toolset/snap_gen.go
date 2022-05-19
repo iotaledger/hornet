@@ -8,7 +8,6 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
@@ -114,16 +113,14 @@ func snapshotGen(args []string) error {
 	}
 
 	// solid entry points
-	// add "NullBlockID" as sole entry point
+	// add "EmptyBlockID" as sole entry point
 	nullHashAdded := false
-	solidEntryPointProducerFunc := func() (hornet.BlockID, error) {
+	solidEntryPointProducerFunc := func() (iotago.BlockID, error) {
 		if nullHashAdded {
-			return nil, nil
+			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 		}
-
 		nullHashAdded = true
-
-		return hornet.NullBlockID(), nil
+		return iotago.EmptyBlockID(), nil
 	}
 
 	// unspent transaction outputs
@@ -135,7 +132,7 @@ func snapshotGen(args []string) error {
 
 		outputAdded = true
 
-		return utxo.CreateOutput(&iotago.OutputID{}, hornet.NullBlockID(), 0, 0, &iotago.BasicOutput{
+		return utxo.CreateOutput(iotago.OutputID{}, iotago.EmptyBlockID(), 0, 0, &iotago.BasicOutput{
 			Amount: protoParas.TokenSupply - treasury,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: &address},
