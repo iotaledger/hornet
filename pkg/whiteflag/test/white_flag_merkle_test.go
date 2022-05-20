@@ -43,6 +43,9 @@ func TestWhiteFlagMerkleTreeHash(t *testing.T) {
 		require.NoError(t, err)
 
 		require.True(t, bytes.Equal(hash, path.Hash(hasher)))
+		isProof, err := path.ContainsValue(includedBlocks[i])
+		require.NoError(t, err)
+		require.True(t, isProof)
 
 		jsonPath, err := json.Marshal(path)
 		require.NoError(t, err)

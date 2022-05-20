@@ -1,6 +1,7 @@
 package whiteflag
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/json"
 	"fmt"
@@ -172,6 +173,26 @@ func (p *InclusionProof) Hash(hasher *Hasher) []byte {
 type jsonPath struct {
 	Left  *json.RawMessage `json:"l"`
 	Right *json.RawMessage `json:"r"`
+}
+
+func containsLeafValue(hasheable Hasheable, value []byte) bool {
+	switch t := hasheable.(type) {
+	case *hashValue:
+		return false
+	case *leafValue:
+		return bytes.Equal(value, t.Value)
+	case *InclusionProof:
+		return containsLeafValue(t.Right, value) || containsLeafValue(t.Left, value)
+	}
+	return false
+}
+
+func (p *InclusionProof) ContainsValue(value encoding.BinaryMarshaler) (bool, error) {
+	bytes, err := value.MarshalBinary()
+	if err != nil {
+		return false, err
+	}
+	return containsLeafValue(p, bytes), nil
 }
 
 func (p *InclusionProof) MarshalJSON() ([]byte, error) {
