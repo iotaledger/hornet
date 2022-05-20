@@ -45,11 +45,11 @@ func (t *Hasher) ComputeInclusionProof(data []encoding.BinaryMarshaler, index in
 
 func (t *Hasher) computeProof(data []encoding.BinaryMarshaler, index int) (Hasheable, error) {
 	if len(data) < 2 {
-		h, err := t.Hash(data)
+		l, err := data[0].MarshalBinary()
 		if err != nil {
 			return nil, err
 		}
-		return &hashValue{h}, nil
+		return &leafValue{l}, nil
 	}
 
 	if len(data) == 2 {
