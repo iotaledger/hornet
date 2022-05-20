@@ -27,6 +27,10 @@ func (s *INXServer) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx
 		tips, err = deps.TipSelector.SelectNonLazyTips()
 	}
 
+	if req.GetCount() > 0 && req.GetCount() < uint32(len(tips)) {
+		tips = tips[:req.GetCount()]
+	}
+
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "error selecting tips: %s", err.Error())
 	}
