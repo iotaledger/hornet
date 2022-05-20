@@ -61,7 +61,7 @@ func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) 
 	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
 }
 
-func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestoneServer) error {
+func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
@@ -90,7 +90,7 @@ func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenT
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToConfirmedMilestone(_ *inx.NoParams, srv inx.INX_ListenToConfirmedMilestoneServer) error {
+func (s *INXServer) ListenToConfirmedMilestones(req *inx.ConfirmedMilestonesRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
