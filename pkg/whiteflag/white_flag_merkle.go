@@ -39,7 +39,11 @@ func (t *Hasher) Hash(data []encoding.BinaryMarshaler) ([]byte, error) {
 		return t.EmptyRoot(), nil
 	}
 	if len(data) == 1 {
-		return t.hashLeaf(data[0])
+		l, err := data[0].MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		return t.hashLeaf(l), nil
 	}
 
 	k := largestPowerOfTwo(len(data))
@@ -54,16 +58,12 @@ func (t *Hasher) Hash(data []encoding.BinaryMarshaler) ([]byte, error) {
 	return t.hashNode(l, r), nil
 }
 
-// hashLeaf returns the Merkle tree leaf hash of data.
-func (t *Hasher) hashLeaf(data encoding.BinaryMarshaler) ([]byte, error) {
-	b, err := data.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
+// hashLeaf returns the Merkle tree leafValue hash of data.
+func (t *Hasher) hashLeaf(l []byte) []byte {
 	h := t.hash.New()
 	h.Write([]byte{LeafHashPrefix})
-	h.Write(b)
-	return h.Sum(nil), nil
+	h.Write(l)
+	return h.Sum(nil)
 }
 
 // hashNode returns the inner Merkle tree node hash of the two child nodes l and r.
