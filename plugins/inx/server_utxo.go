@@ -176,7 +176,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerRequest, srv inx.INX_Li
 			return 0, status.Error(codes.Unavailable, "error accessing the UTXO ledger")
 		}
 
-		if startIndex > 0 && startIndex < ledgerIndex {
+		if startIndex > 0 && startIndex <= ledgerIndex {
 			// Stream all available milestone diffs first
 			pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
 			if startIndex <= pruningIndex {
@@ -276,11 +276,11 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_
 			return 0, 0, status.Error(codes.Unavailable, "error accessing the UTXO ledger")
 		}
 
-		if ledgerIndex < endIndex {
+		if endIndex == 0 || ledgerIndex < endIndex {
 			endIndex = ledgerIndex
 		}
 
-		if startIndex > 0 {
+		if startIndex > 0 && startIndex <= ledgerIndex {
 			// Stream all available milestone diffs first
 			pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
 			if startIndex <= pruningIndex {
