@@ -90,7 +90,7 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToConfirmedMilestones(req *inx.ConfirmedMilestonesRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
+func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
 
 	sendPreviousMilestones := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()

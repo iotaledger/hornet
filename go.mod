@@ -16,7 +16,7 @@ require (
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf
 	github.com/iotaledger/hive.go v0.0.0-20220516114042-6c0ad76bc65f
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220516114042-6c0ad76bc65f
-	github.com/iotaledger/inx/go v0.0.0-20220520155719-5b436a250b93
+	github.com/iotaledger/inx/go v0.0.0-20220520173951-ad6b2605bb52
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v3 v3.0.0-20220519135423-82921868d5cd
 	github.com/labstack/echo/v4 v4.7.2

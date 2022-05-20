@@ -166,7 +166,7 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 	return err
 }
 
-func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
+func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
 
 	sendPreviousMilestoneDiffs := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
 		deps.UTXOManager.ReadLockLedger()
@@ -265,7 +265,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerRequest, srv inx.INX_Li
 	return innerErr
 }
 
-func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_ListenToTreasuryUpdatesServer) error {
+func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToTreasuryUpdatesServer) error {
 	var sentTreasuryUpdate bool
 	sendPreviousMilestoneDiffs := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, milestone.Index, error) {
 		deps.UTXOManager.ReadLockLedger()
