@@ -120,7 +120,6 @@ func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksSe
 		task.Return(nil)
 	})
 	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
-		//TODO: apply filter?
 		wp.Submit(cachedBlock)
 	})
 	wp.Start()
@@ -150,7 +149,6 @@ func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSol
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata) {
-		//TODO: apply filter?
 		wp.Submit(blockMeta)
 	})
 	wp.Start()
@@ -180,7 +178,6 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
-		//TODO: apply filter?
 		wp.Submit(blockMeta)
 	})
 	wp.Start()
