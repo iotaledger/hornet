@@ -221,7 +221,7 @@ func (b *BlockBuilder) Build() *Block {
 
 		switch iotaOutput := output.Output().(type) {
 		case *iotago.BasicOutput:
-			conditions := iotaOutput.UnlockConditionsSet()
+			conditions := iotaOutput.UnlockConditionSet()
 			if conditions.Address().Address.Equal(toAddr) && output.Deposit() == b.amount {
 				sentOutput = output
 				continue
