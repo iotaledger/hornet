@@ -27,7 +27,6 @@ const (
 	PriorityDashboard
 	PriorityPoWHandler
 	PriorityRestAPI // depends on PriorityPoWHandler
-	PrioritySpammer // depends on PriorityPoWHandler
 	PriorityIndexer
 	PriorityStatusReport
 	PriorityPrometheus

@@ -206,9 +206,9 @@ Example:
 
 ## <a id="pow"></a> 5. Proof of Work
 
-| Name                | Description                                                                                          | Type   | Default value |
-| ------------------- | ---------------------------------------------------------------------------------------------------- | ------ | ------------- |
-| refreshTipsInterval | Interval for refreshing tips during PoW for spammer blocks and blocks passed without parents via API | string | "5s"          |
+| Name                | Description                                                                       | Type   | Default value |
+| ------------------- | --------------------------------------------------------------------------------- | ------ | ------------- |
+| refreshTipsInterval | Interval for refreshing tips during PoW for blocks passed without parents via API | string | "5s"          |
 
 Example:
 
@@ -442,7 +442,7 @@ Example:
 | Name                        | Description                                                                                    | Type   | Default value                                                                                                                                                                                                                                                                                                                                                                                                |
 | --------------------------- | ---------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | bindAddress                 | The bind address on which the REST API listens on                                              | string | "0.0.0.0:14265"                                                                                                                                                                                                                                                                                                                                                                                              |
-| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using * are allowed  | array  | /health<br>/api/v2/info<br>/api/v2/tips<br>/api/v2/blocks*<br>/api/v2/transactions*<br>/api/v2/milestones*<br>/api/v2/outputs*<br>/api/v2/addresses*<br>/api/v2/treasury<br>/api/v2/receipts*<br>/api/plugins/debug/v1/*<br>/api/plugins/indexer/v1/*<br>/api/plugins/mqtt/v1<br>/api/plugins/participation/v2/events*<br>/api/plugins/participation/v2/outputs*<br>/api/plugins/participation/v2/addresses* |
+| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using * are allowed  | array  | /health<br>/api/v2/info<br>/api/v2/tips<br>/api/v2/blocks*<br>/api/v2/transactions*<br>/api/v2/milestones*<br>/api/v2/outputs*<br>/api/v2/addresses*<br>/api/v2/treasury<br>/api/v2/receipts*<br>/api/plugins/debug/v1/*<br>/api/plugins/indexer/v1/*<br>/api/plugins/mqtt/v1<br>/api/plugins/participation/v1/events*<br>/api/plugins/participation/v1/outputs*<br>/api/plugins/participation/v1/addresses* |
 | protectedRoutes             | The HTTP REST routes which need to be called with authorization. Wildcards using * are allowed | array  | /api/v2/*<br>/api/plugins/*                                                                                                                                                                                                                                                                                                                                                                                  |
 | [jwtAuth](#restapi_jwtauth) | Configuration for JWT Auth                                                                     | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
 | [pow](#restapi_pow)         | Configuration for Proof of Work                                                                | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -488,9 +488,9 @@ Example:
         "/api/plugins/debug/v1/*",
         "/api/plugins/indexer/v1/*",
         "/api/plugins/mqtt/v1",
-        "/api/plugins/participation/v2/events*",
-        "/api/plugins/participation/v2/outputs*",
-        "/api/plugins/participation/v2/addresses*"
+        "/api/plugins/participation/v1/events*",
+        "/api/plugins/participation/v1/outputs*",
+        "/api/plugins/participation/v1/addresses*"
       ],
       "protectedRoutes": [
         "/api/v2/*",
@@ -536,21 +536,19 @@ Example:
 
 ### <a id="tipsel_nonlazy"></a> NonLazy
 
-| Name                    | Description                                                                                               | Type   | Default value |
-| ----------------------- | --------------------------------------------------------------------------------------------------------- | ------ | ------------- |
-| retentionRulesTipsLimit | The maximum number of current tips for which the retention rules are checked (non-lazy)                   | int    | 100           |
-| maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first block (non-lazy)      | string | "3s"          |
-| maxChildren             | The maximum amount of references by other blocks before the tip is removed from the tip pool (non-lazy)   | uint   | 30            |
-| spammerTipsThreshold    | The maximum amount of tips in a tip-pool (non-lazy) before the spammer tries to reduce these (0 = always) | int    | 0             |
+| Name                    | Description                                                                                             | Type   | Default value |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| retentionRulesTipsLimit | The maximum number of current tips for which the retention rules are checked (non-lazy)                 | int    | 100           |
+| maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first block (non-lazy)    | string | "3s"          |
+| maxChildren             | The maximum amount of references by other blocks before the tip is removed from the tip pool (non-lazy) | uint   | 30            |
 
 ### <a id="tipsel_semilazy"></a> SemiLazy
 
-| Name                    | Description                                                                                                 | Type   | Default value |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------- | ------ | ------------- |
-| retentionRulesTipsLimit | The maximum number of current tips for which the retention rules are checked (semi-lazy)                    | int    | 20            |
-| maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first block (semi-lazy)       | string | "3s"          |
-| maxChildren             | The maximum amount of references by other blocks before the tip is removed from the tip pool (semi-lazy)    | uint   | 2             |
-| spammerTipsThreshold    | The maximum amount of tips in a tip-pool (semi-lazy) before the spammer tries to reduce these (0 = disable) | int    | 30            |
+| Name                    | Description                                                                                              | Type   | Default value |
+| ----------------------- | -------------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| retentionRulesTipsLimit | The maximum number of current tips for which the retention rules are checked (semi-lazy)                 | int    | 20            |
+| maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first block (semi-lazy)    | string | "3s"          |
+| maxChildren             | The maximum amount of references by other blocks before the tip is removed from the tip pool (semi-lazy) | uint   | 2             |
 
 Example:
 
@@ -560,14 +558,12 @@ Example:
       "nonLazy": {
         "retentionRulesTipsLimit": 100,
         "maxReferencedTipAge": "3s",
-        "maxChildren": 30,
-        "spammerTipsThreshold": 0
+        "maxChildren": 30
       },
       "semiLazy": {
         "retentionRulesTipsLimit": 20,
         "maxReferencedTipAge": "3s",
-        "maxChildren": 2,
-        "spammerTipsThreshold": 30
+        "maxChildren": 2
       }
     }
   }
@@ -607,35 +603,7 @@ Example:
   }
 ```
 
-## <a id="spammer"></a> 16. Spammer
-
-| Name         | Description                                                                        | Type    | Default value                  |
-| ------------ | ---------------------------------------------------------------------------------- | ------- | ------------------------------ |
-| message      | The message to embed within the spam blocks                                        | string  | "We are all made of stardust." |
-| tag          | The tag of the block                                                               | string  | "HORNET Spammer"               |
-| tagSemiLazy  | The tag of the block if the semi-lazy pool is used (uses "tag" if empty)           | string  | "HORNET Spammer Semi-Lazy"     |
-| cpuMaxUsage  | Workers remains idle for a while when cpu usage gets over this limit (0 = disable) | float   | 0.8                            |
-| bpsRateLimit | The rate limit for the spammer (0 = no limit)                                      | float   | 0.0                            |
-| workers      | The amount of parallel running spammers                                            | int     | 0                              |
-| autostart    | Automatically start the spammer on node startup                                    | boolean | false                          |
-
-Example:
-
-```json
-  {
-    "spammer": {
-      "message": "We are all made of stardust.",
-      "tag": "HORNET Spammer",
-      "tagSemiLazy": "HORNET Spammer Semi-Lazy",
-      "cpuMaxUsage": 0.8,
-      "bpsRateLimit": 0,
-      "workers": 0,
-      "autostart": false
-    }
-  }
-```
-
-## <a id="receipts"></a> 17. Receipts
+## <a id="receipts"></a> 16. Receipts
 
 | Name                             | Description                 | Type   | Default value |
 | -------------------------------- | --------------------------- | ------ | ------------- |
@@ -697,23 +665,23 @@ Example:
   }
 ```
 
-## <a id="prometheus"></a> 18. Prometheus
+## <a id="prometheus"></a> 17. Prometheus
 
 | Name                                                     | Description                                                  | Type    | Default value    |
 | -------------------------------------------------------- | ------------------------------------------------------------ | ------- | ---------------- |
 | bindAddress                                              | The bind address on which the Prometheus exporter listens on | string  | "localhost:9311" |
 | [fileServiceDiscovery](#prometheus_fileservicediscovery) | Configuration for fileServiceDiscovery                       | object  |                  |
-| databaseMetrics                                          | Include database metrics                                     | boolean | true             |
-| nodeMetrics                                              | Include node metrics                                         | boolean | true             |
-| gossipMetrics                                            | Include gossip metrics                                       | boolean | true             |
-| cachesMetrics                                            | Include caches metrics                                       | boolean | true             |
-| restAPIMetrics                                           | Include restAPI metrics                                      | boolean | true             |
-| inxMetrics                                               | Include INX metrics                                          | boolean | true             |
-| migrationMetrics                                         | Include migration metrics                                    | boolean | true             |
-| debugMetrics                                             | Include debug metrics                                        | boolean | false            |
-| goMetrics                                                | Include go metrics                                           | boolean | false            |
-| processMetrics                                           | Include process metrics                                      | boolean | false            |
-| promhttpMetrics                                          | Include promhttp metrics                                     | boolean | false            |
+| databaseMetrics                                          | Whether to include database metrics                          | boolean | true             |
+| nodeMetrics                                              | Whether to include node metrics                              | boolean | true             |
+| gossipMetrics                                            | Whether to include gossip metrics                            | boolean | true             |
+| cachesMetrics                                            | Whether to include caches metrics                            | boolean | true             |
+| restAPIMetrics                                           | Whether to include restAPI metrics                           | boolean | true             |
+| inxMetrics                                               | Whether to include INX metrics                               | boolean | true             |
+| migrationMetrics                                         | Whether to include migration metrics                         | boolean | true             |
+| debugMetrics                                             | Whether to include debug metrics                             | boolean | false            |
+| goMetrics                                                | Whether to include go metrics                                | boolean | false            |
+| processMetrics                                           | Whether to include process metrics                           | boolean | false            |
+| promhttpMetrics                                          | Whether to include promhttp metrics                          | boolean | false            |
 
 ### <a id="prometheus_fileservicediscovery"></a> FileServiceDiscovery
 
@@ -749,7 +717,7 @@ Example:
   }
 ```
 
-## <a id="inx"></a> 19. INX
+## <a id="inx"></a> 18. INX
 
 | Name            | Description                                            | Type   | Default value    |
 | --------------- | ------------------------------------------------------ | ------ | ---------------- |

@@ -20,9 +20,6 @@ type ParametersTipsel struct {
 		// Defines the maximum amount of references by other blocks
 		// before the tip is removed from the tip pool.
 		MaxChildren uint32 `default:"30" usage:"the maximum amount of references by other blocks before the tip is removed from the tip pool (non-lazy)"`
-		// Defines the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable (semi-lazy), 0 = always (non-lazy))
-		// this is used to support the network if someone attacks the tangle by spamming a lot of tips
-		SpammerTipsThreshold int `default:"0" usage:"the maximum amount of tips in a tip-pool (non-lazy) before the spammer tries to reduce these (0 = always)"`
 	}
 
 	// the config group used for the semi-lazy tip-pool
@@ -37,9 +34,6 @@ type ParametersTipsel struct {
 		// Defines the maximum amount of references by other blocks
 		// before the tip is removed from the tip pool.
 		MaxChildren uint32 `default:"2" usage:"the maximum amount of references by other blocks before the tip is removed from the tip pool (semi-lazy)"`
-		// Defines the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable (semi-lazy), 0 = always (non-lazy))
-		// this is used to support the network if someone attacks the tangle by spamming a lot of tips
-		SpammerTipsThreshold int `default:"30" usage:"the maximum amount of tips in a tip-pool (semi-lazy) before the spammer tries to reduce these (0 = disable)"`
 	}
 }
 

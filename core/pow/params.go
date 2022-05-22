@@ -8,8 +8,8 @@ import (
 
 // ParametersPoW contains the definition of the parameters used by PoW.
 type ParametersPoW struct {
-	// Defines the interval for refreshing tips during PoW for spammer blocks and blocks passed without parents via API.
-	RefreshTipsInterval time.Duration `default:"5s" usage:"interval for refreshing tips during PoW for spammer blocks and blocks passed without parents via API"`
+	// Defines the interval for refreshing tips during PoW for blocks passed without parents via API.
+	RefreshTipsInterval time.Duration `default:"5s" usage:"interval for refreshing tips during PoW for blocks passed without parents via API"`
 }
 
 var ParamsPoW = &ParametersPoW{}

@@ -6,7 +6,6 @@
       "Autopeering",
       "Debug",
       "Prometheus",
-      "Spammer",
       "INX"
     ],
     "stopGracePeriod": "5m"
@@ -183,14 +182,12 @@
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAge": "3s",
-      "maxChildren": 30,
-      "spammerTipsThreshold": 0
+      "maxChildren": 30
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
       "maxReferencedTipAge": "3s",
-      "maxChildren": 2,
-      "spammerTipsThreshold": 30
+      "maxChildren": 2
     }
   },
   "dashboard": {
@@ -202,15 +199,6 @@
       "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
       "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
     }
-  },
-  "spammer": {
-    "message": "We are all made of stardust.",
-    "tag": "HORNET Spammer",
-    "tagSemiLazy": "HORNET Spammer Semi-Lazy",
-    "cpuMaxUsage": 0.8,
-    "bpsRateLimit": 0.0,
-    "workers": 0,
-    "autostart": false
   },
   "receipts": {
     "backup": {

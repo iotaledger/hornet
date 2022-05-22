@@ -58,7 +58,7 @@ services:
       - 4-nodes
 
   inx-indexer:
-    image: iotaledger/inx-indexer:0.6
+    image: iotaledger/inx-indexer:0.7
     networks:
       peering_net:
         ipv4_address: 172.18.211.21
@@ -163,7 +163,7 @@ services:
       - "config_private_tangle.json"
       - "--node.alias=hornet-coo"
       - "--inx.bindAddress=172.18.211.11:9029"
-      - "--app.enablePlugins=Spammer,Coordinator,Debug,Prometheus,INX"
+      - "--app.enablePlugins=Coordinator,Debug,Prometheus,INX"
       - "--p2p.identityPrivateKey=1f46fad4f538a031d4f87f490f6bca4319dfd0307636a5759a22b5e8874bd608f9156ba976a12918c16a481c38c88a7b5351b769adc30390e93b6c0a63b09b79"
       - "--p2p.peers=/ip4/172.18.211.12/tcp/15600/p2p/12D3KooWCKwcTWevoRKa2kEBputeGASvEBuDfRDSbe8t1DWugUmL,/ip4/172.18.211.13/tcp/15600/p2p/12D3KooWGdr8M5KX8KuKaXSiKfHJstdVnRkadYmupF7tFk2HrRoA,/ip4/172.18.211.14/tcp/15600/p2p/12D3KooWC7uE9w3RN4Vh1FJAZa8SbE8yMWR6wCVBajcWpyWguV73"
       - "--p2p.peerAliases=hornet-2,hornet-3,hornet-4"

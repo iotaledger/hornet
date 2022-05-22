@@ -22,7 +22,7 @@ func (s *INXServer) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx
 	var err error
 	var tips iotago.BlockIDs
 	if req.AllowSemiLazy {
-		_, tips, err = deps.TipSelector.SelectSpammerTips()
+		tips, err = deps.TipSelector.SelectTipsWithSemiLazyAllowed()
 	} else {
 		tips, err = deps.TipSelector.SelectNonLazyTips()
 	}

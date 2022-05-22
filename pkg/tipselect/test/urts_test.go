@@ -25,11 +25,9 @@ const (
 	RetentionRulesTipsLimitNonLazy          = 100
 	MaxReferencedTipAgeNonLazy              = 3 * time.Second
 	MaxChildrenNonLazy                      = 100
-	SpammerTipsThresholdNonLazy             = 0
 	RetentionRulesTipsLimitSemiLazy         = 20
 	MaxReferencedTipAgeSemiLazy             = 3 * time.Second
 	MaxChildrenSemiLazy                     = 100
-	SpammerTipsThresholdSemiLazy            = 30
 	MinPoWScore                             = 1.0
 )
 
@@ -50,11 +48,9 @@ func TestTipSelect(t *testing.T) {
 		RetentionRulesTipsLimitNonLazy,
 		MaxReferencedTipAgeNonLazy,
 		uint32(MaxChildrenNonLazy),
-		SpammerTipsThresholdNonLazy,
 		RetentionRulesTipsLimitSemiLazy,
 		MaxReferencedTipAgeSemiLazy,
 		uint32(MaxChildrenSemiLazy),
-		SpammerTipsThresholdSemiLazy,
 	)
 
 	// fill the storage with some blocks to fill the tipselect pool

@@ -70,12 +70,10 @@ func provide(c *dig.Container) error {
 			ParamsTipsel.NonLazy.RetentionRulesTipsLimit,
 			ParamsTipsel.NonLazy.MaxReferencedTipAge,
 			ParamsTipsel.NonLazy.MaxChildren,
-			ParamsTipsel.NonLazy.SpammerTipsThreshold,
 
 			ParamsTipsel.SemiLazy.RetentionRulesTipsLimit,
 			ParamsTipsel.SemiLazy.MaxReferencedTipAge,
 			ParamsTipsel.SemiLazy.MaxChildren,
-			ParamsTipsel.SemiLazy.SpammerTipsThreshold,
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)

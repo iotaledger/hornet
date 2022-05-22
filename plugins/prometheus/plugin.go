@@ -191,12 +191,14 @@ func run() error {
 			for _, collect := range collects {
 				collect()
 			}
+
 			handler := promhttp.HandlerFor(
 				registry,
 				promhttp.HandlerOpts{
 					EnableOpenMetrics: true,
 				},
 			)
+
 			if ParamsPrometheus.PromhttpMetrics {
 				handler = promhttp.InstrumentMetricHandler(registry, handler)
 			}

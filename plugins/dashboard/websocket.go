@@ -39,10 +39,6 @@ const (
 	MsgTypeDatabaseSizeMetric = 13
 	// MsgTypeDatabaseCleanupEvent is the type of the database cleanup message for the metrics.
 	MsgTypeDatabaseCleanupEvent = 14
-	// MsgTypeSpamMetrics is the type of the SpamMetric message.
-	MsgTypeSpamMetrics = 15
-	// MsgTypeAvgSpamMetrics is the type of the AvgSpamMetric message.
-	MsgTypeAvgSpamMetrics = 16
 )
 
 func websocketRoute(ctx echo.Context) error {

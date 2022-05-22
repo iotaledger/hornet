@@ -22,7 +22,6 @@ import (
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
-	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/iotaledger/hive.go/app"
@@ -67,7 +66,6 @@ Command line flags:
 			warpsync.Plugin,
 			urts.Plugin,
 			dashboard.Plugin,
-			spammer.Plugin,
 			receipt.Plugin,
 			prometheus.Plugin,
 			inx.Plugin,
