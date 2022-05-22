@@ -99,9 +99,6 @@ type TipSelector struct {
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (non-lazy pool)
 	maxChildrenNonLazy uint32
-	// spammerTipsThresholdNonLazy is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = always)
-	// this is used to support the network if someone attacks the tangle by spamming a lot of tips. (non-lazy pool)
-	spammerTipsThresholdNonLazy int
 	// retentionRulesTipsLimitSemiLazy is the maximum amount of current tips for which "maxReferencedTipAgeSemiLazy"
 	// and "maxChildren" are checked. if the amount of tips exceeds this limit,
 	// referenced tips get removed directly to reduce the amount of tips in the network. (semi-lazy pool)
@@ -114,9 +111,6 @@ type TipSelector struct {
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (semi-lazy pool)
 	maxChildrenSemiLazy uint32
-	// spammerTipsThresholdSemiLazy is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable)
-	// this is used to support the network if someone attacks the tangle by spamming a lot of tips. (semi-lazy pool)
-	spammerTipsThresholdSemiLazy int
 	// nonLazyTipsMap contains only non-lazy tips.
 	nonLazyTipsMap map[iotago.BlockID]*Tip
 	// semiLazyTipsMap contains only semi-lazy tips.
@@ -136,11 +130,9 @@ func New(
 	retentionRulesTipsLimitNonLazy int,
 	maxReferencedTipAgeNonLazy time.Duration,
 	maxChildrenNonLazy uint32,
-	spammerTipsThresholdNonLazy int,
 	retentionRulesTipsLimitSemiLazy int,
 	maxReferencedTipAgeSemiLazy time.Duration,
-	maxChildrenSemiLazy uint32,
-	spammerTipsThresholdSemiLazy int) *TipSelector {
+	maxChildrenSemiLazy uint32) *TipSelector {
 
 	return &TipSelector{
 		shutdownCtx:                     shutdownCtx,
@@ -150,11 +142,9 @@ func New(
 		retentionRulesTipsLimitNonLazy:  retentionRulesTipsLimitNonLazy,
 		maxReferencedTipAgeNonLazy:      maxReferencedTipAgeNonLazy,
 		maxChildrenNonLazy:              maxChildrenNonLazy,
-		spammerTipsThresholdNonLazy:     spammerTipsThresholdNonLazy,
 		retentionRulesTipsLimitSemiLazy: retentionRulesTipsLimitSemiLazy,
 		maxReferencedTipAgeSemiLazy:     maxReferencedTipAgeSemiLazy,
 		maxChildrenSemiLazy:             maxChildrenSemiLazy,
-		spammerTipsThresholdSemiLazy:    spammerTipsThresholdSemiLazy,
 		nonLazyTipsMap:                  make(map[iotago.BlockID]*Tip),
 		semiLazyTipsMap:                 make(map[iotago.BlockID]*Tip),
 		Events: &Events{
@@ -376,32 +366,31 @@ func (ts *TipSelector) SelectNonLazyTips() (iotago.BlockIDs, error) {
 	return ts.selectTips(ts.nonLazyTipsMap)
 }
 
-func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips iotago.BlockIDs, err error) {
-	if ts.spammerTipsThresholdSemiLazy != 0 && len(ts.semiLazyTipsMap) > ts.spammerTipsThresholdSemiLazy {
-		// threshold was defined and reached, return semi-lazy tips for the spammer
+// SelectTipsWithSemiLazyAllowed tries to select semi-lazy tips first,
+// but uses non-lazy tips instead if not enough semi-lazy tips are found.
+// This functionality may be useful for healthy spammers.
+func (ts *TipSelector) SelectTipsWithSemiLazyAllowed() (tips iotago.BlockIDs, err error) {
+	if len(ts.semiLazyTipsMap) > 2 {
+		// return semi-lazy tips (e.g. for healthy spammers)
 		tips, err = ts.SelectSemiLazyTips()
 		if err != nil {
-			return false, nil, fmt.Errorf("couldn't select semi-lazy tips: %w", err)
+			return nil, fmt.Errorf("couldn't select semi-lazy tips: %w", err)
 		}
 
-		if len(tips) < 2 {
-			// do not spam if the amount of tips are less than 2 since that would not reduce the semi lazy count
-			return false, nil, fmt.Errorf("%w: semi lazy tips are equal", ErrNoTipsAvailable)
+		if len(tips) >= 2 {
+			return tips, nil
 		}
 
-		return true, tips, nil
-	}
-
-	if ts.spammerTipsThresholdNonLazy != 0 && len(ts.nonLazyTipsMap) < ts.spammerTipsThresholdNonLazy {
-		// if a threshold was defined and not reached, do not return tips for the spammer
-		return false, nil, fmt.Errorf("%w: non-lazy threshold not reached", ErrNoTipsAvailable)
+		// if the amount of tips is less than 2, creating a block with a single parent would
+		// not reduce the semi-lazy count. Therefore we ignore the semi-lazy tips, and return
+		// not-lazy tips instead.
 	}
 
 	tips, err = ts.SelectNonLazyTips()
 	if err != nil {
-		return false, tips, fmt.Errorf("couldn't select non-lazy tips: %w", err)
+		return tips, fmt.Errorf("couldn't select non-lazy tips: %w", err)
 	}
-	return false, tips, nil
+	return tips, nil
 }
 
 // CleanUpReferencedTips checks if tips were referenced before

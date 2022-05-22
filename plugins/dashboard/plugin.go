@@ -233,8 +233,6 @@ func run() error {
 
 	// run the database size collector
 	runDatabaseSizeCollector()
-	// run the spammer feed
-	runSpammerMetricWorker()
 
 	return nil
 }

@@ -5,7 +5,6 @@
       "Autopeering"
     ],
     "enablePlugins": [
-      "Spammer",
       "Debug",
       "Prometheus"
     ],
@@ -145,14 +144,12 @@
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAge": "3s",
-      "maxChildren": 30,
-      "spammerTipsThreshold": 0
+      "maxChildren": 30
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
       "maxReferencedTipAge": "3s",
-      "maxChildren": 2,
-      "spammerTipsThreshold": 30
+      "maxChildren": 2
     }
   },
   "dashboard": {
@@ -164,15 +161,6 @@
       "passwordHash": "a5c5c6949e5259b6f74b08019da0b54b056473d2ed4712d8590682e6bd46876b",
       "passwordSalt": "b5769c198c45b84bf502ed0dde3b698eb885a527dca5bd5b0cd015992157cc79"
     }
-  },
-  "spammer": {
-    "message": "We are all made of stardust.",
-    "tag": "HORNET Spammer",
-    "tagSemiLazy": "HORNET Spammer Semi-Lazy",
-    "cpuMaxUsage": 0.8,
-    "bpsRateLimit": 5.0,
-    "workers": 0,
-    "autostart": true
   },
   "prometheus": {
     "bindAddress": "0.0.0.0:9311",

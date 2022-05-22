@@ -1,12 +1,11 @@
 ---
-description: Learn about key concepts to consider for Node maintenance. These include configuring storage, plugins, spammers, and how to work with snapshots.
+description: Learn about key concepts to consider for Node maintenance. These include configuring storage, plugins and how to work with snapshots.
 image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node 
 - Hornet Node
 - storage
 - configuration
-- spammer
 - snapshots
 - reference
 ---
@@ -77,34 +76,6 @@ Hornet can be extended by plugins. You can control plugins using the `node` sect
 ```
 
 You can also control plugins using the [Dashboard/web interface](https://wiki.iota.org/hornet/post_installation#dashboard).
-
-
-## Spammer
-Hornet integrates a lightweight spamming plugin that spams the network with messages. The IOTA network is based on a Directed Acyclic Graph. So, new incoming messages are connected to previous messages (tips). It is healthy for the network to maintain some level of message rate.
-
-The Spammer plugin allows your node to send several data messages at regular intervals. You can set the interval with the `bpsRateLimit` key, which is the number of messages per second (TPS) that the plugin should try to send.
-
-For example, value `"bpsRateLimit": 0.1` would mean to send 1 message every 10 seconds.
-
-You can change the default configuration by enabling this plugin since it is usually disabled.
-
-```json
- "spammer": {
-    "message": "We are all made of stardust.",
-    "index": "HORNET Spammer",
-    "indexSemiLazy": "HORNET Spammer Semi-Lazy",
-    "cpuMaxUsage": 0.8,
-    "bpsRateLimit": 0.0,
-    "workers": 0,
-    "autostart": false
-  }
-```
-
-:::note
-
-This plugin can also be leveraged during a spamming event during which the community tests the throughput of the network.
-
-:::
 
 ## Snapshots
 Your node's ledger accumulates many messages, which uses a significant disk capacity over time. This section discusses configuring local snapshots to prune old transactions from your node's database and create backup snapshot files.

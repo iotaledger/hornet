@@ -82,10 +82,10 @@ func info() (*infoResponse, error) {
 }
 
 func tips(c echo.Context) (*tipsResponse, error) {
-	spammerTips := false
+	allowSemiLazy := false
 	for query := range c.QueryParams() {
-		if strings.ToLower(query) == "spammertips" {
-			spammerTips = true
+		if strings.ToLower(query) == "allowsemilazy" {
+			allowSemiLazy = true
 			break
 		}
 	}
@@ -93,10 +93,10 @@ func tips(c echo.Context) (*tipsResponse, error) {
 	var tips iotago.BlockIDs
 	var err error
 
-	if !spammerTips {
+	if !allowSemiLazy {
 		tips, err = deps.TipSelector.SelectNonLazyTips()
 	} else {
-		_, tips, err = deps.TipSelector.SelectSpammerTips()
+		tips, err = deps.TipSelector.SelectTipsWithSemiLazyAllowed()
 	}
 
 	if err != nil {

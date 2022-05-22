@@ -1,7 +1,7 @@
 version: '3'
 services:
   inx-indexer:
-    image: iotaledger/inx-indexer:0.6
+    image: iotaledger/inx-indexer:0.7
     restart: on-failure
     volumes:
       - ./alphanet/indexer:/app/database

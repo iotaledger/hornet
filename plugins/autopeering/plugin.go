@@ -25,7 +25,6 @@ import (
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
-	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/iotaledger/hive.go/app"
@@ -125,7 +124,6 @@ func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error 
 		initConfig.ForceDisableComponent(warpsync.Plugin.Identifier())
 		initConfig.ForceDisableComponent(urts.Plugin.Identifier())
 		initConfig.ForceDisableComponent(dashboard.Plugin.Identifier())
-		initConfig.ForceDisableComponent(spammer.Plugin.Identifier())
 		initConfig.ForceDisableComponent(receipt.Plugin.Identifier())
 		initConfig.ForceDisableComponent(prometheus.Plugin.Identifier())
 		initConfig.ForceDisableComponent(inx.Plugin.Identifier())
