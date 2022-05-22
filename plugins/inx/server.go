@@ -61,39 +61,47 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 	}
 
 	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
-	var lmi *inx.MilestoneInfo
+	var lmi *inx.Milestone
 	if latestMilestoneIndex > pruningIndex {
-		milestone, err := milestoneForIndex(latestMilestoneIndex)
+		lmi, err = milestoneForIndex(latestMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}
-		lmi = milestone.GetMilestoneInfo()
 	} else {
-		lmi = &inx.MilestoneInfo{
-			MilestoneIndex: uint32(latestMilestoneIndex),
+		//TODO: we should have the milestone here when we store it in the snapshot
+		lmi = &inx.Milestone{
+			MilestoneInfo: &inx.MilestoneInfo{
+				MilestoneIndex: uint32(latestMilestoneIndex),
+			},
+			Milestone: nil,
 		}
 	}
 
 	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
-	var cmi *inx.MilestoneInfo
+	var cmi *inx.Milestone
 	if confirmedMilestoneIndex > pruningIndex {
-		milestone, err := milestoneForIndex(confirmedMilestoneIndex)
+		cmi, err = milestoneForIndex(confirmedMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}
-		cmi = milestone.GetMilestoneInfo()
 	} else {
-		cmi = &inx.MilestoneInfo{
-			MilestoneIndex: uint32(confirmedMilestoneIndex),
+		//TODO: we should have the milestone here when we store it in the snapshot
+		cmi = &inx.Milestone{
+			MilestoneInfo: &inx.MilestoneInfo{
+				MilestoneIndex: uint32(confirmedMilestoneIndex),
+			},
+			Milestone: nil,
 		}
 	}
 
 	return &inx.NodeStatus{
-		IsHealthy:          deps.Tangle.IsNodeHealthy(),
-		LatestMilestone:    lmi,
-		ConfirmedMilestone: cmi,
-		PruningIndex:       uint32(pruningIndex),
-		LedgerIndex:        uint32(index),
+		IsHealthy:              deps.Tangle.IsNodeHealthy(),
+		LatestMilestone:        lmi,
+		ConfirmedMilestone:     cmi,
+		TanglePruningIndex:     uint32(pruningIndex),
+		MilestonesPruningIndex: uint32(pruningIndex),
+		LedgerPruningIndex:     uint32(pruningIndex),
+		LedgerIndex:            uint32(index),
 	}, nil
 }
 

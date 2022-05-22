@@ -106,7 +106,7 @@ func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (
 	return INXNewBlockMetadata(cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
 }
 
-func (s *INXServer) ListenToBlocks(_ *inx.BlockFilter, srv inx.INX_ListenToBlocksServer) error {
+func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedBlock := task.Param(0).(*storage.CachedBlock)
@@ -120,7 +120,6 @@ func (s *INXServer) ListenToBlocks(_ *inx.BlockFilter, srv inx.INX_ListenToBlock
 		task.Return(nil)
 	})
 	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
-		//TODO: apply filter?
 		wp.Submit(cachedBlock)
 	})
 	wp.Start()
@@ -131,7 +130,7 @@ func (s *INXServer) ListenToBlocks(_ *inx.BlockFilter, srv inx.INX_ListenToBlock
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToSolidBlocks(_ *inx.BlockFilter, srv inx.INX_ListenToSolidBlocksServer) error {
+func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		blockMeta := task.Param(0).(*storage.CachedMetadata)
@@ -150,7 +149,6 @@ func (s *INXServer) ListenToSolidBlocks(_ *inx.BlockFilter, srv inx.INX_ListenTo
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata) {
-		//TODO: apply filter?
 		wp.Submit(blockMeta)
 	})
 	wp.Start()
@@ -161,7 +159,7 @@ func (s *INXServer) ListenToSolidBlocks(_ *inx.BlockFilter, srv inx.INX_ListenTo
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToReferencedBlocks(_ *inx.BlockFilter, srv inx.INX_ListenToReferencedBlocksServer) error {
+func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToReferencedBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		blockMeta := task.Param(0).(*storage.CachedMetadata)
@@ -180,7 +178,6 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.BlockFilter, srv inx.INX_Lis
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
-		//TODO: apply filter?
 		wp.Submit(blockMeta)
 	})
 	wp.Start()

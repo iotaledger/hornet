@@ -61,7 +61,7 @@ func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) 
 	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
 }
 
-func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestoneServer) error {
+func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
@@ -90,21 +90,81 @@ func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenT
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToConfirmedMilestone(_ *inx.NoParams, srv inx.INX_ListenToConfirmedMilestoneServer) error {
+func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
+
+	sendPreviousMilestones := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
+		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
+		if endIndex == 0 || cmi < endIndex {
+			endIndex = cmi
+		}
+
+		if startIndex > 0 && startIndex <= cmi {
+			// Stream all available milestones
+			pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+			if startIndex <= pruningIndex {
+				return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
+			}
+
+			for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
+				payload, err := milestoneForIndex(currentIndex)
+				if err != nil {
+					return 0, err
+				}
+				if err := srv.Send(payload); err != nil {
+					return 0, err
+				}
+			}
+		}
+		return endIndex, nil
+	}
+
+	requestStartIndex := milestone.Index(req.GetStartMilestoneIndex())
+	requestEndIndex := milestone.Index(req.GetEndMilestoneIndex())
+
+	lastSentIndex, err := sendPreviousMilestones(requestStartIndex, requestEndIndex)
+	if err != nil {
+		return err
+	}
+
+	if requestEndIndex > 0 && lastSentIndex >= requestEndIndex {
+		// We are done sending, so close the stream
+		return nil
+	}
+
+	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
-		defer cachedMilestone.Release(true)                                   // milestone -1
+		defer cachedMilestone.Release(true) // milestone -1
+
+		if requestStartIndex > 0 && cachedMilestone.Milestone().Index() < requestStartIndex {
+			// Skip this because it is before the index we requested
+			task.Return(nil)
+			return
+		}
+
 		payload, err := milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
 		if err != nil {
 			Plugin.LogInfof("error creating milestone: %v", err)
 			cancel()
+			innerErr = err
+			task.Return(nil)
 			return
 		}
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
+			innerErr = err
+			task.Return(nil)
+			return
 		}
+
+		if requestEndIndex > 0 && cachedMilestone.Milestone().Index() >= requestEndIndex {
+			// We are done sending the milestones
+			innerErr = nil
+			cancel()
+		}
+
 		task.Return(nil)
 	})
 	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
@@ -115,7 +175,7 @@ func (s *INXServer) ListenToConfirmedMilestone(_ *inx.NoParams, srv inx.INX_List
 	<-ctx.Done()
 	deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(closure)
 	wp.Stop()
-	return ctx.Err()
+	return innerErr
 }
 
 func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequest) (*inx.WhiteFlagResponse, error) {
