@@ -10,6 +10,12 @@ module.exports = {
                 routeBasePath: 'hornet',
                 sidebarPath: path.resolve(__dirname, 'sidebars.js'),
                 editUrl: 'https://github.com/iotaledger/hornet/edit/mainnet/documentation',
+                versions: {
+                    current: {
+                        label: 'Production',
+                        badge: true
+                    },
+                },
             }
         ],
     ],
