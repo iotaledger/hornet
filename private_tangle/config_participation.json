@@ -1,0 +1,21 @@
+{
+  "app": {
+    "checkForUpdates": true,
+    "disablePlugins": [],
+    "enablePlugins": [],
+    "stopGracePeriod": "5m"
+  },
+  "inx": {
+    "address": "localhost:9029"
+  },
+  "participation": {
+    "database": {
+      "engine": "rocksdb",
+      "path": "database"
+    },
+    "bindAddress": "localhost:9892"
+  },
+  "profiling": {
+    "bindAddress": "localhost:6060"
+  }
+}

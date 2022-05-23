@@ -20,7 +20,7 @@ services:
       - snapshots
 
   inx-coordinator-bootstrap:
-    image: iotaledger/inx-coordinator:0.4
+    image: iotaledger/inx-coordinator:0.5
     networks:
       peering_net:
         ipv4_address: 172.18.211.20
@@ -39,7 +39,7 @@ services:
       - bootstrap
 
   inx-coordinator:
-    image: iotaledger/inx-coordinator:0.4
+    image: iotaledger/inx-coordinator:0.5
     networks:
       peering_net:
         ipv4_address: 172.18.211.20
@@ -75,12 +75,16 @@ services:
       - 4-nodes
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.6
+    image: iotaledger/inx-mqtt:0.7
     networks:
       peering_net:
         ipv4_address: 172.18.211.22
     restart: on-failure
+    volumes:
+      - ./config_mqtt.json:/app/config.json:ro
     command:
+      - "-c"
+      - "config.json"
       - "--inx.address=172.18.211.11:9029"
       - "--mqtt.websocket.bindAddress=172.18.211.22:1888"
       - "--app.enablePlugins=Prometheus"
@@ -91,7 +95,7 @@ services:
       - 4-nodes
 
   inx-faucet:
-    image: iotaledger/inx-faucet:0.5
+    image: iotaledger/inx-faucet:0.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.23
@@ -113,7 +117,7 @@ services:
       - 4-nodes
 
   inx-participation:
-    image: iotaledger/inx-participation:0.3
+    image: iotaledger/inx-participation:0.4
     networks:
       peering_net:
         ipv4_address: 172.18.211.24
@@ -122,11 +126,32 @@ services:
       - "9892:9892/tcp"
     volumes:
       - ./privatedb/participation:/app/database
+      - ./config_participation.json:/app/config.json:ro
     command:
       - "-c"
       - "config.json"
       - "--inx.address=172.18.211.11:9029"
       - "--participation.bindAddress=172.18.211.24:9892"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-spammer:
+    image: iotaledger/inx-spammer:0.1
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.25
+    restart: on-failure
+    ports:
+      - "9092:9092/tcp"
+    volumes:
+      - ./config_spammer.json:/app/config.json:ro
+    command:
+      - "-c"
+      - "config.json"
+      - "--inx.address=172.18.211.11:9029"
+      - "--spammer.bindAddress=172.18.211.25:9092"
     profiles:
       - 2-nodes
       - 3-nodes
