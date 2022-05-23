@@ -1,0 +1,48 @@
+{
+  "app": {
+    "checkForUpdates": true,
+    "disablePlugins": [],
+    "enablePlugins": [
+      "Prometheus"
+    ],
+    "stopGracePeriod": "5m"
+  },
+  "inx": {
+    "address": "localhost:9029"
+  },
+  "mqtt": {
+    "bufferSize": 0,
+    "bufferBlockSize": 0,
+    "topicCleanupThreshold": 10000,
+    "websocket": {
+      "enabled": true,
+      "bindAddress": "localhost:1888"
+    },
+    "tcp": {
+      "enabled": false,
+      "bindAddress": "localhost:1883",
+      "auth": {
+        "enabled": false,
+        "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000",
+        "users": {
+          "admin": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "tls": {
+        "enabled": false,
+        "privateKeyPath": "private_key.pem",
+        "certificatePath": "certificate.pem"
+      }
+    }
+  },
+  "profiling": {
+    "bindAddress": "localhost:6060"
+  },
+  "prometheus": {
+    "bindAddress": "localhost:9312",
+    "mqttMetrics": true,
+    "goMetrics": false,
+    "processMetrics": false,
+    "promhttpMetrics": false
+  }
+}

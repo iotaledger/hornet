@@ -1,0 +1,34 @@
+{
+  "app": {
+    "checkForUpdates": true,
+    "disablePlugins": [],
+    "enablePlugins": [
+      "Prometheus"
+    ],
+    "stopGracePeriod": "5m"
+  },
+  "inx": {
+    "address": "localhost:9029"
+  },
+  "spammer": {
+    "bindAddress": "localhost:9092",
+    "message": "We are all made of stardust.",
+    "tag": "HORNET Spammer",
+    "tagSemiLazy": "HORNET Spammer Semi-Lazy",
+    "cpuMaxUsage": 0.8,
+    "bpsRateLimit": 5.0,
+    "workers": 0,
+    "autostart": true,
+    "nonLazyTipsThreshold": 0,
+    "semiLazyTipsThreshold": 30
+  },
+  "profiling": {
+    "bindAddress": "localhost:6060"
+  },
+  "prometheus": {
+    "bindAddress": "localhost:9312",
+    "goMetrics": false,
+    "processMetrics": false,
+    "promhttpMetrics": false
+  }
+}
