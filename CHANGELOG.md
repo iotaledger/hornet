@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha14] - 24.05.2022
+
+### Changes
+    - Update INX modules (#1516) 
+    - Remove spammer plugin (#1515)
+    - Feat/inx improvements (#1514)
+    - Extended whiteflag MerkleHasher to do proofs (#1513)
+
+
 ## [2.0.0-alpha13] - 19.05.2022
 
 ### Changes
