@@ -53,6 +53,28 @@ jobs:
           username: ${{ secrets.IOTALEDGER_DOCKER_USERNAME }}
           password: ${{ secrets.IOTALEDGER_DOCKER_PASSWORD }}
 
+      - name: Prepare docker-example files
+        run: |
+          cp config.json docker-example/
+          cp peering.json docker-example/
+
+      - name: Create docker-example.tar.gz
+        uses: a7ul/tar-action@v1.1.0
+        id: compress
+        with:
+          command: c
+          cwd: ./docker-example
+          files: |
+            ./*
+          outPath: docker-example.tar.gz
+
+      - name: Upload docker-example.tar.gz file
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: docker-example.tar.gz
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push to Dockerhub
         uses: docker/build-push-action@v2
         with:
@@ -61,10 +83,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
 
-      - name: Prepare files
+      - name: Prepare private_tangle files
         run: |
-          yq -i 'del(.services.hornet.build)' docker-compose.yml
-          yq -i '.services.hornet.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' docker-compose.yml
           yq -i 'del(.services.create-snapshots.build)' private_tangle/docker-compose.yml
           yq -i 'del(.services.hornet-coo.build)' private_tangle/docker-compose.yml
           yq -i '.services.create-snapshots.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
@@ -73,31 +93,20 @@ jobs:
           yq -i '.services.hornet-3.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
           yq -i '.services.hornet-4.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
 
-      - name: Create docker-compose.zip
-        uses: vimtor/action-zip@v1
+      - name: Create private_tangle.tar.gz file
+        uses: a7ul/tar-action@v1.1.0
+        id: compress
         with:
-          files: .release/ config.json peering.json docker-compose.yml
-          recursive: true
-          dest: docker-compose.zip
+          command: c
+          cwd: ./private_tangle
+          files: |
+            ./*
+          outPath: private_tangle.tar.gz
 
-      - name: Upload docker-compose.zip file
+      - name: Upload private_tangle.tar.gz file
         uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
-          artifacts: docker-compose.zip
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create private_tangle.zip file
-        uses: vimtor/action-zip@v1
-        with:
-          files: private_tangle/
-          recursive: true
-          dest: private_tangle.zip
-
-      - name: Upload private_tangle.zip file
-        uses: ncipollo/release-action@v1
-        with:
-          allowUpdates: true
-          artifacts: private_tangle.zip
+          artifacts: private_tangle.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
 

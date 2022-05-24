@@ -1,14 +1,19 @@
 #!/bin/bash
 
+if [ ! -f .env ]; then
+  cat README.md
+  exit 0
+fi
+
 if [[ "$OSTYPE" != "darwin"* && "$EUID" -ne 0 ]]; then
   echo "Please run as root or with sudo"
   exit
 fi
 
 # Prepare db directory
-mkdir -p alphanet
+mkdir -p data
+mkdir -p data/grafana
+mkdir -p data/prometheus
 if [[ "$OSTYPE" != "darwin"* ]]; then
-  chown -R 65532:65532 alphanet
+  chown -R 65532:65532 data
 fi
-
-docker-compose up
