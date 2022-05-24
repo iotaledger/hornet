@@ -165,8 +165,8 @@ func (p *Protocol) SendBlock(blockData []byte) {
 }
 
 // SendHeartbeat sends a Heartbeat to the given peer.
-func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex milestone.Index, latestMsIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) {
-	heartbeatData, err := newHeartbeatMessage(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
+func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex milestone.Index, latestMsIndex milestone.Index, connectedPeers uint8, syncedPeers uint8) {
+	heartbeatData, err := newHeartbeatMessage(solidMsIndex, pruningMsIndex, latestMsIndex, connectedPeers, syncedPeers)
 	if err != nil {
 		return
 	}
