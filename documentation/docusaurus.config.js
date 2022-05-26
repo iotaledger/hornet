@@ -12,7 +12,7 @@ module.exports = {
                 editUrl: 'https://github.com/iotaledger/hornet/edit/mainnet/documentation',
                 versions: {
                     current: {
-                        label: 'Production',
+                        label: 'IOTA',
                         badge: true
                     },
                 },
