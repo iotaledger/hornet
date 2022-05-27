@@ -58,8 +58,8 @@
         "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
       },
       {
-        "full": "https://cdn.tanglebay.com/snapshots/mainnet/full_snapshot.bin",
-        "delta": "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin"
+        "full": "https://cdn.tanglebay.com/snapshots/iota-mainnet/full_snapshot.bin",
+        "delta": "https://cdn.tanglebay.com/snapshots/iota-mainnet/delta_snapshot.bin"
       }
     ]
   },
@@ -201,8 +201,8 @@
         "/dns/lucamoser.ch/udp/14826/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
         "/dns/entry-hornet-0.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaPHdAn7eueBnXtikZMwhfPXaeGJGXDt4RBuLuGgb",
         "/dns/entry-hornet-1.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaJJqMd5CQvv1A61coSQCYW9PNT1QKPs7xh2Qg5K2",
-        "/dns/entry-0.mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC",
-        "/dns/entry-1.mainnet.tanglebay.com/udp/14636/autopeering/CATsx21mFVvQQPXeDineGs9DDeKvoBBQdzcmR6ffCkVA"
+        "/dns/entry-0.iota-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC",
+        "/dns/entry-1.iota-mainnet.tanglebay.com/udp/14626/autopeering/CATsx21mFVvQQPXeDineGs9DDeKvoBBQdzcmR6ffCkVA"
       ],
       "entryNodesPreferIPv6": false,
       "runAsEntryNode": false
