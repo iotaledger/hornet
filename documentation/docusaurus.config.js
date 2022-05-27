@@ -9,7 +9,7 @@ module.exports = {
                 path: path.resolve(__dirname, 'docs'),
                 routeBasePath: 'hornet',
                 sidebarPath: path.resolve(__dirname, 'sidebars.js'),
-                editUrl: 'https://github.com/iotaledger/hornet/edit/develop/documentation',
+                editUrl: 'https://github.com/gohornet/hornet/edit/develop/documentation',
                 versions: {
                     current: {
                         label: 'Develop',
