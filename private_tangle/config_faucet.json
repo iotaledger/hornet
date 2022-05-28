@@ -1,12 +1,23 @@
 {
+  "app": {
+    "checkForUpdates": true,
+    "disablePlugins": [],
+    "enablePlugins": [],
+    "stopGracePeriod": "5m"
+  },
+  "inx": {
+    "address": "localhost:9029"
+  },
   "faucet": {
-    "amount": 10000000,
-    "smallAmount": 1000000,
-    "maxAddressBalance": 20000000,
-    "maxOutputCount": 127,
+    "amount": 1000000000,
+    "smallAmount": 100000000,
+    "maxAddressBalance": 2000000000,
+    "maxOutputCount": 128,
     "tagMessage": "HORNET FAUCET",
     "batchTimeout": "2s",
-    "powWorkerCount": 0,
-    "bindAddress": "0.0.0.0:8091"
+    "bindAddress": "localhost:8091"
+  },
+  "profiling": {
+    "bindAddress": "localhost:6060"
   }
 }

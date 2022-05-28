@@ -157,6 +157,26 @@ services:
       - 3-nodes
       - 4-nodes
 
+  inx-poi:
+    image: iotaledger/inx-poi:0.1
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.26
+    restart: on-failure
+    ports:
+      - "9687:9687/tcp"
+    volumes:
+      - ./config_poi.json:/app/config.json:ro
+    command:
+      - "-c"
+      - "config.json"
+      - "--inx.address=172.18.211.11:9029"
+      - "--poi.bindAddress=172.18.211.26:9687"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
   hornet-coo:
     build:
       context: ../

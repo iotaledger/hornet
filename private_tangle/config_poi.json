@@ -10,12 +10,8 @@
   "inx": {
     "address": "localhost:9029"
   },
-  "participation": {
-    "database": {
-      "engine": "rocksdb",
-      "path": "database"
-    },
-    "bindAddress": "localhost:9892"
+  "poi": {
+    "bindAddress": "localhost:9687"
   },
   "profiling": {
     "bindAddress": "localhost:6060"

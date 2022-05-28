@@ -20,6 +20,8 @@ if [[ $1 = "build" ]]; then
   docker-compose pull inx-mqtt
   docker-compose pull inx-faucet
   docker-compose pull inx-participation
+  docker-compose pull inx-spammer
+  docker-compose pull inx-poi
 fi
 
 # Create snapshot

@@ -1,8 +1,17 @@
 {
+  "app": {
+    "disablePlugins": [],
+    "enablePlugins": [
+      "Profiling",
+      "Prometheus"
+    ]
+  },
+  "inx": {
+    "address": "localhost:9029"
+  },
   "coordinator": {
     "stateFilePath": "state/coordinator.state",
     "interval": "5s",
-    "powWorkerCount": 0,
     "checkpoints": {
       "maxTrackedBlocks": 10000
     },
@@ -13,7 +22,59 @@
       "heaviestBranchSelectionTimeout": "100ms"
     },
     "signing": {
-      "provider": "local"
+      "provider": "local",
+      "remoteAddress": "localhost:12345",
+      "retryAmount": 10,
+      "retryTimeout": "2s"
+    },
+    "quorum": {
+      "enabled": false,
+      "groups": {
+        "hornet": [
+          {
+            "alias": "test01",
+            "baseURL": "http://localhost:14265",
+            "userName": "",
+            "password": ""
+          }
+        ]
+      },
+      "timeout": "2s"
     }
+  },
+  "migrator": {
+    "stateFilePath": "migrator.state",
+    "receiptMaxEntries": 110,
+    "queryCooldownPeriod": "5s"
+  },
+  "receipts": {
+    "validator": {
+      "api": {
+        "address": "http://localhost:14266",
+        "timeout": "5s"
+      },
+      "coordinator": {
+        "address": "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ",
+        "merkleTreeDepth": 24
+      }
+    }
+  },
+  "logger": {
+    "level": "info",
+    "disableCaller": true,
+    "encoding": "console",
+    "outputPaths": [
+      "stdout"
+    ]
+  },
+  "profiling": {
+    "bindAddress": "localhost:6060"
+  },
+  "prometheus": {
+    "bindAddress": "localhost:9311",
+    "coordinatorMetrics": true,
+    "goMetrics": false,
+    "processMetrics": false,
+    "promhttpMetrics": false
   }
 }
