@@ -6,14 +6,14 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	restapipkg "github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/plugins/restapi"
 )
 
 const (

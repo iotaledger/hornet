@@ -9,8 +9,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/whiteflag"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/bundle"

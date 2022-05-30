@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
 
 	// import implementation

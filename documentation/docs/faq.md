@@ -35,8 +35,8 @@ Of course, you are very welcome! Just send a PR or offer your help in the `#horn
 
 ## I Found a Bug, What Should I Do?
 
-Please open a [new issue](https://github.com/gohornet/hornet/issues/new?assignees=&labels=bug&template=bug_report.md&title=). We'll have a look at your bug report as soon as possible.
+Please open a [new issue](https://github.com/iotaledger/hornet/issues/new?assignees=&labels=bug&template=bug_report.md&title=). We'll have a look at your bug report as soon as possible.
 
 ## I Am Missing Feature XYZ. Can You Add It?
 
-Please open a [new feature request](https://github.com/gohornet/hornet/issues/new?assignees=&labels=feature&template=feature_request.md&title=). We cannot assure that the feature will actually be implemented. Pull requests are very welcome!
+Please open a [new feature request](https://github.com/iotaledger/hornet/issues/new?assignees=&labels=feature&template=feature_request.md&title=). We cannot assure that the feature will actually be implemented. Pull requests are very welcome!

@@ -4,29 +4,29 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/gossip"
-	"github.com/gohornet/hornet/core/p2p"
-	"github.com/gohornet/hornet/core/pow"
-	"github.com/gohornet/hornet/core/profile"
-	"github.com/gohornet/hornet/core/protocfg"
-	"github.com/gohornet/hornet/core/snapshot"
-	"github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/toolset"
+	"github.com/iotaledger/hornet/core/database"
+	"github.com/iotaledger/hornet/core/gossip"
+	"github.com/iotaledger/hornet/core/p2p"
+	"github.com/iotaledger/hornet/core/pow"
+	"github.com/iotaledger/hornet/core/profile"
+	"github.com/iotaledger/hornet/core/protocfg"
+	"github.com/iotaledger/hornet/core/snapshot"
+	"github.com/iotaledger/hornet/core/tangle"
+	"github.com/iotaledger/hornet/pkg/toolset"
 
-	"github.com/gohornet/hornet/plugins/autopeering"
-	"github.com/gohornet/hornet/plugins/dashboard"
-	"github.com/gohornet/hornet/plugins/debug"
-	"github.com/gohornet/hornet/plugins/inx"
-	"github.com/gohornet/hornet/plugins/prometheus"
-	"github.com/gohornet/hornet/plugins/receipt"
-	"github.com/gohornet/hornet/plugins/restapi"
-	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
-	"github.com/gohornet/hornet/plugins/urts"
-	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/app/core/shutdown"
 	"github.com/iotaledger/hive.go/app/plugins/profiling"
+	"github.com/iotaledger/hornet/plugins/autopeering"
+	"github.com/iotaledger/hornet/plugins/dashboard"
+	"github.com/iotaledger/hornet/plugins/debug"
+	"github.com/iotaledger/hornet/plugins/inx"
+	"github.com/iotaledger/hornet/plugins/prometheus"
+	"github.com/iotaledger/hornet/plugins/receipt"
+	"github.com/iotaledger/hornet/plugins/restapi"
+	restapiv2 "github.com/iotaledger/hornet/plugins/restapi/v2"
+	"github.com/iotaledger/hornet/plugins/urts"
+	"github.com/iotaledger/hornet/plugins/warpsync"
 )
 
 var (
@@ -39,7 +39,7 @@ var (
 
 func App() *app.App {
 	return app.New(Name, Version,
-		app.WithVersionCheck("gohornet", "hornet"),
+		app.WithVersionCheck("iotaledger", "hornet"),
 		app.WithUsageText(fmt.Sprintf(`Usage of %s (%s %s):
 
 Run '%s tools' to list all available tools.

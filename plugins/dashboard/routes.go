@@ -14,8 +14,8 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/gohornet/dashboard"
-	"github.com/gohornet/hornet/pkg/jwt"
-	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/jwt"
+	"github.com/iotaledger/hornet/pkg/restapi"
 )
 
 const (

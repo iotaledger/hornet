@@ -41,7 +41,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: gohornet/hornet
+          images: iotaledger/hornet
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -50,8 +50,8 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.IOTALEDGER_DOCKER_USERNAME }}
+          password: ${{ secrets.IOTALEDGER_DOCKER_PASSWORD }}
 
       - name: Build and push to Dockerhub
         uses: docker/build-push-action@v2
@@ -64,14 +64,14 @@ jobs:
       - name: Prepare files
         run: |
           yq -i 'del(.services.hornet.build)' docker-compose.yml
-          yq -i '.services.hornet.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' docker-compose.yml
+          yq -i '.services.hornet.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' docker-compose.yml
           yq -i 'del(.services.create-snapshots.build)' private_tangle/docker-compose.yml
           yq -i 'del(.services.hornet-coo.build)' private_tangle/docker-compose.yml
-          yq -i '.services.create-snapshots.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-coo.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-2.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-3.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-4.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.create-snapshots.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-coo.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-2.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-3.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-4.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
 
       - name: Create docker-compose.zip
         uses: vimtor/action-zip@v1

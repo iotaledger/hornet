@@ -8,10 +8,10 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

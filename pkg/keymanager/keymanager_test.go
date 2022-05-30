@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gohornet/hornet/pkg/keymanager"
+	"github.com/iotaledger/hornet/pkg/keymanager"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

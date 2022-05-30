@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/integration-tests/tester/framework"
+	"github.com/iotaledger/hornet/integration-tests/tester/framework"
 )
 
 // TestAutopeering creates an autopeered network and then checks whether all nodes are synced.

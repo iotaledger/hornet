@@ -1,10 +1,10 @@
 package database
 
 import (
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/metrics"
 )
 
 func newPebble(path string, metrics *metrics.DatabaseMetrics) *database.Database {

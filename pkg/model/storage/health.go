@@ -3,8 +3,8 @@ package storage
 import (
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hornet/pkg/common"
 )
 
 const (

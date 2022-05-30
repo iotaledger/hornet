@@ -9,7 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 
-	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/p2p"
 )
 
 func extractP2PIdentity(args []string) error {

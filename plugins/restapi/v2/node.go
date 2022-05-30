@@ -6,9 +6,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/tipselect"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

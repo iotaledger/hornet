@@ -17,7 +17,7 @@ import (
 
 	hivecrypto "github.com/iotaledger/hive.go/crypto"
 
-	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/p2p"
 )
 
 func generateP2PIdentity(args []string) error {

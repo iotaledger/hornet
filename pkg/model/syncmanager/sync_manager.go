@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 )
 
 const (

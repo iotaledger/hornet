@@ -16,7 +16,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
 )
 
 const (

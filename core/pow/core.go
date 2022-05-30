@@ -5,9 +5,9 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/daemon"
-	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/pkg/daemon"
+	"github.com/iotaledger/hornet/pkg/pow"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

@@ -10,15 +10,15 @@ import (
 
 	"github.com/pkg/errors"
 
-	coreDatabase "github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
+	coreDatabase "github.com/iotaledger/hornet/core/database"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

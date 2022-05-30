@@ -1,4 +1,4 @@
-module github.com/gohornet/hornet
+module github.com/iotaledger/hornet
 
 go 1.18
 

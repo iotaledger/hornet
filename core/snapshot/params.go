@@ -3,8 +3,8 @@ package snapshot
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/pkg/snapshot"
 )
 
 // ParametersSnapshots contains the definition of the parameters used by snapshots.

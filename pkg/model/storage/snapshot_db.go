@@ -3,9 +3,9 @@ package storage
 import (
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	"github.com/iotaledger/hornet/pkg/common"
 )
 
 func (s *Storage) configureSnapshotStore(snapshotStore kvstore.KVStore) error {

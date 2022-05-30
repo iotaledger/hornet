@@ -6,10 +6,10 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/crypto"
+	"github.com/iotaledger/hornet/pkg/keymanager"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

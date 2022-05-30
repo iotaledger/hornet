@@ -3,8 +3,8 @@ package gossip
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 )
 
 // sets up the event handlers which propagate STING messages.

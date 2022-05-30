@@ -7,17 +7,17 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/daemon"
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/app/core/shutdown"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/daemon"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/pkg/tipselect"
 )
 
 func init() {

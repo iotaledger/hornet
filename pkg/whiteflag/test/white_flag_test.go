@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 	_ "golang.org/x/crypto/blake2b"
 
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/testsuite"
-	"github.com/gohornet/hornet/pkg/testsuite/utils"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/testsuite"
+	"github.com/iotaledger/hornet/pkg/testsuite/utils"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

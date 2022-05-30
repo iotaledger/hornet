@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/gohornet/hornet/plugins/restapi"
+	"github.com/iotaledger/hornet/plugins/restapi"
 	inx "github.com/iotaledger/inx/go"
 )
 
