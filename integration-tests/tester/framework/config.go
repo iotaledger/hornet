@@ -626,13 +626,13 @@ type ProtocolConfig struct {
 	// The HRP which should be used for Bech32 addresses.
 	Bech32HRP iotago.NetworkPrefix
 	// The minimum PoW score needed.
-	MinPoWScore float64
+	MinPoWScore uint32
 	// The storage deposit costs.
 	RentStructure iotago.RentStructure
 	// The supply of the native token.
 	TokenSupply uint64
 	// The maximum allowed delta value for the OCRI of a given block in relation to the current CMI before it gets lazy
-	BelowMaxDepth uint16
+	BelowMaxDepth uint8
 	// The coo public key ranges.
 	PublicKeyRanges []protocfg.ConfigPublicKeyRange
 }
@@ -649,7 +649,7 @@ func (protoConfig *ProtocolConfig) CLIFlags() []string {
 		fmt.Sprintf("--%s=%d", "protocol.parameters.version", protoConfig.ProtocolVersion),
 		fmt.Sprintf("--%s=%s", "protocol.parameters.networkName", protoConfig.NetworkName),
 		fmt.Sprintf("--%s=%s", "protocol.parameters.bech32HRP", protoConfig.Bech32HRP),
-		fmt.Sprintf("--%s=%0.0f", "protocol.parameters.minPoWScore", protoConfig.MinPoWScore),
+		fmt.Sprintf("--%s=%d", "protocol.parameters.minPoWScore", protoConfig.MinPoWScore),
 		fmt.Sprintf("--%s=%d", "protocol.parameters.vByteCost", protoConfig.RentStructure.VByteCost),
 		fmt.Sprintf("--%s=%d", "protocol.parameters.vByteFactorData", protoConfig.RentStructure.VBFactorData),
 		fmt.Sprintf("--%s=%d", "protocol.parameters.vByteFactorKey", protoConfig.RentStructure.VBFactorKey),

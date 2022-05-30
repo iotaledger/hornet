@@ -212,7 +212,7 @@ func (proc *MessageProcessor) Emit(block *storage.Block) error {
 	default:
 		// validate PoW score
 		score := pow.Score(block.Data())
-		if score < proc.protoParas.MinPoWScore {
+		if score < float64(proc.protoParas.MinPoWScore) {
 			return fmt.Errorf("block has insufficient PoW score %0.2f", score)
 		}
 	}
@@ -472,7 +472,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 	if !isMilestonePayload {
 		// validate PoW score
-		if !wu.requested && pow.Score(wu.receivedBytes) < proc.protoParas.MinPoWScore {
+		if !wu.requested && pow.Score(wu.receivedBytes) < float64(proc.protoParas.MinPoWScore) {
 			wu.UpdateState(Invalid)
 			wu.punish(errors.New("peer sent a block with insufficient PoW score"))
 			return

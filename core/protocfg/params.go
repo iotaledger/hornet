@@ -42,16 +42,16 @@ type ParametersProtocol struct {
 		// the HRP which should be used for Bech32 addresses.
 		Bech32HRP string `default:"iota" usage:"the HRP which should be used for Bech32 addresses"`
 		// the minimum PoW score required by the network.
-		MinPoWScore float64 `default:"4000" usage:"the minimum PoW score required by the network"`
+		MinPoWScore uint32 `default:"4000" usage:"the minimum PoW score required by the network"`
 		// BelowMaxDepth is the maximum allowed delta
 		// value between OCRI of a given block in relation to the current CMI before it gets lazy.
-		BelowMaxDepth uint16 `default:"15" usage:"the maximum allowed delta value for the OCRI of a given block in relation to the current CMI before it gets lazy"`
+		BelowMaxDepth uint8 `default:"15" usage:"the maximum allowed delta value for the OCRI of a given block in relation to the current CMI before it gets lazy"`
 		// the vByte cost used for the storage deposit
-		RentStructureVByteCost uint64 `name:"vByteCost" default:"500" usage:"the vByte cost used for the storage deposit"`
+		RentStructureVByteCost uint32 `name:"vByteCost" default:"500" usage:"the vByte cost used for the storage deposit"`
 		// the vByte factor used for data fields
-		RentStructureVByteFactorData uint64 `name:"vByteFactorData" default:"1" usage:"the vByte factor used for data fields"`
+		RentStructureVByteFactorData uint8 `name:"vByteFactorData" default:"1" usage:"the vByte factor used for data fields"`
 		// the vByte factor used for key fields
-		RentStructureVByteFactorKey uint64 `name:"vByteFactorKey" default:"10" usage:"the vByte factor used for key fields"`
+		RentStructureVByteFactorKey uint8 `name:"vByteFactorKey" default:"10" usage:"the vByte factor used for key fields"`
 		// the token supply of the base token
 		TokenSupply uint64 `default:"2779530283277761" usage:"the token supply of the native protocol token"`
 	}

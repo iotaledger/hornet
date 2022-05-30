@@ -186,7 +186,7 @@ func (coo *MockCoo) issueMilestoneOnTips(tips iotago.BlockIDs, addLastMilestoneA
 	iotaBlock, err := builder.NewBlockBuilder(coo.te.protoParas.Version).
 		ParentsBlockIDs(tips).
 		Payload(milestonePayload).
-		ProofOfWork(context.Background(), coo.te.protoParas, coo.te.protoParas.MinPoWScore).
+		ProofOfWork(context.Background(), coo.te.protoParas, float64(coo.te.protoParas.MinPoWScore)).
 		Build()
 	if err != nil {
 		return nil, iotago.EmptyBlockID(), err

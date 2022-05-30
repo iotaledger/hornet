@@ -112,7 +112,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 				return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
 			}
 
-			if score < a.tangle.protoParas.MinPoWScore {
+			if score < float64(a.tangle.protoParas.MinPoWScore) {
 				if a.opts.powHandler == nil {
 					return iotago.EmptyBlockID(), ErrBlockAttacherPoWNotAvailable
 				}

@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	MinPoWScore     = 100.0
-	BelowMaxDepth   = 15
-	ProtocolVersion = 99
+	MinPoWScore     uint32 = 100
+	BelowMaxDepth   uint8  = 15
+	ProtocolVersion uint8  = 99
 )
 
 func TestMessageProcessorEmit(t *testing.T) {

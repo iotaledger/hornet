@@ -88,7 +88,7 @@ type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, ne
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
-func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, belowMaxDepth uint16, targetScore float64, showConfirmationGraphs bool) *TestEnvironment {
+func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, belowMaxDepth uint8, targetScore uint32, showConfirmationGraphs bool) *TestEnvironment {
 
 	te := &TestEnvironment{
 		TestInterface:          testInterface,
