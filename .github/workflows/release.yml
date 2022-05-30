@@ -64,14 +64,14 @@ jobs:
       - name: Prepare files
         run: |
           yq -i 'del(.services.hornet.build)' docker-compose.yml
-          yq -i '.services.hornet.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' docker-compose.yml
+          yq -i '.services.hornet.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' docker-compose.yml
           yq -i 'del(.services.create-snapshots.build)' private_tangle/docker-compose.yml
           yq -i 'del(.services.hornet-coo.build)' private_tangle/docker-compose.yml
-          yq -i '.services.create-snapshots.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-coo.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-2.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-3.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-4.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.create-snapshots.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-coo.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-2.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-3.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-4.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
 
       - name: Create docker-compose.zip
         uses: vimtor/action-zip@v1

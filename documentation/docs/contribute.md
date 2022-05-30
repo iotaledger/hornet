@@ -15,4 +15,4 @@ keywords:
 
 ## How to Contribute
 
-If you would like to contribute to Hornet, visit the [Hornet repository](https://github.com/gohornet/hornet#readme).
+If you would like to contribute to Hornet, visit the [Hornet repository](https://github.com/iotaledger/hornet#readme).

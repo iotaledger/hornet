@@ -17,7 +17,7 @@ keywords:
 
 ![Hornet Node using Docker](/img/Banner/banner_hornet_using_docker.png)
 
-Hornet Docker images (amd64/x86_64 architecture) are available at the [gohornet/hornet](https://hub.docker.com/r/gohornet/hornet) Docker hub.
+Hornet Docker images (amd64/x86_64 architecture) are available at the [iotaledger/hornet](https://hub.docker.com/r/iotaledger/hornet) Docker hub.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ Hornet Docker images (amd64/x86_64 architecture) are available at the [gohornet/
 Once you have completed all the installation [requirements](#requirements), you can clone the repository by running:
 
 ```sh
-git clone https://github.com/gohornet/hornet && cd hornet && git checkout mainnet
+git clone https://github.com/iotaledger/hornet && cd hornet && git checkout mainnet
 ```
 
 :::note
@@ -68,10 +68,10 @@ The Docker image runs under user with user id 65532 and group id 65532. To make 
 
 ## Run
 
-You can pull the latest image from `gohornet/hornet` public Docker hub registry by running:
+You can pull the latest image from `iotaledger/hornet` public Docker hub registry by running:
 
 ```bash
-docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:latest
+docker pull iotaledger/hornet:latest && docker tag iotaledger/hornet:latest hornet:latest
 ```
 
 We recommend that you run on host network to improve performance. Otherwise, you will have to publish ports using iptables NAT which is slower.
@@ -152,7 +152,7 @@ docker build -f docker/Dockerfile -t hornet:latest .
 Or pull it from Docker hub (only available for amd64/x86_64):
 
 ```sh
-docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:latest
+docker pull iotaledger/hornet:latest && docker tag iotaledger/hornet:latest hornet:latest
 ```
 
 ## Managing a Node

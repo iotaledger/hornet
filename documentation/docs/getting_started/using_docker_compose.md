@@ -40,7 +40,7 @@ version: '3'
 services:
   hornet:
     container_name: hornet
-    image: gohornet/hornet:latest
+    image: iotaledger/hornet:latest
     network_mode: host
     restart: always
     ulimits:
