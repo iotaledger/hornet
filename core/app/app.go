@@ -39,7 +39,7 @@ var (
 
 func App() *app.App {
 	return app.New(Name, Version,
-		app.WithVersionCheck("gohornet", "hornet"),
+		app.WithVersionCheck("iotaledger", "hornet"),
 		app.WithUsageText(fmt.Sprintf(`Usage of %s (%s %s):
 
 Run '%s tools' to list all available tools.

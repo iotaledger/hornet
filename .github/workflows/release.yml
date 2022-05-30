@@ -41,7 +41,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: gohornet/hornet
+          images: iotaledger/hornet
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}

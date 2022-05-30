@@ -4,9 +4,9 @@ FROM golang:1.18-bullseye AS build
 ARG BUILD_TAGS=rocksdb
 
 LABEL org.label-schema.description="HORNET - The IOTA community node"
-LABEL org.label-schema.name="gohornet/hornet"
+LABEL org.label-schema.name="iotaledger/hornet"
 LABEL org.label-schema.schema-version="1.0"
-LABEL org.label-schema.vcs-url="https://github.com/gohornet/hornet"
+LABEL org.label-schema.vcs-url="https://github.com/iotaledger/hornet"
 
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates
