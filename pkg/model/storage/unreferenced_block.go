@@ -3,8 +3,8 @@ package storage
 import (
 	"encoding/binary"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

@@ -1,7 +1,7 @@
 package testsuite
 
 import (
-	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

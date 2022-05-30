@@ -9,11 +9,11 @@ import (
 	"github.com/dustin/go-humanize"
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 func databaseMigration(args []string) error {

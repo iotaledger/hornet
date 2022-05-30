@@ -9,8 +9,8 @@ import (
 
 	"github.com/docker/go-connections/nat"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/iotaledger/hive.go/crypto"
+	"github.com/iotaledger/hornet/core/protocfg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

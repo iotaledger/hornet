@@ -1,6 +1,6 @@
 package testsuite
 
-import "github.com/gohornet/hornet/pkg/profile"
+import "github.com/iotaledger/hornet/pkg/profile"
 
 var TestProfileCaches = &profile.Caches{
 	Addresses: &profile.CacheOpts{

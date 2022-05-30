@@ -1,9 +1,9 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/milestonemanager"
-	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
+	"github.com/iotaledger/hornet/pkg/model/storage"
 )
 
 // AddBlockToStorage adds a new block to the cache/persistence layer,

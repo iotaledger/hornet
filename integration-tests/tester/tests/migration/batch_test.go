@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/integration-tests/tester/framework"
+	"github.com/iotaledger/hornet/integration-tests/tester/framework"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

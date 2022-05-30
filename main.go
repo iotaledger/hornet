@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/gohornet/hornet/core/app"
+	"github.com/iotaledger/hornet/core/app"
 )
 
 func main() {

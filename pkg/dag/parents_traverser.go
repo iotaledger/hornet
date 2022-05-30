@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gohornet/hornet/pkg/common"
 	"github.com/iotaledger/hive.go/contextutils"
+	"github.com/iotaledger/hornet/pkg/common"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

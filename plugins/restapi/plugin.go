@@ -12,13 +12,13 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/daemon"
-	"github.com/gohornet/hornet/pkg/jwt"
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hornet/pkg/daemon"
+	"github.com/iotaledger/hornet/pkg/jwt"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/tangle"
 )
 
 func init() {

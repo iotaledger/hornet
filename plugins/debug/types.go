@@ -1,8 +1,8 @@
 package debug
 
 import (
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	restapiv2 "github.com/iotaledger/hornet/plugins/restapi/v2"
 )
 
 // outputIDsResponse defines the response of a GET debug outputs REST API call.

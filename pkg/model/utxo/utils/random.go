@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"math/rand"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

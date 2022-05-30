@@ -3,11 +3,11 @@ package v2
 import (
 	"encoding/json"
 
-	"github.com/gohornet/hornet/core/protocfg"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/core/protocfg"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

@@ -3,11 +3,11 @@ package milestonemanager
 import (
 	"math"
 
-	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hornet/pkg/keymanager"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

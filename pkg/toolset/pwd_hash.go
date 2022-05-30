@@ -12,9 +12,9 @@ import (
 	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
 
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/basicauth"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 func readPasswordFromEnv() ([]byte, error) {

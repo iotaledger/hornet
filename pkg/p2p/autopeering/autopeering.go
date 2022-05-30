@@ -15,7 +15,6 @@ import (
 	"github.com/mr-tron/base58/base58"
 	"github.com/multiformats/go-multiaddr"
 
-	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
@@ -26,6 +25,7 @@ import (
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/netutil"
+	"github.com/iotaledger/hornet/pkg/p2p"
 )
 
 const (

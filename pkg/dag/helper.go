@@ -3,7 +3,7 @@ package dag
 import (
 	"context"
 
-	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

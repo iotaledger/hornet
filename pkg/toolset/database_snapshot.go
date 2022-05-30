@@ -9,10 +9,10 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 
-	snapCore "github.com/gohornet/hornet/core/snapshot"
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/snapshot"
+	snapCore "github.com/iotaledger/hornet/core/snapshot"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/snapshot"
 )
 
 const (
