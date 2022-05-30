@@ -34,14 +34,13 @@ func NewLedgerSpent(s *utxo.Spent) (*inx.LedgerSpent, error) {
 	if err != nil {
 		return nil, err
 	}
-	transactionID := s.TargetTransactionID()
 	l := &inx.LedgerSpent{
 		Output:                  output,
-		TransactionIdSpent:      make([]byte, len(transactionID)),
+		TransactionIdSpent:      inx.NewTransactionId(s.TargetTransactionID()),
 		MilestoneIndexSpent:     uint32(s.MilestoneIndex()),
 		MilestoneTimestampSpent: s.MilestoneTimestamp(),
 	}
-	copy(l.TransactionIdSpent, transactionID[:])
+
 	return l, nil
 }
 
