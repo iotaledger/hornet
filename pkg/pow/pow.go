@@ -26,7 +26,6 @@ type RefreshTipsFunc = func() (tips iotago.BlockIDs, err error)
 // Handler handles PoW requests of the node and uses local PoW.
 // It refreshes the tips of blocks during PoW.
 type Handler struct {
-	targetScore         float64
 	refreshTipsInterval time.Duration
 
 	localPoWFunc proofOfWorkFunc
@@ -34,15 +33,14 @@ type Handler struct {
 }
 
 // New creates a new PoW handler instance.
-func New(targetScore float64, refreshTipsInterval time.Duration) *Handler {
+func New(targetScore uint32, refreshTipsInterval time.Duration) *Handler {
 
 	localPoWType := "local"
 	localPoWFunc := func(ctx context.Context, data []byte, parallelism ...int) (uint64, error) {
-		return pow.New(parallelism...).Mine(ctx, data, targetScore)
+		return pow.New(parallelism...).Mine(ctx, data, float64(targetScore))
 	}
 
 	return &Handler{
-		targetScore:         targetScore,
 		refreshTipsInterval: refreshTipsInterval,
 		localPoWFunc:        localPoWFunc,
 		localPoWType:        localPoWType,

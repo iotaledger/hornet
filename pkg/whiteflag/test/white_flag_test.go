@@ -19,9 +19,9 @@ var (
 	seed3, _ = hex.DecodeString("d5353ceeed380ab89a0f6abe4630c2091acc82617c0edd4ff10bd60bba89e2ed30805ef095b989c2bf208a474f8748d11d954aade374380422d4d812b6f1da90")
 	seed4, _ = hex.DecodeString("bd6fe09d8a309ca309c5db7b63513240490109cd0ac6b123551e9da0d5c8916c4a5a4f817e4b4e9df89885ce1af0986da9f1e56b65153c2af1e87ab3b11dabb4")
 
-	showConfirmationGraphs = false
-	MinPoWScore            = 1.0
-	BelowMaxDepth          = uint16(15)
+	showConfirmationGraphs        = false
+	MinPoWScore            uint32 = 1
+	BelowMaxDepth          uint8  = 15
 )
 
 func TestWhiteFlagSendAllCoins(t *testing.T) {
