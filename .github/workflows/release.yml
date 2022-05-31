@@ -65,7 +65,7 @@ jobs:
           file_path: docker-example.tar.gz
 
       - name: Upload docker-example.tar.gz file
-        uses: Shopify/upload-to-release@v1
+        uses: Shopify/upload-to-release@v1.0.1
         with:
           name: HORNET-${{ steps.meta.outputs.version }}-docker-example.tar.gz
           path: docker-example.tar.gz
@@ -96,7 +96,7 @@ jobs:
           file_path: private_tangle.tar.gz
 
       - name: Upload private_tangle.tar.gz file
-        uses: Shopify/upload-to-release@v1
+        uses: Shopify/upload-to-release@v1.0.1
         with:
           name: HORNET-${{ steps.meta.outputs.version }}-private_tangle.tar.gz
           path: private_tangle.tar.gz
