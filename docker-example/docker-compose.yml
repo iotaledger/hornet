@@ -146,6 +146,7 @@ services:
     restart: unless-stopped
     command:
       - "--inx.address=hornet:9029"
+      - "--spammer.bindAddress=inx-spammer:9092"
       - "--app.enablePlugins=Prometheus"
       - "--prometheus.bindAddress=inx-spammer:9312"
 
