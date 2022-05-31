@@ -30,11 +30,14 @@ services:
     volumes:
       - ./config.json:/app/config.json:ro
       - ./peering.json:/app/peering.json
-      - ./data:/app/database
+      - ./data:/app/data
     command:
       - "-c"
       - "config.json"
-      - "--db.path=database"
+      - "--db.path=data/database"
+      - "--p2p.db.path=data/p2pstore"
+      - "--snapshots.fullPath=data/snapshots/full_snapshot.bin"
+      - "--snapshots.deltaPath=data/snapshots/delta_snapshot.bin"
       - "--inx.bindAddress=hornet:9029"
       - "--dashboard.bindAddress=hornet:8081"
       - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD}"
