@@ -88,8 +88,8 @@ func NewPeerStoreContainer(peerStorePath string, dbEngine database.Engine, creat
 	}, nil
 }
 
-// parseEd25519PrivateKeyFromString parses an Ed25519 private key from a hex encoded string.
-func parseEd25519PrivateKeyFromString(identityPrivKey string) (crypto.PrivKey, error) {
+// ParseEd25519PrivateKeyFromString parses an Ed25519 private key from a hex encoded string.
+func ParseEd25519PrivateKeyFromString(identityPrivKey string) (crypto.PrivKey, error) {
 	if identityPrivKey == "" {
 		return nil, ErrNoPrivKeyFound
 	}
@@ -178,7 +178,7 @@ func WriteEd25519PrivateKeyToPEMFile(filepath string, privateKey crypto.PrivKey)
 // or creates a new one and stores it as a PEM file in the p2p store folder.
 func LoadOrCreateIdentityPrivateKey(p2pStorePath string, identityPrivKey string) (crypto.PrivKey, bool, error) {
 
-	privKeyFromConfig, err := parseEd25519PrivateKeyFromString(identityPrivKey)
+	privKeyFromConfig, err := ParseEd25519PrivateKeyFromString(identityPrivKey)
 	if err != nil {
 		if errors.Is(err, ErrPrivKeyInvalid) {
 			return nil, false, errors.New("configuration contains an invalid private key")
