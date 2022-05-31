@@ -65,11 +65,11 @@ jobs:
           file_path: docker-example.tar.gz
 
       - name: Upload docker-example.tar.gz file
-        uses: ncipollo/release-action@v1
+        uses: Shopify/upload-to-release@v1
         with:
-          allowUpdates: true
-          artifacts: docker-example.tar.gz
-          token: ${{ secrets.GITHUB_TOKEN }}
+          name: HORNET-${{ steps.meta.outputs.version }}-docker-example.tar.gz
+          path: docker-example.tar.gz
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push to Dockerhub
         uses: docker/build-push-action@v2
@@ -96,9 +96,9 @@ jobs:
           file_path: private_tangle.tar.gz
 
       - name: Upload private_tangle.tar.gz file
-        uses: ncipollo/release-action@v1
+        uses: Shopify/upload-to-release@v1
         with:
-          allowUpdates: true
-          artifacts: private_tangle.tar.gz
-          token: ${{ secrets.GITHUB_TOKEN }}
+          name: HORNET-${{ steps.meta.outputs.version }}-private_tangle.tar.gz
+          path: private_tangle.tar.gz
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
