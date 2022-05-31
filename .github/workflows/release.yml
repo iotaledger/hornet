@@ -60,7 +60,6 @@ jobs:
 
       - name: Create docker-example.tar.gz
         uses: a7ul/tar-action@v1.1.0
-        id: compress
         with:
           command: c
           cwd: ./docker-example
@@ -95,7 +94,6 @@ jobs:
 
       - name: Create private_tangle.tar.gz file
         uses: a7ul/tar-action@v1.1.0
-        id: compress
         with:
           command: c
           cwd: ./private_tangle
