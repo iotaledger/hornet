@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha16] - 31.05.2022
+
+### Fixed
+    - Removed children API calls from dashboard
+    - Fixed inx-spammer not working in the docker-example
+
+
 ## [2.0.0-alpha15] - 31.05.2022
 
 ### Changes
@@ -25,7 +32,7 @@ All notable changes to this project will be documented in this file.
 ### Changes
     - Decrease private tangle milestone interval to 5s
 
-### Fix
+### Fixed
     - Fix snapshot SEP producer deadlock
     - Fix inx-participation routes
 
