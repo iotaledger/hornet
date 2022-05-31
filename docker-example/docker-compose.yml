@@ -72,7 +72,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
-    user: 65532
+    user: "65532"
     volumes:
       - ./data/prometheus/:/prometheus
       - ./assets/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
@@ -82,7 +82,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
-    user: 65532
+    user: "65532"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`${GRAFANA_HOST}`)"
