@@ -100,18 +100,6 @@ type blockCreatedResponse struct {
 	BlockID string `json:"blockId"`
 }
 
-// childrenResponse defines the response of a GET children REST API call.
-type childrenResponse struct {
-	// The hex encoded block ID of the block.
-	BlockID string `json:"blockId"`
-	// The maximum count of results that are returned by the node.
-	MaxResults uint32 `json:"maxResults"`
-	// The actual count of results that are returned.
-	Count uint32 `json:"count"`
-	// The hex encoded block IDs of the children of this block.
-	Children []string `json:"children"`
-}
-
 // milestoneUTXOChangesResponse defines the response of a GET milestone UTXO changes REST API call.
 type milestoneUTXOChangesResponse struct {
 	// The index of the milestone.
