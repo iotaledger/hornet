@@ -42,10 +42,6 @@ const (
 	// GET returns block metadata (including info about "promotion/reattachment needed").
 	RouteBlockMetadata = "/blocks/:" + restapipkg.ParameterBlockID + "/metadata"
 
-	// RouteBlockChildren is the route for getting block IDs of the children of a block, identified by its blockID.
-	// GET returns the block IDs of all children.
-	RouteBlockChildren = "/blocks/:" + restapipkg.ParameterBlockID + "/children"
-
 	// RouteBlocks is the route for creating new blocks.
 	// POST creates a single new block and returns the new block ID.
 	// The block is parsed based on the given type in the request "Content-Type" header.
@@ -240,15 +236,6 @@ func configure() error {
 			}
 			return restapipkg.JSONResponse(c, http.StatusOK, resp)
 		}
-	})
-
-	routeGroup.GET(RouteBlockChildren, func(c echo.Context) error {
-		resp, err := childrenIDsByID(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteBlocks, func(c echo.Context) error {

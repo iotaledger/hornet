@@ -137,27 +137,6 @@ func blockBytesByID(c echo.Context) ([]byte, error) {
 	return block.Data(), nil
 }
 
-func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
-
-	blockID, err := restapi.ParseBlockIDParam(c)
-	if err != nil {
-		return nil, err
-	}
-
-	maxResults := deps.RestAPILimitsMaxResults
-	childrenBlockIDs, err := deps.Storage.ChildrenBlockIDs(blockID, storage.WithIteratorMaxIterations(maxResults))
-	if err != nil {
-		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
-	}
-
-	return &childrenResponse{
-		BlockID:    blockID.ToHex(),
-		MaxResults: uint32(maxResults),
-		Count:      uint32(len(childrenBlockIDs)),
-		Children:   childrenBlockIDs.ToHex(),
-	}, nil
-}
-
 func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
