@@ -137,7 +137,7 @@ services:
       - ./data:/app/database
     command:
       - "--inx.address=hornet:9029"
-      - "--participation.database.path=database/participation"
+      - "--participation.db.path=database/participation"
       - "--participation.bindAddress=inx-participation:9892"
 
   inx-spammer:

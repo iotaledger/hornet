@@ -18,3 +18,14 @@ You can generate your own dashboard password and salt by running:
 Change the values accordingly, then run `docker-compose up -d`
 
 You can check the logs using `docker-compose logs`
+
+You will be able to access your node under:
+https://node.your-domain.com/api/v2/info
+
+Your dashboard under:
+https://dashboard.your-domain.com
+
+And grafana under:
+https://grafana.your-domain.com
+
+**Warning:** the initial grafana credentials are admin/admin, so be sure to log in once to change them.
