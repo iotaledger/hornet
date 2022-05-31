@@ -59,13 +59,10 @@ jobs:
           cp peering.json docker-example/
 
       - name: Create docker-example.tar.gz
-        uses: a7ul/tar-action@v1.1.0
+        uses: ihiroky/archive-action@v1
         with:
-          command: c
-          cwd: ./docker-example
-          files: |
-            ./*
-          outPath: docker-example.tar.gz
+          root_dir: docker-example
+          file_path: docker-example.tar.gz
 
       - name: Upload docker-example.tar.gz file
         uses: ncipollo/release-action@v1
@@ -93,13 +90,10 @@ jobs:
           yq -i '.services.hornet-4.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
 
       - name: Create private_tangle.tar.gz file
-        uses: a7ul/tar-action@v1.1.0
+        uses: ihiroky/archive-action@v1
         with:
-          command: c
-          cwd: ./private_tangle
-          files: |
-            ./*
-          outPath: private_tangle.tar.gz
+          root_dir: private_tangle
+          file_path: private_tangle.tar.gz
 
       - name: Upload private_tangle.tar.gz file
         uses: ncipollo/release-action@v1
