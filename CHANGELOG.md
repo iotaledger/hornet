@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
     - Migrated repositories to the iotaledger organization (#1528)
     - Update INX modules (#1530) 
     - Updated dashboard (#1527)
-    - Updated protocol paramaeters data types (#1529)
+    - Updated protocol parameters data types (#1529)
 
 
 ## [2.0.0-alpha14] - 24.05.2022
