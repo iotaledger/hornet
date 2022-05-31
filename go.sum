@@ -501,10 +501,10 @@ github.com/influxdata/tdigest v0.0.0-20181121200506-bf2b5ad3c0a9/go.mod h1:Js0mq
 github.com/influxdata/usage-client v0.0.0-20160829180054-6d3895376368/go.mod h1:Wbbw6tYNvwa5dlB6304Sd+82Z3f7PmVZHVKU637d4po=
 github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf h1:3LoDur2QvBLbyXrGubX6HmoP6x5pVn1KkheFonTa6Is=
 github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf/go.mod h1:KMsgDNZKM3kkaIAoIk/FZ6A1vfVPix91lx2dm3dA6g8=
-github.com/iotaledger/hive.go v0.0.0-20220530162014-976ec1e82594 h1:8wa8Il+Uq5xHnK9aP/QwE8GQ8GtIQeeJkcfXOs650LU=
-github.com/iotaledger/hive.go v0.0.0-20220530162014-976ec1e82594/go.mod h1:qY0Eg2w/r+Ot0KrocMQHrtHzrcYKxDAEf33c6nSd8mI=
-github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220530162014-976ec1e82594 h1:VIojph8AVr5PjzvS6FBhIaIEZZOGKSeX3HHHfk7M318=
-github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220530162014-976ec1e82594/go.mod h1:7fVUqbLY+iBjCNjFwzbhOyS07OZJFIYJEDNJAItzMw8=
+github.com/iotaledger/hive.go v0.0.0-20220531132324-8347a155e220 h1:QK26nYSwx4oxxj66UtOgEd1q9wrnfMGYkeHE8N91OyQ=
+github.com/iotaledger/hive.go v0.0.0-20220531132324-8347a155e220/go.mod h1:qY0Eg2w/r+Ot0KrocMQHrtHzrcYKxDAEf33c6nSd8mI=
+github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220531132324-8347a155e220 h1:s+zUBEj9ji/5en3CkPIHZo44dFUeOByMH8x/WNKpHl0=
+github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220531132324-8347a155e220/go.mod h1:7fVUqbLY+iBjCNjFwzbhOyS07OZJFIYJEDNJAItzMw8=
 github.com/iotaledger/inx/go v0.0.0-20220530154855-f371ab0a309d h1:caHiwyxAAcHZKuoOpPBE9IWo15ymYN6wGyuA4/pUkEI=
 github.com/iotaledger/inx/go v0.0.0-20220530154855-f371ab0a309d/go.mod h1:rp86sgkAH4Wbq2qRYfrOTrUeoN6ogXrXefPnV4WNfjk=
 github.com/iotaledger/iota.go v1.0.0 h1:tqm1FxJ/zOdzbrAaQ5BQpVF8dUy2eeGlSeWlNG8GoXY=
