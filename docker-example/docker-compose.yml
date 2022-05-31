@@ -1,0 +1,158 @@
+version: '3'
+services:
+
+  hornet:
+    image: iotaledger/hornet:2.0.0-alpha15
+    ulimits:
+      nofile:
+        soft: 16384
+        hard: 16384
+    stop_grace_period: 5m
+    ports:
+      - "15600:15600/tcp"
+      - "14626:14626/udp"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hornet.service=hornet"
+      - "traefik.http.routers.hornet.rule=Host(`${HORNET_HOST}`)"
+      - "traefik.http.routers.hornet.entrypoints=websecure"
+      - "traefik.http.routers.hornet.tls=true"
+      - "traefik.http.routers.hornet.tls.certresolver=myresolver"
+      - "traefik.http.services.hornet.loadbalancer.server.port=14265"
+      - "traefik.http.routers.hornet-dashboard.service=hornet-dashboard"
+      - "traefik.http.routers.hornet-dashboard.rule=Host(`${DASHBOARD_HOST}`)"
+      - "traefik.http.routers.hornet-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.hornet-dashboard.tls=true"
+      - "traefik.http.routers.hornet-dashboard.tls.certresolver=myresolver"
+      - "traefik.http.services.hornet-dashboard.loadbalancer.server.port=8081"
+    cap_drop:
+      - ALL
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./peering.json:/app/peering.json
+      - ./data:/app/data
+    command:
+      - "-c"
+      - "config.json"
+      - "--db.path=data/database"
+      - "--p2p.db.path=data/p2pstore"
+      - "--snapshots.fullPath=data/snapshots/full_snapshot.bin"
+      - "--snapshots.deltaPath=data/snapshots/delta_snapshot.bin"
+      - "--inx.bindAddress=hornet:9029"
+      - "--dashboard.bindAddress=hornet:8081"
+      - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD}"
+      - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT}"
+      - "--prometheus.bindAddress=hornet:9311"
+
+##################################################################
+#  Reverse Proxy and SSL                                         #
+##################################################################
+
+  traefik:
+    image: traefik:v2.6
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./data/letsencrypt:/letsencrypt"
+
+##################################################################
+#  Monitoring                                                    #
+##################################################################
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    user: "65532"
+    volumes:
+      - ./data/prometheus/:/prometheus
+      - ./assets/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /etc/localtime:/etc/localtime:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    user: "65532"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`${GRAFANA_HOST}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=myresolver"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+      - ./assets/grafana/:/etc/grafana/provisioning/
+
+##################################################################
+#  INX Extensions                                                #
+#  disable them out by commenting out the services               #
+##################################################################
+
+  inx-indexer:
+    image: iotaledger/inx-indexer:0.8
+    stop_grace_period: 5m
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/database
+    command:
+      - "--inx.address=hornet:9029"
+      - "--indexer.db.path=database/indexer"
+      - "--indexer.bindAddress=inx-indexer:9091"
+      - "--app.enablePlugins=Prometheus"
+      - "--prometheus.bindAddress=inx-indexer:9312"
+
+  inx-mqtt:
+    image: iotaledger/inx-mqtt:0.9
+    stop_grace_period: 5m
+    restart: unless-stopped
+    command:
+      - "--inx.address=hornet:9029"
+      - "--mqtt.websocket.bindAddress=inx-mqtt:1888"
+      - "--app.enablePlugins=Prometheus"
+      - "--prometheus.bindAddress=inx-mqtt:9312"
+
+  inx-participation:
+    image: iotaledger/inx-participation:0.5
+    stop_grace_period: 5m
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 16384
+        hard: 16384
+    volumes:
+      - ./data:/app/database
+    command:
+      - "--inx.address=hornet:9029"
+      - "--participation.database.path=database/participation"
+      - "--participation.bindAddress=inx-participation:9892"
+
+  inx-spammer:
+    image: iotaledger/inx-spammer:0.2
+    stop_grace_period: 5m
+    restart: unless-stopped
+    command:
+      - "--inx.address=hornet:9029"
+      - "--app.enablePlugins=Prometheus"
+      - "--prometheus.bindAddress=inx-spammer:9312"
+
+  inx-poi:
+    image: iotaledger/inx-poi:0.2
+    stop_grace_period: 5m
+    restart: unless-stopped
+    command:
+      - "--inx.address=hornet:9029"
+      - "--poi.bindAddress=inx-poi:9687"

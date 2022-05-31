@@ -14,8 +14,8 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf
-	github.com/iotaledger/hive.go v0.0.0-20220530162014-976ec1e82594
-	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220530162014-976ec1e82594
+	github.com/iotaledger/hive.go v0.0.0-20220531132324-8347a155e220
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220531132324-8347a155e220
 	github.com/iotaledger/inx/go v0.0.0-20220530154855-f371ab0a309d
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v3 v3.0.0-20220530132039-ec319e60cc56
