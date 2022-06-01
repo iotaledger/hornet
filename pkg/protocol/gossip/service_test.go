@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hive.go/configuration"
@@ -34,8 +35,10 @@ func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.Manag
 	require.NoError(t, err)
 
 	n, err := libp2p.New(
+		libp2p.DefaultListenAddrs,
 		libp2p.Identity(privateKey),
 		libp2p.ConnectionManager(connManager),
+		libp2p.Transport(tcp.NewTCPTransport),
 	)
 	require.NoError(t, err)
 

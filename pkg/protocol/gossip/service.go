@@ -387,11 +387,11 @@ func (s *Service) eventLoop(ctx context.Context) {
 		case connectedMsg := <-s.connectedChan:
 			s.handleConnected(connectedMsg.peer, connectedMsg.conn)
 
-		case disconnectMsg := <-s.closeStreamChan:
-			if err := s.deregisterProtocol(disconnectMsg.peerID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
-				disconnectMsg.back <- err
+		case closeStreamMsg := <-s.closeStreamChan:
+			if err := s.deregisterProtocol(closeStreamMsg.peerID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
+				closeStreamMsg.back <- err
 			}
-			disconnectMsg.back <- nil
+			closeStreamMsg.back <- nil
 
 		case disconnectedMsg := <-s.disconnectedChan:
 			if err := s.deregisterProtocol(disconnectedMsg.peer.ID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
@@ -450,7 +450,7 @@ func (s *Service) handleInboundStream(stream network.Stream) {
 
 	if len(cancelReason) > 0 {
 		s.Events.InboundStreamCanceled.Trigger(stream, cancelReason)
-		s.closeUnwantedStream(stream)
+		s.closeUnwantedStreamAndClosePeer(stream)
 		return
 	}
 
@@ -461,14 +461,22 @@ func (s *Service) handleInboundStream(stream network.Stream) {
 	s.registerProtocol(remotePeerID, stream)
 }
 
-// closes the given unwanted stream by closing the underlying
-// connection and the stream itself.
+// closeUnwantedStream closes the given unwanted stream.
 func (s *Service) closeUnwantedStream(stream network.Stream) {
 	// using close and reset is the only way to make the remote's peer
 	// "ClosedStream" notifiee handler fire: this is important, because
 	// we want the remote peer to deregister the stream
-	_ = stream.Conn().Close()
 	_ = stream.Reset()
+}
+
+// closeUnwantedStreamAndClosePeer closes the given unwanted stream by closing the underlying
+// peer and the stream itself.
+func (s *Service) closeUnwantedStreamAndClosePeer(stream network.Stream) {
+	// using close and reset is the only way to make the remote's peer
+	// "ClosedStream" notifiee handler fire: this is important, because
+	// we want the remote peer to deregister the stream
+	_ = stream.Reset()
+	s.host.Network().ClosePeer(stream.Conn().RemotePeer())
 }
 
 // handles the automatic creation of a protocol instance if the given peer
