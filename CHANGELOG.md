@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha17] - 01.06.2022
+
+### Fixed
+    - Fixed libp2p connection issue (#1533)
+
+
 ## [2.0.0-alpha16] - 31.05.2022
 
 ### Fixed

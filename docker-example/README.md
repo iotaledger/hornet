@@ -12,6 +12,8 @@ DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
 GRAFANA_HOST=grafana.your-domain.com
 ```
 
+Run `./prepare_docker.sh` to create the `data` folder with correct permissions.
+
 You can generate your own dashboard password and salt by running:
 `docker-compose run hornet tool pwd-hash`
 
