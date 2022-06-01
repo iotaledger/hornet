@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/dig"
 
@@ -125,7 +126,7 @@ func provide(c *dig.Container) error {
 		createdHost, err := libp2p.New(libp2p.Identity(privKey),
 			libp2p.ListenAddrStrings(deps.P2PBindMultiAddresses...),
 			libp2p.Peerstore(peerStoreContainer.Peerstore()),
-			libp2p.DefaultTransports,
+			libp2p.Transport(tcp.NewTCPTransport),
 			libp2p.ConnectionManager(connManager),
 			libp2p.NATPortMap(),
 		)
