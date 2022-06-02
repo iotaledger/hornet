@@ -91,6 +91,9 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 		if a.opts.tipSelFunc == nil {
 			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents given and node tipselection disabled")
 		}
+		if a.opts.powHandler == nil {
+			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents given and node PoW is disabled")
+		}
 		tipSelFunc = a.opts.tipSelFunc
 		tips, err := a.opts.tipSelFunc()
 		if err != nil {
