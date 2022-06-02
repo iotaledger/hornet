@@ -94,7 +94,7 @@ func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (
 	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(blkId) // meta +1
 	if cachedBlockMeta == nil {
 		isSolidEntryPoint, err := deps.Storage.SolidEntryPointsContain(blkId)
-		if err != nil && isSolidEntryPoint {
+		if err == nil && isSolidEntryPoint {
 			return &inx.BlockMetadata{
 				BlockId: blockID,
 				Solid:   true,
