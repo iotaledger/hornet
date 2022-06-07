@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/blang/vfs v1.0.0
 	github.com/cockroachdb/pebble v0.0.0-20220601013604-e7847d681b29
-	github.com/docker/docker v20.10.16+incompatible
+	github.com/docker/docker v20.10.17+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-echarts/go-echarts v1.0.0
