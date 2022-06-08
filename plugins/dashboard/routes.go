@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -37,12 +38,33 @@ func devModeReverseProxyMiddleware() echo.MiddlewareFunc {
 	}))
 }
 
-func apiMiddlewares() []echo.MiddlewareFunc {
+func compileRouteAsRegex(route string) *regexp.Regexp {
 
-	proxySkipper := func(context echo.Context) bool {
-		// Only proxy allowed routes, skip all others
-		return !deps.DashboardAllowedAPIRoute(context)
+	r := regexp.QuoteMeta(route)
+	r = strings.Replace(r, `\*`, "(.*?)", -1)
+	r = r + "$"
+
+	reg, err := regexp.Compile(r)
+	if err != nil {
+		return nil
 	}
+	return reg
+}
+
+func compileRoutesAsRegexes(routes []string) []*regexp.Regexp {
+	var regexes []*regexp.Regexp
+	for _, route := range routes {
+		reg := compileRouteAsRegex(route)
+		if reg == nil {
+			Plugin.LogFatalf("Invalid route in config: %s", route)
+			continue
+		}
+		regexes = append(regexes, reg)
+	}
+	return regexes
+}
+
+func apiMiddlewares() []echo.MiddlewareFunc {
 
 	apiBindAddr := deps.RestAPIBindAddress
 	_, apiBindPort, err := net.SplitHostPort(apiBindAddr)
@@ -55,35 +77,67 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 		Plugin.LogFatalf("wrong dashboard API url: %s", err)
 	}
 
+	proxySkipper := func(context echo.Context) bool {
+		// Only proxy allowed routes, skip all others
+		return !deps.DashboardAllowedAPIRoute(context)
+	}
+
 	balancer := middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{
 		{
 			URL: apiURL,
 		},
 	})
 
-	config := middleware.ProxyConfig{
+	proxyConfig := middleware.ProxyConfig{
 		Skipper:  proxySkipper,
 		Balancer: balancer,
 	}
 
-	// Protect this routes with JWT even if the API is not protected
-	jwtAuthRoutes := []string{
-		"/api/v2/peers",
-		"/api/plugins",
+	// the HTTP REST routes which can be called without authorization.
+	// Wildcards using * are allowed
+	publicRoutes := []string{
+		"/api/plugins/indexer/v1/*",
 	}
 
-	jwtAuthSkipper := func(context echo.Context) bool {
-		path := context.Request().URL.EscapedPath()
-		for _, prefix := range jwtAuthRoutes {
-			if strings.HasPrefix(path, prefix) {
-				return false
+	// the HTTP REST routes which need to be called with authorization even if the API is not protected.
+	// Wildcards using * are allowed
+	protectedRoutes := []string{
+		"/api/v2/peers*",
+		"/api/plugins/*",
+	}
+
+	publicRoutesRegEx := compileRoutesAsRegexes(publicRoutes)
+	protectedRoutesRegEx := compileRoutesAsRegexes(protectedRoutes)
+
+	matchPublic := func(c echo.Context) bool {
+		loweredPath := strings.ToLower(c.Request().URL.EscapedPath())
+
+		for _, reg := range publicRoutesRegEx {
+			if reg.MatchString(loweredPath) {
+				return true
 			}
 		}
-		return true
+		return false
+	}
+
+	matchProtected := func(c echo.Context) bool {
+		loweredPath := strings.ToLower(c.Request().URL.EscapedPath())
+
+		for _, reg := range protectedRoutesRegEx {
+			if reg.MatchString(loweredPath) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Skip routes explicitely matching the publicRoutes, or not matching the protectedRoutes
+	jwtAuthSkipper := func(c echo.Context) bool {
+		return matchPublic(c) || !matchProtected(c)
 	}
 
 	// Only allow JWT created for the dashboard
-	jwtAuthAllow := func(_ echo.Context, subject string, claims *jwt.AuthClaims) bool {
+	jwtAllow := func(_ echo.Context, subject string, claims *jwt.AuthClaims) bool {
 		if claims.Dashboard {
 			return claims.VerifySubject(subject)
 		}
@@ -91,8 +145,8 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 	}
 
 	return []echo.MiddlewareFunc{
-		jwtAuth.Middleware(jwtAuthSkipper, jwtAuthAllow),
-		middleware.ProxyWithConfig(config),
+		jwtAuth.Middleware(jwtAuthSkipper, jwtAllow),
+		middleware.ProxyWithConfig(proxyConfig),
 	}
 }
 
@@ -141,7 +195,7 @@ func setupRoutes(e *echo.Echo) {
 	}
 	e.Group("/*").Use(mw)
 
-	// Pass all the explorer request through to the local rest API
+	// Pass all the dashboard request through to the local rest API
 	e.Group("/api", apiMiddlewares()...)
 
 	e.GET("/ws", websocketRoute)

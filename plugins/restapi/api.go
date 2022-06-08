@@ -38,12 +38,14 @@ func compileRoutesAsRegexes(routes []string) []*regexp.Regexp {
 
 func apiMiddleware() echo.MiddlewareFunc {
 
-	publicRoutes := compileRoutesAsRegexes(ParamsRestAPI.PublicRoutes)
-	protectedRoutes := compileRoutesAsRegexes(ParamsRestAPI.ProtectedRoutes)
+	publicRoutesRegEx := compileRoutesAsRegexes(ParamsRestAPI.PublicRoutes)
+	protectedRoutesRegEx := compileRoutesAsRegexes(ParamsRestAPI.ProtectedRoutes)
 
 	matchPublic := func(c echo.Context) bool {
-		for _, reg := range publicRoutes {
-			if reg.MatchString(strings.ToLower(c.Path())) {
+		loweredPath := strings.ToLower(c.Path())
+
+		for _, reg := range publicRoutesRegEx {
+			if reg.MatchString(loweredPath) {
 				return true
 			}
 		}
@@ -51,8 +53,10 @@ func apiMiddleware() echo.MiddlewareFunc {
 	}
 
 	matchExposed := func(c echo.Context) bool {
-		for _, reg := range append(publicRoutes, protectedRoutes...) {
-			if reg.MatchString(strings.ToLower(c.Path())) {
+		loweredPath := strings.ToLower(c.Path())
+
+		for _, reg := range append(publicRoutesRegEx, protectedRoutesRegEx...) {
+			if reg.MatchString(loweredPath) {
 				return true
 			}
 		}
