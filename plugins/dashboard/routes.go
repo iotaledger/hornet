@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 
-	"github.com/gohornet/dashboard"
+	"github.com/iotaledger/hornet-dashboard"
 	"github.com/iotaledger/hornet/pkg/jwt"
 	"github.com/iotaledger/hornet/pkg/restapi"
 )
