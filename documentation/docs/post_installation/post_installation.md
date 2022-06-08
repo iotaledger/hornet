@@ -131,7 +131,6 @@ You can find the HTTP REST API related options in the `restAPI` section within t
       "/api/v2/transactions*",
       "/api/v2/milestones*",
       "/api/v2/outputs*",
-      "/api/v2/addresses*",
       "/api/v2/treasury",
       "/api/v2/receipts*"
     ],

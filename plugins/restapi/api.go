@@ -117,13 +117,12 @@ func apiMiddleware() echo.MiddlewareFunc {
 
 var dashboardAllowedRoutes = map[string][]string{
 	http.MethodGet: {
-		"/api/v2/addresses",
 		"/api/v2/info",
 		"/api/v2/blocks",
+		"/api/v2/transactions",
 		"/api/v2/milestones",
 		"/api/v2/outputs",
 		"/api/v2/peers",
-		"/api/v2/transactions",
 		"/api/plugins/indexer/v1",
 		"/api/plugins/spammer/v1",
 		"/api/plugins/participation/v1/events",
