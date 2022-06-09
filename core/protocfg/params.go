@@ -36,13 +36,13 @@ type BaseToken struct {
 type SupportedProtocolVersions []uint32
 
 // Highest returns the highest version.
-func (versions SupportedProtocolVersions) Highest() uint32 {
-	return versions[len(versions)-1]
+func (versions SupportedProtocolVersions) Highest() byte {
+	return byte(versions[len(versions)-1])
 }
 
 // Lowest returns the lowest version.
-func (versions SupportedProtocolVersions) Lowest() uint32 {
-	return versions[0]
+func (versions SupportedProtocolVersions) Lowest() byte {
+	return byte(versions[0])
 }
 
 // ParametersProtocol contains the definition of the parameters used by protocol.
