@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha18] - 08.06.2022
+
+### Fixed
+    - Fix JWT skipping for indexer routes via dashboard API
+    - Fix INX ReadBlockMetadata for solid entry points (#1534)
+    - Send correct error message if a block is submitted without parents and no PoW is enabled (#1536)
+
+### Changes
+    - Rename files from message->block
+    - Remove outdated routes
+    - Move dashboard repository to iotaledger
+    - Update go modules
+
+
 ## [2.0.0-alpha17] - 01.06.2022
 
 ### Fixed

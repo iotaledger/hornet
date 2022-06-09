@@ -38,12 +38,14 @@ func compileRoutesAsRegexes(routes []string) []*regexp.Regexp {
 
 func apiMiddleware() echo.MiddlewareFunc {
 
-	publicRoutes := compileRoutesAsRegexes(ParamsRestAPI.PublicRoutes)
-	protectedRoutes := compileRoutesAsRegexes(ParamsRestAPI.ProtectedRoutes)
+	publicRoutesRegEx := compileRoutesAsRegexes(ParamsRestAPI.PublicRoutes)
+	protectedRoutesRegEx := compileRoutesAsRegexes(ParamsRestAPI.ProtectedRoutes)
 
 	matchPublic := func(c echo.Context) bool {
-		for _, reg := range publicRoutes {
-			if reg.MatchString(strings.ToLower(c.Path())) {
+		loweredPath := strings.ToLower(c.Path())
+
+		for _, reg := range publicRoutesRegEx {
+			if reg.MatchString(loweredPath) {
 				return true
 			}
 		}
@@ -51,8 +53,10 @@ func apiMiddleware() echo.MiddlewareFunc {
 	}
 
 	matchExposed := func(c echo.Context) bool {
-		for _, reg := range append(publicRoutes, protectedRoutes...) {
-			if reg.MatchString(strings.ToLower(c.Path())) {
+		loweredPath := strings.ToLower(c.Path())
+
+		for _, reg := range append(publicRoutesRegEx, protectedRoutesRegEx...) {
+			if reg.MatchString(loweredPath) {
 				return true
 			}
 		}
@@ -117,13 +121,12 @@ func apiMiddleware() echo.MiddlewareFunc {
 
 var dashboardAllowedRoutes = map[string][]string{
 	http.MethodGet: {
-		"/api/v2/addresses",
 		"/api/v2/info",
 		"/api/v2/blocks",
+		"/api/v2/transactions",
 		"/api/v2/milestones",
 		"/api/v2/outputs",
 		"/api/v2/peers",
-		"/api/v2/transactions",
 		"/api/plugins/indexer/v1",
 		"/api/plugins/spammer/v1",
 		"/api/plugins/participation/v1/events",

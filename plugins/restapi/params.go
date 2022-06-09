@@ -42,7 +42,6 @@ var ParamsRestAPI = &ParametersRestAPI{
 		"/api/v2/transactions*",
 		"/api/v2/milestones*",
 		"/api/v2/outputs*",
-		"/api/v2/addresses*",
 		"/api/v2/treasury",
 		"/api/v2/receipts*",
 		"/api/plugins/debug/v1/*",
