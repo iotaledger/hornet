@@ -141,26 +141,27 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage                 *storage.Storage
-	SyncManager             *syncmanager.SyncManager
-	Tangle                  *tangle.Tangle
-	TipScoreCalculator      *tangle.TipScoreCalculator
-	PeeringManager          *p2p.Manager
-	GossipService           *gossip.Service
-	UTXOManager             *utxo.Manager
-	PoWHandler              *pow.Handler
-	SnapshotManager         *snapshot.SnapshotManager
-	AppInfo                 *app.AppInfo
-	PeeringConfigManager    *p2p.ConfigManager
-	ProtocolParameters      *iotago.ProtocolParameters
-	BaseToken               *protocfg.BaseToken
-	RestAPILimitsMaxResults int                        `name:"restAPILimitsMaxResults"`
-	SnapshotsFullPath       string                     `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath      string                     `name:"snapshotsDeltaPath"`
-	TipSelector             *tipselect.TipSelector     `optional:"true"`
-	Echo                    *echo.Echo                 `optional:"true"`
-	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
-	RestAPIMetrics          *metrics.RestAPIMetrics
+	Storage                   *storage.Storage
+	SyncManager               *syncmanager.SyncManager
+	Tangle                    *tangle.Tangle
+	TipScoreCalculator        *tangle.TipScoreCalculator
+	PeeringManager            *p2p.Manager
+	GossipService             *gossip.Service
+	UTXOManager               *utxo.Manager
+	PoWHandler                *pow.Handler
+	SnapshotManager           *snapshot.SnapshotManager
+	AppInfo                   *app.AppInfo
+	PeeringConfigManager      *p2p.ConfigManager
+	ProtocolParameters        *iotago.ProtocolParameters
+	BaseToken                 *protocfg.BaseToken
+	SupportedProtocolVersions protocfg.SupportedProtocolVersions
+	RestAPILimitsMaxResults   int                        `name:"restAPILimitsMaxResults"`
+	SnapshotsFullPath         string                     `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath        string                     `name:"snapshotsDeltaPath"`
+	TipSelector               *tipselect.TipSelector     `optional:"true"`
+	Echo                      *echo.Echo                 `optional:"true"`
+	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
+	RestAPIMetrics            *metrics.RestAPIMetrics
 }
 
 func configure() error {

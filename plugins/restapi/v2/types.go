@@ -49,6 +49,8 @@ type infoResponse struct {
 	Version string `json:"version"`
 	// The current status of this node.
 	Status nodeStatus `json:"status"`
+	// The protocol versions this node supports.
+	SupportedProtocolVersions protocfg.SupportedProtocolVersions `json:"supportedProtocolVersions"`
 	// The protocol parameters used by this node.
 	Protocol *iotago.ProtocolParameters `json:"protocol"`
 	// The base token of the network.

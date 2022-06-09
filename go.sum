@@ -507,6 +507,8 @@ github.com/iotaledger/hornet-dashboard v0.0.0-20220608194723-f4d895b51eef h1:27x
 github.com/iotaledger/hornet-dashboard v0.0.0-20220608194723-f4d895b51eef/go.mod h1:MiDTKBTdKOxvOEAbUTXnaoBb68rRPNbHAgNp/Rg/cFM=
 github.com/iotaledger/inx/go v0.0.0-20220530154855-f371ab0a309d h1:caHiwyxAAcHZKuoOpPBE9IWo15ymYN6wGyuA4/pUkEI=
 github.com/iotaledger/inx/go v0.0.0-20220530154855-f371ab0a309d/go.mod h1:rp86sgkAH4Wbq2qRYfrOTrUeoN6ogXrXefPnV4WNfjk=
+github.com/iotaledger/inx/go v0.0.0-20220609114154-0ccfd2b7d35a h1:G4awJwZGtJ5IsxZIUYnMIeJuX6C1oI7RY/yKehiYXUo=
+github.com/iotaledger/inx/go v0.0.0-20220609114154-0ccfd2b7d35a/go.mod h1:rp86sgkAH4Wbq2qRYfrOTrUeoN6ogXrXefPnV4WNfjk=
 github.com/iotaledger/iota.go v1.0.0 h1:tqm1FxJ/zOdzbrAaQ5BQpVF8dUy2eeGlSeWlNG8GoXY=
 github.com/iotaledger/iota.go v1.0.0/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go/v3 v3.0.0-20220530132039-ec319e60cc56 h1:ibtnTlN/oeipqXyPL9sb95U5rJhV7Lh318EHoXsND2U=

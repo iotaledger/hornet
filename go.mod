@@ -16,7 +16,7 @@ require (
 	github.com/iotaledger/hive.go v0.0.0-20220531132324-8347a155e220
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220531132324-8347a155e220
 	github.com/iotaledger/hornet-dashboard v0.0.0-20220608194723-f4d895b51eef
-	github.com/iotaledger/inx/go v0.0.0-20220530154855-f371ab0a309d
+	github.com/iotaledger/inx/go v0.0.0-20220609114154-0ccfd2b7d35a
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v3 v3.0.0-20220530132039-ec319e60cc56
 	github.com/labstack/echo/v4 v4.7.2
