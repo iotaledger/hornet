@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"os"
 	"path/filepath"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/profile"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -222,12 +222,12 @@ func provide(c *dig.Container) error {
 
 	type syncManagerDeps struct {
 		dig.In
-		UTXOManager        *utxo.Manager
-		ProtocolParameters *iotago.ProtocolParameters
+		UTXOManager     *utxo.Manager
+		ProtocolManager *protocol.Manager
 	}
 
 	if err := c.Provide(func(deps syncManagerDeps) *syncmanager.SyncManager {
-		sync, err := syncmanager.New(deps.UTXOManager, milestone.Index(deps.ProtocolParameters.BelowMaxDepth))
+		sync, err := syncmanager.New(deps.UTXOManager, milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth))
 		if err != nil {
 			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
 		}

@@ -2,6 +2,7 @@ package autopeering
 
 import (
 	"context"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"strings"
 	"time"
 
@@ -33,7 +34,6 @@ import (
 	restapiv2 "github.com/iotaledger/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hornet/plugins/urts"
 	"github.com/iotaledger/hornet/plugins/warpsync"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -152,7 +152,7 @@ func provide(c *dig.Container) error {
 
 	type autopeeringDeps struct {
 		dig.In
-		ProtocolParameters *iotago.ProtocolParameters
+		ProtocolManager *protocol.Manager
 	}
 
 	if err := c.Provide(func(deps autopeeringDeps) *autopeering.AutopeeringManager {
@@ -161,7 +161,7 @@ func provide(c *dig.Container) error {
 			ParamsAutopeering.BindAddress,
 			ParamsAutopeering.EntryNodes,
 			ParamsAutopeering.EntryNodesPreferIPv6,
-			service.Key(deps.ProtocolParameters.NetworkName),
+			service.Key(deps.ProtocolManager.Current().NetworkName),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)

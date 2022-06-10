@@ -20,10 +20,10 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/p2p"
 	"github.com/iotaledger/hornet/pkg/profile"
+	proto "github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -86,13 +86,13 @@ func provide(c *dig.Container) error {
 
 	type msgProcDeps struct {
 		dig.In
-		Storage            *storage.Storage
-		SyncManager        *syncmanager.SyncManager
-		ServerMetrics      *metrics.ServerMetrics
-		RequestQueue       gossip.RequestQueue
-		PeeringManager     *p2p.Manager
-		ProtocolParameters *iotago.ProtocolParameters
-		Profile            *profile.Profile
+		Storage         *storage.Storage
+		SyncManager     *syncmanager.SyncManager
+		ServerMetrics   *metrics.ServerMetrics
+		RequestQueue    gossip.RequestQueue
+		PeeringManager  *p2p.Manager
+		ProtocolManager *proto.Manager
+		Profile         *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgProcDeps) *gossip.MessageProcessor {
@@ -102,7 +102,7 @@ func provide(c *dig.Container) error {
 			deps.RequestQueue,
 			deps.PeeringManager,
 			deps.ServerMetrics,
-			deps.ProtocolParameters,
+			deps.ProtocolManager,
 			&gossip.Options{
 				WorkUnitCacheOpts: deps.Profile.Caches.IncomingBlocksFilter,
 			})
@@ -117,16 +117,16 @@ func provide(c *dig.Container) error {
 
 	type serviceDeps struct {
 		dig.In
-		Host               host.Host
-		PeeringManager     *p2p.Manager
-		Storage            *storage.Storage
-		ServerMetrics      *metrics.ServerMetrics
-		ProtocolParameters *iotago.ProtocolParameters
+		Host            host.Host
+		PeeringManager  *p2p.Manager
+		Storage         *storage.Storage
+		ServerMetrics   *metrics.ServerMetrics
+		ProtocolManager *proto.Manager
 	}
 
 	if err := c.Provide(func(deps serviceDeps) *gossip.Service {
 		return gossip.NewService(
-			protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, deps.ProtocolParameters.NetworkID())),
+			protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, deps.ProtocolManager.Current().NetworkID())),
 			deps.Host,
 			deps.PeeringManager,
 			deps.ServerMetrics,
