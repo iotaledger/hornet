@@ -52,7 +52,7 @@ type infoResponse struct {
 	// The protocol versions this node supports.
 	SupportedProtocolVersions protocfg.SupportedProtocolVersions `json:"supportedProtocolVersions"`
 	// The protocol parameters used by this node.
-	Protocol *iotago.ProtocolParameters `json:"protocol"`
+	ProtocolParameters *iotago.ProtocolParameters `json:"protocol"`
 	// The base token of the network.
 	BaseToken *protocfg.BaseToken `json:"baseToken"`
 	// The metrics of this node.

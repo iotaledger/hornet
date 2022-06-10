@@ -152,9 +152,9 @@ type dependencies struct {
 	SnapshotManager           *snapshot.SnapshotManager
 	AppInfo                   *app.AppInfo
 	PeeringConfigManager      *p2p.ConfigManager
+	SupportedProtocolVersions protocfg.SupportedProtocolVersions
 	ProtocolParameters        *iotago.ProtocolParameters
 	BaseToken                 *protocfg.BaseToken
-	SupportedProtocolVersions protocfg.SupportedProtocolVersions
 	RestAPILimitsMaxResults   int                        `name:"restAPILimitsMaxResults"`
 	SnapshotsFullPath         string                     `name:"snapshotsFullPath"`
 	SnapshotsDeltaPath        string                     `name:"snapshotsDeltaPath"`

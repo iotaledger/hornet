@@ -2,11 +2,9 @@ package inx
 
 import (
 	"context"
-	"github.com/iotaledger/hornet/pkg/pow"
-	"github.com/iotaledger/hornet/plugins/restapi"
-	"github.com/labstack/echo/v4"
 	"time"
 
+	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
@@ -18,8 +16,10 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/pow"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/plugins/restapi"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -55,8 +55,8 @@ type dependencies struct {
 	KeyManager                *keymanager.KeyManager
 	TipSelector               *tipselect.TipSelector `optional:"true"`
 	MilestonePublicKeyCount   int                    `name:"milestonePublicKeyCount"`
-	ProtocolParameters        *iotago.ProtocolParameters
 	SupportedProtocolVersions protocfg.SupportedProtocolVersions
+	ProtocolParameters        *iotago.ProtocolParameters
 	BaseToken                 *protocfg.BaseToken
 	PoWHandler                *pow.Handler
 	INXServer                 *INXServer

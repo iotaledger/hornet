@@ -53,9 +53,8 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                      deps.AppInfo.Name,
-		Version:                   deps.AppInfo.Version,
-		SupportedProtocolVersions: deps.SupportedProtocolVersions,
+		Name:    deps.AppInfo.Name,
+		Version: deps.AppInfo.Version,
 		Status: nodeStatus{
 			IsHealthy: deps.Tangle.IsNodeHealthy(),
 			LatestMilestone: milestoneInfoResponse{
@@ -70,8 +69,9 @@ func info() (*infoResponse, error) {
 			},
 			PruningIndex: pruningIndex,
 		},
-		Protocol:  deps.ProtocolParameters,
-		BaseToken: deps.BaseToken,
+		SupportedProtocolVersions: deps.SupportedProtocolVersions,
+		ProtocolParameters:        deps.ProtocolParameters,
+		BaseToken:                 deps.BaseToken,
 		Metrics: nodeMetrics{
 			BlocksPerSecond:           blocksPerSecond,
 			ReferencedBlocksPerSecond: referencedBlocksPerSecond,
