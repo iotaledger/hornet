@@ -18,6 +18,16 @@ func (s *Storage) configureSnapshotStore(snapshotStore kvstore.KVStore) error {
 	return nil
 }
 
+func (s *Storage) configureProtocolStore(protocolStore kvstore.KVStore) error {
+	protocolStore, err := protocolStore.WithRealm([]byte{common.StorePrefixProtocol})
+	if err != nil {
+		return err
+	}
+
+	s.protocolStore = protocolStore
+	return nil
+}
+
 func (s *Storage) storeSnapshotInfo(snapshot *SnapshotInfo) error {
 
 	data, err := snapshot.Serialize(serializer.DeSeriModeNoValidation, nil)

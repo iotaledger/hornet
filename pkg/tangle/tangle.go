@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"context"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"runtime"
 	"sync"
 	"time"
@@ -19,7 +20,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type Tangle struct {
@@ -48,8 +48,8 @@ type Tangle struct {
 	requester *gossip.Requester
 	// used to persist and validate batches of receipts.
 	receiptService *migrator.ReceiptService
-	// the protocol parameters
-	protoParas *iotago.ProtocolParameters
+	// the protocol manager
+	protoMng *protocol.Manager
 
 	milestoneTimeout             time.Duration
 	whiteFlagParentsSolidTimeout time.Duration
@@ -122,7 +122,7 @@ func New(
 	serverMetrics *metrics.ServerMetrics,
 	requester *gossip.Requester,
 	receiptService *migrator.ReceiptService,
-	protoParas *iotago.ProtocolParameters,
+	protoMng *protocol.Manager,
 	milestoneTimeout time.Duration,
 	whiteFlagParentsSolidTimeout time.Duration,
 	updateSyncedAtStartup bool) *Tangle {
@@ -140,7 +140,7 @@ func New(
 		serverMetrics:                serverMetrics,
 		requester:                    requester,
 		receiptService:               receiptService,
-		protoParas:                   protoParas,
+		protoMng:                     protoMng,
 		milestoneTimeout:             milestoneTimeout,
 		whiteFlagParentsSolidTimeout: whiteFlagParentsSolidTimeout,
 		updateSyncedAtStartup:        updateSyncedAtStartup,

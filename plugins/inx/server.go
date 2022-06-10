@@ -115,7 +115,7 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 		})
 	}
 	return &inx.NodeConfiguration{
-		ProtocolParameters:      inx.NewProtocolParameters(deps.ProtocolParameters),
+		ProtocolParameters:      inx.NewProtocolParameters(deps.ProtocolManager.Current()),
 		MilestonePublicKeyCount: uint32(deps.MilestonePublicKeyCount),
 		MilestoneKeyRanges:      keyRanges,
 		BaseToken: &inx.BaseToken{
@@ -126,6 +126,6 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 			Decimals:        deps.BaseToken.Decimals,
 			UseMetricPrefix: deps.BaseToken.UseMetricPrefix,
 		},
-		SupportedProtocolVersions: deps.SupportedProtocolVersions,
+		SupportedProtocolVersions: deps.ProtocolManager.SupportedVersions(),
 	}, nil
 }

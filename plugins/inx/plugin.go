@@ -2,6 +2,7 @@ package inx
 
 import (
 	"context"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -20,7 +21,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/tipselect"
 	"github.com/iotaledger/hornet/plugins/restapi"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -47,22 +47,21 @@ var (
 
 type dependencies struct {
 	dig.In
-	SyncManager               *syncmanager.SyncManager
-	UTXOManager               *utxo.Manager
-	Tangle                    *tangle.Tangle
-	TipScoreCalculator        *tangle.TipScoreCalculator
-	Storage                   *storage.Storage
-	KeyManager                *keymanager.KeyManager
-	TipSelector               *tipselect.TipSelector `optional:"true"`
-	MilestonePublicKeyCount   int                    `name:"milestonePublicKeyCount"`
-	SupportedProtocolVersions protocfg.SupportedProtocolVersions
-	ProtocolParameters        *iotago.ProtocolParameters
-	BaseToken                 *protocfg.BaseToken
-	PoWHandler                *pow.Handler
-	INXServer                 *INXServer
-	INXMetrics                *metrics.INXMetrics
-	Echo                      *echo.Echo                 `optional:"true"`
-	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
+	SyncManager             *syncmanager.SyncManager
+	UTXOManager             *utxo.Manager
+	Tangle                  *tangle.Tangle
+	TipScoreCalculator      *tangle.TipScoreCalculator
+	Storage                 *storage.Storage
+	KeyManager              *keymanager.KeyManager
+	TipSelector             *tipselect.TipSelector `optional:"true"`
+	MilestonePublicKeyCount int                    `name:"milestonePublicKeyCount"`
+	ProtocolManager         *protocol.Manager
+	BaseToken               *protocfg.BaseToken
+	PoWHandler              *pow.Handler
+	INXServer               *INXServer
+	INXMetrics              *metrics.INXMetrics
+	Echo                    *echo.Echo                 `optional:"true"`
+	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
 }
 
 func provide(c *dig.Container) error {

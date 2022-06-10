@@ -26,6 +26,10 @@ func (t *Tangle) IsNodeHealthy() bool {
 		return false
 	}
 
+	if !t.protoMng.NextPendingSupported() {
+		return false
+	}
+
 	// latest milestone timestamp
 	lmi := t.syncManager.LatestMilestoneIndex()
 

@@ -3,6 +3,7 @@ package snapshot
 import (
 	"context"
 	"fmt"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"os"
 
 	"github.com/labstack/gommon/bytes"
@@ -20,7 +21,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -103,7 +103,7 @@ func provide(c *dig.Container) error {
 		Storage              *storage.Storage
 		SyncManager          *syncmanager.SyncManager
 		UTXOManager          *utxo.Manager
-		ProtocolParameters   *iotago.ProtocolParameters
+		ProtocolManager      *protocol.Manager
 		PruningPruneReceipts bool   `name:"pruneReceipts"`
 		SnapshotsFullPath    string `name:"snapshotsFullPath"`
 		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
@@ -111,9 +111,9 @@ func provide(c *dig.Container) error {
 
 	return c.Provide(func(deps snapshotDeps) *snapshot.SnapshotManager {
 
-		solidEntryPointCheckThresholdPast := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
-		solidEntryPointCheckThresholdFuture := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
-		pruningThreshold := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + AdditionalPruningThreshold)
+		solidEntryPointCheckThresholdPast := milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
+		solidEntryPointCheckThresholdFuture := milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
+		pruningThreshold := milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth + AdditionalPruningThreshold)
 
 		snapshotDepth := milestone.Index(ParamsSnapshots.Depth)
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {
@@ -150,7 +150,7 @@ func provide(c *dig.Container) error {
 			deps.Storage,
 			deps.SyncManager,
 			deps.UTXOManager,
-			deps.ProtocolParameters,
+			deps.ProtocolManager,
 			deps.SnapshotsFullPath,
 			deps.SnapshotsDeltaPath,
 			ParamsSnapshots.DeltaSizeThresholdPercentage,
