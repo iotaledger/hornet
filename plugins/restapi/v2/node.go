@@ -71,6 +71,7 @@ func info() (*infoResponse, error) {
 		},
 		SupportedProtocolVersions: deps.ProtocolManager.SupportedVersions(),
 		ProtocolParameters:        deps.ProtocolManager.Current(),
+		PendingProtocolParameters: deps.ProtocolManager.Pending(),
 		BaseToken:                 deps.BaseToken,
 		Metrics: nodeMetrics{
 			BlocksPerSecond:           blocksPerSecond,

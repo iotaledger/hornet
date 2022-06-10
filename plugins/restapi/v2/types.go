@@ -54,6 +54,8 @@ type infoResponse struct {
 	SupportedProtocolVersions protocol.Versions `json:"supportedProtocolVersions"`
 	// The protocol parameters used by this node.
 	ProtocolParameters *iotago.ProtocolParameters `json:"protocol"`
+	// The pending protocol parameters.
+	PendingProtocolParameters []*iotago.ProtocolParamsMilestoneOpt `json:"pendingProtocolParameters"`
 	// The base token of the network.
 	BaseToken *protocfg.BaseToken `json:"baseToken"`
 	// The metrics of this node.
