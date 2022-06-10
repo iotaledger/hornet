@@ -69,8 +69,9 @@ func info() (*infoResponse, error) {
 			},
 			PruningIndex: pruningIndex,
 		},
-		Protocol:  deps.ProtocolParameters,
-		BaseToken: deps.BaseToken,
+		SupportedProtocolVersions: deps.SupportedProtocolVersions,
+		ProtocolParameters:        deps.ProtocolParameters,
+		BaseToken:                 deps.BaseToken,
 		Metrics: nodeMetrics{
 			BlocksPerSecond:           blocksPerSecond,
 			ReferencedBlocksPerSecond: referencedBlocksPerSecond,

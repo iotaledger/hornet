@@ -47,21 +47,22 @@ var (
 
 type dependencies struct {
 	dig.In
-	SyncManager             *syncmanager.SyncManager
-	UTXOManager             *utxo.Manager
-	Tangle                  *tangle.Tangle
-	TipScoreCalculator      *tangle.TipScoreCalculator
-	Storage                 *storage.Storage
-	KeyManager              *keymanager.KeyManager
-	TipSelector             *tipselect.TipSelector `optional:"true"`
-	MilestonePublicKeyCount int                    `name:"milestonePublicKeyCount"`
-	ProtocolParameters      *iotago.ProtocolParameters
-	BaseToken               *protocfg.BaseToken
-	PoWHandler              *pow.Handler
-	INXServer               *INXServer
-	INXMetrics              *metrics.INXMetrics
-	Echo                    *echo.Echo                 `optional:"true"`
-	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
+	SyncManager               *syncmanager.SyncManager
+	UTXOManager               *utxo.Manager
+	Tangle                    *tangle.Tangle
+	TipScoreCalculator        *tangle.TipScoreCalculator
+	Storage                   *storage.Storage
+	KeyManager                *keymanager.KeyManager
+	TipSelector               *tipselect.TipSelector `optional:"true"`
+	MilestonePublicKeyCount   int                    `name:"milestonePublicKeyCount"`
+	SupportedProtocolVersions protocfg.SupportedProtocolVersions
+	ProtocolParameters        *iotago.ProtocolParameters
+	BaseToken                 *protocfg.BaseToken
+	PoWHandler                *pow.Handler
+	INXServer                 *INXServer
+	INXMetrics                *metrics.INXMetrics
+	Echo                      *echo.Echo                 `optional:"true"`
+	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
 }
 
 func provide(c *dig.Container) error {

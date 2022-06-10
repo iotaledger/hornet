@@ -35,17 +35,18 @@ func initConfigPars(c *dig.Container) error {
 
 	type cfgResult struct {
 		dig.Out
-		KeyManager              *keymanager.KeyManager
-		MilestonePublicKeyCount int `name:"milestonePublicKeyCount"`
-		ProtocolParameters      *iotago.ProtocolParameters
-		BaseToken               *BaseToken
+		KeyManager                *keymanager.KeyManager
+		MilestonePublicKeyCount   int `name:"milestonePublicKeyCount"`
+		SupportedProtocolVersions SupportedProtocolVersions
+		ProtocolParameters        *iotago.ProtocolParameters
+		BaseToken                 *BaseToken
 	}
 
 	if err := c.Provide(func() cfgResult {
 
 		res := cfgResult{
-			MilestonePublicKeyCount: ParamsProtocol.MilestonePublicKeyCount,
-
+			MilestonePublicKeyCount:   ParamsProtocol.MilestonePublicKeyCount,
+			SupportedProtocolVersions: ParamsProtocol.SupportedProtocolVersions,
 			ProtocolParameters: &iotago.ProtocolParameters{
 				Version:       ParamsProtocol.Parameters.Version,
 				NetworkName:   ParamsProtocol.Parameters.NetworkName,

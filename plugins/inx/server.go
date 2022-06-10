@@ -126,5 +126,6 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 			Decimals:        deps.BaseToken.Decimals,
 			UseMetricPrefix: deps.BaseToken.UseMetricPrefix,
 		},
+		SupportedProtocolVersions: deps.SupportedProtocolVersions,
 	}, nil
 }

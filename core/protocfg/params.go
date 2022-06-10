@@ -32,8 +32,24 @@ type BaseToken struct {
 	UseMetricPrefix bool `default:"true" usage:"the base token uses the metric prefix" json:"useMetricPrefix"`
 }
 
+// SupportedProtocolVersions is a slice of supported protocol versions.
+type SupportedProtocolVersions []uint32
+
+// Highest returns the highest version.
+func (versions SupportedProtocolVersions) Highest() byte {
+	return byte(versions[len(versions)-1])
+}
+
+// Lowest returns the lowest version.
+func (versions SupportedProtocolVersions) Lowest() byte {
+	return byte(versions[0])
+}
+
 // ParametersProtocol contains the definition of the parameters used by protocol.
 type ParametersProtocol struct {
+	// The supported protocol versions by this node.
+	SupportedProtocolVersions SupportedProtocolVersions `noflag:"true"`
+
 	Parameters struct {
 		// the protocol version this node supports
 		Version byte `default:"2" usage:"the protocol version this node supports"`
@@ -65,6 +81,7 @@ type ParametersProtocol struct {
 }
 
 var ParamsProtocol = &ParametersProtocol{
+	SupportedProtocolVersions: SupportedProtocolVersions{2}, // make sure to add the versions sorted asc
 	PublicKeyRanges: ConfigPublicKeyRanges{
 		{
 			Key:        "a9b46fe743df783dedd00c954612428b34241f5913cf249d75bed3aafd65e4cd",
