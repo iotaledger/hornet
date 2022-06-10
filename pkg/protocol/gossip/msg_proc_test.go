@@ -3,6 +3,7 @@ package gossip_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"testing"
 
 	"github.com/libp2p/go-libp2p"
@@ -67,7 +68,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 		TokenSupply:   0,
 	}
 
-	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, protoParas, &gossip.Options{
+	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, protocol.NewManager(te.Storage(), protoParas), &gossip.Options{
 		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingBlocksFilter,
 	})
 	require.NoError(t, err)
