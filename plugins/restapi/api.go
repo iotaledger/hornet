@@ -1,7 +1,6 @@
 package restapi
 
 import (
-	"net/http"
 	"regexp"
 	"strings"
 
@@ -82,16 +81,8 @@ func apiMiddleware() echo.MiddlewareFunc {
 
 	jwtAllow := func(c echo.Context, subject string, claims *jwt.AuthClaims) bool {
 		// Allow all JWT created for the API if the endpoints are exposed
-		if matchExposed(c) && claims.API {
+		if matchExposed(c) {
 			return claims.VerifySubject(subject)
-		}
-
-		// Only allow Dashboard JWT for certain routes
-		if claims.Dashboard {
-			if deps.DashboardAuthUsername == "" {
-				return false
-			}
-			return claims.VerifySubject(deps.DashboardAuthUsername) && dashboardAllowedAPIRoute(c)
 		}
 
 		return false
@@ -108,8 +99,8 @@ func apiMiddleware() echo.MiddlewareFunc {
 
 		return func(c echo.Context) error {
 
-			// Check if the route should be exposed (public or protected) or is required by the dashboard
-			if matchExposed(c) || dashboardAllowedAPIRoute(c) {
+			// Check if the route should be exposed (public or protected)
+			if matchExposed(c) {
 				// Apply JWT middleware
 				return jwtMiddlewareHandler(c)
 			}
@@ -117,29 +108,6 @@ func apiMiddleware() echo.MiddlewareFunc {
 			return echo.ErrForbidden
 		}
 	}
-}
-
-var dashboardAllowedRoutes = map[string][]string{
-	http.MethodGet: {
-		"/api/v2/info",
-		"/api/v2/blocks",
-		"/api/v2/transactions",
-		"/api/v2/milestones",
-		"/api/v2/outputs",
-		"/api/v2/peers",
-		"/api/plugins/indexer/v1",
-		"/api/plugins/spammer/v1",
-		"/api/plugins/participation/v1/events",
-	},
-	http.MethodPost: {
-		"/api/v2/peers",
-		"/api/plugins/spammer/v1",
-		"/api/plugins/participation/v1/admin/events",
-	},
-	http.MethodDelete: {
-		"/api/v2/peers",
-		"/api/plugins/participation/v1/admin/events",
-	},
 }
 
 func checkAllowedAPIRoute(context echo.Context, allowedRoutes map[string][]string) bool {
@@ -158,8 +126,4 @@ func checkAllowedAPIRoute(context echo.Context, allowedRoutes map[string][]strin
 	}
 
 	return false
-}
-
-func dashboardAllowedAPIRoute(context echo.Context) bool {
-	return checkAllowedAPIRoute(context, dashboardAllowedRoutes)
 }

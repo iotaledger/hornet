@@ -24,7 +24,6 @@ const (
 	PriorityWarpSync
 	PrioritySnapshots
 	PriorityMetricsUpdater
-	PriorityDashboard
 	PriorityPoWHandler
 	PriorityRestAPI // depends on PriorityPoWHandler
 	PriorityIndexer

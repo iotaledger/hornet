@@ -84,6 +84,7 @@ func NewTreasuryUpdate(index milestone.Index, created *utxo.TreasuryOutput, cons
 }
 
 func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.OutputResponse, error) {
+	// we need to lock the ledger here to have the correct index for unspent info of the output.
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
 
@@ -133,6 +134,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 }
 
 func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentOutputsServer) error {
+	// we need to lock the ledger here to have the correct index for unspent info of the output.
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
 

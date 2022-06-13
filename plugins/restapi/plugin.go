@@ -46,13 +46,12 @@ var (
 
 type dependencies struct {
 	dig.In
-	Tangle                *tangle.Tangle `optional:"true"`
-	Echo                  *echo.Echo
-	RestAPIMetrics        *metrics.RestAPIMetrics
-	Host                  host.Host
-	RestAPIBindAddress    string         `name:"restAPIBindAddress"`
-	NodePrivateKey        crypto.PrivKey `name:"nodePrivateKey"`
-	DashboardAuthUsername string         `name:"dashboardAuthUsername" optional:"true"`
+	Tangle             *tangle.Tangle `optional:"true"`
+	Echo               *echo.Echo
+	RestAPIMetrics     *metrics.RestAPIMetrics
+	Host               host.Host
+	RestAPIBindAddress string         `name:"restAPIBindAddress"`
+	NodePrivateKey     crypto.PrivKey `name:"nodePrivateKey"`
 }
 
 func initConfigPars(c *dig.Container) error {
@@ -87,24 +86,14 @@ func provide(c *dig.Container) error {
 		Plugin.LogPanic(err)
 	}
 
-	type echoResult struct {
-		dig.Out
-		Echo                     *echo.Echo
-		DashboardAllowedAPIRoute restapi.AllowedRoute `name:"dashboardAllowedAPIRoute"`
-	}
-
-	if err := c.Provide(func() echoResult {
+	if err := c.Provide(func() *echo.Echo {
 		e := echo.New()
 		e.HideBanner = true
 		e.Use(middleware.Recover())
 		e.Use(middleware.CORS())
 		e.Use(middleware.Gzip())
 		e.Use(middleware.BodyLimit(ParamsRestAPI.Limits.MaxBodyLength))
-
-		return echoResult{
-			Echo:                     e,
-			DashboardAllowedAPIRoute: dashboardAllowedAPIRoute,
-		}
+		return e
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}

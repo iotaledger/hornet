@@ -189,16 +189,6 @@
       "maxChildren": 2
     }
   },
-  "dashboard": {
-    "bindAddress": "localhost:8081",
-    "dev": false,
-    "auth": {
-      "sessionTimeout": "72h",
-      "username": "admin",
-      "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
-    }
-  },
   "receipts": {
     "backup": {
       "enabled": false,

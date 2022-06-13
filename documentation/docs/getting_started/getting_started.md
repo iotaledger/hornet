@@ -51,14 +51,10 @@ Hornet exposes different functionality on different ports:
 - 15600 TCP - Gossip protocol port.
 - 14626 UDP - Autopeering port (optional).
 - 14265 TCP - REST HTTP API port (optional).
-- 8081 TCP - Dashboard (optional).
 
 These ports are important for flawless node operation. The REST HTTP API port is optional and is only needed if
 you want to offer access to your node's API. All ports can be customized inside
 the [config.json](https://wiki.iota.org/hornet/post_installation) file.
-
-The default dashboard only listens on localhost:8081 per default. If you want to make it accessible from
-the Internet, you will need to change the default configuration (though we recommend using a reverse proxy).
 
 ## Operating System
 

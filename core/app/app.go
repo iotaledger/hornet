@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/core/shutdown"
+	"github.com/iotaledger/hive.go/app/plugins/profiling"
 	"github.com/iotaledger/hornet/core/database"
 	"github.com/iotaledger/hornet/core/gossip"
 	"github.com/iotaledger/hornet/core/p2p"
@@ -13,12 +16,7 @@ import (
 	"github.com/iotaledger/hornet/core/snapshot"
 	"github.com/iotaledger/hornet/core/tangle"
 	"github.com/iotaledger/hornet/pkg/toolset"
-
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/app/core/shutdown"
-	"github.com/iotaledger/hive.go/app/plugins/profiling"
 	"github.com/iotaledger/hornet/plugins/autopeering"
-	"github.com/iotaledger/hornet/plugins/dashboard"
 	"github.com/iotaledger/hornet/plugins/debug"
 	"github.com/iotaledger/hornet/plugins/inx"
 	"github.com/iotaledger/hornet/plugins/prometheus"
@@ -65,7 +63,6 @@ Command line flags:
 			autopeering.Plugin,
 			warpsync.Plugin,
 			urts.Plugin,
-			dashboard.Plugin,
 			receipt.Plugin,
 			prometheus.Plugin,
 			inx.Plugin,
