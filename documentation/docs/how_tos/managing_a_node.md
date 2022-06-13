@@ -8,7 +8,7 @@ keywords:
 - configuration
 - spammer
 - snapshots
-- reference
+- how to
 ---
 
 

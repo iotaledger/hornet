@@ -9,7 +9,7 @@ keywords:
 - Discord
 - FAQ
 - Difficulties
-- Reference
+- reference
 ---
 
 # Troubleshooting

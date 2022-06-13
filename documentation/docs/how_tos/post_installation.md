@@ -7,7 +7,7 @@ keywords:
 - Configuration
 - REST API
 - Dashboard
-- reference
+- how to
 ---
 
 

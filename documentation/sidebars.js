@@ -12,84 +12,104 @@
 module.exports = {
   mySidebar: [{
       type: 'doc',
-      id: 'welcome',
-    },
-    {
-      type: 'category',
-      label: 'Getting Started',
-      items: [{
-        type: 'doc',
-        id: 'getting_started/getting_started',
-        label: 'Getting Started',
-      }, {
-        type: 'doc',
-        id: 'getting_started/nodes_101',
-        label: 'Nodes 101',
-      }, {
-        type: 'doc',
-        id: 'getting_started/security_101',
-        label: 'Security 101',
-      }, {
-        type: 'doc',
-        id: 'getting_started/hornet_apt_repository',
-        label: 'Hornet apt Repository',
-      }, {
-        type: 'doc',
-        id: 'getting_started/using_docker',
-        label: 'Using Docker',
-      }, {
-        type: 'doc',
-        id: 'getting_started/using_docker_compose',
-        label: 'Using Docker Compose',
-      }, {
-        type: 'doc',
-        id: 'getting_started/bootstrap_from_a_genesis_snapshot',
-        label: 'Bootstrapping From a Genesis Snapshot',
-      }, {
-        type: 'doc',
-        id: 'getting_started/private_tangle',
-        label: 'Private Tangle',
-      }, ]
-    },
-    {
-      type: 'category',
-      label: 'Post Installation',
-      items: [{
-        type: 'doc',
-        id: 'post_installation/post_installation',
-        label: 'Post Installation',
-      }, {
-        type: 'doc',
-        id: 'post_installation/managing_a_node',
-        label: 'Managing a Node',
-      }, {
-        type: 'doc',
-        id: 'post_installation/configuration',
-        label: 'Configuration',
-      }, {
-        type: 'doc',
-        id: 'post_installation/peering',
-        label: 'Peering',
-      }, {
-        type: 'doc',
-        id: 'post_installation/run_as_a_verifier',
-        label: 'Run as a Verifier',
-      },]
+      id: 'getting_started/welcome',
     },
     {
       type: 'doc',
-      id: 'api_reference',
-      label: 'API Reference',
+      id: 'getting_started/getting_started',
+    },
+    {
+      type: 'category',
+      label: 'How to',
+      items: [
+        {
+          type: 'doc',
+          id: 'how_tos/hornet_apt_repository',
+          label: 'Install Hornet via apt repository',
+        },
+        {
+          type: 'doc',
+          id: 'how_tos/using_docker',
+          label: 'Install Hornet using Docker',
+        },
+        {
+          type: 'doc',
+          id: 'how_tos/using_docker_compose',
+          label: 'Install Hornet using Docker Compose',
+        }, 
+        {
+          type: 'doc',
+          id: 'how_tos/bootstrap_from_a_genesis_snapshot',
+          label: 'Bootstrap from a genesis snapshot',
+        }, 
+        {
+          type: 'doc',
+          id: 'how_tos/private_tangle',
+          label: 'Run a private tangle',
+        },
+        {
+          type: 'doc',
+          id: 'how_tos/post_installation',
+          label: 'Post Installation',
+        }, 
+        {
+          type: 'doc',
+          id: 'how_tos/managing_a_node',
+          label: 'Manage a Node',
+        }, 
+        {
+          type: 'doc',
+          id: 'how_tos/run_as_a_verifier',
+          label: 'Run a Node as a Verifier',
+        },
+      ]
+    },
+    {
+      type: 'category',
+      label: 'Key Concepts',
+      items: [
+        {
+          type: 'doc',
+          id: 'key_concepts/nodes_101',
+          label: 'Nodes 101',
+        }, 
+        {
+          type: 'doc',
+          id: 'key_concepts/security_101',
+          label: 'Security 101',
+        },
+        {
+          type: 'doc',
+          id: 'key_concepts/peering',
+          label: 'Peering',
+        }, 
+      ]
+    },
+    {
+      type: 'category',
+      label: 'References',
+      items: [
+        {
+          type: 'doc',
+          id: 'references/configuration',
+          label: 'Configuration',
+        },
+        {
+          type: 'doc',
+          id: 'references/api_reference',
+          label: 'API Reference',
+        },
+        {
+          type: 'doc',
+          id: 'references/faq',
+          label: 'FAQ',
+        },
+      ]
     },
     {
       type: 'doc',
       id: 'troubleshooting',
       label: 'Troubleshooting',
-    },
-    {
-      type: 'doc',
-      id: 'faq',
-      label: 'FAQ',
     },
     {
       type: 'doc',

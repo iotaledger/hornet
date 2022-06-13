@@ -6,7 +6,7 @@ keywords:
 - Hornet Node
 - Hornet
 - Security
-- reference
+- explanation
 ---
 
 
