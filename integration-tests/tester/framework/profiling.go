@@ -3,20 +3,10 @@ package framework
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"time"
-
-	"github.com/go-echarts/go-echarts/charts"
-	"github.com/gorilla/websocket"
-
-	"github.com/iotaledger/hive.go/websockethub"
-	"github.com/iotaledger/hornet/pkg/tangle"
-	"github.com/iotaledger/hornet/pkg/tipselect"
-	"github.com/iotaledger/hornet/plugins/dashboard"
 )
 
 const (
@@ -38,17 +28,6 @@ type Profiler struct {
 	http.Client
 }
 
-// registerWSTopics registers the given topics on the publisher.
-func registerWSTopics(wsConn *websocket.Conn, topics ...byte) error {
-	for _, b := range topics {
-		topicRegCmd := []byte{dashboard.WebsocketCmdRegister, b}
-		if err := wsConn.WriteMessage(websockethub.BinaryMessage, topicRegCmd); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // TakeCPUProfile takes a CPU profile for the given duration and then saves it to the log directory.
 func (n *Profiler) TakeCPUProfile(dur time.Duration) error {
 	profileBytes, err := n.query(fmt.Sprintf("/debug/pprof/profile?seconds=%d", dur.Truncate(time.Second)))
@@ -67,199 +46,6 @@ func (n *Profiler) TakeHeapSnapshot() error {
 	}
 	fileName := fmt.Sprintf("%s_%s_%d.profile", n.targetName, heapProfilePrefix, time.Now().Unix())
 	return n.writeProfile(fileName, profileBytes)
-}
-
-// GraphMetrics graphs metrics about BPS, memory consumption, confirmation rate of the node and saves it into the log dir.
-func (n *Profiler) GraphMetrics(dur time.Duration) error {
-	var err error
-
-	// BPS
-	var bpsChartXAxis []string
-	var newBPS, incomingBPS, outgoingBPS []int32
-	bpsChart := charts.NewLine()
-	bpsChart.SetGlobalOptions(
-		charts.TitleOpts{Title: "Blocks Per Second"},
-		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
-	)
-
-	// conf. and issuance rate
-	referencedRateChart := charts.NewLine()
-	referencedRateChart.SetGlobalOptions(
-		charts.TitleOpts{Title: "Referenced Rate"},
-		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
-	)
-	issuanceRateChart := charts.NewBar()
-	issuanceRateChart.SetGlobalOptions(
-		charts.TitleOpts{Title: "Milestone Issuance Delta"},
-		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
-	)
-	var confIssXAxis []string
-	var referencedRate []float64
-	var issuanceInterval []float64
-
-	// memory
-	memChart := charts.NewLine()
-	memObjsChart := charts.NewLine()
-	memChart.SetGlobalOptions(
-		charts.TitleOpts{Title: "Memory"},
-		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
-	)
-	memObjsChart.SetGlobalOptions(
-		charts.TitleOpts{Title: "Heap Objects"},
-		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
-	)
-	var memChartXAxis []string
-	var memSys, memHeapSys, memHeapInUse, memHeapIdle, memHeapReleased, memHeapObjects, memMSpanInUse, memMCacheInUse, memStackSys []uint64
-
-	// db size
-	dbSizeChart := charts.NewLine()
-	dbSizeChart.SetGlobalOptions(
-		charts.TitleOpts{Title: "Database Size"},
-		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
-	)
-	var dbSizeXAxis []string
-	var dbSizeTotal []int64
-
-	// tip selection
-	tipSelChart := charts.NewLine()
-	tipSelChart.SetGlobalOptions(
-		charts.TitleOpts{Title: "Tip-Selection"},
-		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
-	)
-	var tipSelXAxis []string
-	var tipSelDur []int64
-
-	conn, _, err := websocket.DefaultDialer.Dial(n.websocketURI, nil)
-	if err != nil {
-		return err
-	}
-
-	if err := registerWSTopics(conn, dashboard.MsgTypeBPSMetric, dashboard.MsgTypeTipSelMetric, dashboard.MsgTypeConfirmedMsMetrics,
-		dashboard.MsgTypeDatabaseSizeMetric, dashboard.MsgTypeNodeStatus); err != nil {
-		return err
-	}
-
-	s := time.Now()
-	end := s.Add(dur)
-	for time.Now().Before(end) {
-		if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
-			return err
-		}
-		_, msgRaw, err := conn.ReadMessage()
-		if err != nil {
-			return err
-		}
-		m := &dashboard.Msg{}
-		if err := json.Unmarshal(msgRaw, m); err != nil {
-			return err
-		}
-		if m.Data == nil {
-			continue
-		}
-		switch m.Type {
-
-		case dashboard.MsgTypeBPSMetric:
-			bpsMetric := &tangle.BPSMetrics{}
-			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: bpsMetric}); err != nil {
-				return err
-			}
-			bpsChartXAxis = append(bpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
-			incomingBPS = append(incomingBPS, int32(bpsMetric.Incoming))
-			outgoingBPS = append(outgoingBPS, -int32(bpsMetric.Outgoing))
-			newBPS = append(newBPS, int32(bpsMetric.New))
-
-		case dashboard.MsgTypeTipSelMetric:
-			tipSelMetric := &tipselect.TipSelStats{}
-			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: tipSelMetric}); err != nil {
-				return err
-			}
-
-			tipSelXAxis = append(bpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
-			tipSelDur = append(tipSelDur, int64(tipSelMetric.Duration)/int64(time.Millisecond))
-
-		case dashboard.MsgTypeConfirmedMsMetrics:
-			confMetrics := []*tangle.ConfirmedMilestoneMetric{}
-			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: &confMetrics}); err != nil {
-				return err
-			}
-			if len(confMetrics) == 0 {
-				continue
-			}
-			confMetric := confMetrics[len(confMetrics)-1]
-			confIssXAxis = append(confIssXAxis, fmt.Sprintf("Ms %s", strconv.Itoa(int(confMetric.MilestoneIndex))))
-			referencedRate = append(referencedRate, confMetric.ReferencedRate)
-			issuanceInterval = append(issuanceInterval, confMetric.TimeSinceLastMilestone)
-
-		case dashboard.MsgTypeDatabaseSizeMetric:
-			dbSizeMetrics := []*dashboard.DBSizeMetric{}
-			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: &dbSizeMetrics}); err != nil {
-				return err
-			}
-			if len(dbSizeMetrics) == 0 {
-				continue
-			}
-			dbSizeMetric := dbSizeMetrics[len(dbSizeMetrics)-1]
-			dbSizeXAxis = append(bpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
-			dbSizeTotal = append(dbSizeTotal, dbSizeMetric.Total/byteMBDivider)
-
-		case dashboard.MsgTypeNodeStatus:
-			nodeStatus := &dashboard.NodeStatus{
-				Mem: &dashboard.MemMetrics{},
-			}
-			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: nodeStatus}); err != nil {
-				return err
-			}
-
-			memMetrics := nodeStatus.Mem
-			memChartXAxis = append(memChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
-			memSys = append(memSys, memMetrics.Sys/byteMBDivider)
-			memHeapSys = append(memHeapSys, memMetrics.HeapSys/byteMBDivider)
-			memHeapInUse = append(memHeapInUse, memMetrics.HeapInUse/byteMBDivider)
-			memHeapIdle = append(memHeapIdle, memMetrics.HeapIdle/byteMBDivider)
-			memHeapReleased = append(memHeapReleased, memMetrics.HeapReleased/byteMBDivider)
-			memHeapObjects = append(memHeapObjects, memMetrics.HeapObjects)
-			memMSpanInUse = append(memMSpanInUse, memMetrics.MSpanInUse/byteMBDivider)
-			memMCacheInUse = append(memMCacheInUse, memMetrics.MCacheInUse/byteMBDivider)
-			memStackSys = append(memStackSys, memMetrics.StackSys/byteMBDivider)
-		}
-	}
-
-	bpsChart.AddXAxis(bpsChartXAxis).
-		AddYAxis("New", newBPS).
-		AddYAxis("Incoming", incomingBPS).
-		AddYAxis("Outgoing", outgoingBPS)
-
-	referencedRateChart.AddXAxis(confIssXAxis).
-		AddYAxis("Ref. Rate %", referencedRate)
-	issuanceRateChart.AddXAxis(confIssXAxis).
-		AddYAxis("Issuance Delta", issuanceInterval)
-
-	dbSizeChart.AddXAxis(dbSizeXAxis).AddYAxis("Total", dbSizeTotal)
-
-	memChart.AddXAxis(memChartXAxis).
-		AddYAxis("Sys", memSys).
-		AddYAxis("Heap Sys", memHeapSys).
-		AddYAxis("Heap In Use", memHeapInUse).
-		AddYAxis("Heap Idle", memHeapIdle).
-		AddYAxis("Heap Released", memHeapReleased).
-		AddYAxis("M Span In Use", memMSpanInUse).
-		AddYAxis("M Cache In Use", memMCacheInUse).
-		AddYAxis("Stack Sys", memStackSys)
-
-	memObjsChart.AddXAxis(memChartXAxis).AddYAxis("Objects", memHeapObjects)
-
-	tipSelChart.AddXAxis(tipSelXAxis).AddYAxis("Duration", tipSelDur)
-
-	chartPage := charts.NewPage()
-	chartPage.PageTitle = n.targetName
-	chartPage.Add(bpsChart, memChart, dbSizeChart, memObjsChart, tipSelChart, referencedRateChart, issuanceRateChart)
-
-	var buf bytes.Buffer
-	if err := chartPage.Render(&buf); err != nil {
-		return fmt.Errorf("unable to render metrics charts: %w", err)
-	}
-
-	return writeFileInLogDir(fmt.Sprintf("%s_%s_%d.html", n.targetName, metricsChartPrefix, time.Now().Unix()), ioutil.NopCloser(&buf))
 }
 
 // queries the given pprof URI and returns the profile data.
