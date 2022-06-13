@@ -2,6 +2,7 @@ package autopeering
 
 import (
 	"context"
+	"github.com/iotaledger/hornet/core/protocfg"
 	"github.com/iotaledger/hornet/pkg/protocol"
 	"strings"
 	"time"
@@ -119,6 +120,7 @@ func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error 
 		initConfig.ForceDisableComponent(pow.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(gossip.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(tangle.CoreComponent.Identifier())
+		initConfig.ForceDisableComponent(protocfg.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(snapshot.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(restapiv2.Plugin.Identifier())
 		initConfig.ForceDisableComponent(warpsync.Plugin.Identifier())

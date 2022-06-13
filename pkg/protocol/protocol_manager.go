@@ -77,6 +77,11 @@ type Manager struct {
 
 // Init initialises the Manager by loading the last stored or persisting the parameters passed in via constructor.
 func (m *Manager) Init() error {
+	// can only run with provided protocol parameters
+	if m.storage == nil {
+		return nil
+	}
+
 	m.currentRWMu.Lock()
 	defer m.currentRWMu.Unlock()
 
