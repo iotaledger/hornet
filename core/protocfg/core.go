@@ -52,7 +52,7 @@ func initConfigPars(c *dig.Container) error {
 
 	type cfgDeps struct {
 		dig.In
-		Storage *storage.Storage
+		Storage *storage.Storage `optional:"true"`
 	}
 
 	type cfgResult struct {
