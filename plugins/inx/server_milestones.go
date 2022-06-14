@@ -224,6 +224,9 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 			return
 		}
 
+		// remember the last index we sent
+		lastSentIndex = index
+
 		if requestEndIndex > 0 && index >= requestEndIndex {
 			// We are done sending the updates
 			innerErr = nil

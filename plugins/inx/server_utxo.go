@@ -295,6 +295,9 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 			return
 		}
 
+		// remember the last index we sent
+		lastSentIndex = index
+
 		if requestEndIndex > 0 && index >= requestEndIndex {
 			// We are done sending the updates
 			innerErr = nil
@@ -490,6 +493,9 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 			task.Return(nil)
 			return
 		}
+
+		// remember the last index we sent
+		lastSentIndex = index
 
 		if requestEndIndex > 0 && index >= requestEndIndex {
 			// We are done sending the updates
