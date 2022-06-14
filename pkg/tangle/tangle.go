@@ -173,6 +173,7 @@ func New(
 			ConfirmedMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 			NewConfirmedMilestoneMetric:    events.NewEvent(NewConfirmedMilestoneMetricCaller),
 			ConfirmationMetricsUpdated:     events.NewEvent(ConfirmationMetricsCaller),
+			ReferencedBlocksCountUpdated:   events.NewEvent(ReferencedBlocksCountUpdatedCaller),
 			MilestoneSolidificationFailed:  events.NewEvent(milestone.IndexCaller),
 			MilestoneTimeout:               events.NewEvent(events.VoidCaller),
 			LedgerUpdated:                  events.NewEvent(LedgerUpdatedCaller),

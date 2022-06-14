@@ -43,6 +43,10 @@ func ReceiptCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*iotago.ReceiptMilestoneOpt))(params[0].(*iotago.ReceiptMilestoneOpt))
 }
 
+func ReferencedBlocksCountUpdatedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(msIndex milestone.Index, referencedBlocksCount int))(params[0].(milestone.Index), params[1].(int))
+}
+
 type Events struct {
 	BPSMetricsUpdated              *events.Event
 	ReceivedNewBlock               *events.Event
@@ -63,4 +67,5 @@ type Events struct {
 	LedgerUpdated                  *events.Event
 	TreasuryMutated                *events.Event
 	NewReceipt                     *events.Event
+	ReferencedBlocksCountUpdated   *events.Event
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hornet/pkg/tangle"
-	"github.com/iotaledger/hornet/pkg/whiteflag"
 )
 
 func init() {
@@ -39,7 +38,7 @@ var (
 
 	onGossipServiceProtocolStarted    *events.Closure
 	onGossipServiceProtocolTerminated *events.Closure
-	onMilestoneConfirmed              *events.Closure
+	onReferencedBlocksCountUpdated    *events.Closure
 	onMilestoneSolidificationFailed   *events.Closure
 	onWarpSyncCheckpointUpdated       *events.Closure
 	onWarpSyncTargetUpdated           *events.Closure
@@ -90,9 +89,9 @@ func configureEvents() {
 		p.Events.HeartbeatUpdated.Detach(onHeartbeatUpdated)
 	})
 
-	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		warpSync.AddReferencedBlocksCount(len(confirmation.Mutations.BlocksReferenced))
-		warpSync.UpdateCurrentConfirmedMilestone(confirmation.MilestoneIndex)
+	onReferencedBlocksCountUpdated = events.NewClosure(func(msIndex milestone.Index, referencedBlocksCount int) {
+		warpSync.AddReferencedBlocksCount(referencedBlocksCount)
+		warpSync.UpdateCurrentConfirmedMilestone(msIndex)
 	})
 
 	onMilestoneSolidificationFailed = events.NewClosure(func(msIndex milestone.Index) {
@@ -146,7 +145,7 @@ func configureEvents() {
 func attachEvents() {
 	deps.GossipService.Events.ProtocolStarted.Attach(onGossipServiceProtocolStarted)
 	deps.GossipService.Events.ProtocolTerminated.Attach(onGossipServiceProtocolTerminated)
-	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	deps.Tangle.Events.ReferencedBlocksCountUpdated.Attach(onReferencedBlocksCountUpdated)
 	deps.Tangle.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onWarpSyncCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Attach(onWarpSyncTargetUpdated)
@@ -157,7 +156,7 @@ func attachEvents() {
 func detachEvents() {
 	deps.GossipService.Events.ProtocolStarted.Detach(onGossipServiceProtocolStarted)
 	deps.GossipService.Events.ProtocolTerminated.Detach(onGossipServiceProtocolTerminated)
-	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+	deps.Tangle.Events.ReferencedBlocksCountUpdated.Detach(onReferencedBlocksCountUpdated)
 	deps.Tangle.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onWarpSyncCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Detach(onWarpSyncTargetUpdated)
