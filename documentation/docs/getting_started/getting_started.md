@@ -88,10 +88,6 @@ You can install Hornet on Windows using:
 
 - [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
 
-Alternatively, you can build Hornet by following these instructions:
-
-- [Prebuilt binary files](hornet_apt_repository.md#pre-built-binaries).
-
 ## Configuration
 
 Hornet uses two JSON configuration files that you can tweak based on your deployment requirements:
