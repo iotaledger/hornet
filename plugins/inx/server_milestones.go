@@ -3,7 +3,6 @@ package inx
 import (
 	"context"
 	"fmt"
-
 	"github.com/pkg/errors"
 
 	"google.golang.org/grpc/codes"
@@ -157,16 +156,38 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		return endIndex, nil
 	}
 
-	requestStartIndex := milestone.Index(req.GetStartMilestoneIndex())
-	requestEndIndex := milestone.Index(req.GetEndMilestoneIndex())
+	stream := &streamRange{
+		start: milestone.Index(req.GetStartMilestoneIndex()),
+		end:   milestone.Index(req.GetEndMilestoneIndex()),
+	}
 
-	lastSentIndex, err := sendPreviousMilestones(requestStartIndex, requestEndIndex)
+	var err error
+	stream.lastSent, err = sendPreviousMilestones(stream.start, stream.end)
 	if err != nil {
 		return err
 	}
 
-	if requestEndIndex > 0 && lastSentIndex >= requestEndIndex {
+	if stream.isBounded() && stream.lastSent >= stream.end {
 		// We are done sending, so close the stream
+		return nil
+	}
+
+	catchUpFunc := func(start milestone.Index, end milestone.Index) error {
+		err := sendMilestonesRange(start, end)
+		if err != nil {
+			Plugin.LogInfof("sendMilestonesRange error: %v", err)
+		}
+		return err
+	}
+
+	sendFunc := func(task *workerpool.Task, index milestone.Index) error {
+		// no release needed
+		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
+		if err := createMilestonePayloadForCachedMilestoneAndSend(cachedMilestone.Retain()); err != nil { // milestone +1
+			Plugin.LogInfof("send error: %v", err)
+			return err
+		}
+
 		return nil
 	}
 
@@ -176,60 +197,12 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
 		defer cachedMilestone.Release(true) // milestone -1
 
-		index := cachedMilestone.Milestone().Index()
-
-		if requestStartIndex > 0 && index < requestStartIndex {
-			// Skip this because it is before the index we requested
-			task.Return(nil)
-			return
-		}
-
-		if requestStartIndex > 0 && index-1 > lastSentIndex {
-			// we missed some milestones in between
-			startIndex := requestStartIndex
-			if startIndex < lastSentIndex+1 {
-				startIndex = lastSentIndex + 1
-			}
-
-			endIndex := index - 1
-			if requestEndIndex > 0 && endIndex > requestEndIndex {
-				endIndex = requestEndIndex
-			}
-
-			if err := sendMilestonesRange(startIndex, endIndex); err != nil {
-				Plugin.LogInfof("sendMilestonesRange error: %v", err)
-				innerErr = err
-				cancel()
-				task.Return(nil)
-				return
-			}
-
-			// remember the last index we sent
-			lastSentIndex = endIndex
-		}
-
-		if requestEndIndex > 0 && index > requestEndIndex {
-			// We are done sending the updates
-			innerErr = nil
-			cancel()
-			task.Return(nil)
-			return
-		}
-
-		if err := createMilestonePayloadForCachedMilestoneAndSend(cachedMilestone.Retain()); err != nil { // milestone +1
-			Plugin.LogInfof("send error: %v", err)
+		done, err := handleRangedSend(&task, cachedMilestone.Milestone().Index(), stream, catchUpFunc, sendFunc)
+		switch {
+		case err != nil:
 			innerErr = err
-			cancel()
-			task.Return(nil)
-			return
-		}
-
-		// remember the last index we sent
-		lastSentIndex = index
-
-		if requestEndIndex > 0 && index >= requestEndIndex {
-			// We are done sending the updates
-			innerErr = nil
+			fallthrough
+		case done:
 			cancel()
 		}
 

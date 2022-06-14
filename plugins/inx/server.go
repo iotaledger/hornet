@@ -2,6 +2,8 @@ package inx
 
 import (
 	"context"
+	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"net"
 
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -128,4 +130,74 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 		},
 		SupportedProtocolVersions: deps.SupportedProtocolVersions,
 	}, nil
+}
+
+type streamRange struct {
+	start    milestone.Index
+	end      milestone.Index
+	lastSent milestone.Index
+}
+
+// tells whether the stream range has a range requested.
+func (stream *streamRange) rangeRequested() bool {
+	return stream.start > 0
+}
+
+// tells whether the stream is bounded, aka has an end index.
+func (stream *streamRange) isBounded() bool {
+	return stream.end > 0
+}
+
+// handles the sending of data within a streamRange.
+//	- sendFunc gets executed for the given index.
+// 	- if data wasn't sent between streamRange.lastSent and the given index, then the given catchUpFunc is executed
+//	 with the range from streamRange.lastSent + 1 up to index - 1.
+//	- it is the caller's job to call task.Return(...).
+//	- streamRange.lastSent is auto. updated
+func handleRangedSend(task *workerpool.Task, index milestone.Index, streamRange *streamRange,
+	catchUpFunc func(start milestone.Index, end milestone.Index) error,
+	sendFunc func(task *workerpool.Task, index milestone.Index) error,
+) (bool, error) {
+
+	// below requested range
+	if streamRange.rangeRequested() && index < streamRange.start {
+		return false, nil
+	}
+
+	// execute catch up function with missing indices
+	if streamRange.rangeRequested() && index-1 > streamRange.lastSent {
+		startIndex := streamRange.start
+		if startIndex < streamRange.lastSent+1 {
+			startIndex = streamRange.lastSent + 1
+		}
+
+		endIndex := index - 1
+		if streamRange.isBounded() && endIndex > streamRange.end {
+			endIndex = streamRange.end
+		}
+
+		if err := catchUpFunc(startIndex, endIndex); err != nil {
+			return false, err
+		}
+
+		streamRange.lastSent = endIndex
+	}
+
+	// stream finished
+	if streamRange.isBounded() && index > streamRange.end {
+		return true, nil
+	}
+
+	if err := sendFunc(task, index); err != nil {
+		return false, err
+	}
+
+	streamRange.lastSent = index
+
+	// stream finished
+	if streamRange.isBounded() && index >= streamRange.end {
+		return true, nil
+	}
+
+	return false, nil
 }

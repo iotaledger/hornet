@@ -3,7 +3,6 @@ package inx
 import (
 	"context"
 	"fmt"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -228,79 +227,51 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		return endIndex, nil
 	}
 
-	requestStartIndex := milestone.Index(req.GetStartMilestoneIndex())
-	requestEndIndex := milestone.Index(req.GetEndMilestoneIndex())
+	stream := &streamRange{
+		start: milestone.Index(req.GetStartMilestoneIndex()),
+		end:   milestone.Index(req.GetEndMilestoneIndex()),
+	}
 
-	lastSentIndex, err := sendPreviousMilestoneDiffs(requestStartIndex, requestEndIndex)
+	var err error
+	stream.lastSent, err = sendPreviousMilestoneDiffs(stream.start, stream.end)
 	if err != nil {
 		return err
 	}
 
-	if requestEndIndex > 0 && lastSentIndex >= requestEndIndex {
+	if stream.isBounded() && stream.lastSent >= stream.end {
 		// We are done sending, so close the stream
+		return nil
+	}
+
+	catchUpFunc := func(start milestone.Index, end milestone.Index) error {
+		err := sendMilestoneDiffsRange(start, end)
+		if err != nil {
+			Plugin.LogInfof("sendMilestoneDiffsRange error: %v", err)
+		}
+		return err
+	}
+
+	sendFunc := func(task *workerpool.Task, index milestone.Index) error {
+		newOutputs := task.Param(1).(utxo.Outputs)
+		newSpents := task.Param(2).(utxo.Spents)
+
+		if err := createLedgerUpdatePayloadAndSend(index, newOutputs, newSpents); err != nil {
+			Plugin.LogInfof("send error: %v", err)
+			return err
+		}
+
 		return nil
 	}
 
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		index := task.Param(0).(milestone.Index)
-
-		if requestStartIndex > 0 && index < requestStartIndex {
-			// Skip this because it is before the index we requested
-			task.Return(nil)
-			return
-		}
-
-		if requestStartIndex > 0 && index-1 > lastSentIndex {
-			// we missed some ledger updates in between
-			startIndex := requestStartIndex
-			if startIndex < lastSentIndex+1 {
-				startIndex = lastSentIndex + 1
-			}
-
-			endIndex := index - 1
-			if requestEndIndex > 0 && endIndex > requestEndIndex {
-				endIndex = requestEndIndex
-			}
-
-			if err := sendMilestoneDiffsRange(startIndex, endIndex); err != nil {
-				Plugin.LogInfof("sendMilestoneDiffsRange error: %v", err)
-				innerErr = err
-				cancel()
-				task.Return(nil)
-				return
-			}
-
-			// remember the last index we sent
-			lastSentIndex = endIndex
-		}
-
-		if requestEndIndex > 0 && index > requestEndIndex {
-			// We are done sending the updates
-			innerErr = nil
-			cancel()
-			task.Return(nil)
-			return
-		}
-
-		newOutputs := task.Param(1).(utxo.Outputs)
-		newSpents := task.Param(2).(utxo.Spents)
-
-		if err := createLedgerUpdatePayloadAndSend(index, newOutputs, newSpents); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+		done, err := handleRangedSend(&task, task.Param(0).(milestone.Index), stream, catchUpFunc, sendFunc)
+		switch {
+		case err != nil:
 			innerErr = err
-			cancel()
-			task.Return(nil)
-			return
-		}
-
-		// remember the last index we sent
-		lastSentIndex = index
-
-		if requestEndIndex > 0 && index >= requestEndIndex {
-			// We are done sending the updates
-			innerErr = nil
+			fallthrough
+		case done:
 			cancel()
 		}
 
@@ -419,10 +390,13 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		return ledgerIndex, nil
 	}
 
-	requestStartIndex := milestone.Index(req.GetStartMilestoneIndex())
-	requestEndIndex := milestone.Index(req.GetEndMilestoneIndex())
+	stream := &streamRange{
+		start: milestone.Index(req.GetStartMilestoneIndex()),
+		end:   milestone.Index(req.GetEndMilestoneIndex()),
+	}
 
-	lastSentIndex, err := sendPreviousTreasuryUpdates(requestStartIndex, requestEndIndex)
+	var err error
+	stream.lastSent, err = sendPreviousTreasuryUpdates(stream.start, stream.end)
 	if err != nil {
 		return err
 	}
@@ -433,73 +407,41 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		if err != nil {
 			return err
 		}
-		lastSentIndex = ledgerIndex
+		stream.lastSent = ledgerIndex
 	}
 
-	if requestEndIndex > 0 && lastSentIndex >= requestEndIndex {
+	if stream.isBounded() && stream.lastSent >= stream.end {
 		// We are done sending, so close the stream
+		return nil
+	}
+
+	catchUpFunc := func(start milestone.Index, end milestone.Index) error {
+		err := sendTreasuryUpdatesRange(start, end)
+		if err != nil {
+			Plugin.LogInfof("sendTreasuryUpdatesRange error: %v", err)
+		}
+		return err
+	}
+
+	sendFunc := func(task *workerpool.Task, index milestone.Index) error {
+		tm := task.Param(1).(*utxo.TreasuryMutationTuple)
+		if err := createTreasuryUpdatePayloadAndSend(index, tm.NewOutput, tm.SpentOutput); err != nil {
+			Plugin.LogInfof("send error: %v", err)
+			return err
+		}
+
 		return nil
 	}
 
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		index := task.Param(0).(milestone.Index)
-
-		if requestStartIndex > 0 && index < requestStartIndex {
-			// Skip this because it is before the index we requested
-			task.Return(nil)
-			return
-		}
-
-		if requestStartIndex > 0 && index-1 > lastSentIndex {
-			// we missed some treasury updates in between
-			startIndex := requestStartIndex
-			if startIndex < lastSentIndex+1 {
-				startIndex = lastSentIndex + 1
-			}
-
-			endIndex := index - 1
-			if requestEndIndex > 0 && endIndex > requestEndIndex {
-				endIndex = requestEndIndex
-			}
-
-			if err := sendTreasuryUpdatesRange(startIndex, endIndex); err != nil {
-				Plugin.LogInfof("sendTreasuryUpdatesRange error: %v", err)
-				innerErr = err
-				cancel()
-				task.Return(nil)
-				return
-			}
-
-			// remember the last index we sent
-			lastSentIndex = endIndex
-		}
-
-		if requestEndIndex > 0 && index > requestEndIndex {
-			// We are done sending the updates
-			innerErr = nil
-			cancel()
-			task.Return(nil)
-			return
-		}
-
-		tm := task.Param(1).(*utxo.TreasuryMutationTuple)
-
-		if err := createTreasuryUpdatePayloadAndSend(index, tm.NewOutput, tm.SpentOutput); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+		done, err := handleRangedSend(&task, task.Param(0).(milestone.Index), stream, catchUpFunc, sendFunc)
+		switch {
+		case err != nil:
 			innerErr = err
-			cancel()
-			task.Return(nil)
-			return
-		}
-
-		// remember the last index we sent
-		lastSentIndex = index
-
-		if requestEndIndex > 0 && index >= requestEndIndex {
-			// We are done sending the updates
-			innerErr = nil
+			fallthrough
+		case done:
 			cancel()
 		}
 
