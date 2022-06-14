@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## [2.0.0-alpha19] - 14.06.2022
+
+### Fixed
+    - Fix INX deadlock #1560
+    - Fix possible data races in INX #1561
+
+### Changes
+    - Adds supported protocol versions to REST API and INX (#1552)
+
+
 ## [2.0.0-alpha18] - 08.06.2022
 
 ### Fixed
