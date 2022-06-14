@@ -20,11 +20,6 @@ This is a small tutorial on how to run your own private [Chrysalis](https://chry
 
 You will need to set up [a Coordinator](https://wiki.iota.org/learn/about-iota/an-introduction-to-iota#the-coordinator) and at least one additional [node](https://wiki.iota.org/hornet/getting_started) and distribute some tokens to an address that you can manage using a wallet. You will do this by running some scripts from the _private_tangle_ folder that you can find in the HORNET repository.
 
-## Preparations
-
-1. [Build HORNET](hornet_apt_repository.md).
-2. Install a wallet built for Chrysalis, for example [the cli-wallet](https://github.com/iotaledger/cli-wallet).
-
 ## Configuration
 
 The scripts in the _private_tangle_ folder of the HORNET repository, which you will use to run the Coordinator and the nodes, are preconfigured. By default, they will distribute the tokens to the following address:
