@@ -217,7 +217,7 @@ func (m *Manager) updateCurrent() error {
 	// TODO: needs to be adapted for when protocol parameters struct changes
 	nextProtoParams := &iotago.ProtocolParameters{}
 	if _, err := nextProtoParams.Deserialize(nextParams, serializer.DeSeriModePerformValidation, nil); err != nil {
-		return fmt.Errorf("unable to deserialize next protocol parameters: %w", err)
+		return fmt.Errorf("unable to deserialize new protocol parameters: %w", err)
 	}
 
 	m.current = nextProtoParams
