@@ -167,40 +167,65 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 
 func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
 
+	createLedgerUpdatePayloadAndSend := func(msIndex milestone.Index, outputs utxo.Outputs, spents utxo.Spents) error {
+		payload, err := NewLedgerUpdate(msIndex, outputs, spents)
+		if err != nil {
+			return err
+		}
+		if err := srv.Send(payload); err != nil {
+			return fmt.Errorf("send error: %w", err)
+		}
+		return nil
+	}
+
+	sendMilestoneDiffsRange := func(startIndex milestone.Index, endIndex milestone.Index) error {
+		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
+			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+			if err != nil {
+				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
+			}
+
+			if err := createLedgerUpdatePayloadAndSend(msDiff.Index, msDiff.Outputs, msDiff.Spents); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// if a startIndex is given, we send all available milestone diffs including the start index.
+	// if an endIndex is given, we send all available milestone diffs up to and including min(ledgerIndex, endIndex).
+	// if no startIndex is given, but an endIndex, we do not send previous milestone diffs.
 	sendPreviousMilestoneDiffs := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
-		deps.UTXOManager.ReadLockLedger()
-		defer deps.UTXOManager.ReadUnlockLedger()
-		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+		if startIndex == 0 {
+			// no need to send previous milestone diffs
+			return 0, nil
+		}
+
+		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
 		if err != nil {
 			return 0, status.Error(codes.Unavailable, "error accessing the UTXO ledger")
 		}
 
-		if startIndex > 0 && startIndex <= ledgerIndex {
-			// Stream all available milestone diffs first
-			pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
-			if startIndex <= pruningIndex {
-				return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
-			}
-
-			if ledgerIndex < endIndex {
-				endIndex = ledgerIndex
-			}
-			for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
-				msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
-				if err != nil {
-					return 0, status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
-				}
-				payload, err := NewLedgerUpdate(msDiff.Index, msDiff.Outputs, msDiff.Spents)
-				if err != nil {
-					return 0, err
-				}
-				if err := srv.Send(payload); err != nil {
-					return 0, fmt.Errorf("send error: %w", err)
-				}
-			}
-			return endIndex, nil
+		if startIndex > ledgerIndex {
+			// no need to send previous milestone diffs
+			return 0, nil
 		}
-		return ledgerIndex, nil
+
+		// Stream all available milestone diffs first
+		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+		if startIndex <= pruningIndex {
+			return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
+		}
+
+		if endIndex == 0 || endIndex > ledgerIndex {
+			endIndex = ledgerIndex
+		}
+
+		if err := sendMilestoneDiffsRange(startIndex, endIndex); err != nil {
+			return 0, err
+		}
+
+		return endIndex, nil
 	}
 
 	requestStartIndex := milestone.Index(req.GetStartMilestoneIndex())
@@ -227,17 +252,42 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 			return
 		}
 
-		newOutputs := task.Param(1).(utxo.Outputs)
-		newSpents := task.Param(2).(utxo.Spents)
-		payload, err := NewLedgerUpdate(index, newOutputs, newSpents)
-		if err != nil {
-			Plugin.LogInfof("send error: %v", err)
-			innerErr = err
+		if requestStartIndex > 0 && index-1 > lastSentIndex {
+			// we missed some ledger updated in between
+			startIndex := requestStartIndex
+			if startIndex < lastSentIndex+1 {
+				startIndex = lastSentIndex + 1
+			}
+
+			endIndex := index - 1
+			if requestEndIndex > 0 && endIndex > requestEndIndex {
+				endIndex = requestEndIndex
+			}
+
+			if err := sendMilestoneDiffsRange(startIndex, endIndex); err != nil {
+				Plugin.LogInfof("sendMilestoneDiffsRange error: %v", err)
+				innerErr = err
+				cancel()
+				task.Return(nil)
+				return
+			}
+
+			// remember the last index we sent
+			lastSentIndex = endIndex
+		}
+
+		if requestEndIndex > 0 && index > requestEndIndex {
+			// We are done sending the updates
+			innerErr = nil
 			cancel()
 			task.Return(nil)
 			return
 		}
-		if err := srv.Send(payload); err != nil {
+
+		newOutputs := task.Param(1).(utxo.Outputs)
+		newSpents := task.Param(2).(utxo.Spents)
+
+		if err := createLedgerUpdatePayloadAndSend(index, newOutputs, newSpents); err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			innerErr = err
 			cancel()
@@ -253,14 +303,19 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
 	closure := events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 		wp.Submit(index, newOutputs, newSpents)
 	})
+
 	wp.Start()
 	deps.Tangle.Events.LedgerUpdated.Attach(closure)
+
 	<-ctx.Done()
+
 	deps.Tangle.Events.LedgerUpdated.Detach(closure)
 	wp.Stop()
+
 	return innerErr
 }
 
