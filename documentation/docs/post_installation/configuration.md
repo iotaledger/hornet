@@ -224,7 +224,7 @@ Example:
 
 | Name                                        | Description                                                        | Type   | Default value                               |
 | ------------------------------------------- | ------------------------------------------------------------------ | ------ | ------------------------------------------- |
-| bindMultiAddresses                          | The bind addresses for this node                                   | array  | /ip4/0.0.0.0/tcp/15600<br>/ip6/::/tcp/15600 |
+| bindMultiAddresses                          | The bind addresses for this node                                   | array  | /ip4/0.0.0.0/tcp/15600<br/>/ip6/::/tcp/15600 |
 | [connectionManager](#p2p_connectionmanager) | Configuration for connectionManager                                | object |                                             |
 | identityPrivateKey                          | Private key used to derive the node identity (optional)            | string | ""                                          |
 | [db](#p2p_db)                               | Configuration for Database                                         | object |                                             |
@@ -741,4 +741,3 @@ Example:
     }
   }
 ```
-
