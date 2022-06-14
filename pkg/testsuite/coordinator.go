@@ -163,12 +163,12 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 			err := te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
 		},
+		nil,
 		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 			if te.OnLedgerUpdatedFunc != nil {
 				te.OnLedgerUpdatedFunc(index, newOutputs, newSpents)
 			}
 		},
-		nil,
 		nil,
 	)
 	return wfConf, confirmedMilestoneStats, err
