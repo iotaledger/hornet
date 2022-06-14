@@ -70,7 +70,6 @@ Hornet ships as a single executable binary (`hornet` or `hornet.exe`) and some J
 
 You can install Hornet on Linux using:
 
-- [The hornet apt repository](https://wiki.iota.org/hornet/getting_started/hornet_apt_repository).
 - [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
 
 Alternatively, you can build Hornet by following these instructions:
