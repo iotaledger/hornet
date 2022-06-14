@@ -76,6 +76,7 @@ type Manager struct {
 }
 
 // Init initialises the Manager by loading the last stored or persisting the parameters passed in via constructor.
+// If the Manager got initialised with no storage, then Manager.Init() is a no-op and initProtoParas are used instead.
 func (m *Manager) Init() error {
 	// can only run with provided protocol parameters
 	if m.storage == nil {
