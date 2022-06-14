@@ -319,9 +319,22 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
-	var timeStartConfirmation, timeSetConfirmedMilestoneIndex, timeUpdateConeRootIndexes, timeConfirmedMilestoneChanged, timeConfirmedMilestoneIndexChanged, timeMilestoneConfirmedSyncEvent, timeMilestoneConfirmed time.Time
+	var (
+		timeStart                             time.Time
+		timeSetConfirmedMilestoneIndexStart   time.Time
+		timeSetConfirmedMilestoneIndexEnd     time.Time
+		timeUpdateConeRootIndexesEnd          time.Time
+		timeConfirmedMilestoneIndexChangedEnd time.Time
+		timeMilestoneConfirmedStart           time.Time
+		timeMilestoneConfirmedEnd             time.Time
+		timeConfirmedMilestoneChangedStart    time.Time
+		timeConfirmedMilestoneChangedEnd      time.Time
+	)
 
-	timeStart := time.Now()
+	var newReceipt *iotago.ReceiptMilestoneOpt
+	var newConfirmation *whiteflag.Confirmation
+
+	timeStart = time.Now()
 	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(
 		t.storage.UTXOManager(),
 		memcachedTraverserStorage,
@@ -332,37 +345,10 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		whiteflag.DefaultCheckBlockReferencedFunc,
 		whiteflag.DefaultSetBlockReferencedFunc,
 		t.serverMetrics,
-		func(blockMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
-			t.Events.BlockReferenced.Trigger(blockMeta, index, confTime)
-		},
-		func(confirmation *whiteflag.Confirmation) {
-			timeStartConfirmation = time.Now()
-			if err := t.syncManager.SetConfirmedMilestoneIndex(milestoneIndexToSolidify); err != nil {
-				t.LogPanicf("SetConfirmedMilestoneIndex failed: %s", err)
-			}
-			timeSetConfirmedMilestoneIndex = time.Now()
-			if t.syncManager.IsNodeAlmostSynced() {
-				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, block broadcasting, etc...)
-				// we can safely ignore errors of the future cone solidifier.
-				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.BlocksReferenced, confirmation.MilestoneIndex)
-			}
-			timeUpdateConeRootIndexes = time.Now()
-			t.Events.ConfirmedMilestoneChanged.Trigger(cachedMilestoneToSolidify) // milestone pass +1
-			timeConfirmedMilestoneChanged = time.Now()
-			t.Events.ConfirmedMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
-			timeConfirmedMilestoneIndexChanged = time.Now()
-			t.milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
-			timeMilestoneConfirmedSyncEvent = time.Now()
-			t.Events.MilestoneConfirmed.Trigger(confirmation)
-			timeMilestoneConfirmed = time.Now()
-		},
-		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
-			t.Events.LedgerUpdated.Trigger(index, newOutputs, newSpents)
-		},
-		func(index milestone.Index, tuple *utxo.TreasuryMutationTuple) {
-			t.Events.TreasuryMutated.Trigger(index, tuple)
-		},
+		// Hint: Ledger is write locked
 		func(rt *utxo.ReceiptTuple) error {
+			newReceipt = rt.Receipt
+
 			if t.receiptService != nil {
 				if t.receiptService.ValidationEnabled {
 					if err := t.receiptService.ValidateWithoutLocking(rt.Receipt); err != nil {
@@ -379,12 +365,58 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 					}
 				}
 			}
-			t.Events.NewReceipt.Trigger(rt.Receipt)
 			return nil
+		},
+		// Hint: Ledger is write locked
+		func(confirmation *whiteflag.Confirmation) {
+			newConfirmation = confirmation
+
+			timeSetConfirmedMilestoneIndexStart = time.Now()
+			if err := t.syncManager.SetConfirmedMilestoneIndex(milestoneIndexToSolidify); err != nil {
+				t.LogPanicf("SetConfirmedMilestoneIndex failed: %s", err)
+			}
+			timeSetConfirmedMilestoneIndexEnd = time.Now()
+
+			if t.syncManager.IsNodeAlmostSynced() {
+				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, block broadcasting, etc...)
+				// we can safely ignore errors of the future cone solidifier.
+				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.BlocksReferenced, confirmation.MilestoneIndex)
+			}
+			timeUpdateConeRootIndexesEnd = time.Now()
+
+			t.Events.ConfirmedMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
+			timeConfirmedMilestoneIndexChangedEnd = time.Now()
+		},
+		// Hint: Ledger is not locked
+		func(blockMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
+			t.Events.BlockReferenced.Trigger(blockMeta, index, confTime)
+		},
+		// Hint: Ledger is not locked
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+			t.Events.LedgerUpdated.Trigger(index, newOutputs, newSpents)
+		},
+		// Hint: Ledger is not locked
+		func(index milestone.Index, tuple *utxo.TreasuryMutationTuple) {
+			t.Events.TreasuryMutated.Trigger(index, tuple)
 		})
 
 	if err != nil {
 		t.LogPanic(err)
+	}
+
+	if newReceipt != nil {
+		t.Events.NewReceipt.Trigger(newReceipt)
+	}
+
+	timeConfirmedMilestoneChangedStart = time.Now()
+	t.Events.ConfirmedMilestoneChanged.Trigger(cachedMilestoneToSolidify) // milestone pass +1
+	timeConfirmedMilestoneChangedEnd = time.Now()
+
+	if newConfirmation != nil {
+		t.Events.ReferencedBlocksCountUpdated.Trigger(milestoneIndexToSolidify, len(newConfirmation.Mutations.BlocksReferenced))
+		timeMilestoneConfirmedStart = time.Now()
+		t.Events.MilestoneConfirmed.Trigger(newConfirmation)
+		timeMilestoneConfirmedEnd = time.Now()
 	}
 
 	t.LogInfof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
@@ -397,12 +429,11 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		time.Since(timeStart).Truncate(time.Millisecond),
 	)
 
-	confirmationMetrics.DurationSetConfirmedMilestoneIndex = timeSetConfirmedMilestoneIndex.Sub(timeStartConfirmation)
-	confirmationMetrics.DurationUpdateConeRootIndexes = timeUpdateConeRootIndexes.Sub(timeSetConfirmedMilestoneIndex)
-	confirmationMetrics.DurationConfirmedMilestoneChanged = timeConfirmedMilestoneChanged.Sub(timeUpdateConeRootIndexes)
-	confirmationMetrics.DurationConfirmedMilestoneIndexChanged = timeConfirmedMilestoneIndexChanged.Sub(timeConfirmedMilestoneChanged)
-	confirmationMetrics.DurationMilestoneConfirmedSyncEvent = timeMilestoneConfirmedSyncEvent.Sub(timeConfirmedMilestoneIndexChanged)
-	confirmationMetrics.DurationMilestoneConfirmed = timeMilestoneConfirmed.Sub(timeMilestoneConfirmedSyncEvent)
+	confirmationMetrics.DurationSetConfirmedMilestoneIndex = timeSetConfirmedMilestoneIndexEnd.Sub(timeSetConfirmedMilestoneIndexStart)
+	confirmationMetrics.DurationUpdateConeRootIndexes = timeUpdateConeRootIndexesEnd.Sub(timeSetConfirmedMilestoneIndexEnd)
+	confirmationMetrics.DurationConfirmedMilestoneIndexChanged = timeConfirmedMilestoneIndexChangedEnd.Sub(timeUpdateConeRootIndexesEnd)
+	confirmationMetrics.DurationConfirmedMilestoneChanged = timeConfirmedMilestoneChangedEnd.Sub(timeConfirmedMilestoneChangedStart)
+	confirmationMetrics.DurationMilestoneConfirmed = timeMilestoneConfirmedEnd.Sub(timeMilestoneConfirmedStart)
 	confirmationMetrics.DurationTotal = time.Since(timeStart)
 
 	t.Events.ConfirmationMetricsUpdated.Trigger(confirmationMetrics)

@@ -78,7 +78,7 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 			cancel()
 		}
 		task.Return(nil)
-	})
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
 		wp.Submit(milestone)
 	})
@@ -166,7 +166,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		}
 
 		task.Return(nil)
-	})
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
 		wp.Submit(milestone)
 	})

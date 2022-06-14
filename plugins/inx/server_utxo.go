@@ -252,7 +252,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		}
 
 		task.Return(nil)
-	})
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 		wp.Submit(index, newOutputs, newSpents)
 	})
@@ -369,7 +369,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		}
 
 		task.Return(nil)
-	})
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(index milestone.Index, tuple *utxo.TreasuryMutationTuple) {
 		wp.Submit(index, tuple)
 	})
@@ -395,7 +395,7 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 			cancel()
 		}
 		task.Return(nil)
-	})
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(receipt *iotago.ReceiptMilestoneOpt) {
 		wp.Submit(receipt)
 	})

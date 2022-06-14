@@ -85,9 +85,8 @@ type Tangle struct {
 
 	startWaitGroup sync.WaitGroup
 
-	blockProcessedSyncEvent     *events.SyncEvent
-	blockSolidSyncEvent         *events.SyncEvent
-	milestoneConfirmedSyncEvent *events.SyncEvent
+	blockProcessedSyncEvent *events.SyncEvent
+	blockSolidSyncEvent     *events.SyncEvent
 
 	milestoneSolidificationCtxLock    syncutils.Mutex
 	milestoneSolidificationCancelFunc context.CancelFunc
@@ -157,12 +156,9 @@ func New(
 		milestoneSolidifierQueueSize:     2,
 		blockProcessedSyncEvent:          events.NewSyncEvent(),
 		blockSolidSyncEvent:              events.NewSyncEvent(),
-		milestoneConfirmedSyncEvent:      events.NewSyncEvent(),
 		Events: &Events{
 			BPSMetricsUpdated:              events.NewEvent(BPSMetricsCaller),
 			ReceivedNewBlock:               events.NewEvent(storage.NewBlockCaller),
-			ReceivedKnownBlock:             events.NewEvent(storage.BlockCaller),
-			ProcessedBlock:                 events.NewEvent(storage.BlockIDCaller),
 			BlockSolid:                     events.NewEvent(storage.BlockMetadataCaller),
 			BlockReferenced:                events.NewEvent(storage.BlockReferencedCaller),
 			ReceivedNewMilestoneBlock:      events.NewEvent(storage.BlockIDCaller),
@@ -173,6 +169,7 @@ func New(
 			ConfirmedMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 			NewConfirmedMilestoneMetric:    events.NewEvent(NewConfirmedMilestoneMetricCaller),
 			ConfirmationMetricsUpdated:     events.NewEvent(ConfirmationMetricsCaller),
+			ReferencedBlocksCountUpdated:   events.NewEvent(ReferencedBlocksCountUpdatedCaller),
 			MilestoneSolidificationFailed:  events.NewEvent(milestone.IndexCaller),
 			MilestoneTimeout:               events.NewEvent(events.VoidCaller),
 			LedgerUpdated:                  events.NewEvent(LedgerUpdatedCaller),

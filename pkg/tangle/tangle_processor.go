@@ -233,14 +233,8 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 		if proto != nil {
 			proto.Metrics.KnownBlocks.Inc()
 		}
-		t.Events.ReceivedKnownBlock.Trigger(cachedBlock)
 	}
 
-	// "ProcessedBlock" event has to be fired after "ReceivedNewBlock" event,
-	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
-	// with the block it issued itself because the block may be not solid yet and therefore their database entries
-	// are not created yet.
-	t.Events.ProcessedBlock.Trigger(incomingBlock.BlockID())
 	t.blockProcessedSyncEvent.Trigger(incomingBlock.BlockID())
 
 	for _, request := range requests {
@@ -276,16 +270,6 @@ func (t *Tangle) RegisterBlockSolidEvent(blockID iotago.BlockID) chan struct{} {
 // DeregisterBlockSolidEvent removes a registered event to free the memory if not used.
 func (t *Tangle) DeregisterBlockSolidEvent(blockID iotago.BlockID) {
 	t.blockSolidSyncEvent.DeregisterEvent(blockID)
-}
-
-// RegisterMilestoneConfirmedEvent returns a channel that gets closed when the milestone is confirmed.
-func (t *Tangle) RegisterMilestoneConfirmedEvent(msIndex milestone.Index) chan struct{} {
-	return t.milestoneConfirmedSyncEvent.RegisterEvent(msIndex)
-}
-
-// DeregisterMilestoneConfirmedEvent removes a registered event to free the memory if not used.
-func (t *Tangle) DeregisterMilestoneConfirmedEvent(msIndex milestone.Index) {
-	t.milestoneConfirmedSyncEvent.DeregisterEvent(msIndex)
 }
 
 func (t *Tangle) PrintStatus() {

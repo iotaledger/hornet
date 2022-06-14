@@ -43,24 +43,45 @@ func ReceiptCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*iotago.ReceiptMilestoneOpt))(params[0].(*iotago.ReceiptMilestoneOpt))
 }
 
+func ReferencedBlocksCountUpdatedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(msIndex milestone.Index, referencedBlocksCount int))(params[0].(milestone.Index), params[1].(int))
+}
+
 type Events struct {
-	BPSMetricsUpdated              *events.Event
-	ReceivedNewBlock               *events.Event
-	ReceivedKnownBlock             *events.Event
-	ProcessedBlock                 *events.Event
-	BlockSolid                     *events.Event
-	BlockReferenced                *events.Event
-	ReceivedNewMilestoneBlock      *events.Event
-	LatestMilestoneChanged         *events.Event
-	LatestMilestoneIndexChanged    *events.Event
-	MilestoneConfirmed             *events.Event
-	ConfirmedMilestoneChanged      *events.Event
+	// block events
+	ReceivedNewBlock          *events.Event
+	BlockSolid                *events.Event
+	ReceivedNewMilestoneBlock *events.Event // remove with dashboard removal PR
+
+	// milestone events
+	LatestMilestoneChanged        *events.Event
+	LatestMilestoneIndexChanged   *events.Event
+	MilestoneSolidificationFailed *events.Event
+	MilestoneTimeout              *events.Event
+
+	// metrics
+	BPSMetricsUpdated *events.Event
+
+	// Events related to milestone confirmation
+
+	// Hint: Ledger is write locked
 	ConfirmedMilestoneIndexChanged *events.Event
-	NewConfirmedMilestoneMetric    *events.Event
-	ConfirmationMetricsUpdated     *events.Event
-	MilestoneSolidificationFailed  *events.Event
-	MilestoneTimeout               *events.Event
-	LedgerUpdated                  *events.Event
-	TreasuryMutated                *events.Event
-	NewReceipt                     *events.Event
+	// Hint: Ledger is not locked
+	NewConfirmedMilestoneMetric *events.Event // used for dashboard metrics
+	// Hint: Ledger is not locked
+	MilestoneConfirmed *events.Event // used for dashboard metrics
+	// Hint: Ledger is not locked
+	ConfirmationMetricsUpdated *events.Event // used for prometheus metrics
+	// Hint: Ledger is not locked
+	ConfirmedMilestoneChanged *events.Event
+	// Hint: Ledger is not locked
+	BlockReferenced *events.Event
+	// Hint: Ledger is not locked
+	ReferencedBlocksCountUpdated *events.Event
+	// Hint: Ledger is not locked
+	LedgerUpdated *events.Event
+	// Hint: Ledger is not locked
+	TreasuryMutated *events.Event
+	// Hint: Ledger is not locked
+	NewReceipt *events.Event
 }
