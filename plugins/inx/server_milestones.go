@@ -2,6 +2,7 @@ package inx
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -92,29 +93,67 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 
 func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
 
+	createMilestonePayloadForIndexAndSend := func(msIndex milestone.Index) error {
+		payload, err := milestoneForIndex(msIndex)
+		if err != nil {
+			return err
+		}
+		if err := srv.Send(payload); err != nil {
+			return fmt.Errorf("send error: %w", err)
+		}
+		return nil
+	}
+
+	createMilestonePayloadForCachedMilestoneAndSend := func(ms *storage.CachedMilestone) error {
+		payload, err := milestoneForCachedMilestone(ms)
+		if err != nil {
+			return err
+		}
+		if err := srv.Send(payload); err != nil {
+			return fmt.Errorf("send error: %w", err)
+		}
+		return nil
+	}
+
+	sendMilestonesRange := func(startIndex milestone.Index, endIndex milestone.Index) error {
+		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
+			if err := createMilestonePayloadForIndexAndSend(currentIndex); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// if a startIndex is given, we send all available milestones including the start index.
+	// if an endIndex is given, we send all available milestones up to and including min(ledgerIndex, endIndex).
+	// if no startIndex is given, but an endIndex, we do not send previous milestones.
 	sendPreviousMilestones := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
+		if startIndex == 0 {
+			// no need to send previous milestones
+			return 0, nil
+		}
+
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
-		if endIndex == 0 || cmi < endIndex {
+
+		if startIndex > cmi {
+			// no need to send previous milestones
+			return 0, nil
+		}
+
+		// Stream all available milestones first
+		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+		if startIndex <= pruningIndex {
+			return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
+		}
+
+		if endIndex == 0 || endIndex > cmi {
 			endIndex = cmi
 		}
 
-		if startIndex > 0 && startIndex <= cmi {
-			// Stream all available milestones
-			pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
-			if startIndex <= pruningIndex {
-				return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
-			}
-
-			for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
-				payload, err := milestoneForIndex(currentIndex)
-				if err != nil {
-					return 0, err
-				}
-				if err := srv.Send(payload); err != nil {
-					return 0, err
-				}
-			}
+		if err := sendMilestonesRange(startIndex, endIndex); err != nil {
+			return 0, err
 		}
+
 		return endIndex, nil
 	}
 
@@ -137,44 +176,73 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
 		defer cachedMilestone.Release(true) // milestone -1
 
-		if requestStartIndex > 0 && cachedMilestone.Milestone().Index() < requestStartIndex {
+		index := cachedMilestone.Milestone().Index()
+
+		if requestStartIndex > 0 && index < requestStartIndex {
 			// Skip this because it is before the index we requested
 			task.Return(nil)
 			return
 		}
 
-		payload, err := milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
-		if err != nil {
-			Plugin.LogInfof("error creating milestone: %v", err)
-			cancel()
-			innerErr = err
-			task.Return(nil)
-			return
+		if requestStartIndex > 0 && index-1 > lastSentIndex {
+			// we missed some milestones in between
+			startIndex := requestStartIndex
+			if startIndex < lastSentIndex+1 {
+				startIndex = lastSentIndex + 1
+			}
+
+			endIndex := index - 1
+			if requestEndIndex > 0 && endIndex > requestEndIndex {
+				endIndex = requestEndIndex
+			}
+
+			if err := sendMilestonesRange(startIndex, endIndex); err != nil {
+				Plugin.LogInfof("sendMilestonesRange error: %v", err)
+				innerErr = err
+				cancel()
+				task.Return(nil)
+				return
+			}
+
+			// remember the last index we sent
+			lastSentIndex = endIndex
 		}
-		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+
+		if requestEndIndex > 0 && index > requestEndIndex {
+			// We are done sending the updates
+			innerErr = nil
 			cancel()
-			innerErr = err
 			task.Return(nil)
 			return
 		}
 
-		if requestEndIndex > 0 && cachedMilestone.Milestone().Index() >= requestEndIndex {
-			// We are done sending the milestones
+		if err := createMilestonePayloadForCachedMilestoneAndSend(cachedMilestone.Retain()); err != nil { // milestone +1
+			Plugin.LogInfof("send error: %v", err)
+			innerErr = err
+			cancel()
+			task.Return(nil)
+			return
+		}
+
+		if requestEndIndex > 0 && index >= requestEndIndex {
+			// We are done sending the updates
 			innerErr = nil
 			cancel()
 		}
 
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
 	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
 		wp.Submit(milestone)
 	})
+
 	wp.Start()
 	deps.Tangle.Events.ConfirmedMilestoneChanged.Attach(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(closure)
 	wp.Stop()
+
 	return innerErr
 }
 

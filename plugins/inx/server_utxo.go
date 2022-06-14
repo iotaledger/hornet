@@ -253,7 +253,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		}
 
 		if requestStartIndex > 0 && index-1 > lastSentIndex {
-			// we missed some ledger updated in between
+			// we missed some ledger updates in between
 			startIndex := requestStartIndex
 			if startIndex < lastSentIndex+1 {
 				startIndex = lastSentIndex + 1
