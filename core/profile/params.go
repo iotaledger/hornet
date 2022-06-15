@@ -13,6 +13,8 @@ const (
 type ParametersNode struct {
 	// Profile is the key to set the profile to use.
 	Profile string `default:"auto" usage:"the profile the node runs with" shorthand:"p"`
+	// Alias is used to set an alias to identify a node
+	Alias string `default:"HORNET node" usage:"set an alias to identify a node"`
 }
 
 var ParamsNode = &ParametersNode{}

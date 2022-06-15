@@ -47,8 +47,6 @@ func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeID string, sec
 
 type AuthClaims struct {
 	jwt.StandardClaims
-	Dashboard bool `json:"dashboard"`
-	API       bool `json:"api"`
 }
 
 func (c *AuthClaims) compare(field string, expected string) bool {
@@ -119,7 +117,7 @@ func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Conte
 	}
 }
 
-func (j *JWTAuth) IssueJWT(api bool, dashboard bool) (string, error) {
+func (j *JWTAuth) IssueJWT() (string, error) {
 
 	now := time.Now()
 
@@ -139,8 +137,6 @@ func (j *JWTAuth) IssueJWT(api bool, dashboard bool) (string, error) {
 
 	claims := &AuthClaims{
 		StandardClaims: stdClaims,
-		Dashboard:      dashboard,
-		API:            api,
 	}
 
 	// Create token

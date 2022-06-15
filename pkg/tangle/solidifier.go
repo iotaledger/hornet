@@ -325,8 +325,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		timeSetConfirmedMilestoneIndexEnd     time.Time
 		timeUpdateConeRootIndexesEnd          time.Time
 		timeConfirmedMilestoneIndexChangedEnd time.Time
-		timeMilestoneConfirmedStart           time.Time
-		timeMilestoneConfirmedEnd             time.Time
 		timeConfirmedMilestoneChangedStart    time.Time
 		timeConfirmedMilestoneChangedEnd      time.Time
 	)
@@ -414,9 +412,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	if newConfirmation != nil {
 		t.Events.ReferencedBlocksCountUpdated.Trigger(milestoneIndexToSolidify, len(newConfirmation.Mutations.BlocksReferenced))
-		timeMilestoneConfirmedStart = time.Now()
-		t.Events.MilestoneConfirmed.Trigger(newConfirmation)
-		timeMilestoneConfirmedEnd = time.Now()
 	}
 
 	t.LogInfof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
@@ -433,7 +428,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	confirmationMetrics.DurationUpdateConeRootIndexes = timeUpdateConeRootIndexesEnd.Sub(timeSetConfirmedMilestoneIndexEnd)
 	confirmationMetrics.DurationConfirmedMilestoneIndexChanged = timeConfirmedMilestoneIndexChangedEnd.Sub(timeUpdateConeRootIndexesEnd)
 	confirmationMetrics.DurationConfirmedMilestoneChanged = timeConfirmedMilestoneChangedEnd.Sub(timeConfirmedMilestoneChangedStart)
-	confirmationMetrics.DurationMilestoneConfirmed = timeMilestoneConfirmedEnd.Sub(timeMilestoneConfirmedStart)
 	confirmationMetrics.DurationTotal = time.Since(timeStart)
 
 	t.Events.ConfirmationMetricsUpdated.Trigger(confirmationMetrics)
@@ -457,7 +451,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 			// Ignore the first two milestones after node was sync (otherwise the BPS and conf.rate is wrong)
 			rbpsBlock = fmt.Sprintf(", %0.2f BPS, %0.2f RBPS, %0.2f%% ref.rate", metric.BPS, metric.RBPS, metric.ReferencedRate)
-			t.Events.NewConfirmedMilestoneMetric.Trigger(metric)
 		} else {
 			rbpsBlock = fmt.Sprintf(", %0.2f RBPS", metric.RBPS)
 		}

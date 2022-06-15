@@ -27,7 +27,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/p2p"
 	"github.com/iotaledger/hornet/pkg/p2p/autopeering"
-	"github.com/iotaledger/hornet/plugins/dashboard"
 	"github.com/iotaledger/hornet/plugins/debug"
 	"github.com/iotaledger/hornet/plugins/inx"
 	"github.com/iotaledger/hornet/plugins/prometheus"
@@ -125,7 +124,6 @@ func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error 
 		initConfig.ForceDisableComponent(restapiv2.Plugin.Identifier())
 		initConfig.ForceDisableComponent(warpsync.Plugin.Identifier())
 		initConfig.ForceDisableComponent(urts.Plugin.Identifier())
-		initConfig.ForceDisableComponent(dashboard.Plugin.Identifier())
 		initConfig.ForceDisableComponent(receipt.Plugin.Identifier())
 		initConfig.ForceDisableComponent(prometheus.Plugin.Identifier())
 		initConfig.ForceDisableComponent(inx.Plugin.Identifier())

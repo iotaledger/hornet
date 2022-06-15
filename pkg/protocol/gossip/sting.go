@@ -156,13 +156,13 @@ func extractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
 }
 
 // Heartbeat contains information about a nodes current solid and pruned milestone index
-// and its connected and synced neighbors count.
+// and its connected and synced peers count.
 type Heartbeat struct {
 	SolidMilestoneIndex  milestone.Index `json:"solidMilestoneIndex"`
 	PrunedMilestoneIndex milestone.Index `json:"prunedMilestoneIndex"`
 	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
-	ConnectedNeighbors   int             `json:"connectedNeighbors"`
-	SyncedNeighbors      int             `json:"syncedNeighbors"`
+	ConnectedPeers       int             `json:"connectedPeers"`
+	SyncedPeers          int             `json:"syncedPeers"`
 }
 
 // ParseHeartbeat parses the given message into a heartbeat.
@@ -171,8 +171,8 @@ func ParseHeartbeat(data []byte) *Heartbeat {
 		SolidMilestoneIndex:  milestone.Index(binary.LittleEndian.Uint32(data[:4])),
 		PrunedMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(data[4:8])),
 		LatestMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(data[8:12])),
-		ConnectedNeighbors:   int(data[12]),
-		SyncedNeighbors:      int(data[13]),
+		ConnectedPeers:       int(data[12]),
+		SyncedPeers:          int(data[13]),
 	}
 }
 

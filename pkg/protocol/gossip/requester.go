@@ -120,7 +120,7 @@ func (r *Requester) RunRequestQueueDrainer(ctx context.Context) {
 
 				if !requested {
 					// we have no neighbor that has the data for sure,
-					// so we ask all neighbors that could have the data
+					// so we ask all peers that could have the data
 					// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= LatestMilestoneIndex)
 					r.service.ForEach(func(proto *Protocol) bool {
 						// we only send a request block if the peer could have the data
