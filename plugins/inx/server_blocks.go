@@ -2,7 +2,6 @@ package inx
 
 import (
 	"context"
-	"github.com/iotaledger/hornet/pkg/tipselect"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -17,6 +16,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/pkg/tipselect"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -53,10 +53,14 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		if len(tip) > 0 {
 			switch tip[0].Score {
 			case tipselect.ScoreLazy:
+				// promote is false
 				m.ShouldReattach = true
 			case tipselect.ScoreSemiLazy:
 				m.ShouldPromote = true
+				// reattach is false
 			case tipselect.ScoreNonLazy:
+				// promote is false
+				// reattach is false
 			}
 			return m, nil
 		}
@@ -77,9 +81,13 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 			return nil, errors.WithMessage(echo.ErrInternalServerError, "tip score could not be calculated")
 		case tangle.TipScoreOCRIThresholdReached, tangle.TipScoreYCRIThresholdReached:
 			m.ShouldPromote = true
+			// reattach is false
 		case tangle.TipScoreBelowMaxDepth:
+			// promote is false
 			m.ShouldReattach = true
 		case tangle.TipScoreHealthy:
+			// promote is false
+			// reattach is false
 		}
 	}
 
@@ -201,11 +209,10 @@ func (s *INXServer) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenT
 		tip := task.Param(0).(*tipselect.Tip)
 
 		blockMeta := deps.Storage.CachedBlockMetadataOrNil(tip.BlockID)
-		defer blockMeta.Release(true) // meta -1
-
 		if blockMeta == nil {
 			return
 		}
+		defer blockMeta.Release(true) // meta -1
 
 		payload, err := INXNewBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata(), tip)
 		if err != nil {
