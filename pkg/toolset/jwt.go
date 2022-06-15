@@ -81,7 +81,7 @@ func generateJWTApiToken(args []string) error {
 		return fmt.Errorf("JWT auth initialization failed: %w", err)
 	}
 
-	jwtToken, err := jwtAuth.IssueJWT(true, false)
+	jwtToken, err := jwtAuth.IssueJWT()
 	if err != nil {
 		return fmt.Errorf("issuing JWT token failed: %w", err)
 	}

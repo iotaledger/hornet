@@ -38,7 +38,6 @@ type ConfirmationMetrics struct {
 	DurationUpdateConeRootIndexes                    time.Duration
 	DurationConfirmedMilestoneChanged                time.Duration
 	DurationConfirmedMilestoneIndexChanged           time.Duration
-	DurationMilestoneConfirmed                       time.Duration
 	DurationTotal                                    time.Duration
 }
 

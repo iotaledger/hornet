@@ -157,7 +157,6 @@ func collectDebug() {
 		milestoneConfirmationDurations.WithLabelValues("update_cone_root_indexes").Set(lastConfirmationMetrics.DurationUpdateConeRootIndexes.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("confirmed_milestone_changed").Set(lastConfirmationMetrics.DurationConfirmedMilestoneChanged.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("confirmed_milestone_index_changed").Set(lastConfirmationMetrics.DurationConfirmedMilestoneIndexChanged.Seconds())
-		milestoneConfirmationDurations.WithLabelValues("milestone_confirmed").Set(lastConfirmationMetrics.DurationMilestoneConfirmed.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("total").Set(lastConfirmationMetrics.DurationTotal.Seconds())
 	}
 }

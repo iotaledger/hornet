@@ -78,7 +78,6 @@ func DefaultConfig() *AppConfig {
 		INX:         DefaultINXConfig(),
 		Plugins:     DefaultPluginConfig(),
 		Profiling:   DefaultProfilingConfig(),
-		Dashboard:   DefaultDashboardConfig(),
 		Receipts:    DefaultNodeReceiptValidatorConfig(),
 		Autopeering: DefaultAutopeeringConfig(),
 		INXCoo:      DefaultINXCoordinatorConfig(),
@@ -246,8 +245,6 @@ type AppConfig struct {
 	Plugins PluginConfig
 	// Profiling config.
 	Profiling ProfilingConfig
-	// Dashboard config.
-	Dashboard DashboardConfig
 	// Receipts config
 	Receipts ReceiptsConfig
 	// Autopeering config.
@@ -279,7 +276,6 @@ func (cfg *AppConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.INX.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
-	cliFlags = append(cliFlags, cfg.Dashboard.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Receipts.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Autopeering.CLIFlags()...)
 	return cliFlags
@@ -716,25 +712,5 @@ func (profilingConfig *ProfilingConfig) CLIFlags() []string {
 func DefaultProfilingConfig() ProfilingConfig {
 	return ProfilingConfig{
 		BindAddress: "0.0.0.0:6060",
-	}
-}
-
-// DashboardConfig holds the dashboard specific configuration.
-type DashboardConfig struct {
-	// The bind address of the dashboard
-	BindAddress string
-}
-
-// CLIFlags returns the config as CLI flags.
-func (dashboardConfig *DashboardConfig) CLIFlags() []string {
-	return []string{
-		fmt.Sprintf("--%s=%s", "dashboard.bindAddress", dashboardConfig.BindAddress),
-	}
-}
-
-// DefaultDashboardConfig returns the default profiling config.
-func DefaultDashboardConfig() DashboardConfig {
-	return DashboardConfig{
-		BindAddress: "0.0.0.0:8081",
 	}
 }

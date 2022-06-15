@@ -568,41 +568,7 @@ Example:
   }
 ```
 
-## <a id="dashboard"></a> 15. Dashboard
-
-| Name                    | Description                                                  | Type    | Default value    |
-| ----------------------- | ------------------------------------------------------------ | ------- | ---------------- |
-| bindAddress             | The bind address on which the dashboard can be accessed from | string  | "localhost:8081" |
-| dev                     | Whether to run the dashboard in dev mode                     | boolean | false            |
-| [auth](#dashboard_auth) | Configuration for auth                                       | object  |                  |
-
-### <a id="dashboard_auth"></a> Auth
-
-| Name           | Description                                           | Type   | Default value                                                      |
-| -------------- | ----------------------------------------------------- | ------ | ------------------------------------------------------------------ |
-| sessionTimeout | How long the auth session should last before expiring | string | "72h"                                                              |
-| username       | The auth username (max 25 chars)                      | string | "admin"                                                            |
-| passwordHash   | The auth password+salt as a scrypt hash               | string | "0000000000000000000000000000000000000000000000000000000000000000" |
-| passwordSalt   | The auth salt used for hashing the password           | string | "0000000000000000000000000000000000000000000000000000000000000000" |
-
-Example:
-
-```json
-  {
-    "dashboard": {
-      "bindAddress": "localhost:8081",
-      "dev": false,
-      "auth": {
-        "sessionTimeout": "72h",
-        "username": "admin",
-        "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
-        "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
-      }
-    }
-  }
-```
-
-## <a id="receipts"></a> 16. Receipts
+## <a id="receipts"></a> 15. Receipts
 
 | Name                             | Description                 | Type   | Default value |
 | -------------------------------- | --------------------------- | ------ | ------------- |
@@ -664,7 +630,7 @@ Example:
   }
 ```
 
-## <a id="prometheus"></a> 17. Prometheus
+## <a id="prometheus"></a> 16. Prometheus
 
 | Name                                                     | Description                                                  | Type    | Default value    |
 | -------------------------------------------------------- | ------------------------------------------------------------ | ------- | ---------------- |
@@ -716,7 +682,7 @@ Example:
   }
 ```
 
-## <a id="inx"></a> 18. INX
+## <a id="inx"></a> 17. INX
 
 | Name            | Description                                            | Type   | Default value    |
 | --------------- | ------------------------------------------------------ | ------ | ---------------- |

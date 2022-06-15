@@ -10,7 +10,7 @@ const (
 	maxAllowedMilestoneAge = time.Minute * 5
 )
 
-// IsNodeHealthy returns whether the node is synced, has active neighbors and its latest milestone is not too old.
+// IsNodeHealthy returns whether the node is synced, has active peers and its latest milestone is not too old.
 func (t *Tangle) IsNodeHealthy() bool {
 	if !t.syncManager.IsNodeAlmostSynced() {
 		return false
