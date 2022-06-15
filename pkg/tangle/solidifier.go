@@ -325,8 +325,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		timeSetConfirmedMilestoneIndexEnd     time.Time
 		timeUpdateConeRootIndexesEnd          time.Time
 		timeConfirmedMilestoneIndexChangedEnd time.Time
-		timeMilestoneConfirmedStart           time.Time
-		timeMilestoneConfirmedEnd             time.Time
 		timeConfirmedMilestoneChangedStart    time.Time
 		timeConfirmedMilestoneChangedEnd      time.Time
 	)
@@ -414,9 +412,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	if newConfirmation != nil {
 		t.Events.ReferencedBlocksCountUpdated.Trigger(milestoneIndexToSolidify, len(newConfirmation.Mutations.BlocksReferenced))
-		timeMilestoneConfirmedStart = time.Now()
-		t.Events.MilestoneConfirmed.Trigger(newConfirmation)
-		timeMilestoneConfirmedEnd = time.Now()
 	}
 
 	t.LogInfof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
@@ -433,7 +428,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	confirmationMetrics.DurationUpdateConeRootIndexes = timeUpdateConeRootIndexesEnd.Sub(timeSetConfirmedMilestoneIndexEnd)
 	confirmationMetrics.DurationConfirmedMilestoneIndexChanged = timeConfirmedMilestoneIndexChangedEnd.Sub(timeUpdateConeRootIndexesEnd)
 	confirmationMetrics.DurationConfirmedMilestoneChanged = timeConfirmedMilestoneChangedEnd.Sub(timeConfirmedMilestoneChangedStart)
-	confirmationMetrics.DurationMilestoneConfirmed = timeMilestoneConfirmedEnd.Sub(timeMilestoneConfirmedStart)
 	confirmationMetrics.DurationTotal = time.Since(timeStart)
 
 	t.Events.ConfirmationMetricsUpdated.Trigger(confirmationMetrics)

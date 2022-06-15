@@ -93,7 +93,7 @@ require (
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/jellydator/ttlcache/v2 v2.11.1 // indirect
 	github.com/klauspost/compress v1.15.6 // indirect
-	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.13 // indirect
 	github.com/knadh/koanf v1.4.2-0.20220512043835-4112a7258008 // indirect
 	github.com/koron/go-ssdp v0.0.3 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
@@ -167,7 +167,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
-	golang.org/x/exp v0.0.0-20220609121020-a51bd0440498 // indirect
+	golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20220614195744-fb05da6f9022 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect

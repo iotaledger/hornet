@@ -2,7 +2,6 @@ package tangle
 
 import (
 	"context"
-	"github.com/iotaledger/hornet/pkg/protocol"
 	"runtime"
 	"sync"
 	"time"
@@ -19,6 +18,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 )
 
@@ -164,7 +164,6 @@ func New(
 			ReceivedNewMilestoneBlock:      events.NewEvent(storage.BlockIDCaller),
 			LatestMilestoneChanged:         events.NewEvent(storage.MilestoneCaller),
 			LatestMilestoneIndexChanged:    events.NewEvent(milestone.IndexCaller),
-			MilestoneConfirmed:             events.NewEvent(ConfirmedMilestoneCaller),
 			ConfirmedMilestoneChanged:      events.NewEvent(storage.MilestoneCaller),
 			ConfirmedMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 			NewConfirmedMilestoneMetric:    events.NewEvent(NewConfirmedMilestoneMetricCaller),

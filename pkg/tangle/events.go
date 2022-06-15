@@ -23,10 +23,6 @@ func NewConfirmedMilestoneMetricCaller(handler interface{}, params ...interface{
 	handler.(func(metric *ConfirmedMilestoneMetric))(params[0].(*ConfirmedMilestoneMetric))
 }
 
-func ConfirmedMilestoneCaller(handler interface{}, params ...interface{}) {
-	handler.(func(confirmation *whiteflag.Confirmation))(params[0].(*whiteflag.Confirmation))
-}
-
 func BPSMetricsCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*BPSMetrics))(params[0].(*BPSMetrics))
 }
@@ -68,8 +64,6 @@ type Events struct {
 	ConfirmedMilestoneIndexChanged *events.Event
 	// Hint: Ledger is not locked
 	NewConfirmedMilestoneMetric *events.Event // used for dashboard metrics
-	// Hint: Ledger is not locked
-	MilestoneConfirmed *events.Event // used for dashboard metrics
 	// Hint: Ledger is not locked
 	ConfirmationMetricsUpdated *events.Event // used for prometheus metrics
 	// Hint: Ledger is not locked
