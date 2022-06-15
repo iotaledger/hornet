@@ -166,7 +166,6 @@ func New(
 			LatestMilestoneIndexChanged:    events.NewEvent(milestone.IndexCaller),
 			ConfirmedMilestoneChanged:      events.NewEvent(storage.MilestoneCaller),
 			ConfirmedMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
-			NewConfirmedMilestoneMetric:    events.NewEvent(NewConfirmedMilestoneMetricCaller),
 			ConfirmationMetricsUpdated:     events.NewEvent(ConfirmationMetricsCaller),
 			ReferencedBlocksCountUpdated:   events.NewEvent(ReferencedBlocksCountUpdatedCaller),
 			MilestoneSolidificationFailed:  events.NewEvent(milestone.IndexCaller),

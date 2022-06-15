@@ -451,7 +451,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 			// Ignore the first two milestones after node was sync (otherwise the BPS and conf.rate is wrong)
 			rbpsBlock = fmt.Sprintf(", %0.2f BPS, %0.2f RBPS, %0.2f%% ref.rate", metric.BPS, metric.RBPS, metric.ReferencedRate)
-			t.Events.NewConfirmedMilestoneMetric.Trigger(metric)
 		} else {
 			rbpsBlock = fmt.Sprintf(", %0.2f RBPS", metric.RBPS)
 		}
