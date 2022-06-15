@@ -52,7 +52,7 @@ func initConfigPars(c *dig.Container) error {
 
 	type cfgDeps struct {
 		dig.In
-		Storage *storage.Storage `optional:"true"`
+		Storage *storage.Storage `optional:"true"` // optional because of entry-node mode
 	}
 
 	type cfgResult struct {

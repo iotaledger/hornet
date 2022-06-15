@@ -76,6 +76,7 @@ type Manager struct {
 }
 
 // Init initialises the Manager by loading the last stored or persisting the parameters passed in via constructor.
+// If the Manager got initialised with no storage, then Manager.Init() is a no-op and initProtoParas are used instead.
 func (m *Manager) Init() error {
 	// can only run with provided protocol parameters
 	if m.storage == nil {
@@ -120,10 +121,10 @@ func (m *Manager) LoadPending(syncManager *syncmanager.SyncManager) {
 
 func (m *Manager) readProtocolParasFromMilestone(index milestone.Index) *iotago.ProtocolParamsMilestoneOpt {
 	cachedMs := m.storage.CachedMilestoneByIndexOrNil(index)
-	defer cachedMs.Release(true)
 	if cachedMs == nil {
 		return nil
 	}
+	defer cachedMs.Release(true)
 	return cachedMs.Milestone().Milestone().Opts.MustSet().ProtocolParams()
 }
 
@@ -216,7 +217,7 @@ func (m *Manager) updateCurrent() error {
 	// TODO: needs to be adapted for when protocol parameters struct changes
 	nextProtoParams := &iotago.ProtocolParameters{}
 	if _, err := nextProtoParams.Deserialize(nextParams, serializer.DeSeriModePerformValidation, nil); err != nil {
-		return fmt.Errorf("unable to deserialize next protocol parameters: %w", err)
+		return fmt.Errorf("unable to deserialize new protocol parameters: %w", err)
 	}
 
 	m.current = nextProtoParams

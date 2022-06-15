@@ -3,7 +3,6 @@ package inx
 import (
 	"context"
 	"fmt"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -167,217 +166,298 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 
 func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
 
-	sendPreviousMilestoneDiffs := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
-		deps.UTXOManager.ReadLockLedger()
-		defer deps.UTXOManager.ReadUnlockLedger()
-		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
-		if err != nil {
-			return 0, status.Error(codes.Unavailable, "error accessing the UTXO ledger")
-		}
-
-		if startIndex > 0 && startIndex <= ledgerIndex {
-			// Stream all available milestone diffs first
-			pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
-			if startIndex <= pruningIndex {
-				return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
-			}
-
-			if ledgerIndex < endIndex {
-				endIndex = ledgerIndex
-			}
-			for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
-				msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
-				if err != nil {
-					return 0, status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
-				}
-				payload, err := NewLedgerUpdate(msDiff.Index, msDiff.Outputs, msDiff.Spents)
-				if err != nil {
-					return 0, err
-				}
-				if err := srv.Send(payload); err != nil {
-					return 0, fmt.Errorf("send error: %w", err)
-				}
-			}
-			return endIndex, nil
-		}
-		return ledgerIndex, nil
-	}
-
-	requestStartIndex := milestone.Index(req.GetStartMilestoneIndex())
-	requestEndIndex := milestone.Index(req.GetEndMilestoneIndex())
-
-	lastSentIndex, err := sendPreviousMilestoneDiffs(requestStartIndex, requestEndIndex)
-	if err != nil {
-		return err
-	}
-
-	if requestEndIndex > 0 && lastSentIndex >= requestEndIndex {
-		// We are done sending, so close the stream
-		return nil
-	}
-
-	var innerErr error
-	ctx, cancel := context.WithCancel(context.Background())
-	wp := workerpool.New(func(task workerpool.Task) {
-		index := task.Param(0).(milestone.Index)
-
-		if requestStartIndex > 0 && index < requestStartIndex {
-			// Skip this because it is before the index we requested
-			task.Return(nil)
-			return
-		}
-
-		newOutputs := task.Param(1).(utxo.Outputs)
-		newSpents := task.Param(2).(utxo.Spents)
-		payload, err := NewLedgerUpdate(index, newOutputs, newSpents)
-		if err != nil {
-			Plugin.LogInfof("send error: %v", err)
-			innerErr = err
-			cancel()
-			task.Return(nil)
-			return
-		}
-		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
-			innerErr = err
-			cancel()
-			task.Return(nil)
-			return
-		}
-
-		if requestEndIndex > 0 && index >= requestEndIndex {
-			// We are done sending the updates
-			innerErr = nil
-			cancel()
-		}
-
-		task.Return(nil)
-	})
-	closure := events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
-		wp.Submit(index, newOutputs, newSpents)
-	})
-	wp.Start()
-	deps.Tangle.Events.LedgerUpdated.Attach(closure)
-	<-ctx.Done()
-	deps.Tangle.Events.LedgerUpdated.Detach(closure)
-	wp.Stop()
-	return innerErr
-}
-
-func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToTreasuryUpdatesServer) error {
-	var sentTreasuryUpdate bool
-	sendPreviousMilestoneDiffs := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, milestone.Index, error) {
-		deps.UTXOManager.ReadLockLedger()
-		defer deps.UTXOManager.ReadUnlockLedger()
-
-		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
-		if err != nil {
-			return 0, 0, status.Error(codes.Unavailable, "error accessing the UTXO ledger")
-		}
-
-		if endIndex == 0 || ledgerIndex < endIndex {
-			endIndex = ledgerIndex
-		}
-
-		if startIndex > 0 && startIndex <= ledgerIndex {
-			// Stream all available milestone diffs first
-			pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
-			if startIndex <= pruningIndex {
-				return 0, 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
-			}
-
-			for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
-				msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
-				if err != nil {
-					return 0, 0, status.Errorf(codes.NotFound, "treasury update for milestoneIndex %d not found", currentIndex)
-				}
-				if msDiff.TreasuryOutput != nil {
-					payload, err := NewTreasuryUpdate(msDiff.Index, msDiff.TreasuryOutput, msDiff.SpentTreasuryOutput)
-					if err != nil {
-						return 0, 0, err
-					}
-					if err := srv.Send(payload); err != nil {
-						return 0, 0, fmt.Errorf("send error: %w", err)
-					}
-					sentTreasuryUpdate = true
-				}
-			}
-		}
-		return ledgerIndex, endIndex, nil
-	}
-
-	requestStartIndex := milestone.Index(req.GetStartMilestoneIndex())
-	requestEndIndex := milestone.Index(req.GetEndMilestoneIndex())
-
-	ledgerIndex, lastSentIndex, err := sendPreviousMilestoneDiffs(requestStartIndex, requestEndIndex)
-	if err != nil {
-		return err
-	}
-
-	if requestEndIndex > 0 && lastSentIndex >= requestEndIndex {
-		// We are done sending, so close the stream
-		return nil
-	}
-
-	if !sentTreasuryUpdate {
-		// Since treasury mutations do not happen on every milestone, send the stored unspent output that we have
-		treasuryOutput, err := deps.UTXOManager.UnspentTreasuryOutputWithoutLocking()
-		if err != nil {
-			return err
-		}
-		payload, err := NewTreasuryUpdate(ledgerIndex, treasuryOutput, treasuryOutput)
+	createLedgerUpdatePayloadAndSend := func(msIndex milestone.Index, outputs utxo.Outputs, spents utxo.Spents) error {
+		payload, err := NewLedgerUpdate(msIndex, outputs, spents)
 		if err != nil {
 			return err
 		}
 		if err := srv.Send(payload); err != nil {
 			return fmt.Errorf("send error: %w", err)
 		}
+		return nil
+	}
+
+	sendMilestoneDiffsRange := func(startIndex milestone.Index, endIndex milestone.Index) error {
+		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
+			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+			if err != nil {
+				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
+			}
+
+			if err := createLedgerUpdatePayloadAndSend(msDiff.Index, msDiff.Outputs, msDiff.Spents); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// if a startIndex is given, we send all available milestone diffs including the start index.
+	// if an endIndex is given, we send all available milestone diffs up to and including min(ledgerIndex, endIndex).
+	// if no startIndex is given, but an endIndex, we do not send previous milestone diffs.
+	sendPreviousMilestoneDiffs := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
+		if startIndex == 0 {
+			// no need to send previous milestone diffs
+			return 0, nil
+		}
+
+		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
+		if err != nil {
+			return 0, status.Error(codes.Unavailable, "error accessing the UTXO ledger")
+		}
+
+		if startIndex > ledgerIndex {
+			// no need to send previous milestone diffs
+			return 0, nil
+		}
+
+		// Stream all available milestone diffs first
+		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+		if startIndex <= pruningIndex {
+			return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
+		}
+
+		if endIndex == 0 || endIndex > ledgerIndex {
+			endIndex = ledgerIndex
+		}
+
+		if err := sendMilestoneDiffsRange(startIndex, endIndex); err != nil {
+			return 0, err
+		}
+
+		return endIndex, nil
+	}
+
+	stream := &streamRange{
+		start: milestone.Index(req.GetStartMilestoneIndex()),
+		end:   milestone.Index(req.GetEndMilestoneIndex()),
+	}
+
+	var err error
+	stream.lastSent, err = sendPreviousMilestoneDiffs(stream.start, stream.end)
+	if err != nil {
+		return err
+	}
+
+	if stream.isBounded() && stream.lastSent >= stream.end {
+		// We are done sending, so close the stream
+		return nil
+	}
+
+	catchUpFunc := func(start milestone.Index, end milestone.Index) error {
+		err := sendMilestoneDiffsRange(start, end)
+		if err != nil {
+			Plugin.LogInfof("sendMilestoneDiffsRange error: %v", err)
+		}
+		return err
+	}
+
+	sendFunc := func(task *workerpool.Task, index milestone.Index) error {
+		newOutputs := task.Param(1).(utxo.Outputs)
+		newSpents := task.Param(2).(utxo.Spents)
+
+		if err := createLedgerUpdatePayloadAndSend(index, newOutputs, newSpents); err != nil {
+			Plugin.LogInfof("send error: %v", err)
+			return err
+		}
+
+		return nil
 	}
 
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		index := task.Param(0).(milestone.Index)
-
-		if requestStartIndex > 0 && index < requestStartIndex {
-			// Skip this because it is before the index we requested
-			task.Return(nil)
-			return
-		}
-
-		tm := task.Param(1).(*utxo.TreasuryMutationTuple)
-		payload, err := NewTreasuryUpdate(index, tm.NewOutput, tm.SpentOutput)
-		if err != nil {
-			Plugin.LogInfof("Send error: %v", err)
-			cancel()
+		done, err := handleRangedSend(&task, task.Param(0).(milestone.Index), stream, catchUpFunc, sendFunc)
+		switch {
+		case err != nil:
 			innerErr = err
-			task.Return(nil)
-			return
-		}
-		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
-			cancel()
-			innerErr = err
-			task.Return(nil)
-			return
-		}
-
-		if requestEndIndex > 0 && index >= requestEndIndex {
-			// We are done sending the updates
-			innerErr = nil
+			fallthrough
+		case done:
 			cancel()
 		}
 
 		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
+	closure := events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+		wp.Submit(index, newOutputs, newSpents)
 	})
+
+	wp.Start()
+	deps.Tangle.Events.LedgerUpdated.Attach(closure)
+	<-ctx.Done()
+	deps.Tangle.Events.LedgerUpdated.Detach(closure)
+	wp.Stop()
+
+	return innerErr
+}
+
+func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToTreasuryUpdatesServer) error {
+
+	var treasuryUpdateSent bool
+
+	createTreasuryUpdatePayloadAndSend := func(msIndex milestone.Index, treasuryOutput *utxo.TreasuryOutput, spentTreasuryOutput *utxo.TreasuryOutput) error {
+		if treasuryOutput != nil {
+			payload, err := NewTreasuryUpdate(msIndex, treasuryOutput, spentTreasuryOutput)
+			if err != nil {
+				return err
+			}
+			if err := srv.Send(payload); err != nil {
+				return fmt.Errorf("send error: %w", err)
+			}
+			treasuryUpdateSent = true
+		}
+		return nil
+	}
+
+	sendTreasuryUpdatesRange := func(startIndex milestone.Index, endIndex milestone.Index) error {
+		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
+			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+			if err != nil {
+				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
+			}
+
+			if err := createTreasuryUpdatePayloadAndSend(msDiff.Index, msDiff.TreasuryOutput, msDiff.SpentTreasuryOutput); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// if a startIndex is given, we send all available treasury updates including the start index.
+	// if an endIndex is given, we send all available treasury updates up to and including min(ledgerIndex, endIndex).
+	// if no startIndex is given, but an endIndex, we do not send previous treasury updates.
+	sendPreviousTreasuryUpdates := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
+		if startIndex == 0 {
+			// no need to send treasury updates diffs
+			return 0, nil
+		}
+
+		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
+		if err != nil {
+			return 0, status.Error(codes.Unavailable, "error accessing the UTXO ledger")
+		}
+
+		if startIndex > ledgerIndex {
+			// no need to send treasury updates diffs
+			return 0, nil
+		}
+
+		// Stream all available milestone diffs first
+		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+		if startIndex <= pruningIndex {
+			return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
+		}
+
+		if endIndex == 0 || endIndex > ledgerIndex {
+			endIndex = ledgerIndex
+		}
+
+		if err := sendTreasuryUpdatesRange(startIndex, endIndex); err != nil {
+			return 0, err
+		}
+
+		return endIndex, nil
+	}
+
+	sendCurrentTreasuryOutput := func() (milestone.Index, error) {
+
+		getCurrentTreasuryOutputAndIndex := func() (milestone.Index, *utxo.TreasuryOutput, error) {
+			deps.UTXOManager.ReadLockLedger()
+			defer deps.UTXOManager.ReadUnlockLedger()
+
+			ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+			if err != nil {
+				return 0, nil, status.Error(codes.Unavailable, "error accessing the UTXO ledger")
+			}
+
+			treasuryOutput, err := deps.UTXOManager.UnspentTreasuryOutputWithoutLocking()
+			if err != nil {
+				return 0, nil, status.Errorf(codes.Unavailable, "error accessing the UTXO ledger %s", err)
+			}
+
+			return ledgerIndex, treasuryOutput, nil
+		}
+
+		ledgerIndex, treasuryOutput, err := getCurrentTreasuryOutputAndIndex()
+		if err != nil {
+			return 0, err
+		}
+
+		if err := createTreasuryUpdatePayloadAndSend(ledgerIndex, treasuryOutput, treasuryOutput); err != nil {
+			return 0, err
+		}
+
+		return ledgerIndex, nil
+	}
+
+	stream := &streamRange{
+		start: milestone.Index(req.GetStartMilestoneIndex()),
+		end:   milestone.Index(req.GetEndMilestoneIndex()),
+	}
+
+	var err error
+	stream.lastSent, err = sendPreviousTreasuryUpdates(stream.start, stream.end)
+	if err != nil {
+		return err
+	}
+
+	if !treasuryUpdateSent {
+		// Since treasury mutations do not happen on every milestone, send the stored unspent output that we have
+		ledgerIndex, err := sendCurrentTreasuryOutput()
+		if err != nil {
+			return err
+		}
+		stream.lastSent = ledgerIndex
+	}
+
+	if stream.isBounded() && stream.lastSent >= stream.end {
+		// We are done sending, so close the stream
+		return nil
+	}
+
+	catchUpFunc := func(start milestone.Index, end milestone.Index) error {
+		err := sendTreasuryUpdatesRange(start, end)
+		if err != nil {
+			Plugin.LogInfof("sendTreasuryUpdatesRange error: %v", err)
+		}
+		return err
+	}
+
+	sendFunc := func(task *workerpool.Task, index milestone.Index) error {
+		tm := task.Param(1).(*utxo.TreasuryMutationTuple)
+		if err := createTreasuryUpdatePayloadAndSend(index, tm.NewOutput, tm.SpentOutput); err != nil {
+			Plugin.LogInfof("send error: %v", err)
+			return err
+		}
+
+		return nil
+	}
+
+	var innerErr error
+	ctx, cancel := context.WithCancel(context.Background())
+	wp := workerpool.New(func(task workerpool.Task) {
+		done, err := handleRangedSend(&task, task.Param(0).(milestone.Index), stream, catchUpFunc, sendFunc)
+		switch {
+		case err != nil:
+			innerErr = err
+			fallthrough
+		case done:
+			cancel()
+		}
+
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
 	closure := events.NewClosure(func(index milestone.Index, tuple *utxo.TreasuryMutationTuple) {
 		wp.Submit(index, tuple)
 	})
+
 	wp.Start()
 	deps.Tangle.Events.TreasuryMutated.Attach(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.TreasuryMutated.Detach(closure)
 	wp.Stop()
+
 	return innerErr
 }
 
@@ -395,7 +475,7 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 			cancel()
 		}
 		task.Return(nil)
-	})
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(receipt *iotago.ReceiptMilestoneOpt) {
 		wp.Submit(receipt)
 	})
