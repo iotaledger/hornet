@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/iotaledger/hive.go/workerpool"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/host"
@@ -167,6 +168,8 @@ type Service struct {
 	streams map[peer.ID]*Protocol
 	// the instance of the peeringManager to work with.
 	peeringManager *p2p.Manager
+	// used for async coupling of peering manager events
+	peeringMngWP *workerpool.WorkerPool
 	// the instance of the server metrics.
 	serverMetrics *metrics.ServerMetrics
 	// holds the service options.
@@ -292,6 +295,7 @@ func (s *Service) CloseStream(peerID peer.ID) error {
 // Start starts the Service's event loop.
 func (s *Service) Start(ctx context.Context) {
 
+	s.peeringMngWP.Start()
 	s.attachEvents()
 
 	// libp2p stream handler
@@ -314,6 +318,7 @@ func (s *Service) Start(ctx context.Context) {
 	s.host.Network().StopNotify((*netNotifiee)(s))
 
 	s.detachEvents()
+	s.peeringMngWP.Stop()
 }
 
 // shutdown sets the stopped flag and drains all outstanding requests of the event loop.
@@ -630,25 +635,39 @@ func (s *Service) proto(peerID peer.ID) *Protocol {
 func (s *Service) configureEvents() {
 
 	// peering manager
+	s.peeringMngWP = workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+		switch req := task.Param(0).(type) {
+		case *connectionmsg:
+			if req.conn == nil {
+				s.disconnectedChan <- req
+				return
+			}
+			s.connectedChan <- req
+		case *relationupdatedmsg:
+			s.relationUpdatedChan <- req
+		}
+	})
+
 	s.onPeeringManagerConnected = events.NewClosure(func(peer *p2p.Peer, conn network.Conn) {
 		if s.stopped.IsSet() {
 			return
 		}
-		s.connectedChan <- &connectionmsg{peer: peer, conn: conn}
+		s.peeringMngWP.Submit(&connectionmsg{peer: peer, conn: conn})
 	})
 
 	s.onPeeringManagerDisconnected = events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
 		if s.stopped.IsSet() {
 			return
 		}
-		s.disconnectedChan <- &connectionmsg{peer: peerOptErr.Peer, conn: nil}
+		s.peeringMngWP.Submit(&connectionmsg{peer: peerOptErr.Peer, conn: nil})
 	})
 
 	s.onPeeringManagerRelationUpdated = events.NewClosure(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
 		if s.stopped.IsSet() {
 			return
 		}
-		s.relationUpdatedChan <- &relationupdatedmsg{peer: peer, oldRelation: oldRel}
+		s.peeringMngWP.Submit(&relationupdatedmsg{peer: peer, oldRelation: oldRel})
 	})
 
 	// logger
