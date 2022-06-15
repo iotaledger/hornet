@@ -505,8 +505,12 @@ github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220531132324-8347a155e220 h
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220531132324-8347a155e220/go.mod h1:7fVUqbLY+iBjCNjFwzbhOyS07OZJFIYJEDNJAItzMw8=
 github.com/iotaledger/hornet-dashboard v0.0.0-20220608194723-f4d895b51eef h1:27xYkEWDmYstvKyQ5xRF0v5uJaVHAPhtK3POnMI79iU=
 github.com/iotaledger/hornet-dashboard v0.0.0-20220608194723-f4d895b51eef/go.mod h1:MiDTKBTdKOxvOEAbUTXnaoBb68rRPNbHAgNp/Rg/cFM=
+github.com/iotaledger/inx v0.0.0-20220610151752-9afbe7ecb2cd h1:4C1qYor4b9aXHDxR1xNKr9hdyrttse9+7fB1cIq6k4M=
+github.com/iotaledger/inx v0.0.0-20220610151752-9afbe7ecb2cd/go.mod h1:N4E/RZxs33AnGAj3s06d2izxHPiV6iYnZBIP7245ybM=
 github.com/iotaledger/inx/go v0.0.0-20220610044628-dd60e5489706 h1:kWR9YBwl2rvOpa7mv4857lM8fnR5MblHjnC3k+7ONgc=
 github.com/iotaledger/inx/go v0.0.0-20220610044628-dd60e5489706/go.mod h1:rp86sgkAH4Wbq2qRYfrOTrUeoN6ogXrXefPnV4WNfjk=
+github.com/iotaledger/inx/go v0.0.0-20220610151752-9afbe7ecb2cd h1:x2+5dGBAXdzvTxUYTes+Nu9C5PTe5xV+dMOrNw9uf/o=
+github.com/iotaledger/inx/go v0.0.0-20220610151752-9afbe7ecb2cd/go.mod h1:rp86sgkAH4Wbq2qRYfrOTrUeoN6ogXrXefPnV4WNfjk=
 github.com/iotaledger/iota.go v1.0.0 h1:tqm1FxJ/zOdzbrAaQ5BQpVF8dUy2eeGlSeWlNG8GoXY=
 github.com/iotaledger/iota.go v1.0.0/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go/v3 v3.0.0-20220530132039-ec319e60cc56 h1:ibtnTlN/oeipqXyPL9sb95U5rJhV7Lh318EHoXsND2U=

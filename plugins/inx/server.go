@@ -116,6 +116,16 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 			EndIndex:   uint32(r.EndIndex),
 		})
 	}
+
+	var pendingProtoParas []*inx.PendingProtocolParameters
+	for _, ele := range deps.ProtocolManager.Pending() {
+		pendingProtoParas = append(pendingProtoParas, &inx.PendingProtocolParameters{
+			TargetMilestoneIndex: ele.TargetMilestoneIndex,
+			Version:              uint32(ele.ProtocolVersion),
+			Params:               ele.Params,
+		})
+	}
+
 	return &inx.NodeConfiguration{
 		ProtocolParameters:      inx.NewProtocolParameters(deps.ProtocolManager.Current()),
 		MilestonePublicKeyCount: uint32(deps.MilestonePublicKeyCount),
@@ -129,6 +139,7 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 			UseMetricPrefix: deps.BaseToken.UseMetricPrefix,
 		},
 		SupportedProtocolVersions: deps.ProtocolManager.SupportedVersions(),
+		PendingProtocolParameters: pendingProtoParas,
 	}, nil
 }
 
