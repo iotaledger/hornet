@@ -121,10 +121,10 @@ func (m *Manager) LoadPending(syncManager *syncmanager.SyncManager) {
 
 func (m *Manager) readProtocolParasFromMilestone(index milestone.Index) *iotago.ProtocolParamsMilestoneOpt {
 	cachedMs := m.storage.CachedMilestoneByIndexOrNil(index)
-	defer cachedMs.Release(true)
 	if cachedMs == nil {
 		return nil
 	}
+	defer cachedMs.Release(true)
 	return cachedMs.Milestone().Milestone().Opts.MustSet().ProtocolParams()
 }
 
