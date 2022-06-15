@@ -70,13 +70,7 @@ Hornet ships as a single executable binary (`hornet` or `hornet.exe`) and some J
 
 You can install Hornet on Linux using:
 
-- [The hornet apt repository](https://wiki.iota.org/hornet/getting_started/hornet_apt_repository).
 - [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
-
-Alternatively, you can build Hornet by following these instructions:
-
-- [Prebuilt binary files](hornet_apt_repository.md#pre-built-binaries), or
-- [Build from the source](hornet_apt_repository.md#build-from-source).
 
 ### MacOS
 
@@ -93,10 +87,6 @@ Alternatively, you can build Hornet by following these instructions:
 You can install Hornet on Windows using:
 
 - [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
-
-Alternatively, you can build Hornet by following these instructions:
-
-- [Prebuilt binary files](hornet_apt_repository.md#pre-built-binaries).
 
 ## Configuration
 
