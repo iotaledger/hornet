@@ -2,6 +2,7 @@ package inx
 
 import (
 	"context"
+	"github.com/iotaledger/hornet/pkg/tipselect"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -20,7 +21,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata) (*inx.BlockMetadata, error) {
+func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata, tip ...*tipselect.Tip) (*inx.BlockMetadata, error) {
 	m := &inx.BlockMetadata{
 		BlockId: inx.NewBlockId(blockID),
 		Parents: inx.NewBlockIds(metadata.Parents()),
@@ -43,7 +44,23 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		if metadata.IsMilestone() {
 			m.MilestoneIndex = uint32(msIndex)
 		}
-	} else if metadata.IsSolid() {
+
+		return m, nil
+	}
+
+	if metadata.IsSolid() {
+
+		if len(tip) > 0 {
+			switch tip[0].Score {
+			case tipselect.ScoreLazy:
+				m.ShouldReattach = true
+			case tipselect.ScoreSemiLazy:
+				m.ShouldPromote = true
+			case tipselect.ScoreNonLazy:
+			}
+			return m, nil
+		}
+
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
@@ -55,25 +72,15 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
-		var shouldPromote bool
-		var shouldReattach bool
-
 		switch tipScore {
 		case tangle.TipScoreNotFound:
 			return nil, errors.WithMessage(echo.ErrInternalServerError, "tip score could not be calculated")
 		case tangle.TipScoreOCRIThresholdReached, tangle.TipScoreYCRIThresholdReached:
-			shouldPromote = true
-			shouldReattach = false
+			m.ShouldPromote = true
 		case tangle.TipScoreBelowMaxDepth:
-			shouldPromote = false
-			shouldReattach = true
+			m.ShouldReattach = true
 		case tangle.TipScoreHealthy:
-			shouldPromote = false
-			shouldReattach = false
 		}
-
-		m.ShouldPromote = shouldPromote
-		m.ShouldReattach = shouldReattach
 	}
 
 	return m, nil
@@ -184,6 +191,42 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 	deps.Tangle.Events.BlockReferenced.Attach(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.BlockReferenced.Detach(closure)
+	wp.Stop()
+	return ctx.Err()
+}
+
+func (s *INXServer) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTipScoreUpdatesServer) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	wp := workerpool.New(func(task workerpool.Task) {
+		tip := task.Param(0).(*tipselect.Tip)
+
+		blockMeta := deps.Storage.CachedBlockMetadataOrNil(tip.BlockID)
+		defer blockMeta.Release(true) // meta -1
+
+		if blockMeta == nil {
+			return
+		}
+
+		payload, err := INXNewBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata(), tip)
+		if err != nil {
+			Plugin.LogInfof("Send error: %v", err)
+			cancel()
+			return
+		}
+		if err := srv.Send(payload); err != nil {
+			Plugin.LogInfof("Send error: %v", err)
+			cancel()
+		}
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
+	closure := events.NewClosure(func(tip *tipselect.Tip) { wp.Submit(tip) })
+	wp.Start()
+	deps.TipSelector.Events.TipAdded.Attach(closure)
+	deps.TipSelector.Events.TipRemoved.Attach(closure)
+	<-ctx.Done()
+	deps.TipSelector.Events.TipAdded.Detach(closure)
+	deps.TipSelector.Events.TipRemoved.Detach(closure)
 	wp.Stop()
 	return ctx.Err()
 }
