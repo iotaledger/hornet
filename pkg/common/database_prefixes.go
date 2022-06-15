@@ -8,5 +8,6 @@ const (
 	StorePrefixMilestones         byte = 5
 	StorePrefixChildren           byte = 6
 	StorePrefixUnreferencedBlocks byte = 7
+	StorePrefixProtocol           byte = 8
 	StorePrefixHealth             byte = 255
 )

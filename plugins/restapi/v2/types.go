@@ -2,6 +2,7 @@ package v2
 
 import (
 	"encoding/json"
+	"github.com/iotaledger/hornet/pkg/protocol"
 
 	"github.com/iotaledger/hornet/core/protocfg"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
@@ -50,7 +51,7 @@ type infoResponse struct {
 	// The current status of this node.
 	Status nodeStatus `json:"status"`
 	// The protocol versions this node supports.
-	SupportedProtocolVersions protocfg.SupportedProtocolVersions `json:"supportedProtocolVersions"`
+	SupportedProtocolVersions protocol.Versions `json:"supportedProtocolVersions"`
 	// The protocol parameters used by this node.
 	ProtocolParameters *iotago.ProtocolParameters `json:"protocol"`
 	// The base token of the network.

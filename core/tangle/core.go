@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"context"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"os"
 	"time"
 
@@ -25,7 +26,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -122,27 +122,27 @@ func provide(c *dig.Container) error {
 		Storage                                 *storage.Storage
 		MaxDeltaBlockYoungestConeRootIndexToCMI int `name:"maxDeltaBlockYoungestConeRootIndexToCMI"`
 		MaxDeltaBlockOldestConeRootIndexToCMI   int `name:"maxDeltaBlockOldestConeRootIndexToCMI"`
-		ProtocolParameters                      *iotago.ProtocolParameters
+		ProtocolManager                         *protocol.Manager
 	}
 
 	if err := c.Provide(func(deps tipScoreDeps) *tangle.TipScoreCalculator {
-		return tangle.NewTipScoreCalculator(deps.Storage, deps.MaxDeltaBlockYoungestConeRootIndexToCMI, deps.MaxDeltaBlockOldestConeRootIndexToCMI, int(deps.ProtocolParameters.BelowMaxDepth))
+		return tangle.NewTipScoreCalculator(deps.Storage, deps.MaxDeltaBlockYoungestConeRootIndexToCMI, deps.MaxDeltaBlockOldestConeRootIndexToCMI, int(deps.ProtocolManager.Current().BelowMaxDepth))
 	}); err != nil {
 		CoreComponent.LogPanic(err)
 	}
 
 	type tangleDeps struct {
 		dig.In
-		Storage            *storage.Storage
-		SyncManager        *syncmanager.SyncManager
-		MilestoneManager   *milestonemanager.MilestoneManager
-		RequestQueue       gossip.RequestQueue
-		Service            *gossip.Service
-		Requester          *gossip.Requester
-		MessageProcessor   *gossip.MessageProcessor
-		ServerMetrics      *metrics.ServerMetrics
-		ReceiptService     *migrator.ReceiptService `optional:"true"`
-		ProtocolParameters *iotago.ProtocolParameters
+		Storage          *storage.Storage
+		SyncManager      *syncmanager.SyncManager
+		MilestoneManager *milestonemanager.MilestoneManager
+		RequestQueue     gossip.RequestQueue
+		Service          *gossip.Service
+		Requester        *gossip.Requester
+		MessageProcessor *gossip.MessageProcessor
+		ServerMetrics    *metrics.ServerMetrics
+		ReceiptService   *migrator.ReceiptService `optional:"true"`
+		ProtocolManager  *protocol.Manager
 	}
 
 	if err := c.Provide(func(deps tangleDeps) *tangle.Tangle {
@@ -159,7 +159,7 @@ func provide(c *dig.Container) error {
 			deps.ServerMetrics,
 			deps.Requester,
 			deps.ReceiptService,
-			deps.ProtocolParameters,
+			deps.ProtocolManager,
 			ParamsTangle.MilestoneTimeout,
 			ParamsTangle.WhiteFlagParentsSolidTimeout,
 			*syncedAtStartup)

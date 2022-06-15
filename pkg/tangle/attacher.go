@@ -115,7 +115,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 				return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
 			}
 
-			if score < float64(a.tangle.protoParas.MinPoWScore) {
+			if score < float64(a.tangle.protoMng.Current().MinPoWScore) {
 				if a.opts.powHandler == nil {
 					return iotago.EmptyBlockID(), ErrBlockAttacherPoWNotAvailable
 				}
@@ -140,7 +140,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 		}
 	}
 
-	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, a.tangle.protoParas)
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, a.tangle.protoMng.Current())
 	if err != nil {
 		return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
 	}

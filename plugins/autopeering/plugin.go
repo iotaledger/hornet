@@ -2,6 +2,8 @@ package autopeering
 
 import (
 	"context"
+	"github.com/iotaledger/hornet/core/protocfg"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"strings"
 	"time"
 
@@ -33,7 +35,6 @@ import (
 	restapiv2 "github.com/iotaledger/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hornet/plugins/urts"
 	"github.com/iotaledger/hornet/plugins/warpsync"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -119,6 +120,7 @@ func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error 
 		initConfig.ForceDisableComponent(pow.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(gossip.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(tangle.CoreComponent.Identifier())
+		initConfig.ForceDisableComponent(protocfg.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(snapshot.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(restapiv2.Plugin.Identifier())
 		initConfig.ForceDisableComponent(warpsync.Plugin.Identifier())
@@ -152,7 +154,7 @@ func provide(c *dig.Container) error {
 
 	type autopeeringDeps struct {
 		dig.In
-		ProtocolParameters *iotago.ProtocolParameters
+		ProtocolManager *protocol.Manager
 	}
 
 	if err := c.Provide(func(deps autopeeringDeps) *autopeering.AutopeeringManager {
@@ -161,7 +163,7 @@ func provide(c *dig.Container) error {
 			ParamsAutopeering.BindAddress,
 			ParamsAutopeering.EntryNodes,
 			ParamsAutopeering.EntryNodesPreferIPv6,
-			service.Key(deps.ProtocolParameters.NetworkName),
+			service.Key(deps.ProtocolManager.Current().NetworkName),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)

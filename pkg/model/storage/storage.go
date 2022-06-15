@@ -106,6 +106,9 @@ type Storage struct {
 	snapshot      *SnapshotInfo
 	snapshotMutex syncutils.RWMutex
 
+	// protocol
+	protocolStore kvstore.KVStore
+
 	// utxo
 	utxoManager *utxo.Manager
 
@@ -377,6 +380,10 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 	}
 
 	if err := s.configureSnapshotStore(tangleStore); err != nil {
+		return err
+	}
+
+	if err := s.configureProtocolStore(tangleStore); err != nil {
 		return err
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"os"
 	"path/filepath"
 	"time"
@@ -73,7 +74,7 @@ type SnapshotManager struct {
 	storage                              *storage.Storage
 	syncManager                          *syncmanager.SyncManager
 	utxoManager                          *utxo.Manager
-	protoParas                           *iotago.ProtocolParameters
+	protoMng                             *protocol.Manager
 	snapshotFullPath                     string
 	snapshotDeltaPath                    string
 	deltaSnapshotSizeThresholdPercentage float64
@@ -108,7 +109,7 @@ func NewSnapshotManager(
 	storage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	utxoManager *utxo.Manager,
-	protoParas *iotago.ProtocolParameters,
+	protoMng *protocol.Manager,
 	snapshotFullPath string,
 	snapshotDeltaPath string,
 	deltaSnapshotSizeThresholdPercentage float64,
@@ -133,7 +134,7 @@ func NewSnapshotManager(
 		storage:                              storage,
 		syncManager:                          syncManager,
 		utxoManager:                          utxoManager,
-		protoParas:                           protoParas,
+		protoMng:                             protoMng,
 		snapshotFullPath:                     snapshotFullPath,
 		snapshotDeltaPath:                    snapshotDeltaPath,
 		deltaSnapshotSizeThresholdPercentage: deltaSnapshotSizeThresholdPercentage,
@@ -373,7 +374,7 @@ func (s *SnapshotManager) LoadSnapshotFromFile(ctx context.Context, snapshotType
 	s.LogInfof("importing %s snapshot file...", snapshotNames[snapshotType])
 	ts := time.Now()
 
-	header, err := loadSnapshotFileToStorage(ctx, s.storage, snapshotType, filePath, s.protoParas)
+	header, err := loadSnapshotFileToStorage(ctx, s.storage, snapshotType, filePath, s.protoMng.Current())
 	if err != nil {
 		return err
 	}
@@ -547,7 +548,7 @@ func (s *SnapshotManager) ImportSnapshots(ctx context.Context) error {
 	}
 
 	if snapAvail == snapshotAvailNone {
-		if err = s.downloadSnapshotFiles(ctx, s.protoParas.NetworkID(), s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
+		if err = s.downloadSnapshotFiles(ctx, s.protoMng.Current().NetworkID(), s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
 			return err
 		}
 	}
@@ -641,13 +642,14 @@ func (s *SnapshotManager) downloadSnapshotFiles(ctx context.Context, wantedNetwo
 func (s *SnapshotManager) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInfo) error {
 
 	// check that the stored snapshot corresponds to the wanted network ID
-	if snapshotInfo.NetworkID != s.protoParas.NetworkID() {
-		s.LogPanicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", s.protoParas.NetworkID(), s.protoParas.NetworkName, snapshotInfo.NetworkID)
+	protoParas := s.protoMng.Current()
+	if snapshotInfo.NetworkID != protoParas.NetworkID() {
+		s.LogPanicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", protoParas.NetworkID(), protoParas.NetworkName, snapshotInfo.NetworkID)
 	}
 
 	// if we don't enforce loading of a snapshot,
 	// we can check the ledger state of the current database and start the node.
-	if err := s.utxoManager.CheckLedgerState(s.protoParas); err != nil {
+	if err := s.utxoManager.CheckLedgerState(protoParas); err != nil {
 		s.LogFatal(err)
 	}
 

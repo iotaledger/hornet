@@ -168,7 +168,7 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 		}
 
 		// Do not validate here, the parents might need to be set
-		if _, err := iotaBlock.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.ProtocolParameters); err != nil {
+		if _, err := iotaBlock.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.ProtocolManager.Current()); err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
@@ -176,13 +176,13 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 		return nil, echo.ErrUnsupportedMediaType
 	}
 
-	if iotaBlock.ProtocolVersion != deps.ProtocolParameters.Version {
+	if iotaBlock.ProtocolVersion != deps.ProtocolManager.Current().Version {
 		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid block, error: protocolVersion invalid")
 	}
 
 	switch payload := iotaBlock.Payload.(type) {
 	case *iotago.Transaction:
-		if payload.Essence.NetworkID != deps.ProtocolParameters.NetworkID() {
+		if payload.Essence.NetworkID != deps.ProtocolManager.Current().NetworkID() {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
 		}
 	default:

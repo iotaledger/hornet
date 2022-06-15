@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -20,7 +21,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/tipselect"
 	"github.com/iotaledger/hornet/plugins/restapi"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -141,27 +141,26 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage                   *storage.Storage
-	SyncManager               *syncmanager.SyncManager
-	Tangle                    *tangle.Tangle
-	TipScoreCalculator        *tangle.TipScoreCalculator
-	PeeringManager            *p2p.Manager
-	GossipService             *gossip.Service
-	UTXOManager               *utxo.Manager
-	PoWHandler                *pow.Handler
-	SnapshotManager           *snapshot.SnapshotManager
-	AppInfo                   *app.AppInfo
-	PeeringConfigManager      *p2p.ConfigManager
-	SupportedProtocolVersions protocfg.SupportedProtocolVersions
-	ProtocolParameters        *iotago.ProtocolParameters
-	BaseToken                 *protocfg.BaseToken
-	RestAPILimitsMaxResults   int                        `name:"restAPILimitsMaxResults"`
-	SnapshotsFullPath         string                     `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath        string                     `name:"snapshotsDeltaPath"`
-	TipSelector               *tipselect.TipSelector     `optional:"true"`
-	Echo                      *echo.Echo                 `optional:"true"`
-	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
-	RestAPIMetrics            *metrics.RestAPIMetrics
+	Storage                 *storage.Storage
+	SyncManager             *syncmanager.SyncManager
+	Tangle                  *tangle.Tangle
+	TipScoreCalculator      *tangle.TipScoreCalculator
+	PeeringManager          *p2p.Manager
+	GossipService           *gossip.Service
+	UTXOManager             *utxo.Manager
+	PoWHandler              *pow.Handler
+	SnapshotManager         *snapshot.SnapshotManager
+	AppInfo                 *app.AppInfo
+	PeeringConfigManager    *p2p.ConfigManager
+	ProtocolManager         *protocol.Manager
+	BaseToken               *protocfg.BaseToken
+	RestAPILimitsMaxResults int                        `name:"restAPILimitsMaxResults"`
+	SnapshotsFullPath       string                     `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath      string                     `name:"snapshotsDeltaPath"`
+	TipSelector             *tipselect.TipSelector     `optional:"true"`
+	Echo                    *echo.Echo                 `optional:"true"`
+	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
+	RestAPIMetrics          *metrics.RestAPIMetrics
 }
 
 func configure() error {
