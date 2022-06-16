@@ -95,7 +95,7 @@ services:
       - 4-nodes
 
   inx-faucet:
-    image: iotaledger/inx-faucet:0.7
+    image: iotaledger/inx-faucet:0.8
     networks:
       peering_net:
         ipv4_address: 172.18.211.23

@@ -13,6 +13,7 @@ if [[ $1 = "build" ]]; then
   docker-compose pull inx-indexer
   docker-compose pull inx-mqtt
   docker-compose pull inx-participation
+  docker-compose pull inx-dashboard
 fi
 
 # Prepare db directory

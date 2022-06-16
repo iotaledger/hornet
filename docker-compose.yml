@@ -33,9 +33,14 @@ services:
     restart: on-failure
     ports:
       - "8081:8081/tcp"
+    volumes:
+      - ./alphanet/dashboard:/app/dashboard
     command:
       - "--inx.address=hornet:9029"
       - "--dashboard.bindAddress=inx-dashboard:8081"
+      - "--dashboard.auth.identityFilePath=/app/dashboard/identity.key"
+      - "--dashboard.auth.passwordHash=0000000000000000000000000000000000000000000000000000000000000000"
+      - "--dashboard.auth.passwordSalt=0000000000000000000000000000000000000000000000000000000000000000"
   
   hornet:
     build:
