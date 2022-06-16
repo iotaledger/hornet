@@ -14,6 +14,7 @@ fi
 mkdir -p data
 mkdir -p data/grafana
 mkdir -p data/prometheus
+mkdir -p data/dashboard
 if [[ "$OSTYPE" != "darwin"* ]]; then
   chown -R 65532:65532 data
 fi

@@ -161,8 +161,11 @@ services:
       - "traefik.http.routers.hornet-dashboard.tls=true"
       - "traefik.http.routers.hornet-dashboard.tls.certresolver=myresolver"
       - "traefik.http.services.hornet-dashboard.loadbalancer.server.port=8081"
+    volumes:
+      - ./data:/app/database
     command:
       - "--inx.address=hornet:9029"
       - "--dashboard.bindAddress=inx-dashboard:8081"
+      - "--dashboard.auth.identityFilePath=/app/database/dashboard/identity.key"
       - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD}"
       - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT}"
