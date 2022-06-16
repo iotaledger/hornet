@@ -54,7 +54,7 @@ func databaseSizesMetrics(c echo.Context) (*DatabaseSizesMetric, error) {
 		Tangle: tangleDatabaseSize,
 		UTXO:   utxoDatabaseSize,
 		Total:  tangleDatabaseSize + utxoDatabaseSize,
-		Time:   time.Now(),
+		Time:   time.Now().Unix(),
 	}, nil
 }
 

@@ -1,9 +1,5 @@
 package metrics
 
-import (
-	"time"
-)
-
 // NodeInfoExtended represents extended information about the node.
 type NodeInfoExtended struct {
 	Version       string `json:"version"`
@@ -16,8 +12,8 @@ type NodeInfoExtended struct {
 
 // DatabaseSizesMetric represents database size metrics.
 type DatabaseSizesMetric struct {
-	Tangle int64     `json:"tangle"`
-	UTXO   int64     `json:"utxo"`
-	Total  int64     `json:"total"`
-	Time   time.Time `json:"ts"`
+	Tangle int64 `json:"tangle"`
+	UTXO   int64 `json:"utxo"`
+	Total  int64 `json:"total"`
+	Time   int64 `json:"ts"`
 }
