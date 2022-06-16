@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha20] - 17.06.2022
+
+### Fixed
+    - Removes synchronous event handlers between peer manager to gossip service (#1565)
+
+### Changes
+    - Moved dashboard to INX (#1568, #1566)
+    - Adds tip score updates stream to INX (#1563)
+
 
 ## [2.0.0-alpha19] - 14.06.2022
 
