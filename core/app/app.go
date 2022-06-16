@@ -17,6 +17,7 @@ import (
 	"github.com/iotaledger/hornet/core/tangle"
 	"github.com/iotaledger/hornet/pkg/toolset"
 	"github.com/iotaledger/hornet/plugins/autopeering"
+	dashboard_metrics "github.com/iotaledger/hornet/plugins/dashboard-metrics"
 	"github.com/iotaledger/hornet/plugins/debug"
 	"github.com/iotaledger/hornet/plugins/inx"
 	"github.com/iotaledger/hornet/plugins/prometheus"
@@ -66,6 +67,7 @@ Command line flags:
 			receipt.Plugin,
 			prometheus.Plugin,
 			inx.Plugin,
+			dashboard_metrics.Plugin,
 			debug.Plugin,
 		}...),
 	)

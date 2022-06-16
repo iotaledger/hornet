@@ -40,6 +40,12 @@ type dependencies struct {
 
 func provide(c *dig.Container) error {
 
+	if err := c.Provide(func() string {
+		return ParamsNode.Alias
+	}, dig.Name("nodeAlias")); err != nil {
+		CoreComponent.LogPanic(err)
+	}
+
 	type profileDeps struct {
 		dig.In
 		ProfilesConfig *configuration.Configuration `name:"profilesConfig"`
