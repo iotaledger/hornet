@@ -2,10 +2,11 @@ package autopeering
 
 import (
 	"context"
-	"github.com/iotaledger/hornet/core/protocfg"
-	"github.com/iotaledger/hornet/pkg/protocol"
 	"strings"
 	"time"
+
+	"github.com/iotaledger/hornet/core/protocfg"
+	"github.com/iotaledger/hornet/pkg/protocol"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
 	libp2p "github.com/libp2p/go-libp2p-core/peer"
@@ -27,6 +28,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/p2p"
 	"github.com/iotaledger/hornet/pkg/p2p/autopeering"
+	dashboard_metrics "github.com/iotaledger/hornet/plugins/dashboard-metrics"
 	"github.com/iotaledger/hornet/plugins/debug"
 	"github.com/iotaledger/hornet/plugins/inx"
 	"github.com/iotaledger/hornet/plugins/prometheus"
@@ -127,6 +129,7 @@ func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error 
 		initConfig.ForceDisableComponent(receipt.Plugin.Identifier())
 		initConfig.ForceDisableComponent(prometheus.Plugin.Identifier())
 		initConfig.ForceDisableComponent(inx.Plugin.Identifier())
+		initConfig.ForceDisableComponent(dashboard_metrics.Plugin.Identifier())
 		initConfig.ForceDisableComponent(debug.Plugin.Identifier())
 	}
 
