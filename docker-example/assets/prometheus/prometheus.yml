@@ -26,3 +26,10 @@ scrape_configs:
     static_configs:
       - targets:
           - 'inx-spammer:9312'
+
+  - job_name: inx-dashboard
+    scrape_interval: 5s
+    scrape_timeout: 5s
+    static_configs:
+      - targets:
+          - 'inx-dashboard:9312'

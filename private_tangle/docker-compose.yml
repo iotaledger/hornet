@@ -177,6 +177,82 @@ services:
       - 3-nodes
       - 4-nodes
 
+  inx-dashboard-1:
+    image: iotaledger/inx-dashboard:0.1
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.31
+    restart: on-failure
+    ports:
+      - "8081:8081/tcp"
+    volumes:
+      - ./config_dashboard.json:/app/config.json:ro
+    command:
+      - "-c"
+      - "config.json"
+      - "--inx.address=172.18.211.11:9029"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-dashboard-2:
+    image: iotaledger/inx-dashboard:0.1
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.32
+    restart: on-failure
+    ports:
+      - "8082:8081/tcp"
+    volumes:
+      - ./config_dashboard.json:/app/config.json:ro
+    command:
+      - "-c"
+      - "config.json"
+      - "--inx.address=172.18.211.12:9029"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-dashboard-3:
+    image: iotaledger/inx-dashboard:0.1
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.33
+    restart: on-failure
+    ports:
+      - "8083:8081/tcp"
+    volumes:
+      - ./config_dashboard.json:/app/config.json:ro
+    command:
+      - "-c"
+      - "config.json"
+      - "--inx.address=172.18.211.13:9029"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-dashboard-4:
+    image: iotaledger/inx-dashboard:0.1
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.34
+    restart: on-failure
+    ports:
+      - "8084:8081/tcp"
+    volumes:
+      - ./config_dashboard.json:/app/config.json:ro
+    command:
+      - "-c"
+      - "config.json"
+      - "--inx.address=172.18.211.14:9029"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
   hornet-coo:
     build:
       context: ../
