@@ -18,6 +18,9 @@ fi
 
 # Prepare db directory
 mkdir -p alphanet
+mkdir -p alphanet/indexer
+mkdir -p alphanet/participation
+mkdir -p alphanet/dashboard
 if [[ "$OSTYPE" != "darwin"* ]]; then
   chown -R 65532:65532 alphanet
 fi

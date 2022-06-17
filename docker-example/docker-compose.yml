@@ -167,5 +167,6 @@ services:
       - "--inx.address=hornet:9029"
       - "--dashboard.bindAddress=inx-dashboard:8081"
       - "--dashboard.auth.identityFilePath=/app/database/dashboard/identity.key"
+      - "--dashboard.auth.username=${DASHBOARD_USERNAME}"
       - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD}"
       - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT}"
