@@ -22,6 +22,7 @@ if [[ $1 = "build" ]]; then
   docker-compose pull inx-participation
   docker-compose pull inx-spammer
   docker-compose pull inx-poi
+  docker-compose pull inx-dashboard
 fi
 
 # Create snapshot

@@ -6,7 +6,8 @@
     ],
     "enablePlugins": [
       "Debug",
-      "Prometheus"
+      "Prometheus",
+      "INX"
     ],
     "stopGracePeriod": "5m"
   },

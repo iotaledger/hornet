@@ -28,6 +28,20 @@ services:
       - "--inx.address=hornet:9029"
       - "--participation.bindAddress=inx-participation:9892"
 
+  inx-dashboard:
+    image: iotaledger/inx-dashboard:0.1
+    restart: on-failure
+    ports:
+      - "8081:8081/tcp"
+    volumes:
+      - ./alphanet/dashboard:/app/dashboard
+    command:
+      - "--inx.address=hornet:9029"
+      - "--dashboard.bindAddress=inx-dashboard:8081"
+      - "--dashboard.auth.identityFilePath=/app/dashboard/identity.key"
+      - "--dashboard.auth.passwordHash=0000000000000000000000000000000000000000000000000000000000000000"
+      - "--dashboard.auth.passwordSalt=0000000000000000000000000000000000000000000000000000000000000000"
+  
   hornet:
     build:
       context: .
@@ -42,7 +56,6 @@ services:
       - "15600:15600/tcp"
       - "14626:14626/udp"
       - "14265:14265/tcp"
-      - "8081:8081/tcp"
       - "9311:9311/tcp"
     cap_drop:
       - ALL

@@ -2,7 +2,7 @@ version: '3'
 services:
 
   hornet:
-    image: iotaledger/hornet:2.0.0-alpha19
+    image: iotaledger/hornet:2.0.0-alpha20
     ulimits:
       nofile:
         soft: 16384
@@ -19,12 +19,6 @@ services:
       - "traefik.http.routers.hornet.tls=true"
       - "traefik.http.routers.hornet.tls.certresolver=myresolver"
       - "traefik.http.services.hornet.loadbalancer.server.port=14265"
-      - "traefik.http.routers.hornet-dashboard.service=hornet-dashboard"
-      - "traefik.http.routers.hornet-dashboard.rule=Host(`${DASHBOARD_HOST}`)"
-      - "traefik.http.routers.hornet-dashboard.entrypoints=websecure"
-      - "traefik.http.routers.hornet-dashboard.tls=true"
-      - "traefik.http.routers.hornet-dashboard.tls.certresolver=myresolver"
-      - "traefik.http.services.hornet-dashboard.loadbalancer.server.port=8081"
     cap_drop:
       - ALL
     volumes:
@@ -39,9 +33,6 @@ services:
       - "--snapshots.fullPath=data/snapshots/full_snapshot.bin"
       - "--snapshots.deltaPath=data/snapshots/delta_snapshot.bin"
       - "--inx.bindAddress=hornet:9029"
-      - "--dashboard.bindAddress=hornet:8081"
-      - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD}"
-      - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT}"
       - "--prometheus.bindAddress=hornet:9311"
 
 ##################################################################
@@ -157,3 +148,24 @@ services:
     command:
       - "--inx.address=hornet:9029"
       - "--poi.bindAddress=inx-poi:9687"
+
+  inx-dashboard:
+    image: iotaledger/inx-dashboard:0.1
+    stop_grace_period: 5m
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hornet-dashboard.service=hornet-dashboard"
+      - "traefik.http.routers.hornet-dashboard.rule=Host(`${DASHBOARD_HOST}`)"
+      - "traefik.http.routers.hornet-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.hornet-dashboard.tls=true"
+      - "traefik.http.routers.hornet-dashboard.tls.certresolver=myresolver"
+      - "traefik.http.services.hornet-dashboard.loadbalancer.server.port=8081"
+    volumes:
+      - ./data:/app/database
+    command:
+      - "--inx.address=hornet:9029"
+      - "--dashboard.bindAddress=inx-dashboard:8081"
+      - "--dashboard.auth.identityFilePath=/app/database/dashboard/identity.key"
+      - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD}"
+      - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT}"

@@ -16,21 +16,21 @@ The nodes will then be reachable under these ports:
 - COO:
     - API: http://localhost:14265
     - External Peering: 15600/tcp
-    - Dashboard: http://localhost:8081
+    - Dashboard: http://localhost:8081 (username: admin, password: admin)
     - Faucet: http://localhost:8091
     - Prometheus: http://localhost:9311/metrics
 - Hornet-2:
     - API: http://localhost:14266
     - External Peering: 15601/tcp
-    - Dashboard: http://localhost:8082
+    - Dashboard: http://localhost:8082 (username: admin, password: admin)
     - Prometheus: http://localhost:9312/metrics
 - Hornet-3:
     - API: http://localhost:14267
     - External Peering: 15602/tcp
-    - Dashboard: http://localhost:8083
+    - Dashboard: http://localhost:8083 (username: admin, password: admin)
     - Prometheus: http://localhost:9313/metrics
 - Hornet-4:
     - API: http://localhost:14268
     - External Peering: 15603/tcp
-    - Dashboard: http://localhost:8084
+    - Dashboard: http://localhost:8084 (username: admin, password: admin)
     - Prometheus: http://localhost:9314/metrics
