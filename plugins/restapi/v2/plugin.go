@@ -204,7 +204,7 @@ func configure() error {
 				return err
 			}
 			return restapipkg.JSONResponse(c, http.StatusOK, resp)
-		})
+		}, checkNodeAlmostSynced(), checkUpcomingUnsupportedProtocolVersion())
 	}
 
 	routeGroup.GET(RouteBlockMetadata, func(c echo.Context) error {
@@ -415,15 +415,6 @@ func configure() error {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.POST(RouteComputeWhiteFlagMutations, func(c echo.Context) error {
-		resp, err := computeWhiteFlagMutations(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
 		resp, err := addPeer(c)
 		if err != nil {
@@ -431,6 +422,14 @@ func configure() error {
 		}
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
+
+	routeGroup.POST(RouteComputeWhiteFlagMutations, func(c echo.Context) error {
+		resp, err := computeWhiteFlagMutations(c)
+		if err != nil {
+			return err
+		}
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	}, checkNodeAlmostSynced(), checkUpcomingUnsupportedProtocolVersion())
 
 	routeGroup.POST(RouteControlDatabasePrune, func(c echo.Context) error {
 		resp, err := pruneDatabase(c)
