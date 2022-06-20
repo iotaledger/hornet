@@ -3,7 +3,6 @@ package test
 import (
 	"bytes"
 	"crypto"
-	"encoding"
 	"encoding/json"
 	"testing"
 
@@ -18,7 +17,7 @@ import (
 
 func TestWhiteFlagMerkleTreeHash(t *testing.T) {
 
-	var includedBlocks []encoding.BinaryMarshaler
+	var includedBlocks iotago.BlockIDs
 
 	// https://github.com/Wollac/iota-crypto-demo/tree/master/examples/merkle
 
@@ -31,8 +30,7 @@ func TestWhiteFlagMerkleTreeHash(t *testing.T) {
 	includedBlocks = append(includedBlocks, iotago.MustBlockIDFromHexString("0x6bf84c7174cb7476364cc3dbd968b0f7172ed85794bb358b0c3b525da1786f9f"))
 
 	hasher := whiteflag.NewHasher(crypto.BLAKE2b_256)
-	hash, err := hasher.Hash(includedBlocks)
-	require.NoError(t, err)
+	hash := hasher.HashBlockIDs(includedBlocks)
 
 	expectedHash, err := iotago.DecodeHex("0xbf67ce7ba23e8c0951b5abaec4f5524360d2c26d971ff226d3359fa70cdb0beb")
 	require.NoError(t, err)

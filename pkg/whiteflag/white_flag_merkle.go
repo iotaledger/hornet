@@ -2,8 +2,9 @@ package whiteflag
 
 import (
 	"crypto"
-	"encoding"
 	"math/bits"
+
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // Domain separation prefixes
@@ -33,29 +34,29 @@ func (t *Hasher) EmptyRoot() []byte {
 	return t.hash.New().Sum(nil)
 }
 
-// Hash computes the Merkle tree hash of the provided data encodings.
-func (t *Hasher) Hash(data []encoding.BinaryMarshaler) ([]byte, error) {
+// HashBlockIDs computes the Merkle tree hash of the provided BlockIDs.
+func (t *Hasher) HashBlockIDs(blockIDs iotago.BlockIDs) []byte {
+	data := make([][]byte, len(blockIDs))
+	for i := range blockIDs {
+		data[i] = blockIDs[i][:]
+	}
+	return t.Hash(data)
+}
+
+// Hash computes the Merkle tree hash of the provided data.
+func (t *Hasher) Hash(data [][]byte) []byte {
 	if len(data) == 0 {
-		return t.EmptyRoot(), nil
+		return t.EmptyRoot()
 	}
 	if len(data) == 1 {
-		l, err := data[0].MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
-		return t.hashLeaf(l), nil
+		l := data[0]
+		return t.hashLeaf(l)
 	}
 
 	k := largestPowerOfTwo(len(data))
-	l, err := t.Hash(data[:k])
-	if err != nil {
-		return nil, err
-	}
-	r, err := t.Hash(data[k:])
-	if err != nil {
-		return nil, err
-	}
-	return t.hashNode(l, r), nil
+	l := t.Hash(data[:k])
+	r := t.Hash(data[k:])
+	return t.hashNode(l, r)
 }
 
 // hashLeaf returns the Merkle tree leafValue hash of data.
