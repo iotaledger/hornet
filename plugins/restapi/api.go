@@ -109,21 +109,3 @@ func apiMiddleware() echo.MiddlewareFunc {
 		}
 	}
 }
-
-func checkAllowedAPIRoute(context echo.Context, allowedRoutes map[string][]string) bool {
-
-	// Check for which route we will allow to access the API
-	routesForMethod, exists := allowedRoutes[context.Request().Method]
-	if !exists {
-		return false
-	}
-
-	path := context.Request().URL.EscapedPath()
-	for _, prefix := range routesForMethod {
-		if strings.HasPrefix(path, prefix) {
-			return true
-		}
-	}
-
-	return false
-}

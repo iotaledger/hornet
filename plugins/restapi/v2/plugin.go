@@ -1,10 +1,10 @@
 package v2
 
 import (
-	"github.com/iotaledger/hornet/pkg/protocol"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/p2p"
 	"github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
 	"github.com/iotaledger/hornet/pkg/snapshot"
@@ -212,7 +213,7 @@ func configure() error {
 			return err
 		}
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
+	}, checkNodeAlmostSynced())
 
 	routeGroup.GET(RouteBlock, func(c echo.Context) error {
 		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
@@ -245,7 +246,7 @@ func configure() error {
 		}
 		c.Response().Header().Set(echo.HeaderLocation, resp.BlockID)
 		return restapipkg.JSONResponse(c, http.StatusCreated, resp)
-	})
+	}, checkNodeAlmostSynced(), checkUpcomingUnsupportedProtocolVersion())
 
 	routeGroup.GET(RouteTransactionsIncludedBlock, func(c echo.Context) error {
 		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
@@ -453,4 +454,26 @@ func configure() error {
 // AddFeature adds a feature to the RouteInfo endpoint.
 func AddFeature(feature string) {
 	features = append(features, feature)
+}
+
+func checkNodeAlmostSynced() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if !deps.SyncManager.IsNodeAlmostSynced() {
+				return errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
+			}
+			return next(c)
+		}
+	}
+}
+
+func checkUpcomingUnsupportedProtocolVersion() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if !deps.ProtocolManager.NextPendingSupported() {
+				return errors.WithMessage(echo.ErrServiceUnavailable, "node does not support the upcoming protocol upgrade")
+			}
+			return next(c)
+		}
+	}
 }

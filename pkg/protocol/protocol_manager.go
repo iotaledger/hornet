@@ -2,13 +2,14 @@ package protocol
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
-	"github.com/iotaledger/iota.go/v3"
-	"sync"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
