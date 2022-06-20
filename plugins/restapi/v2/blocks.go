@@ -22,11 +22,6 @@ var (
 )
 
 func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
-
-	if !deps.SyncManager.IsNodeAlmostSynced() {
-		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
 	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
@@ -138,11 +133,6 @@ func blockBytesByID(c echo.Context) ([]byte, error) {
 }
 
 func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
-
-	if !deps.SyncManager.IsNodeAlmostSynced() {
-		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
 	mimeType, err := restapi.GetRequestContentType(c, restapi.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
 	if err != nil {
 		return nil, err
