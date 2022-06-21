@@ -125,18 +125,18 @@ You can find the HTTP REST API related options in the `restAPI` section within t
     },
     "publicRoutes": [
       "/health",
-      "/api/v2/info",
-      "/api/v2/tips",
-      "/api/v2/blocks*",
-      "/api/v2/transactions*",
-      "/api/v2/milestones*",
-      "/api/v2/outputs*",
-      "/api/v2/treasury",
-      "/api/v2/receipts*"
+      "/api/routes",
+      "/api/core/v2/info",
+      "/api/core/v2/tips",
+      "/api/core/v2/blocks*",
+      "/api/core/v2/transactions*",
+      "/api/core/v2/milestones*",
+      "/api/core/v2/outputs*",
+      "/api/core/v2/treasury",
+      "/api/core/v2/receipts*"
     ],
     "protectedRoutes": [
-      "/api/v2/*",
-      "/api/plugins/*"
+      "/api/*",
     ],
     "bindAddress": "0.0.0.0:14265",
     "pow": {

@@ -152,7 +152,7 @@
       "/api/core/v2/outputs*",
       "/api/core/v2/treasury",
       "/api/core/v2/receipts*",
-      "/api/plugins/debug/v1/*",
+      "/api/debug/v1/*",
       "/api/indexer/v1/*",
       "/api/mqtt/v1",
       "/api/participation/v1/events*",
