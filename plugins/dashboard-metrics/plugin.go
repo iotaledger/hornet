@@ -50,13 +50,13 @@ var (
 
 type dependencies struct {
 	dig.In
-	RestPluginManager *restapi.RestPluginManager `optional:"true"`
-	AppInfo           *app.AppInfo
-	Host              host.Host
-	NodeAlias         string             `name:"nodeAlias"`
-	TangleDatabase    *database.Database `name:"tangleDatabase"`
-	UTXODatabase      *database.Database `name:"utxoDatabase"`
-	Tangle            *tangle.Tangle
+	RestRouteManager *restapi.RestRouteManager `optional:"true"`
+	AppInfo          *app.AppInfo
+	Host             host.Host
+	NodeAlias        string             `name:"nodeAlias"`
+	TangleDatabase   *database.Database `name:"tangleDatabase"`
+	UTXODatabase     *database.Database `name:"utxoDatabase"`
+	Tangle           *tangle.Tangle
 }
 
 func configure() error {
@@ -65,7 +65,7 @@ func configure() error {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the dashboard metrics plugin")
 	}
 
-	routeGroup := deps.RestPluginManager.AddPlugin("dashboard-metrics/v1")
+	routeGroup := deps.RestRouteManager.AddRoute("dashboard-metrics/v1")
 
 	routeGroup.GET(RouteNodeInfoExtended, func(c echo.Context) error {
 		return restapipkg.JSONResponse(c, http.StatusOK, nodeInfoExtended(c))

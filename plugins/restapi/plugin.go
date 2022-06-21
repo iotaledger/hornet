@@ -103,8 +103,8 @@ func provide(c *dig.Container) error {
 		Echo *echo.Echo
 	}
 
-	if err := c.Provide(func(deps proxyDeps) *RestPluginManager {
-		return newRestPluginManager(deps.Echo)
+	if err := c.Provide(func(deps proxyDeps) *RestRouteManager {
+		return newRestRouteManager(deps.Echo)
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}

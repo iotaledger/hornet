@@ -65,12 +65,12 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage           *storage.Storage
-	SyncManager       *syncmanager.SyncManager
-	Tangle            *tangle.Tangle
-	RequestQueue      gossip.RequestQueue
-	UTXOManager       *utxo.Manager
-	RestPluginManager *restapi.RestPluginManager `optional:"true"`
+	Storage          *storage.Storage
+	SyncManager      *syncmanager.SyncManager
+	Tangle           *tangle.Tangle
+	RequestQueue     gossip.RequestQueue
+	UTXOManager      *utxo.Manager
+	RestRouteManager *restapi.RestRouteManager `optional:"true"`
 }
 
 func configure() error {
@@ -79,7 +79,7 @@ func configure() error {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
 
-	routeGroup := deps.RestPluginManager.AddPlugin("debug/v1")
+	routeGroup := deps.RestRouteManager.AddRoute("debug/v1")
 
 	routeGroup.POST(RouteDebugSolidifier, func(c echo.Context) error {
 		deps.Tangle.TriggerSolidifier()

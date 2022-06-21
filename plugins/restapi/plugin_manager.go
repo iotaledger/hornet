@@ -8,74 +8,74 @@ import (
 	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
 )
 
-type RestPluginManager struct {
+type RestRouteManager struct {
 	sync.RWMutex
-	plugins []string
-	proxy   *restapipkg.DynamicProxy
+	routes []string
+	proxy  *restapipkg.DynamicProxy
 }
 
-func newRestPluginManager(e *echo.Echo) *RestPluginManager {
-	return &RestPluginManager{
-		plugins: []string{},
-		proxy:   restapipkg.NewDynamicProxy(e, "/api/plugins"),
+func newRestRouteManager(e *echo.Echo) *RestRouteManager {
+	return &RestRouteManager{
+		routes: []string{},
+		proxy:  restapipkg.NewDynamicProxy(e, "/api"),
 	}
 }
-func (p *RestPluginManager) Plugins() []string {
+func (p *RestRouteManager) Routes() []string {
 	p.RLock()
 	defer p.RUnlock()
 
-	return p.plugins
+	return p.routes
 }
 
-// AddPlugin adds a plugin route to the RouteInfo endpoint and returns the route for this plugin.
-func (p *RestPluginManager) AddPlugin(pluginRoute string) *echo.Group {
+// AddRoute adds a route to the Routes endpoint and returns group to be used to register endpoints.
+func (p *RestRouteManager) AddRoute(route string) *echo.Group {
 	p.Lock()
 	defer p.Unlock()
 
 	found := false
-	for _, plugin := range p.plugins {
-		if plugin == pluginRoute {
+	for _, r := range p.routes {
+		if r == route {
 			found = true
 			break
 		}
 	}
 	if !found {
-		p.plugins = append(p.plugins, pluginRoute)
+		p.routes = append(p.routes, route)
 	}
 	// existing groups get overwritten (necessary if last plugin was not cleaned up properly)
-	return p.proxy.AddGroup(pluginRoute)
+	return p.proxy.AddGroup(route)
 }
 
-// AddPluginProxy adds a plugin route to the RouteInfo endpoint and configures a remote proxy for this route.
-func (p *RestPluginManager) AddPluginProxy(pluginRoute string, host string, port uint32) error {
+// AddProxyRoute adds a proxy route to the Routes endpoint and configures a remote proxy for this route.
+func (p *RestRouteManager) AddProxyRoute(route string, host string, port uint32) error {
 	p.Lock()
 	defer p.Unlock()
 
 	found := false
-	for _, plugin := range p.plugins {
-		if plugin == pluginRoute {
+	for _, r := range p.routes {
+		if r == route {
 			found = true
 			break
 		}
 	}
 	if !found {
-		p.plugins = append(p.plugins, pluginRoute)
+		p.routes = append(p.routes, route)
 	}
 	// existing proxies get overwritten (necessary if last plugin was not cleaned up properly)
-	return p.proxy.AddReverseProxy(pluginRoute, host, port)
+	return p.proxy.AddReverseProxy(route, host, port)
 }
 
-// RemovePlugin removes a plugin route to the RouteInfo endpoint.
-func (p *RestPluginManager) RemovePlugin(pluginRoute string) {
+// RemoveRoute removes a route from the Routes endpoint.
+func (p *RestRouteManager) RemoveRoute(route string) {
 	p.Lock()
 	defer p.Unlock()
 
-	newPlugins := make([]string, 0)
-	for _, plugin := range p.plugins {
-		if plugin != pluginRoute {
-			newPlugins = append(newPlugins, plugin)
+	newRoutes := make([]string, 0)
+	for _, r := range p.routes {
+		if r != route {
+			newRoutes = append(newRoutes, r)
 		}
 	}
-	p.plugins = newPlugins
-	p.proxy.RemoveReverseProxy(pluginRoute)
+	p.routes = newRoutes
+	p.proxy.RemoveReverseProxy(route)
 }

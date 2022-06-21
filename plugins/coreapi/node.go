@@ -79,7 +79,7 @@ func info() (*infoResponse, error) {
 			ReferencedRate:            referencedRate,
 		},
 		Features: features,
-		Plugins:  deps.RestPluginManager.Plugins(),
+		Plugins:  deps.RestRouteManager.Routes(),
 	}, nil
 }
 
