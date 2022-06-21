@@ -20,7 +20,7 @@ services:
       - snapshots
 
   inx-coordinator-bootstrap:
-    image: iotaledger/inx-coordinator:0.6
+    image: iotaledger/inx-coordinator:0.7
     networks:
       peering_net:
         ipv4_address: 172.18.211.20
@@ -39,7 +39,7 @@ services:
       - bootstrap
 
   inx-coordinator:
-    image: iotaledger/inx-coordinator:0.6
+    image: iotaledger/inx-coordinator:0.7
     networks:
       peering_net:
         ipv4_address: 172.18.211.20
@@ -58,7 +58,7 @@ services:
       - 4-nodes
 
   inx-indexer:
-    image: iotaledger/inx-indexer:0.8
+    image: iotaledger/inx-indexer:0.9
     networks:
       peering_net:
         ipv4_address: 172.18.211.21
@@ -75,7 +75,7 @@ services:
       - 4-nodes
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.9
+    image: iotaledger/inx-mqtt:0.10
     networks:
       peering_net:
         ipv4_address: 172.18.211.22
@@ -117,7 +117,7 @@ services:
       - 4-nodes
 
   inx-participation:
-    image: iotaledger/inx-participation:0.5
+    image: iotaledger/inx-participation:0.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.24
@@ -138,7 +138,7 @@ services:
       - 4-nodes
 
   inx-spammer:
-    image: iotaledger/inx-spammer:0.2
+    image: iotaledger/inx-spammer:0.3
     networks:
       peering_net:
         ipv4_address: 172.18.211.25
@@ -158,7 +158,7 @@ services:
       - 4-nodes
 
   inx-poi:
-    image: iotaledger/inx-poi:0.2
+    image: iotaledger/inx-poi:0.3
     networks:
       peering_net:
         ipv4_address: 172.18.211.26
@@ -178,7 +178,7 @@ services:
       - 4-nodes
 
   inx-dashboard-1:
-    image: iotaledger/inx-dashboard:0.1
+    image: iotaledger/inx-dashboard:0.2
     networks:
       peering_net:
         ipv4_address: 172.18.211.31
@@ -201,7 +201,7 @@ services:
       - 4-nodes
 
   inx-dashboard-2:
-    image: iotaledger/inx-dashboard:0.1
+    image: iotaledger/inx-dashboard:0.2
     networks:
       peering_net:
         ipv4_address: 172.18.211.32
@@ -224,7 +224,7 @@ services:
       - 4-nodes
 
   inx-dashboard-3:
-    image: iotaledger/inx-dashboard:0.1
+    image: iotaledger/inx-dashboard:0.2
     networks:
       peering_net:
         ipv4_address: 172.18.211.33
@@ -247,7 +247,7 @@ services:
       - 4-nodes
 
   inx-dashboard-4:
-    image: iotaledger/inx-dashboard:0.1
+    image: iotaledger/inx-dashboard:0.2
     networks:
       peering_net:
         ipv4_address: 172.18.211.34
