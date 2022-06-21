@@ -43,12 +43,12 @@ func TestValue(t *testing.T) {
 	genesisAddrKey := iotago.AddressKeys{Address: &framework.GenesisAddress, Keys: framework.GenesisSeed}
 	genesisInputID := &iotago.UTXOInput{TransactionID: [32]byte{}, TransactionOutputIndex: 0}
 
-	// build and sign transaction spending the total supply
-	tx, err := builder.NewTransactionBuilder(protoParas.NetworkID()).
-		AddInput(&builder.ToBeSignedUTXOInput{
-			Address:  &framework.GenesisAddress,
-			OutputID: genesisInputID.ID(),
-			Output: &iotago.BasicOutput{
+	// build and sign transaction spending the total supply and create block
+	block, err := builder.NewTransactionBuilder(protoParas.NetworkID()).
+		AddInput(&builder.TxInput{
+			UnlockTarget: &framework.GenesisAddress,
+			InputID:      genesisInputID.ID(),
+			Input: &iotago.BasicOutput{
 				Amount: protoParas.TokenSupply,
 				Conditions: iotago.UnlockConditions{
 					&iotago.AddressUnlockCondition{
@@ -73,11 +73,9 @@ func TestValue(t *testing.T) {
 				},
 			},
 		}).
-		Build(protoParas, iotago.NewInMemoryAddressSigner(genesisAddrKey))
-	require.NoError(t, err)
-
-	// build block
-	block, err := builder.NewBlockBuilder(protoParas.Version).Payload(tx).Build()
+		BuildAndSwapToBlockBuilder(protoParas, iotago.NewInMemoryAddressSigner(genesisAddrKey), nil).
+		ProtocolVersion(protoParas.Version).
+		Build()
 	require.NoError(t, err)
 
 	// broadcast to a node
