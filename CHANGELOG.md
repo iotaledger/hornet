@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.0-alpha21] - 21.06.2022
+## [2.0.0-alpha.21] - 21.06.2022
 
 ### Changes
     - Restructures REST API endpoints (#1577)

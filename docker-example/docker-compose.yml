@@ -2,7 +2,7 @@ version: '3'
 services:
 
   hornet:
-    image: iotaledger/hornet:2.0.0-alpha21
+    image: iotaledger/hornet:2.0.0-alpha.21
     ulimits:
       nofile:
         soft: 16384
