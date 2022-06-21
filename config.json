@@ -143,24 +143,24 @@
     "bindAddress": "0.0.0.0:14265",
     "publicRoutes": [
       "/health",
-      "/api/v2/info",
-      "/api/v2/tips",
-      "/api/v2/blocks*",
-      "/api/v2/transactions*",
-      "/api/v2/milestones*",
-      "/api/v2/outputs*",
-      "/api/v2/treasury",
-      "/api/v2/receipts*",
-      "/api/plugins/debug/v1/*",
-      "/api/plugins/indexer/v1/*",
-      "/api/plugins/mqtt/v1",
-      "/api/plugins/participation/v1/events*",
-      "/api/plugins/participation/v1/outputs*",
-      "/api/plugins/participation/v1/addresses*"
+      "/api/routes",
+      "/api/core/v2/info",
+      "/api/core/v2/tips",
+      "/api/core/v2/blocks*",
+      "/api/core/v2/transactions*",
+      "/api/core/v2/milestones*",
+      "/api/core/v2/outputs*",
+      "/api/core/v2/treasury",
+      "/api/core/v2/receipts*",
+      "/api/debug/v1/*",
+      "/api/indexer/v1/*",
+      "/api/mqtt/v1",
+      "/api/participation/v1/events*",
+      "/api/participation/v1/outputs*",
+      "/api/participation/v1/addresses*"
     ],
     "protectedRoutes": [
-      "/api/v2/*",
-      "/api/plugins/*"
+      "/api/*"
     ],
     "jwtAuth": {
       "salt": "HORNET"

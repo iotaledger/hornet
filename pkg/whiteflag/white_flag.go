@@ -14,6 +14,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/merklehasher"
 
 	// import implementation
 	_ "golang.org/x/crypto/blake2b"
@@ -314,11 +315,11 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	}
 
 	// compute past cone merkle tree root hash
-	confirmedMerkleHash := NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.BlocksReferenced)
+	confirmedMerkleHash := merklehasher.NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.BlocksReferenced)
 	copy(wfConf.InclusionMerkleRoot[:], confirmedMerkleHash)
 
 	// compute inclusion merkle tree root hash
-	appliedMerkleHash := NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.BlocksIncludedWithTransactions)
+	appliedMerkleHash := merklehasher.NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.BlocksIncludedWithTransactions)
 	copy(wfConf.AppliedMerkleRoot[:], appliedMerkleHash)
 
 	if len(wfConf.BlocksIncludedWithTransactions) != (len(wfConf.BlocksReferenced) - len(wfConf.BlocksExcludedWithConflictingTransactions) - len(wfConf.BlocksExcludedWithoutTransactions)) {

@@ -28,12 +28,12 @@ import (
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/p2p"
 	"github.com/iotaledger/hornet/pkg/p2p/autopeering"
+	"github.com/iotaledger/hornet/plugins/coreapi"
 	dashboard_metrics "github.com/iotaledger/hornet/plugins/dashboard-metrics"
 	"github.com/iotaledger/hornet/plugins/debug"
 	"github.com/iotaledger/hornet/plugins/inx"
 	"github.com/iotaledger/hornet/plugins/prometheus"
 	"github.com/iotaledger/hornet/plugins/receipt"
-	restapiv2 "github.com/iotaledger/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hornet/plugins/urts"
 	"github.com/iotaledger/hornet/plugins/warpsync"
 )
@@ -123,7 +123,7 @@ func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error 
 		initConfig.ForceDisableComponent(tangle.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(protocfg.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(snapshot.CoreComponent.Identifier())
-		initConfig.ForceDisableComponent(restapiv2.Plugin.Identifier())
+		initConfig.ForceDisableComponent(coreapi.Plugin.Identifier())
 		initConfig.ForceDisableComponent(warpsync.Plugin.Identifier())
 		initConfig.ForceDisableComponent(urts.Plugin.Identifier())
 		initConfig.ForceDisableComponent(receipt.Plugin.Identifier())

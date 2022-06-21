@@ -17,13 +17,13 @@ import (
 	"github.com/iotaledger/hornet/core/tangle"
 	"github.com/iotaledger/hornet/pkg/toolset"
 	"github.com/iotaledger/hornet/plugins/autopeering"
+	"github.com/iotaledger/hornet/plugins/coreapi"
 	dashboard_metrics "github.com/iotaledger/hornet/plugins/dashboard-metrics"
 	"github.com/iotaledger/hornet/plugins/debug"
 	"github.com/iotaledger/hornet/plugins/inx"
 	"github.com/iotaledger/hornet/plugins/prometheus"
 	"github.com/iotaledger/hornet/plugins/receipt"
 	"github.com/iotaledger/hornet/plugins/restapi"
-	restapiv2 "github.com/iotaledger/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hornet/plugins/urts"
 	"github.com/iotaledger/hornet/plugins/warpsync"
 )
@@ -60,7 +60,7 @@ Command line flags:
 		app.WithPlugins([]*app.Plugin{
 			profiling.Plugin,
 			restapi.Plugin,
-			restapiv2.Plugin,
+			coreapi.Plugin,
 			autopeering.Plugin,
 			warpsync.Plugin,
 			urts.Plugin,

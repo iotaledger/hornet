@@ -1,4 +1,4 @@
-package v2
+package coreapi
 
 import (
 	"strings"
@@ -79,7 +79,6 @@ func info() (*infoResponse, error) {
 			ReferencedRate:            referencedRate,
 		},
 		Features: features,
-		Plugins:  deps.RestPluginManager.Plugins(),
 	}, nil
 }
 

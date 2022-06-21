@@ -2,7 +2,6 @@ package inx
 
 import (
 	"context"
-	"github.com/iotaledger/hornet/pkg/protocol"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -18,6 +17,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/tipselect"
 	"github.com/iotaledger/hornet/plugins/restapi"
@@ -60,8 +60,8 @@ type dependencies struct {
 	PoWHandler              *pow.Handler
 	INXServer               *INXServer
 	INXMetrics              *metrics.INXMetrics
-	Echo                    *echo.Echo                 `optional:"true"`
-	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
+	Echo                    *echo.Echo                `optional:"true"`
+	RestRouteManager        *restapi.RestRouteManager `optional:"true"`
 }
 
 func provide(c *dig.Container) error {

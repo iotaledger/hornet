@@ -97,8 +97,9 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 
 	require.NotEmpty(b.te.TestInterface, b.tag)
 
-	iotaBlock, err := builder.NewBlockBuilder(b.te.protoParas.Version).
-		ParentsBlockIDs(b.parents).
+	iotaBlock, err := builder.NewBlockBuilder().
+		ProtocolVersion(b.te.protoParas.Version).
+		Parents(b.parents).
 		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
 	require.NoError(b.te.TestInterface, err)
@@ -161,7 +162,7 @@ func (b *BlockBuilder) Build() *Block {
 	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
 
 	for _, output := range outputsThatCanBeConsumed {
-		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: fromAddr, OutputID: output.OutputID(), Output: output.Output()})
+		txBuilder.AddInput(&builder.TxInput{UnlockTarget: fromAddr, InputID: output.OutputID(), Input: output.Output()})
 		consumedInputs = append(consumedInputs, output)
 		consumedAmount += output.Deposit()
 
@@ -192,9 +193,11 @@ func (b *BlockBuilder) Build() *Block {
 
 	require.NotNil(b.te.TestInterface, b.parents)
 
-	iotaBlock, err := builder.NewBlockBuilder(b.te.protoParas.Version).
-		ParentsBlockIDs(b.parents).
-		Payload(transaction).Build()
+	iotaBlock, err := builder.NewBlockBuilder().
+		ProtocolVersion(b.te.protoParas.Version).
+		Parents(b.parents).
+		Payload(transaction).
+		Build()
 	require.NoError(b.te.TestInterface, err)
 
 	_, err = b.te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)

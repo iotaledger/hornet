@@ -3,7 +3,6 @@ package gossip
 import (
 	"context"
 	"fmt"
-	"github.com/iotaledger/hornet/pkg/protocol"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -22,6 +21,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/p2p"
 	"github.com/iotaledger/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/builder"
 	"github.com/iotaledger/iota.go/v3/pow"
@@ -339,9 +339,10 @@ func constructMilestoneBlock(protoParas *iotago.ProtocolParameters, cachedMilest
 
 	// we don't need to do proof of work for milestone blocks because milestones have Nonce = 0.
 	// TODO: this is enforced by TIP-???
-	return builder.NewBlockBuilder(protoParas.Version).
+	return builder.NewBlockBuilder().
+		ProtocolVersion(protoParas.Version).
 		Payload(cachedMilestone.Milestone().Milestone()).
-		ParentsBlockIDs(cachedMilestone.Milestone().Milestone().Parents).
+		Parents(cachedMilestone.Milestone().Milestone().Parents).
 		Build()
 }
 

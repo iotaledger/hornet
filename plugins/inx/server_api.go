@@ -26,7 +26,7 @@ func (s *INXServer) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest
 	if req.GetPort() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "port can not be zero")
 	}
-	if err := deps.RestPluginManager.AddPluginProxy(req.GetRoute(), req.GetHost(), req.GetPort()); err != nil {
+	if err := deps.RestRouteManager.AddProxyRoute(req.GetRoute(), req.GetHost(), req.GetPort()); err != nil {
 		Plugin.LogErrorf("Error registering proxy %s", req.GetRoute())
 		return nil, status.Errorf(codes.Internal, "error adding route to proxy: %s", err.Error())
 	}
@@ -42,7 +42,7 @@ func (s *INXServer) UnregisterAPIRoute(_ context.Context, req *inx.APIRouteReque
 	if len(req.GetRoute()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "route can not be empty")
 	}
-	deps.RestPluginManager.RemovePlugin(req.GetRoute())
+	deps.RestRouteManager.RemoveRoute(req.GetRoute())
 	Plugin.LogInfof("Removed proxy %s", req.GetRoute())
 	return &inx.NoParams{}, nil
 }

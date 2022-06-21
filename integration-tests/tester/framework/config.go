@@ -401,8 +401,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 		BindAddress: "0.0.0.0:14265",
 		PublicRoutes: []string{
 			"/health",
-			"/api/v2/*",
-			"/api/plugins/*",
+			"/api/*",
 		},
 		ProtectedRoutes: []string{},
 		PoWEnabled:      true,

@@ -1,4 +1,4 @@
-package v2
+package coreapi
 
 import (
 	"github.com/labstack/echo/v4"

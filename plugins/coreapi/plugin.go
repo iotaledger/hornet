@@ -1,4 +1,4 @@
-package v2
+package coreapi
 
 import (
 	"net/http"
@@ -125,7 +125,7 @@ func init() {
 	Plugin = &app.Plugin{
 		Status: app.StatusEnabled,
 		Component: &app.Component{
-			Name:      "RestAPIV2",
+			Name:      "CoreAPIV2",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Configure: configure,
 		},
@@ -155,22 +155,21 @@ type dependencies struct {
 	PeeringConfigManager    *p2p.ConfigManager
 	ProtocolManager         *protocol.Manager
 	BaseToken               *protocfg.BaseToken
-	RestAPILimitsMaxResults int                        `name:"restAPILimitsMaxResults"`
-	SnapshotsFullPath       string                     `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath      string                     `name:"snapshotsDeltaPath"`
-	TipSelector             *tipselect.TipSelector     `optional:"true"`
-	Echo                    *echo.Echo                 `optional:"true"`
-	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
+	RestAPILimitsMaxResults int                       `name:"restAPILimitsMaxResults"`
+	SnapshotsFullPath       string                    `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath      string                    `name:"snapshotsDeltaPath"`
+	TipSelector             *tipselect.TipSelector    `optional:"true"`
+	RestRouteManager        *restapi.RestRouteManager `optional:"true"`
 	RestAPIMetrics          *metrics.RestAPIMetrics
 }
 
 func configure() error {
 	// check if RestAPI plugin is disabled
 	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
-		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the RestAPIV2 plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the CoreAPIV2 plugin")
 	}
 
-	routeGroup := deps.Echo.Group("/api/v2")
+	routeGroup := deps.RestRouteManager.AddRoute("core/v2")
 
 	attacherOpts := []tangle.BlockAttacherOption{
 		tangle.WithTimeout(blockProcessedTimeout),

@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/whiteflag"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/bundle"
@@ -20,6 +19,7 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/merklehasher"
 
 	// import implementation
 	_ "golang.org/x/crypto/blake2b"
@@ -28,7 +28,7 @@ import (
 // ErrEmptyBundle is returned when a bundle contains no transaction.
 var ErrEmptyBundle = errors.New("empty bundle")
 
-var hasher = whiteflag.NewHasher(crypto.BLAKE2b_512)
+var hasher = merklehasher.NewHasher(crypto.BLAKE2b_512)
 
 // LegacyAPI defines the calls of the legacy API that are used.
 type LegacyAPI interface {
