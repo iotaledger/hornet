@@ -121,7 +121,7 @@
     "bindAddress": "0.0.0.0:14265",
     "publicRoutes": [
       "/health",
-      "/api/*",
+      "/api/*"
     ],
     "protectedRoutes": [
     ],
