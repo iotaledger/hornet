@@ -19,6 +19,11 @@ services:
       - "traefik.http.routers.hornet.tls=true"
       - "traefik.http.routers.hornet.tls.certresolver=myresolver"
       - "traefik.http.services.hornet.loadbalancer.server.port=14265"
+      - "traefik.http.routers.hornet.middlewares=redirect-dashboard"
+      - "traefik.http.middlewares.redirect-dashboard.redirectregex.regex=^https:\\/\\/([^\\/]+)\\/?$$"
+      - "traefik.http.middlewares.redirect-dashboard.redirectregex.replacement=https://$$1/dashboard/"
+      - "traefik.http.middlewares.redirect-dashboard.redirectregex.permanent=true"
+
     cap_drop:
       - ALL
     volumes:
@@ -79,11 +84,14 @@ services:
     user: "65532"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`${GRAFANA_HOST}`)"
+      - "traefik.http.routers.grafana.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/grafana`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
-      - "traefik.http.routers.grafana.tls.certresolver=myresolver"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    environment:
+      - GF_SERVER_DOMAIN=${HORNET_HOST}
+      - GF_SERVER_ROOT_URL=/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
       - ./data/grafana:/var/lib/grafana
       - ./assets/grafana/:/etc/grafana/provisioning/
@@ -156,10 +164,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.hornet-dashboard.service=hornet-dashboard"
-      - "traefik.http.routers.hornet-dashboard.rule=Host(`${DASHBOARD_HOST}`)"
+      - "traefik.http.routers.hornet-dashboard.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/dashboard`)"
       - "traefik.http.routers.hornet-dashboard.entrypoints=websecure"
       - "traefik.http.routers.hornet-dashboard.tls=true"
-      - "traefik.http.routers.hornet-dashboard.tls.certresolver=myresolver"
       - "traefik.http.services.hornet-dashboard.loadbalancer.server.port=8081"
     volumes:
       - ./data:/app/database
@@ -170,3 +177,4 @@ services:
       - "--dashboard.auth.username=${DASHBOARD_USERNAME}"
       - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD}"
       - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT}"
+

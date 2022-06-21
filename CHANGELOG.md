@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
     - Restructures REST API endpoints (#1577)
     - Removed milestone index from timelock and expiration unlock conditions (#1572)
     - Disable certain REST endpoints if an unsupported protocol upgrade is detected (#1571)
+    - Changed the docker-example to only require 1 domain
 
 
 ## [2.0.0-alpha20] - 17.06.2022
