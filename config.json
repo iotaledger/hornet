@@ -17,7 +17,7 @@
   "protocol": {
     "parameters": {
       "version": 2,
-      "networkName": "alphanet-6",
+      "networkName": "alphanet-7",
       "bech32HRP": "rms",
       "minPoWScore": 1000.0,
       "belowMaxDepth": 15,
