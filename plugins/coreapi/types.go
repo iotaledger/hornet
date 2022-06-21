@@ -63,8 +63,6 @@ type infoResponse struct {
 	Metrics nodeMetrics `json:"metrics"`
 	// The features this node exposes.
 	Features []string `json:"features"`
-	// The plugins this node exposes.
-	Plugins []string `json:"plugins"`
 }
 
 // tipsResponse defines the response of a GET tips REST API call.

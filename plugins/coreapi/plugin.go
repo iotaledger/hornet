@@ -159,7 +159,6 @@ type dependencies struct {
 	SnapshotsFullPath       string                    `name:"snapshotsFullPath"`
 	SnapshotsDeltaPath      string                    `name:"snapshotsDeltaPath"`
 	TipSelector             *tipselect.TipSelector    `optional:"true"`
-	Echo                    *echo.Echo                `optional:"true"`
 	RestRouteManager        *restapi.RestRouteManager `optional:"true"`
 	RestAPIMetrics          *metrics.RestAPIMetrics
 }
@@ -170,7 +169,7 @@ func configure() error {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the CoreAPIV2 plugin")
 	}
 
-	routeGroup := deps.Echo.Group("/api/v2")
+	routeGroup := deps.RestRouteManager.AddRoute("core/v2")
 
 	attacherOpts := []tangle.BlockAttacherOption{
 		tangle.WithTimeout(blockProcessedTimeout),

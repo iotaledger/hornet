@@ -17,7 +17,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/daemon"
 	"github.com/iotaledger/hornet/pkg/jwt"
 	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/restapi"
 	"github.com/iotaledger/hornet/pkg/tangle"
 )
 
@@ -37,10 +36,8 @@ func init() {
 }
 
 var (
-	Plugin             *app.Plugin
-	deps               dependencies
-	nodeAPIHealthRoute = "/health"
-
+	Plugin  *app.Plugin
+	deps    dependencies
 	jwtAuth *jwt.JWTAuth
 )
 
@@ -52,6 +49,7 @@ type dependencies struct {
 	Host               host.Host
 	RestAPIBindAddress string         `name:"restAPIBindAddress"`
 	NodePrivateKey     crypto.PrivKey `name:"nodePrivateKey"`
+	RestRouteManager   *RestRouteManager
 }
 
 func initConfigPars(c *dig.Container) error {
@@ -115,7 +113,6 @@ func provide(c *dig.Container) error {
 func configure() error {
 	deps.Echo.Use(apiMiddleware())
 	setupRoutes()
-
 	return nil
 }
 
@@ -149,18 +146,4 @@ func run() error {
 	}
 
 	return nil
-}
-
-func setupRoutes() {
-
-	errorHandler := restapi.ErrorHandler()
-
-	deps.Echo.HTTPErrorHandler = func(err error, c echo.Context) {
-		Plugin.LogDebugf("HTTP request failed: %s", err)
-		deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
-
-		errorHandler(err, c)
-	}
-
-	setupHealthRoute()
 }
