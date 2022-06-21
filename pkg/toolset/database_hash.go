@@ -111,12 +111,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 
 	// write all solid entry points in lexicographical order
 	for _, solidEntryPoint := range solidEntryPoints.RemoveDupsAndSort() {
-		sepBytes, err := solidEntryPoint.MarshalBinary()
-		if err != nil {
-			return fmt.Errorf("unable to serialize solid entry point %s: %w", solidEntryPoint.ToHex(), err)
-		}
-
-		if err := binary.Write(lsHash, binary.LittleEndian, sepBytes); err != nil {
+		if err := binary.Write(lsHash, binary.LittleEndian, solidEntryPoint[:]); err != nil {
 			return fmt.Errorf("unable to calculate snapshot hash: %w", err)
 		}
 	}

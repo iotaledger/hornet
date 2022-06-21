@@ -2,7 +2,6 @@ package whiteflag
 
 import (
 	"bytes"
-	"encoding"
 	"encoding/json"
 	"fmt"
 
@@ -11,7 +10,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-type Hasheable interface {
+type hasheable interface {
 	Hash(hasher *Hasher) []byte
 }
 
@@ -24,18 +23,24 @@ type hashValue struct {
 }
 
 type InclusionProof struct {
-	Left  Hasheable
-	Right Hasheable
+	Left  hasheable
+	Right hasheable
 }
 
 // ComputeInclusionProof computes the audit path
-func (t *Hasher) ComputeInclusionProof(data []encoding.BinaryMarshaler, index int) (*InclusionProof, error) {
-	if len(data) < 2 {
+func (t *Hasher) ComputeInclusionProof(blockIDs iotago.BlockIDs, index int) (*InclusionProof, error) {
+	if len(blockIDs) < 2 {
 		return nil, errors.New("you need at lest 2 items to create an inclusion proof")
 	}
-	if index >= len(data) {
-		return nil, fmt.Errorf("index %d out of bounds len=%d", index, len(data))
+	if index >= len(blockIDs) {
+		return nil, fmt.Errorf("index %d out of bounds len=%d", index, len(blockIDs))
 	}
+
+	data := make([][]byte, len(blockIDs))
+	for i := range blockIDs {
+		data[i] = blockIDs[i][:]
+	}
+
 	p, err := t.computeProof(data, index)
 	if err != nil {
 		return nil, err
@@ -43,24 +48,15 @@ func (t *Hasher) ComputeInclusionProof(data []encoding.BinaryMarshaler, index in
 	return p.(*InclusionProof), nil
 }
 
-func (t *Hasher) computeProof(data []encoding.BinaryMarshaler, index int) (Hasheable, error) {
+func (t *Hasher) computeProof(data [][]byte, index int) (hasheable, error) {
 	if len(data) < 2 {
-		l, err := data[0].MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
+		l := data[0]
 		return &leafValue{l}, nil
 	}
 
 	if len(data) == 2 {
-		left, err := data[0].MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
-		right, err := data[1].MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
+		left := data[0]
+		right := data[1]
 		if index == 0 {
 			return &InclusionProof{
 				Left:  &leafValue{left},
@@ -81,20 +77,14 @@ func (t *Hasher) computeProof(data []encoding.BinaryMarshaler, index int) (Hashe
 		if err != nil {
 			return nil, err
 		}
-		right, err := t.Hash(data[k:])
-		if err != nil {
-			return nil, err
-		}
+		right := t.Hash(data[k:])
 		return &InclusionProof{
 			Left:  left,
 			Right: &hashValue{right},
 		}, nil
 	} else {
 		// Inside right half
-		left, err := t.Hash(data[:k])
-		if err != nil {
-			return nil, err
-		}
+		left := t.Hash(data[:k])
 		right, err := t.computeProof(data[k:], index-k)
 		if err != nil {
 			return nil, err
@@ -175,7 +165,7 @@ type jsonPath struct {
 	Right *json.RawMessage `json:"r"`
 }
 
-func containsLeafValue(hasheable Hasheable, value []byte) bool {
+func containsLeafValue(hasheable hasheable, value []byte) bool {
 	switch t := hasheable.(type) {
 	case *hashValue:
 		return false
@@ -187,12 +177,8 @@ func containsLeafValue(hasheable Hasheable, value []byte) bool {
 	return false
 }
 
-func (p *InclusionProof) ContainsValue(value encoding.BinaryMarshaler) (bool, error) {
-	bytes, err := value.MarshalBinary()
-	if err != nil {
-		return false, err
-	}
-	return containsLeafValue(p, bytes), nil
+func (p *InclusionProof) ContainsValue(value iotago.BlockID) (bool, error) {
+	return containsLeafValue(p, value[:]), nil
 }
 
 func (p *InclusionProof) MarshalJSON() ([]byte, error) {
@@ -212,7 +198,7 @@ func (p *InclusionProof) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalHashable(raw *json.RawMessage, hasheable *Hasheable) error {
+func unmarshalHashable(raw *json.RawMessage, hasheable *hasheable) error {
 	h := &hashValue{}
 	if err := json.Unmarshal(*raw, h); err == nil {
 		*hasheable = h
@@ -238,11 +224,11 @@ func (p *InclusionProof) UnmarshalJSON(bytes []byte) error {
 	if err := json.Unmarshal(bytes, j); err != nil {
 		return err
 	}
-	var left Hasheable
+	var left hasheable
 	if err := unmarshalHashable(j.Left, &left); err != nil {
 		return err
 	}
-	var right Hasheable
+	var right hasheable
 	if err := unmarshalHashable(j.Right, &right); err != nil {
 		return err
 	}

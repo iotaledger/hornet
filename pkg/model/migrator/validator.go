@@ -3,7 +3,6 @@ package migrator
 import (
 	"bytes"
 	"crypto"
-	"encoding"
 	"fmt"
 	"math"
 
@@ -218,7 +217,7 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 		return nil, fmt.Errorf("invalid milestone signature: %w", err)
 	}
 
-	var includedTails []encoding.BinaryMarshaler
+	var includedTails [][]byte
 	var includedBundles []bundle.Bundle
 	for i, rawTrytes := range confirmation.IncludedBundles {
 		bndl, err := asBundle(rawTrytes)
@@ -229,17 +228,18 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 			return nil, fmt.Errorf("invalid included bundle %d: %w", i, err)
 		}
 		includedBundles = append(includedBundles, bndl)
-		includedTails = append(includedTails, trinaryHash(bundle.TailTransactionHash(bndl)))
+		tailBytes, err := trinaryHash(bundle.TailTransactionHash(bndl)).MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		includedTails = append(includedTails, tailBytes)
 	}
 
 	msMerkleHash, err := m.whiteFlagMerkleTreeHash(ms)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Merkle tree hash: %w", err)
 	}
-	merkleHash, err := hasher.Hash(includedTails)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compute Merkle tree hash: %w", err)
-	}
+	merkleHash := hasher.Hash(includedTails)
 	if !bytes.Equal(msMerkleHash, merkleHash) {
 		return nil, fmt.Errorf("invalid MerkleTreeHash %s", merkleHash)
 	}

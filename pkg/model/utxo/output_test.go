@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -186,7 +187,7 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 				Address: address,
 			},
 			&iotago.TimelockUnlockCondition{
-				MilestoneIndex: 234,
+				UnixTime: uint32(time.Now().Unix()),
 			},
 		},
 	}
@@ -257,8 +258,8 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 				Address: address.ToAddress(),
 			},
 			&iotago.ExpirationUnlockCondition{
-				MilestoneIndex: 324324,
-				ReturnAddress:  issuerAddress,
+				UnixTime:      uint32(time.Now().Unix()),
+				ReturnAddress: issuerAddress,
 			},
 		},
 	}

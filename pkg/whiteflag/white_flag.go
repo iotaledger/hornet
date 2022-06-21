@@ -3,7 +3,6 @@ package whiteflag
 import (
 	"context"
 	"crypto"
-	"encoding"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -102,8 +101,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 
 	semValCtx := &iotago.SemanticValidationContext{
 		ExtParas: &iotago.ExternalUnlockParameters{
-			ConfMsIndex: uint32(msIndex),
-			ConfUnix:    msTimestamp,
+			ConfUnix: msTimestamp,
 		},
 	}
 
@@ -316,25 +314,11 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	}
 
 	// compute past cone merkle tree root hash
-	confirmedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.BlocksReferenced))
-	for i := range wfConf.BlocksReferenced {
-		confirmedMarshalers[i] = wfConf.BlocksReferenced[i]
-	}
-	confirmedMerkleHash, err := NewHasher(crypto.BLAKE2b_256).Hash(confirmedMarshalers)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compute confirmed merkle tree root: %w", err)
-	}
+	confirmedMerkleHash := NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.BlocksReferenced)
 	copy(wfConf.InclusionMerkleRoot[:], confirmedMerkleHash)
 
 	// compute inclusion merkle tree root hash
-	appliedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.BlocksIncludedWithTransactions))
-	for i := range wfConf.BlocksIncludedWithTransactions {
-		appliedMarshalers[i] = wfConf.BlocksIncludedWithTransactions[i]
-	}
-	appliedMerkleHash, err := NewHasher(crypto.BLAKE2b_256).Hash(appliedMarshalers)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compute applied merkle tree root: %w", err)
-	}
+	appliedMerkleHash := NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.BlocksIncludedWithTransactions)
 	copy(wfConf.AppliedMerkleRoot[:], appliedMerkleHash)
 
 	if len(wfConf.BlocksIncludedWithTransactions) != (len(wfConf.BlocksReferenced) - len(wfConf.BlocksExcludedWithConflictingTransactions) - len(wfConf.BlocksExcludedWithoutTransactions)) {
