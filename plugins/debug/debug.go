@@ -12,7 +12,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/restapi"
-	restapiv2 "github.com/iotaledger/hornet/plugins/restapi/v2"
+	"github.com/iotaledger/hornet/plugins/coreapi"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -130,11 +130,11 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 	}
 
-	outputs := make([]*restapiv2.OutputResponse, len(diff.Outputs))
-	spents := make([]*restapiv2.OutputResponse, len(diff.Spents))
+	outputs := make([]*coreapi.OutputResponse, len(diff.Outputs))
+	spents := make([]*coreapi.OutputResponse, len(diff.Spents))
 
 	for i, output := range diff.Outputs {
-		o, err := restapiv2.NewOutputResponse(output, diff.Index)
+		o, err := coreapi.NewOutputResponse(output, diff.Index)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +142,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}
 
 	for i, spent := range diff.Spents {
-		o, err := restapiv2.NewSpentResponse(spent, diff.Index)
+		o, err := coreapi.NewSpentResponse(spent, diff.Index)
 		if err != nil {
 			return nil, err
 		}

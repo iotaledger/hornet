@@ -1,4 +1,4 @@
-package v2
+package coreapi
 
 import (
 	"net/http"
@@ -125,7 +125,7 @@ func init() {
 	Plugin = &app.Plugin{
 		Status: app.StatusEnabled,
 		Component: &app.Component{
-			Name:      "RestAPIV2",
+			Name:      "CoreAPIV2",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Configure: configure,
 		},

@@ -2,7 +2,7 @@ package debug
 
 import (
 	"github.com/iotaledger/hornet/pkg/model/milestone"
-	restapiv2 "github.com/iotaledger/hornet/plugins/restapi/v2"
+	"github.com/iotaledger/hornet/plugins/coreapi"
 )
 
 // outputIDsResponse defines the response of a GET debug outputs REST API call.
@@ -26,9 +26,9 @@ type milestoneDiffResponse struct {
 	// The index of the milestone.
 	MilestoneIndex milestone.Index `json:"index"`
 	// The newly created outputs by this milestone diff.
-	Outputs []*restapiv2.OutputResponse `json:"outputs"`
+	Outputs []*coreapi.OutputResponse `json:"outputs"`
 	// The used outputs (spents) by this milestone diff.
-	Spents []*restapiv2.OutputResponse `json:"spents"`
+	Spents []*coreapi.OutputResponse `json:"spents"`
 }
 
 // request defines an request response.
