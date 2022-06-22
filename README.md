@@ -1,10 +1,10 @@
-# HORNET - The IOTA community node
+# HORNET - The IOTA node
 
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/iotaledger/hornet/Build?style=for-the-badge) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/iotaledger/hornet?style=for-the-badge) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/iotaledger/hornet?style=for-the-badge) ![GitHub](https://img.shields.io/github/license/iotaledger/hornet?style=for-the-badge)
 
-<p><img src="https://raw.githubusercontent.com/gohornet/logo/master/HORNET_logo.svg?sanitize=true"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/iotaledger/hornet/develop/documentation/static/img/logo/HORNET_logo.svg?sanitize=true" width="600"/></p>
 
-HORNET is a powerful, community driven IOTA fullnode software written in Go.
+HORNET is a powerful IOTA fullnode software written in Go.
 It is easy to install and maintain.
 
 ---
@@ -12,8 +12,8 @@ It is easy to install and maintain.
 In this repository you will find the following branches:
 
 - `develop`: default branch where all development will get merged to. This represents the next iteration of the node.
-- `shimmer`: this branch contains the latest released code targeted for the [shimmer network](https://shimmer.network)
-- `mainnet`: this branch contains the latest released code targeted for the [IOTA mainnet](https://iota.org)
+- `staging`: this branch contains the latest released code targeted for the [shimmer network](https://shimmer.network)
+- `production`: this branch contains the latest released code targeted for the [IOTA mainnet](https://iota.org)
 
 ---
 
@@ -28,7 +28,7 @@ _Table of contents_
 
 <!--ts-->
 
-- [HORNET - The IOTA community node](#hornet---the-iota-community-node)
+- [HORNET - The IOTA node](#hornet---the-iota-node)
   - [Notes](#notes)
   - [Documentation](#documentation)
   - [Contributing](#contributing)
