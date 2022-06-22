@@ -45,9 +45,8 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 	blockA := te.NewBlockBuilder("A").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store().
 		BookOnWallets()
 
@@ -69,9 +68,8 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 	blockB := te.NewBlockBuilder("B").
 		Parents(append(te.LastMilestoneParents(), blockA.StoredBlockID())).
 		FromWallet(seed2Wallet).
-		ToWallet(seed1Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
-		Build().
+		BuildTransactionToWallet(seed1Wallet).
 		Store().
 		BookOnWallets()
 
@@ -111,9 +109,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	blockA := te.NewBlockBuilder("A").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
 		Amount(1_000_000).
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store().
 		BookOnWallets()
 
@@ -124,9 +121,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	blockB := te.NewBlockBuilder("B").
 		Parents(append(te.LastMilestoneParents(), blockA.StoredBlockID())).
 		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
 		Amount(2_000_000).
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store().
 		BookOnWallets()
 
@@ -137,10 +133,9 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	blockC := te.NewBlockBuilder("C").
 		Parents(append(te.LastMilestoneParents(), blockB.StoredBlockID())).
 		FromWallet(seed3Wallet).
-		ToWallet(seed2Wallet).
 		Amount(1_000_000).
 		FakeInputs().
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store()
 
 	// Confirming milestone at block C (block D and E are not included)
@@ -163,19 +158,17 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	blockD := te.NewBlockBuilder("D").
 		Parents(iotago.BlockIDs{blockA.StoredBlockID(), blockC.StoredBlockID()}).
 		FromWallet(seed4Wallet).
-		ToWallet(seed2Wallet).
 		Amount(1_500_000).
 		FakeInputs().
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store()
 
 	// Valid transfer from seed2 (1_000_000) and seed2 (2_000_000) with remainder seed2 (1_500_000) to seed4 (1_500_000)
 	blockE := te.NewBlockBuilder("E").
 		Parents(iotago.BlockIDs{blockB.StoredBlockID(), blockD.StoredBlockID()}).
 		FromWallet(seed2Wallet).
-		ToWallet(seed4Wallet).
 		Amount(1_500_000).
-		Build().
+		BuildTransactionToWallet(seed4Wallet).
 		Store().
 		BookOnWallets()
 
@@ -204,10 +197,9 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	blockF := te.NewBlockBuilder("F").
 		Parents(append(te.LastMilestoneParents(), blockE.StoredBlockID())).
 		FromWallet(seed3Wallet).
-		ToWallet(seed2Wallet).
 		Amount(1_000_000).
 		UsingOutput(te.GenesisOutput).
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store()
 
 	// Confirming milestone at block F
@@ -230,10 +222,9 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	blockG := te.NewBlockBuilder("G").
 		Parents(append(te.LastMilestoneParents(), blockF.StoredBlockID())).
 		FromWallet(seed4Wallet).
-		ToWallet(seed3Wallet).
 		Amount(1_500_000).
 		UsingOutput(seed4WalletOutput).
-		Build().
+		BuildTransactionToWallet(seed3Wallet).
 		Store().
 		BookOnWallets()
 
@@ -241,10 +232,9 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	blockH := te.NewBlockBuilder("H").
 		Parents(iotago.BlockIDs{blockG.StoredBlockID()}).
 		FromWallet(seed4Wallet).
-		ToWallet(seed2Wallet).
 		Amount(1_500_000).
 		UsingOutput(seed4WalletOutput).
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store()
 
 	// Confirming milestone at block H
@@ -322,9 +312,8 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 	blockA := te.NewBlockBuilder("A").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store().
 		BookOnWallets()
 
@@ -346,9 +335,8 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 	blockB := te.NewBlockBuilder("B").
 		Parents(append(te.LastMilestoneParents(), blockA.StoredBlockID())).
 		FromWallet(seed2Wallet).
-		ToWallet(seed1Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
-		Build().
+		BuildTransactionToWallet(seed1Wallet).
 		Store().
 		BookOnWallets()
 
@@ -378,9 +366,8 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	blockA := te.NewBlockBuilder("A").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store().
 		BookOnWallets()
 
@@ -402,9 +389,8 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	blockB := te.NewBlockBuilder("B").
 		Parents(append(te.LastMilestoneParents(), blockA.StoredBlockID())).
 		FromWallet(seed2Wallet).
-		ToWallet(seed1Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
-		Build().
+		BuildTransactionToWallet(seed1Wallet).
 		Store().
 		BookOnWallets()
 
@@ -428,9 +414,8 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	blockC := te.NewBlockBuilder("C").
 		Parents(iotago.BlockIDs{blockB.StoredBlockID(), milestone5Reattachment}).
 		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
-		Build().
+		BuildTransactionToWallet(seed2Wallet).
 		Store().
 		BookOnWallets()
 
