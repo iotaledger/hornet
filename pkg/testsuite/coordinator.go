@@ -219,3 +219,17 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips iotago.BlockIDs, 
 	require.NoError(te.TestInterface, err)
 	return te.ConfirmMilestone(ms, createConfirmationGraph)
 }
+
+func (te *TestEnvironment) UnspentAliasOutputsInLedger() utxo.Outputs {
+	outputs, err := te.UTXOManager().UnspentOutputs()
+	require.NoError(te.TestInterface, err)
+
+	var aliasOutputs utxo.Outputs
+	for _, output := range outputs {
+		switch output.OutputType() {
+		case iotago.OutputAlias:
+			aliasOutputs = append(aliasOutputs, output)
+		}
+	}
+	return aliasOutputs
+}

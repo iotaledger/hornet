@@ -446,3 +446,119 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	require.False(t, invalidMilestone5Metadata.Metadata().IsReferenced())
 	require.False(t, invalidMilestone5Metadata.Metadata().IsMilestone())
 }
+
+func TestWhiteFlagAliasOutput(t *testing.T) {
+	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
+
+	genesisAddress := seed1Wallet.Address()
+
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+
+	//Add token supply to our local HDWallet
+	seed1Wallet.BookOutput(te.GenesisOutput)
+	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
+
+	seed1Wallet.PrintStatus()
+
+	// Create Alias
+	blockA := te.NewBlockBuilder("A").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		BuildAlias().
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 0)
+
+	// Confirming milestone at block A
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockA.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // A + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	aliasOutput := te.UnspentAliasOutputsInLedger()[0]
+	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(0))
+
+	// Valid State Transition
+	newAliasOutput := aliasOutput.Output().(*iotago.AliasOutput).Clone().(*iotago.AliasOutput)
+	newAliasOutput.AliasID = iotago.AliasIDFromOutputID(aliasOutput.OutputID())
+	newAliasOutput.StateIndex++
+
+	blockB := te.NewBlockBuilder("B").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		Amount(aliasOutput.Deposit()).
+		UsingOutput(aliasOutput).
+		BuildTransactionUsingOutputs(newAliasOutput).
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+
+	// Confirming milestone at block B
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockB.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // B + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
+	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(1))
+
+	// Invalid State Transition
+	newAliasOutput = aliasOutput.Output().(*iotago.AliasOutput).Clone().(*iotago.AliasOutput)
+	newAliasOutput.StateIndex++
+	newAliasOutput.StateIndex++
+
+	blockC := te.NewBlockBuilder("C").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		Amount(aliasOutput.Deposit()).
+		UsingOutput(aliasOutput).
+		BuildTransactionUsingOutputs(newAliasOutput).
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+
+	// Confirming milestone at block C
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockC.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // C + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	// Verify the blocks have the expected conflict reason
+	te.AssertBlockConflictReason(blockC.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
+	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(1))
+
+	// Burn Alias
+	blockD := te.NewBlockBuilder("D").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		Amount(aliasOutput.Deposit()).
+		UsingOutput(aliasOutput).
+		BuildTransactionToWallet(seed1Wallet).
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+
+	// Confirming milestone at block C
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockD.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // D + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 0)
+}

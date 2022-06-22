@@ -227,6 +227,35 @@ func (b *BlockBuilder) BuildTransactionUsingOutputs(outputs ...iotago.Output) *B
 	}
 }
 
+func (b *BlockBuilder) BuildAlias() *Block {
+	require.NotNil(b.te.TestInterface, b.fromWallet)
+	fromAddress := b.fromWallet.Address()
+
+	aliasOutput := &iotago.AliasOutput{
+		Amount:         0,
+		NativeTokens:   nil,
+		AliasID:        iotago.AliasID{},
+		StateIndex:     0,
+		StateMetadata:  nil,
+		FoundryCounter: 0,
+		Conditions: iotago.UnlockConditions{
+			&iotago.StateControllerAddressUnlockCondition{Address: fromAddress},
+			&iotago.GovernorAddressUnlockCondition{Address: fromAddress},
+		},
+		Features: nil,
+		ImmutableFeatures: iotago.Features{
+			&iotago.IssuerFeature{Address: fromAddress},
+		},
+	}
+
+	if b.amount == 0 {
+		b.amount = b.te.protoParas.RentStructure.MinRent(aliasOutput)
+		aliasOutput.Amount = b.amount
+	}
+	require.Greater(b.te.TestInterface, b.amount, uint64(0), "trying to send a transaction with no value")
+
+	return b.BuildTransactionUsingOutputs(aliasOutput)
+}
 
 func (b *BlockBuilder) BuildTransactionToWallet(wallet *utils.HDWallet) *Block {
 	b.toWallet = wallet
