@@ -95,6 +95,9 @@ var errorToConflictMapping = map[error]Conflict{
 
 	// Unlock validation
 	iotago.ErrInvalidInputUnlock: ConflictInvalidInputUnlock,
+
+	// Chain transitions
+	iotago.ErrTransDepIdentOutputNextInvalid: ConflictInvalidChainStateTransition,
 }
 
 func ConflictFromSemanticValidationError(err error) Conflict {

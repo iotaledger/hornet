@@ -196,8 +196,6 @@ func (te *TestEnvironment) ConfirmMilestone(ms *storage.Milestone, createConfirm
 		if te.showConfirmationGraphs {
 			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.TempDir, te.TestInterface.Name(), confirmedMilestoneStats.Index)
 			utils.ShowDotFile(te.TestInterface, dotFileContent, dotFilePath)
-		} else {
-			fmt.Println(dotFileContent)
 		}
 	}
 
@@ -218,4 +216,18 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips iotago.BlockIDs, 
 	ms, _, err := te.coo.issueMilestoneOnTips(tips, true)
 	require.NoError(te.TestInterface, err)
 	return te.ConfirmMilestone(ms, createConfirmationGraph)
+}
+
+func (te *TestEnvironment) UnspentAliasOutputsInLedger() utxo.Outputs {
+	outputs, err := te.UTXOManager().UnspentOutputs()
+	require.NoError(te.TestInterface, err)
+
+	var aliasOutputs utxo.Outputs
+	for _, output := range outputs {
+		switch output.OutputType() {
+		case iotago.OutputAlias:
+			aliasOutputs = append(aliasOutputs, output)
+		}
+	}
+	return aliasOutputs
 }
