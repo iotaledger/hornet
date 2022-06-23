@@ -196,8 +196,6 @@ func (te *TestEnvironment) ConfirmMilestone(ms *storage.Milestone, createConfirm
 		if te.showConfirmationGraphs {
 			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.TempDir, te.TestInterface.Name(), confirmedMilestoneStats.Index)
 			utils.ShowDotFile(te.TestInterface, dotFileContent, dotFilePath)
-		} else {
-			fmt.Println(dotFileContent)
 		}
 	}
 

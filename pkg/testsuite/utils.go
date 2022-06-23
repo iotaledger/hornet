@@ -272,23 +272,38 @@ func (m *Block) Store() *Block {
 func (m *Block) BookOnWallets() *Block {
 	require.False(m.builder.te.TestInterface, m.booked)
 	m.builder.fromWallet.BookSpents(m.consumedOutputs)
+
+	if m.builder.toWallet != nil {
+		// Also book it in the toWallet because both addresses can have part ownership of the output.
+		// Note: if there is a third wallet involved this will not catch it, and the third wallet will still hold a reference to it
+		m.builder.toWallet.BookSpents(m.consumedOutputs)
+	}
+
 	for _, sentOutput := range m.createdOutputs {
-		if m.builder.toWallet != nil {
-			// Check if we should book the output to the toWallet or to the fromWallet
-			switch output := sentOutput.Output().(type) {
-			case *iotago.BasicOutput:
+		// Check if we should book the output to the toWallet or to the fromWallet
+		switch output := sentOutput.Output().(type) {
+		case *iotago.BasicOutput:
+			if m.builder.toWallet != nil {
 				if output.UnlockConditionSet().Address().Address.Equal(m.builder.toWallet.Address()) {
 					m.builder.toWallet.BookOutput(sentOutput)
 					continue
 				}
-			case *iotago.AliasOutput:
-				if output.UnlockConditionSet().GovernorAddress().Address.Equal(m.builder.toWallet.Address()) {
+			}
+			// Note: we do not care about SDRUC here right now
+			m.builder.fromWallet.BookOutput(sentOutput)
+
+		case *iotago.AliasOutput:
+			if m.builder.toWallet != nil {
+				if output.UnlockConditionSet().GovernorAddress().Address.Equal(m.builder.toWallet.Address()) ||
+					output.UnlockConditionSet().StateControllerAddress().Address.Equal(m.builder.toWallet.Address()) {
 					m.builder.toWallet.BookOutput(sentOutput)
-					continue
 				}
 			}
+			if output.UnlockConditionSet().GovernorAddress().Address.Equal(m.builder.fromWallet.Address()) ||
+				output.UnlockConditionSet().StateControllerAddress().Address.Equal(m.builder.fromWallet.Address()) {
+				m.builder.fromWallet.BookOutput(sentOutput)
+			}
 		}
-		m.builder.fromWallet.BookOutput(sentOutput)
 	}
 	m.booked = true
 
