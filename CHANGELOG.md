@@ -4,13 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [2.0.0-alpha.22] - 23.06.2022
 
-### Changes
+### Fixed
     - Fixed a wrong minimum deposit calculation in iota.go after removing the milestone index from timelock and expiration unlock conditions.
 
 
 ## [2.0.0-alpha.21] - 21.06.2022
 
-### Changes
+### Changed
     - Restructures REST API endpoints (#1577)
     - Removed milestone index from timelock and expiration unlock conditions (#1572)
     - Disable certain REST endpoints if an unsupported protocol upgrade is detected (#1571)
@@ -22,7 +22,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
     - Removes synchronous event handlers between peer manager to gossip service (#1565)
 
-### Changes
+### Changed
     - Moved dashboard to INX (#1568, #1566)
     - Adds tip score updates stream to INX (#1563)
 
@@ -33,7 +33,7 @@ All notable changes to this project will be documented in this file.
     - Fix INX deadlock #1560
     - Fix possible data races in INX #1561
 
-### Changes
+### Changed
     - Adds supported protocol versions to REST API and INX (#1552)
 
 
@@ -44,7 +44,7 @@ All notable changes to this project will be documented in this file.
     - Fix INX ReadBlockMetadata for solid entry points (#1534)
     - Send correct error message if a block is submitted without parents and no PoW is enabled (#1536)
 
-### Changes
+### Changed
     - Rename files from message->block
     - Remove outdated routes
     - Move dashboard repository to iotaledger
@@ -66,7 +66,7 @@ All notable changes to this project will be documented in this file.
 
 ## [2.0.0-alpha15] - 31.05.2022
 
-### Changes
+### Changed
     - Migrated repositories to the iotaledger organization (#1528)
     - Update INX modules (#1530) 
     - Updated dashboard (#1527)
@@ -75,7 +75,7 @@ All notable changes to this project will be documented in this file.
 
 ## [2.0.0-alpha14] - 24.05.2022
 
-### Changes
+### Changed
     - Update INX modules (#1516) 
     - Remove spammer plugin (#1515)
     - Feat/inx improvements (#1514)
@@ -84,7 +84,7 @@ All notable changes to this project will be documented in this file.
 
 ## [2.0.0-alpha13] - 19.05.2022
 
-### Changes
+### Changed
     - Decrease private tangle milestone interval to 5s
 
 ### Fixed
