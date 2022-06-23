@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha.22] - 23.06.2022
+
+### Changes
+    - Fixed a wrong minimum deposit calculation in iota.go after removing the milestone index from timelock and expiration unlock conditions.
+
+
 ## [2.0.0-alpha.21] - 21.06.2022
 
 ### Changes
