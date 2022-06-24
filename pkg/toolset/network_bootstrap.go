@@ -49,10 +49,10 @@ func networkBootstrap(args []string) error {
 	databaseEngineFlag := fs.String(FlagToolDatabaseEngine, string(DefaultValueDatabaseEngine), "database engine (optional, values: pebble, rocksdb)")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolNetworkBootstrap)
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolBootstrapPrivateTangle)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s --%s %s --%s %s",
-			ToolNetworkBootstrap,
+			ToolBootstrapPrivateTangle,
 			FlagToolConfigFilePath,
 			"config.json",
 			FlagToolSnapshotPath,

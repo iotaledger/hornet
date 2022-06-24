@@ -37,7 +37,7 @@ services:
       - ./privatedb/state:/app/state
     command:
       - "tool"
-      - "network-bootstrap"
+      - "bootstrap-private-tangle"
       - "--configFile=/app/config_private_tangle.json"
       - "--snapshotPath=/app/snapshots/full_snapshot.bin"
       - "--protocolParametersPath=/app/protocol_parameters.json"
