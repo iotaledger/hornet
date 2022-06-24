@@ -548,8 +548,8 @@ github.com/libp2p/go-libp2p-asn-util v0.2.0/go.mod h1:WoaWxbHKBymSN41hWSq/lGKJEc
 github.com/libp2p/go-libp2p-circuit v0.6.0 h1:rw/HlhmUB3OktS/Ygz6+2XABOmHKzZpPUuMNUMosj8w=
 github.com/libp2p/go-libp2p-core v0.2.0/go.mod h1:X0eyB0Gy93v0DZtSYbEM7RnMChm9Uv3j7yRXjO77xSI=
 github.com/libp2p/go-libp2p-core v0.5.7/go.mod h1:txwbVEhHEXikXn9gfC7/UDDw7rkxuX0bJvM49Ykaswo=
-github.com/libp2p/go-libp2p-core v0.16.1 h1:bWoiEBqVkpJ13hbv/f69tHODp86t6mvc4fBN4DkK73M=
-github.com/libp2p/go-libp2p-core v0.16.1/go.mod h1:O3i/7y+LqUb0N+qhzXjBjjpchgptWAVMG1Voegk7b4c=
+github.com/libp2p/go-libp2p-core v0.17.0 h1:QGU8mlxHytwTc4pq/aVQX9VDoAPiCHxfe/oOSwF+YDg=
+github.com/libp2p/go-libp2p-core v0.17.0/go.mod h1:h/iAbFij28ASmI+tvXfjoipg1g2N33O4UN6LIb6QfoU=
 github.com/libp2p/go-libp2p-peerstore v0.7.0 h1:2iIUwok3vtmnWJTZeTeLgnBO6GbkXcwSRwgZHEKrQZs=
 github.com/libp2p/go-libp2p-peerstore v0.7.0/go.mod h1:cdUWTHro83vpg6unCpGUr8qJoX3e93Vy8o97u5ppIM0=
 github.com/libp2p/go-libp2p-resource-manager v0.3.0 h1:2+cYxUNi33tcydsVLt6K5Fv2E3OTiVeafltecAj15E0=
