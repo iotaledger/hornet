@@ -9,12 +9,12 @@ import (
 
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/keymanager"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/builder"
+	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
 type MockCoo struct {
@@ -143,7 +143,7 @@ func (coo *MockCoo) milestonePayload(parents iotago.BlockIDs) (*iotago.Milestone
 
 	milestonePayload := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.te.protoParas.Version, coo.LastMilestoneID(), sortedParents, mutations.InclusionMerkleRoot, mutations.AppliedMerkleRoot)
 
-	keymapping := coo.keyManager.MilestonePublicKeyMappingForMilestoneIndex(milestoneIndex, coo.cooPrivateKeys, len(coo.cooPrivateKeys))
+	keymapping := coo.keyManager.MilestonePublicKeyMappingForMilestoneIndex(uint32(milestoneIndex), coo.cooPrivateKeys, len(coo.cooPrivateKeys))
 
 	pubKeys := []iotago.MilestonePublicKey{}
 	pubKeysSet := iotago.MilestonePublicKeySet{}

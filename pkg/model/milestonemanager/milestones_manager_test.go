@@ -9,12 +9,11 @@ import (
 	"github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/core/protocfg"
-	"github.com/iotaledger/hornet/pkg/keymanager"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/testsuite"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
 const (
@@ -71,7 +70,7 @@ func initTest(testInterface testing.TB) (*testsuite.TestEnvironment, *milestonem
 		for _, keyRange := range coordinatorPublicKeyRanges {
 			pubKey, err := crypto.ParseEd25519PublicKeyFromString(keyRange.Key)
 			require.NoError(te.TestInterface, err, "can't load public key ranges")
-			keyManager.AddKeyRange(pubKey, milestone.Index(keyRange.StartIndex), milestone.Index(keyRange.EndIndex))
+			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 		}
 
 		return keyManager

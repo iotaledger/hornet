@@ -650,7 +650,7 @@ func (s *SnapshotManager) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInf
 	// if we don't enforce loading of a snapshot,
 	// we can check the ledger state of the current database and start the node.
 	if err := s.utxoManager.CheckLedgerState(protoParas); err != nil {
-		s.LogFatal(err)
+		s.LogFatalAndExit(err)
 	}
 
 	return nil

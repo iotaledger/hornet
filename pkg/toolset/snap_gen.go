@@ -35,7 +35,7 @@ func snapshotGen(args []string) error {
 			FlagToolSnapGenTreasuryAllocation,
 			"500000000",
 			FlagToolOutputPath,
-			"snapshots/private_tangle/full_snapshot.bin"))
+			"genesis_snapshot.bin"))
 	}
 
 	if err := parseFlagSet(fs, args); err != nil {

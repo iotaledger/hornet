@@ -10,7 +10,6 @@ import (
 
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/keymanager"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
@@ -18,6 +17,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/testsuite/utils"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
 // configureCoordinator configures a new coordinator with clean state for the tests.

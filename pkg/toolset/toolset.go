@@ -28,6 +28,9 @@ const (
 	FlagToolDatabasePathSource = "sourceDatabasePath"
 	FlagToolDatabasePathTarget = "targetDatabasePath"
 
+	FlagToolProtocolParametersPath = "protocolParametersPath"
+	FlagToolCoordinatorStatePath   = "cooStatePath"
+
 	FlagToolSnapshotPath       = "snapshotPath"
 	FlagToolSnapshotPathFull   = "fullSnapshotPath"
 	FlagToolSnapshotPathDelta  = "deltaSnapshotPath"
@@ -81,6 +84,7 @@ const (
 	ToolDatabaseMigration  = "db-migration"
 	ToolDatabaseSnapshot   = "db-snapshot"
 	ToolDatabaseVerify     = "db-verify"
+	ToolNetworkBootstrap   = "network-bootstrap"
 )
 
 const (
@@ -137,6 +141,7 @@ func HandleTools() {
 		ToolDatabaseMigration:  databaseMigration,
 		ToolDatabaseSnapshot:   databaseSnapshot,
 		ToolDatabaseVerify:     databaseVerify,
+		ToolNetworkBootstrap:   networkBootstrap,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -177,7 +182,8 @@ func listTools() {
 	fmt.Printf("%-20s merges missing tangle data from a database to another one\n", fmt.Sprintf("%s:", ToolDatabaseMerge))
 	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
 	fmt.Printf("%-20s creates a full snapshot from a database\n", fmt.Sprintf("%s:", ToolDatabaseSnapshot))
-	fmt.Printf("%-20s verifies a valid ledger state and the existence of all blocks`\n", fmt.Sprintf("%s:", ToolDatabaseVerify))
+	fmt.Printf("%-20s verifies a valid ledger state and the existence of all blocks\n", fmt.Sprintf("%s:", ToolDatabaseVerify))
+	fmt.Printf("%-20s bootstraps a network by creating a snapshot, database and coordinator state file\n", fmt.Sprintf("%s:", ToolNetworkBootstrap))
 }
 
 func yesOrNo(value bool) string {

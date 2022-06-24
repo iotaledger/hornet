@@ -2,7 +2,6 @@ package tangle
 
 import (
 	"context"
-	"github.com/iotaledger/hornet/pkg/protocol"
 	"os"
 	"time"
 
@@ -16,16 +15,17 @@ import (
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/daemon"
-	"github.com/iotaledger/hornet/pkg/keymanager"
 	"github.com/iotaledger/hornet/pkg/metrics"
 	"github.com/iotaledger/hornet/pkg/model/migrator"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
 const (

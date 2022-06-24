@@ -3,21 +3,20 @@ package protocfg
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/iotaledger/hive.go/app/core/shutdown"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/model/syncmanager"
-	"github.com/iotaledger/hornet/pkg/protocol"
-	"github.com/iotaledger/hornet/pkg/tangle"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/core/shutdown"
 	"github.com/iotaledger/hive.go/crypto"
-	"github.com/iotaledger/hornet/pkg/keymanager"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/protocol"
+	"github.com/iotaledger/hornet/pkg/tangle"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
 func init() {
@@ -122,7 +121,7 @@ func KeyManagerWithConfigPublicKeyRanges(coordinatorPublicKeyRanges ConfigPublic
 			return nil, err
 		}
 
-		keyManager.AddKeyRange(pubKey, milestone.Index(keyRange.StartIndex), milestone.Index(keyRange.EndIndex))
+		keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 	}
 
 	return keyManager, nil

@@ -125,7 +125,7 @@ func verifyDatabase(
 
 	// load the genesis ledger state into the temporary storage (SEP and ledger state only)
 	println("loading genesis snapshot...")
-	if err := loadGenesisSnapshot(tangleStoreTemp, genesisSnapshotFilePath, true, tangleStoreSource.SnapshotInfo().NetworkID); err != nil {
+	if err := loadGenesisSnapshot(tangleStoreTemp, genesisSnapshotFilePath, protoParas, true, tangleStoreSource.SnapshotInfo().NetworkID); err != nil {
 		return fmt.Errorf("loading genesis snapshot failed: %w", err)
 	}
 

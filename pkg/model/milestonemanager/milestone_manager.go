@@ -4,11 +4,11 @@ import (
 	"math"
 
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/keymanager"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
 type packageEvents struct {
@@ -97,7 +97,7 @@ func (m *MilestoneManager) VerifyMilestoneBlock(block *iotago.Block) *iotago.Mil
 		}
 	}
 
-	if err := milestonePayload.VerifySignatures(m.milestonePublicKeyCount, m.keyManager.PublicKeysSetForMilestoneIndex(milestone.Index(milestonePayload.Index))); err != nil {
+	if err := milestonePayload.VerifySignatures(m.milestonePublicKeyCount, m.keyManager.PublicKeysSetForMilestoneIndex(milestonePayload.Index)); err != nil {
 		return nil
 	}
 
@@ -115,7 +115,7 @@ func (m *MilestoneManager) VerifyMilestonePayload(payload iotago.Payload) *iotag
 		return nil
 	}
 
-	if err := milestonePayload.VerifySignatures(m.milestonePublicKeyCount, m.keyManager.PublicKeysSetForMilestoneIndex(milestone.Index(milestonePayload.Index))); err != nil {
+	if err := milestonePayload.VerifySignatures(m.milestonePublicKeyCount, m.keyManager.PublicKeysSetForMilestoneIndex(milestonePayload.Index)); err != nil {
 		return nil
 	}
 
