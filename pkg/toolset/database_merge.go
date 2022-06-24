@@ -511,7 +511,7 @@ func mergeDatabase(
 	if msIndexEndTarget == 0 {
 		// no ledger state in database available => load the genesis snapshot
 		println("loading genesis snapshot...")
-		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
+		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, protoParas, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
 			return errors.Wrapf(ErrCritical, "loading genesis snapshot failed: %s", err.Error())
 		}
 

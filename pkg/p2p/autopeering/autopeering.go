@@ -397,12 +397,12 @@ func (a *AutopeeringManager) Run(ctx context.Context) {
 	// resolve the bind address
 	localAddr, err := net.ResolveUDPAddr(peering.Network(), a.bindAddress)
 	if err != nil {
-		a.LogFatalf("error resolving %s: %s", a.bindAddress, err)
+		a.LogFatalfAndExit("error resolving %s: %s", a.bindAddress, err)
 	}
 
 	conn, err := net.ListenUDP(peering.Network(), localAddr)
 	if err != nil {
-		a.LogFatalf("error listening: %s", err)
+		a.LogFatalfAndExit("error listening: %s", err)
 	}
 
 	handlers := []server.Handler{a.discoveryProtocol}

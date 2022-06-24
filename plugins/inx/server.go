@@ -40,12 +40,12 @@ func (s *INXServer) Start() {
 	go func() {
 		lis, err := net.Listen("tcp", ParamsINX.BindAddress)
 		if err != nil {
-			Plugin.LogFatalf("failed to listen: %v", err)
+			Plugin.LogFatalfAndExit("failed to listen: %v", err)
 		}
 		defer lis.Close()
 
 		if err := s.grpcServer.Serve(lis); err != nil {
-			Plugin.LogFatalf("failed to serve: %v", err)
+			Plugin.LogFatalfAndExit("failed to serve: %v", err)
 		}
 	}()
 }

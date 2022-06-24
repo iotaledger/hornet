@@ -32,6 +32,16 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
 fi
 docker-compose --profile "snapshots" up
 
+# Prepare database directory for coo
+mkdir -p privatedb/coo
+mkdir -p privatedb/state
+if [[ "$OSTYPE" != "darwin"* ]]; then
+  chown -R 65532:65532 privatedb
+fi
+
+# Bootstrap network (create coo database, create genesis milestone, create coo state)
+docker-compose --profile "bootstrap" up
+
 # Duplicate snapshot for all nodes
 cp -R snapshots/coo snapshots/hornet-2
 cp -R snapshots/coo snapshots/hornet-3
@@ -41,16 +51,11 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
 fi
 
 # Prepare database directory
-mkdir -p privatedb/coo
 mkdir -p privatedb/indexer
 mkdir -p privatedb/participation
-mkdir -p privatedb/state
 mkdir -p privatedb/hornet-2
 mkdir -p privatedb/hornet-3
 mkdir -p privatedb/hornet-4
 if [[ "$OSTYPE" != "darwin"* ]]; then
   chown -R 65532:65532 privatedb
 fi
-
-# Bootstrap coordinator
-docker-compose --profile "bootstrap" up

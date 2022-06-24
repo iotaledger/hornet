@@ -28,6 +28,9 @@ const (
 	FlagToolDatabasePathSource = "sourceDatabasePath"
 	FlagToolDatabasePathTarget = "targetDatabasePath"
 
+	FlagToolProtocolParametersPath = "protocolParametersPath"
+	FlagToolCoordinatorStatePath   = "cooStatePath"
+
 	FlagToolSnapshotPath       = "snapshotPath"
 	FlagToolSnapshotPathFull   = "fullSnapshotPath"
 	FlagToolSnapshotPathDelta  = "deltaSnapshotPath"
@@ -63,24 +66,25 @@ const (
 )
 
 const (
-	ToolPwdHash            = "pwd-hash"
-	ToolP2PIdentityGen     = "p2pidentity-gen"
-	ToolP2PExtractIdentity = "p2pidentity-extract"
-	ToolEd25519Key         = "ed25519-key"
-	ToolEd25519Addr        = "ed25519-addr"
-	ToolJWTApi             = "jwt-api"
-	ToolSnapGen            = "snap-gen"
-	ToolSnapMerge          = "snap-merge"
-	ToolSnapInfo           = "snap-info"
-	ToolSnapHash           = "snap-hash"
-	ToolBenchmarkIO        = "bench-io"
-	ToolBenchmarkCPU       = "bench-cpu"
-	ToolDatabaseLedgerHash = "db-hash"
-	ToolDatabaseHealth     = "db-health"
-	ToolDatabaseMerge      = "db-merge"
-	ToolDatabaseMigration  = "db-migration"
-	ToolDatabaseSnapshot   = "db-snapshot"
-	ToolDatabaseVerify     = "db-verify"
+	ToolPwdHash                = "pwd-hash"
+	ToolP2PIdentityGen         = "p2pidentity-gen"
+	ToolP2PExtractIdentity     = "p2pidentity-extract"
+	ToolEd25519Key             = "ed25519-key"
+	ToolEd25519Addr            = "ed25519-addr"
+	ToolJWTApi                 = "jwt-api"
+	ToolSnapGen                = "snap-gen"
+	ToolSnapMerge              = "snap-merge"
+	ToolSnapInfo               = "snap-info"
+	ToolSnapHash               = "snap-hash"
+	ToolBenchmarkIO            = "bench-io"
+	ToolBenchmarkCPU           = "bench-cpu"
+	ToolDatabaseLedgerHash     = "db-hash"
+	ToolDatabaseHealth         = "db-health"
+	ToolDatabaseMerge          = "db-merge"
+	ToolDatabaseMigration      = "db-migration"
+	ToolDatabaseSnapshot       = "db-snapshot"
+	ToolDatabaseVerify         = "db-verify"
+	ToolBootstrapPrivateTangle = "bootstrap-private-tangle"
 )
 
 const (
@@ -119,24 +123,25 @@ func HandleTools() {
 	}
 
 	tools := map[string]func([]string) error{
-		ToolPwdHash:            hashPasswordAndSalt,
-		ToolP2PIdentityGen:     generateP2PIdentity,
-		ToolP2PExtractIdentity: extractP2PIdentity,
-		ToolEd25519Key:         generateEd25519Key,
-		ToolEd25519Addr:        generateEd25519Address,
-		ToolJWTApi:             generateJWTApiToken,
-		ToolSnapGen:            snapshotGen,
-		ToolSnapMerge:          snapshotMerge,
-		ToolSnapInfo:           snapshotInfo,
-		ToolSnapHash:           snapshotHash,
-		ToolBenchmarkIO:        benchmarkIO,
-		ToolBenchmarkCPU:       benchmarkCPU,
-		ToolDatabaseLedgerHash: databaseLedgerHash,
-		ToolDatabaseHealth:     databaseHealth,
-		ToolDatabaseMerge:      databaseMerge,
-		ToolDatabaseMigration:  databaseMigration,
-		ToolDatabaseSnapshot:   databaseSnapshot,
-		ToolDatabaseVerify:     databaseVerify,
+		ToolPwdHash:                hashPasswordAndSalt,
+		ToolP2PIdentityGen:         generateP2PIdentity,
+		ToolP2PExtractIdentity:     extractP2PIdentity,
+		ToolEd25519Key:             generateEd25519Key,
+		ToolEd25519Addr:            generateEd25519Address,
+		ToolJWTApi:                 generateJWTApiToken,
+		ToolSnapGen:                snapshotGen,
+		ToolSnapMerge:              snapshotMerge,
+		ToolSnapInfo:               snapshotInfo,
+		ToolSnapHash:               snapshotHash,
+		ToolBenchmarkIO:            benchmarkIO,
+		ToolBenchmarkCPU:           benchmarkCPU,
+		ToolDatabaseLedgerHash:     databaseLedgerHash,
+		ToolDatabaseHealth:         databaseHealth,
+		ToolDatabaseMerge:          databaseMerge,
+		ToolDatabaseMigration:      databaseMigration,
+		ToolDatabaseSnapshot:       databaseSnapshot,
+		ToolDatabaseVerify:         databaseVerify,
+		ToolBootstrapPrivateTangle: networkBootstrap,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -177,7 +182,8 @@ func listTools() {
 	fmt.Printf("%-20s merges missing tangle data from a database to another one\n", fmt.Sprintf("%s:", ToolDatabaseMerge))
 	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
 	fmt.Printf("%-20s creates a full snapshot from a database\n", fmt.Sprintf("%s:", ToolDatabaseSnapshot))
-	fmt.Printf("%-20s verifies a valid ledger state and the existence of all blocks`\n", fmt.Sprintf("%s:", ToolDatabaseVerify))
+	fmt.Printf("%-20s verifies a valid ledger state and the existence of all blocks\n", fmt.Sprintf("%s:", ToolDatabaseVerify))
+	fmt.Printf("%-20s bootstraps a private tangle by creating a snapshot, database and coordinator state file\n", fmt.Sprintf("%s:", ToolBootstrapPrivateTangle))
 }
 
 func yesOrNo(value bool) string {
