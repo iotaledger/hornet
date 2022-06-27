@@ -42,7 +42,7 @@ func (o *Output) OutputID() iotago.OutputID {
 	return o.outputID
 }
 
-func (o *Output) mapKey() string {
+func (o *Output) MapKey() string {
 	return string(o.outputID[:])
 }
 
@@ -116,11 +116,11 @@ func outputStorageKeyForOutputID(outputID iotago.OutputID) []byte {
 	return ms.Bytes()
 }
 
-func (o *Output) kvStorableKey() (key []byte) {
+func (o *Output) KVStorableKey() (key []byte) {
 	return outputStorageKeyForOutputID(o.outputID)
 }
 
-func (o *Output) kvStorableValue() (value []byte) {
+func (o *Output) KVStorableValue() (value []byte) {
 	ms := marshalutil.New(40)
 	ms.WriteBytes(o.blockID[:])              // 32 bytes
 	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
@@ -189,11 +189,11 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 //- Helper
 
 func storeOutput(output *Output, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(output.kvStorableKey(), output.kvStorableValue())
+	return mutations.Set(output.KVStorableKey(), output.KVStorableValue())
 }
 
 func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
-	return mutations.Delete(output.kvStorableKey())
+	return mutations.Delete(output.KVStorableKey())
 }
 
 //- Manager

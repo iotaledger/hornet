@@ -1,4 +1,4 @@
-package utxo
+package utxo_test
 
 import (
 	"bytes"
@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 )
 
-func EqualOutput(t *testing.T, expected *Output, actual *Output) {
+func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.OutputID(), actual.OutputID())
 	require.Equal(t, expected.BlockID(), actual.BlockID())
 	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
@@ -17,14 +19,14 @@ func EqualOutput(t *testing.T, expected *Output, actual *Output) {
 	require.EqualValues(t, expected.Output(), actual.Output())
 }
 
-func EqualSpent(t *testing.T, expected *Spent, actual *Spent) {
+func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
 	require.Equal(t, expected.OutputID(), actual.OutputID())
 	require.Equal(t, expected.TargetTransactionID(), actual.TargetTransactionID())
 	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
 	EqualOutput(t, expected.Output(), actual.Output())
 }
 
-func EqualOutputs(t *testing.T, expected Outputs, actual Outputs) {
+func EqualOutputs(t *testing.T, expected utxo.Outputs, actual utxo.Outputs) {
 	require.Equal(t, len(expected), len(actual))
 
 	// Sort Outputs by output ID.
@@ -44,7 +46,7 @@ func EqualOutputs(t *testing.T, expected Outputs, actual Outputs) {
 	}
 }
 
-func EqualSpents(t *testing.T, expected Spents, actual Spents) {
+func EqualSpents(t *testing.T, expected utxo.Spents, actual utxo.Spents) {
 	require.Equal(t, len(expected), len(actual))
 
 	// Sort Spents by output ID.

@@ -18,7 +18,7 @@ func lookupKeyUnspentOutput(outputID iotago.OutputID) lookupKey {
 	return ms.Bytes()
 }
 
-func (o *Output) unspentLookupKey() lookupKey {
+func (o *Output) UnspentLookupKey() lookupKey {
 	return lookupKeyUnspentOutput(o.outputID)
 }
 
@@ -33,7 +33,7 @@ func outputIDFromDatabaseKey(key lookupKey) (iotago.OutputID, error) {
 }
 
 func markAsUnspent(output *Output, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(output.unspentLookupKey(), []byte{})
+	return mutations.Set(output.UnspentLookupKey(), []byte{})
 }
 
 func markAsSpent(output *Output, mutations kvstore.BatchedMutations) error {
@@ -41,7 +41,7 @@ func markAsSpent(output *Output, mutations kvstore.BatchedMutations) error {
 }
 
 func deleteOutputLookups(output *Output, mutations kvstore.BatchedMutations) error {
-	return mutations.Delete(output.unspentLookupKey())
+	return mutations.Delete(output.UnspentLookupKey())
 }
 
 func (u *Manager) IsOutputIDUnspentWithoutLocking(outputID iotago.OutputID) (bool, error) {
@@ -49,7 +49,7 @@ func (u *Manager) IsOutputIDUnspentWithoutLocking(outputID iotago.OutputID) (boo
 }
 
 func (u *Manager) IsOutputUnspentWithoutLocking(output *Output) (bool, error) {
-	return u.utxoStorage.Has(output.unspentLookupKey())
+	return u.utxoStorage.Has(output.UnspentLookupKey())
 }
 
 func storeSpentAndMarkOutputAsSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
