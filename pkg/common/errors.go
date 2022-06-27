@@ -5,6 +5,8 @@ import (
 )
 
 var (
+	// ErrCritical is returned when a critical error stops the execution of a task.
+	ErrCritical = errors.New("critical error")
 	// ErrOperationAborted is returned when the operation was aborted e.g. by a shutdown signal.
 	ErrOperationAborted = errors.New("operation was aborted")
 	// ErrBlockNotFound is returned when a block was not found.

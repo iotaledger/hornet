@@ -83,7 +83,7 @@ type DownloadTarget struct {
 	Delta string `usage:"URL of the delta snapshot file" json:"delta"`
 }
 
-func (s *SnapshotManager) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
+func (s *Manager) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
 
 	// check if the remote snapshot files fit the network ID and if delta fits the full snapshot.
 	checkTargetConsistency := func(wantedNetworkID uint64, fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) error {
@@ -169,7 +169,7 @@ func (s *SnapshotManager) filterTargets(wantedNetworkID uint64, targets []*Downl
 }
 
 // DownloadSnapshotFiles tries to download snapshots files from the given targets.
-func (s *SnapshotManager) DownloadSnapshotFiles(ctx context.Context, wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
+func (s *Manager) DownloadSnapshotFiles(ctx context.Context, wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
 
 	for _, target := range s.filterTargets(wantedNetworkID, targets) {
 
@@ -194,7 +194,7 @@ func (s *SnapshotManager) DownloadSnapshotFiles(ctx context.Context, wantedNetwo
 }
 
 // downloads a snapshot header from the given url.
-func (s *SnapshotManager) downloadHeader(url string) (*ReadFileHeader, error) {
+func (s *Manager) downloadHeader(url string) (*ReadFileHeader, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotHeader)
 	defer cancel()
 
@@ -217,7 +217,7 @@ func (s *SnapshotManager) downloadHeader(url string) (*ReadFileHeader, error) {
 }
 
 // downloads a snapshot file from the given url to the specified path.
-func (s *SnapshotManager) downloadFile(ctx context.Context, path string, url string) error {
+func (s *Manager) downloadFile(ctx context.Context, path string, url string) error {
 	downloadCtx, downloadCtxCancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
 	defer downloadCtxCancel()
 

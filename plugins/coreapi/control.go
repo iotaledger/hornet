@@ -14,7 +14,7 @@ import (
 
 func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 
-	if deps.SnapshotManager.IsSnapshottingOrPruning() {
+	if deps.SnapshotManager.IsSnapshotting() || deps.PruningManager.IsPruning() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is already creating a snapshot or pruning is running")
 	}
 
@@ -34,14 +34,14 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 	var targetIndex milestone.Index
 
 	if request.Index != nil {
-		targetIndex, err = deps.SnapshotManager.PruneDatabaseByTargetIndex(Plugin.Daemon().ContextStopped(), *request.Index)
+		targetIndex, err = deps.PruningManager.PruneDatabaseByTargetIndex(Plugin.Daemon().ContextStopped(), *request.Index)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
 	}
 
 	if request.Depth != nil {
-		targetIndex, err = deps.SnapshotManager.PruneDatabaseByDepth(Plugin.Daemon().ContextStopped(), *request.Depth)
+		targetIndex, err = deps.PruningManager.PruneDatabaseByDepth(Plugin.Daemon().ContextStopped(), *request.Depth)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
@@ -53,7 +53,7 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
 
-		targetIndex, err = deps.SnapshotManager.PruneDatabaseBySize(Plugin.Daemon().ContextStopped(), pruningTargetDatabaseSizeBytes)
+		targetIndex, err = deps.PruningManager.PruneDatabaseBySize(Plugin.Daemon().ContextStopped(), pruningTargetDatabaseSizeBytes)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
@@ -66,7 +66,7 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 
 func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 
-	if deps.SnapshotManager.IsSnapshottingOrPruning() {
+	if deps.SnapshotManager.IsSnapshotting() || deps.PruningManager.IsPruning() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is already creating a snapshot or pruning is running")
 	}
 

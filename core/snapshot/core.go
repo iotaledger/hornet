@@ -3,10 +3,10 @@ package snapshot
 import (
 	"context"
 	"fmt"
-	"github.com/iotaledger/hornet/pkg/protocol"
 	"os"
 
-	"github.com/labstack/gommon/bytes"
+	"github.com/iotaledger/hornet/pkg/protocol"
+
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
@@ -68,7 +68,7 @@ type dependencies struct {
 	Storage              *storage.Storage
 	Tangle               *tangle.Tangle
 	UTXOManager          *utxo.Manager
-	SnapshotManager      *snapshot.SnapshotManager
+	SnapshotManager      *snapshot.Manager
 	DeleteAllFlag        bool   `name:"deleteAll"`
 	PruningPruneReceipts bool   `name:"pruneReceipts"`
 	SnapshotsFullPath    string `name:"snapshotsFullPath"`
@@ -80,16 +80,14 @@ func initConfigPars(c *dig.Container) error {
 
 	type cfgResult struct {
 		dig.Out
-		PruningPruneReceipts bool   `name:"pruneReceipts"`
-		SnapshotsFullPath    string `name:"snapshotsFullPath"`
-		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
+		SnapshotsFullPath  string `name:"snapshotsFullPath"`
+		SnapshotsDeltaPath string `name:"snapshotsDeltaPath"`
 	}
 
 	return c.Provide(func() cfgResult {
 		return cfgResult{
-			PruningPruneReceipts: ParamsPruning.PruneReceipts,
-			SnapshotsFullPath:    ParamsSnapshots.FullPath,
-			SnapshotsDeltaPath:   ParamsSnapshots.DeltaPath,
+			SnapshotsFullPath:  ParamsSnapshots.FullPath,
+			SnapshotsDeltaPath: ParamsSnapshots.DeltaPath,
 		}
 	})
 }
@@ -109,7 +107,7 @@ func provide(c *dig.Container) error {
 		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
 	}
 
-	return c.Provide(func(deps snapshotDeps) *snapshot.SnapshotManager {
+	return c.Provide(func(deps snapshotDeps) *snapshot.Manager {
 
 		solidEntryPointCheckThresholdPast := milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
 		solidEntryPointCheckThresholdFuture := milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
@@ -121,32 +119,8 @@ func provide(c *dig.Container) error {
 			snapshotDepth = solidEntryPointCheckThresholdFuture
 		}
 
-		pruningMilestonesEnabled := ParamsPruning.Milestones.Enabled
-		pruningMilestonesMaxMilestonesToKeep := milestone.Index(ParamsPruning.Milestones.MaxMilestonesToKeep)
-		pruningMilestonesMaxMilestonesToKeepMin := snapshotDepth + solidEntryPointCheckThresholdPast + pruningThreshold + 1
-		if pruningMilestonesMaxMilestonesToKeep != 0 && pruningMilestonesMaxMilestonesToKeep < pruningMilestonesMaxMilestonesToKeepMin {
-			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), pruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeepMin)
-			pruningMilestonesMaxMilestonesToKeep = pruningMilestonesMaxMilestonesToKeepMin
-		}
-
-		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
-			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.Enabled)))
-		}
-
-		pruningSizeEnabled := ParamsPruning.Size.Enabled
-		pruningTargetDatabaseSizeBytes, err := bytes.Parse(ParamsPruning.Size.TargetSize)
-		if err != nil {
-			CoreComponent.LogPanicf("parameter %s invalid", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)))
-		}
-
-		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
-			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)), CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.Enabled)))
-		}
-
 		return snapshot.NewSnapshotManager(
 			CoreComponent.Logger(),
-			deps.TangleDatabase,
-			deps.UTXODatabase,
 			deps.Storage,
 			deps.SyncManager,
 			deps.UTXOManager,
@@ -160,13 +134,6 @@ func provide(c *dig.Container) error {
 			pruningThreshold,
 			snapshotDepth,
 			milestone.Index(ParamsSnapshots.Interval),
-			pruningMilestonesEnabled,
-			pruningMilestonesMaxMilestonesToKeep,
-			pruningSizeEnabled,
-			pruningTargetDatabaseSizeBytes,
-			ParamsPruning.Size.ThresholdPercentage,
-			ParamsPruning.Size.CooldownTime,
-			deps.PruningPruneReceipts,
 		)
 	})
 }

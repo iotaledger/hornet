@@ -23,6 +23,7 @@ const (
 	PriorityHeartbeats // depends on PriorityGossipService
 	PriorityWarpSync
 	PrioritySnapshots
+	PriorityPruning
 	PriorityMetricsUpdater
 	PriorityPoWHandler
 	PriorityRestAPI // depends on PriorityPoWHandler

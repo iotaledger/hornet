@@ -5,6 +5,7 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hornet/pkg/pruning"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 )
@@ -23,7 +24,7 @@ var (
 
 	metricsLock                syncutils.RWMutex
 	lastSnapshotMetrics        *snapshot.SnapshotMetrics
-	lastDatabasePruningMetrics *snapshot.PruningMetrics
+	lastDatabasePruningMetrics *pruning.PruningMetrics
 	lastConfirmationMetrics    *whiteflag.ConfirmationMetrics
 )
 
@@ -93,7 +94,7 @@ func configureDebug() {
 		lastSnapshotMetrics = metrics
 	}))
 
-	deps.SnapshotManager.Events.PruningMetricsUpdated.Attach(events.NewClosure(func(metrics *snapshot.PruningMetrics) {
+	deps.PruningManager.Events.PruningMetricsUpdated.Attach(events.NewClosure(func(metrics *pruning.PruningMetrics) {
 		databasePruningTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()

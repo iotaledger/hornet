@@ -22,6 +22,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/profile"
 	proto "github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/pkg/pruning"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
 )
@@ -68,7 +69,8 @@ type dependencies struct {
 	Storage          *storage.Storage
 	SyncManager      *syncmanager.SyncManager
 	Tangle           *tangle.Tangle
-	SnapshotManager  *snapshot.SnapshotManager
+	SnapshotManager  *snapshot.Manager
+	PruningManager   *pruning.Manager
 	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
@@ -184,7 +186,7 @@ func configure() error {
 
 	// don't re-enqueue pending requests in case the node is running hot
 	deps.Requester.AddBackPressureFunc(func() bool {
-		return deps.SnapshotManager.IsSnapshottingOrPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
+		return deps.SnapshotManager.IsSnapshotting() || deps.PruningManager.IsPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
 	})
 
 	configureEvents()
