@@ -46,7 +46,7 @@ func (s *Spent) OutputID() iotago.OutputID {
 	return s.outputID
 }
 
-func (s *Spent) mapKey() string {
+func (s *Spent) MapKey() string {
 	return string(s.outputID[:])
 }
 
@@ -93,11 +93,11 @@ func spentStorageKeyForOutputID(outputID iotago.OutputID) []byte {
 	return ms.Bytes()
 }
 
-func (s *Spent) kvStorableKey() (key []byte) {
+func (s *Spent) KVStorableKey() (key []byte) {
 	return spentStorageKeyForOutputID(s.outputID)
 }
 
-func (s *Spent) kvStorableValue() (value []byte) {
+func (s *Spent) KVStorableValue() (value []byte) {
 	ms := marshalutil.New(40)
 	ms.WriteBytes(s.targetTransactionID[:])  // 32 bytes
 	ms.WriteUint32(uint32(s.milestoneIndex)) // 4 bytes
@@ -175,9 +175,9 @@ func (u *Manager) ReadSpentForOutputIDWithoutLocking(outputID iotago.OutputID) (
 }
 
 func storeSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(spent.kvStorableKey(), spent.kvStorableValue())
+	return mutations.Set(spent.KVStorableKey(), spent.KVStorableValue())
 }
 
 func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
-	return mutations.Delete(spent.kvStorableKey())
+	return mutations.Delete(spent.KVStorableKey())
 }

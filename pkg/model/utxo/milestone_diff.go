@@ -34,11 +34,11 @@ func milestoneDiffKeyForIndex(msIndex milestone.Index) []byte {
 	return m.Bytes()
 }
 
-func (ms *MilestoneDiff) kvStorableKey() []byte {
+func (ms *MilestoneDiff) KVStorableKey() []byte {
 	return milestoneDiffKeyForIndex(ms.Index)
 }
 
-func (ms *MilestoneDiff) kvStorableValue() []byte {
+func (ms *MilestoneDiff) KVStorableValue() []byte {
 
 	m := marshalutil.New(9)
 
@@ -53,12 +53,14 @@ func (ms *MilestoneDiff) kvStorableValue() []byte {
 	}
 
 	if ms.TreasuryOutput != nil {
+		// hasTreasury is true
 		m.WriteBool(true)
 		m.WriteBytes(ms.TreasuryOutput.MilestoneID[:])
 		m.WriteBytes(ms.SpentTreasuryOutput.MilestoneID[:])
 		return m.Bytes()
 	}
 
+	// hasTreasury is false
 	m.WriteBool(false)
 
 	return m.Bytes()
@@ -171,11 +173,11 @@ func (ms *MilestoneDiff) SHA256Sum() ([]byte, error) {
 
 	msDiffHash := sha256.New()
 
-	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.kvStorableKey()); err != nil {
+	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.KVStorableKey()); err != nil {
 		return nil, fmt.Errorf("unable to serialize milestone diff: %w", err)
 	}
 
-	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.kvStorableValue()); err != nil {
+	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.KVStorableValue()); err != nil {
 		return nil, fmt.Errorf("unable to serialize milestone diff: %w", err)
 	}
 
@@ -186,7 +188,7 @@ func (ms *MilestoneDiff) SHA256Sum() ([]byte, error) {
 //- DB helpers
 
 func storeDiff(diff *MilestoneDiff, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(diff.kvStorableKey(), diff.kvStorableValue())
+	return mutations.Set(diff.KVStorableKey(), diff.KVStorableValue())
 }
 
 func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {

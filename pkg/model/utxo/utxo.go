@@ -29,6 +29,11 @@ func New(store kvstore.KVStore) *Manager {
 	}
 }
 
+// KVStore returns the underlying KVStore.
+func (u *Manager) KVStore() kvstore.KVStore {
+	return u.utxoStorage
+}
+
 // ClearLedger removes all entries from the UTXO ledger (spent, unspent, diff, receipts, treasury).
 func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 	u.WriteLockLedger()
@@ -396,7 +401,7 @@ func (u *Manager) LedgerStateSHA256Sum() ([]byte, error) {
 			return nil, err
 		}
 
-		if _, err := ledgerStateHash.Write(output.kvStorableValue()); err != nil {
+		if _, err := ledgerStateHash.Write(output.KVStorableValue()); err != nil {
 			return nil, err
 		}
 	}
