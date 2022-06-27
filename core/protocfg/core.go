@@ -48,6 +48,12 @@ type dependencies struct {
 
 func initConfigPars(c *dig.Container) error {
 
+	if err := c.Provide(func() string {
+		return ParamsProtocol.Parameters.NetworkName
+	}, dig.Name("targetNetworkName")); err != nil {
+		CoreComponent.LogPanic(err)
+	}
+
 	type cfgDeps struct {
 		dig.In
 		Storage *storage.Storage `optional:"true"` // optional because of entry-node mode
