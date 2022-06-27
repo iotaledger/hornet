@@ -19,8 +19,8 @@ func NewOutputMetadataResponse(output *utxo.Output, ledgerIndex milestone.Index)
 		TransactionID:            output.OutputID().TransactionID().ToHex(),
 		Spent:                    false,
 		OutputIndex:              output.OutputID().Index(),
-		MilestoneIndexBooked:     output.MilestoneIndex(),
-		MilestoneTimestampBooked: output.MilestoneTimestamp(),
+		MilestoneIndexBooked:     output.MilestoneIndexBooked(),
+		MilestoneTimestampBooked: output.MilestoneTimestampBooked(),
 		LedgerIndex:              ledgerIndex,
 	}
 }
@@ -37,9 +37,9 @@ func rawMessageForOutput(output *utxo.Output) (*json.RawMessage, error) {
 func NewSpentMetadataResponse(spent *utxo.Spent, ledgerIndex milestone.Index) *OutputMetadataResponse {
 	metadata := NewOutputMetadataResponse(spent.Output(), ledgerIndex)
 	metadata.Spent = true
-	metadata.MilestoneIndexSpent = spent.MilestoneIndex()
-	metadata.TransactionIDSpent = spent.TargetTransactionID().ToHex()
-	metadata.MilestoneTimestampSpent = spent.MilestoneTimestamp()
+	metadata.MilestoneTimestampSpent = spent.MilestoneTimestampSpent()
+	metadata.TransactionIDSpent = spent.TransactionIDSpent().ToHex()
+	metadata.MilestoneIndexSpent = spent.MilestoneIndexSpent()
 	return metadata
 }
 

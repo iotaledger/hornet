@@ -3,6 +3,7 @@ package inx
 import (
 	"context"
 	"fmt"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -22,8 +23,8 @@ func NewLedgerOutput(o *utxo.Output) (*inx.LedgerOutput, error) {
 	return &inx.LedgerOutput{
 		OutputId:                 inx.NewOutputId(o.OutputID()),
 		BlockId:                  inx.NewBlockId(o.BlockID()),
-		MilestoneIndexBooked:     uint32(o.MilestoneIndex()),
-		MilestoneTimestampBooked: o.MilestoneTimestamp(),
+		MilestoneIndexBooked:     uint32(o.MilestoneIndexBooked()),
+		MilestoneTimestampBooked: o.MilestoneTimestampBooked(),
 		Output:                   output,
 	}, nil
 }
@@ -35,9 +36,9 @@ func NewLedgerSpent(s *utxo.Spent) (*inx.LedgerSpent, error) {
 	}
 	l := &inx.LedgerSpent{
 		Output:                  output,
-		TransactionIdSpent:      inx.NewTransactionId(s.TargetTransactionID()),
-		MilestoneIndexSpent:     uint32(s.MilestoneIndex()),
-		MilestoneTimestampSpent: s.MilestoneTimestamp(),
+		TransactionIdSpent:      inx.NewTransactionId(s.TransactionIDSpent()),
+		MilestoneIndexSpent:     uint32(s.MilestoneIndexSpent()),
+		MilestoneTimestampSpent: s.MilestoneTimestampSpent(),
 	}
 
 	return l, nil

@@ -30,10 +30,10 @@ func (l LexicalOrderedOutputs) Swap(i, j int) {
 type Output struct {
 	kvStorable
 
-	outputID           iotago.OutputID
-	blockID            iotago.BlockID
-	milestoneIndex     milestone.Index
-	milestoneTimestamp uint32
+	outputID          iotago.OutputID
+	blockID           iotago.BlockID
+	msIndexBooked     milestone.Index
+	msTimestampBooked uint32
 
 	output iotago.Output
 }
@@ -50,12 +50,12 @@ func (o *Output) BlockID() iotago.BlockID {
 	return o.blockID
 }
 
-func (o *Output) MilestoneIndex() milestone.Index {
-	return o.milestoneIndex
+func (o *Output) MilestoneIndexBooked() milestone.Index {
+	return o.msIndexBooked
 }
 
-func (o *Output) MilestoneTimestamp() uint32 {
-	return o.milestoneTimestamp
+func (o *Output) MilestoneTimestampBooked() uint32 {
+	return o.msTimestampBooked
 }
 
 func (o *Output) OutputType() iotago.OutputType {
@@ -80,17 +80,17 @@ func (o Outputs) ToOutputSet() iotago.OutputSet {
 	return outputSet
 }
 
-func CreateOutput(outputID iotago.OutputID, blockID iotago.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
+func CreateOutput(outputID iotago.OutputID, blockID iotago.BlockID, msIndexBooked milestone.Index, msTimestampBooked uint32, output iotago.Output) *Output {
 	return &Output{
-		outputID:           outputID,
-		blockID:            blockID,
-		milestoneIndex:     milestoneIndex,
-		milestoneTimestamp: milestoneTimestamp,
-		output:             output,
+		outputID:          outputID,
+		blockID:           blockID,
+		msIndexBooked:     msIndexBooked,
+		msTimestampBooked: msTimestampBooked,
+		output:            output,
 	}
 }
 
-func NewOutput(blockID iotago.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(blockID iotago.BlockID, msIndexBooked milestone.Index, msTimestampBooked uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	txID, err := transaction.ID()
 	if err != nil {
@@ -104,7 +104,7 @@ func NewOutput(blockID iotago.BlockID, milestoneIndex milestone.Index, milestone
 	output = transaction.Essence.Outputs[int(index)]
 	outputID := iotago.OutputIDFromTransactionIDAndIndex(txID, index)
 
-	return CreateOutput(outputID, blockID, milestoneIndex, milestoneTimestamp, output), nil
+	return CreateOutput(outputID, blockID, msIndexBooked, msTimestampBooked, output), nil
 }
 
 //- kvStorable
@@ -122,9 +122,9 @@ func (o *Output) KVStorableKey() (key []byte) {
 
 func (o *Output) KVStorableValue() (value []byte) {
 	ms := marshalutil.New(40)
-	ms.WriteBytes(o.blockID[:])              // 32 bytes
-	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
-	ms.WriteUint32(o.milestoneTimestamp)     // 4 bytes
+	ms.WriteBytes(o.blockID[:])             // 32 bytes
+	ms.WriteUint32(uint32(o.msIndexBooked)) // 4 bytes
+	ms.WriteUint32(o.msTimestampBooked)     // 4 bytes
 
 	outputBytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -160,11 +160,11 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	}
 
 	// Read Milestone
-	if o.milestoneIndex, err = parseMilestoneIndex(valueUtil); err != nil {
+	if o.msIndexBooked, err = parseMilestoneIndex(valueUtil); err != nil {
 		return err
 	}
 
-	if o.milestoneTimestamp, err = valueUtil.ReadUint32(); err != nil {
+	if o.msTimestampBooked, err = valueUtil.ReadUint32(); err != nil {
 		return err
 	}
 

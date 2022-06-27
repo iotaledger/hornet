@@ -345,7 +345,7 @@ func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.OutputID(), actual.OutputID())
 	require.Equal(t, expected.BlockID(), actual.BlockID())
-	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
+	require.Equal(t, expected.MilestoneIndexBooked(), actual.MilestoneIndexBooked())
 	require.Equal(t, expected.OutputType(), actual.OutputType())
 	require.Equal(t, expected.Deposit(), actual.Deposit())
 	require.EqualValues(t, expected.Output(), actual.Output())
@@ -353,8 +353,9 @@ func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 
 func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
 	require.Equal(t, expected.OutputID(), actual.OutputID())
-	require.Equal(t, expected.TargetTransactionID(), actual.TargetTransactionID())
-	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
+	require.Equal(t, expected.TransactionIDSpent(), actual.TransactionIDSpent())
+	require.Equal(t, expected.MilestoneIndexSpent(), actual.MilestoneIndexSpent())
+	require.Equal(t, expected.MilestoneTimestampSpent(), actual.MilestoneTimestampSpent())
 	EqualOutput(t, expected.Output(), actual.Output())
 }
 
