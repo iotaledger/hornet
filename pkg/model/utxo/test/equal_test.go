@@ -23,6 +23,7 @@ func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
 	require.Equal(t, expected.OutputID(), actual.OutputID())
 	require.Equal(t, expected.TransactionIDSpent(), actual.TransactionIDSpent())
 	require.Equal(t, expected.MilestoneIndexSpent(), actual.MilestoneIndexSpent())
+	require.Equal(t, expected.MilestoneTimestampSpent(), actual.MilestoneTimestampSpent())
 	EqualOutput(t, expected.Output(), actual.Output())
 }
 

@@ -294,7 +294,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 
 			consumedCount := rand.Intn(500) + 1
 			for i := 0; i < consumedCount; i++ {
-				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents(milestone.Index(milestonePayload.Index)))
+				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents(milestone.Index(milestonePayload.Index), milestonePayload.Timestamp))
 			}
 
 			msDiff.SpentTreasuryOutput = &utxo.TreasuryOutput{
@@ -338,8 +338,8 @@ func randLSTransactionUnspentOutputs() *utxo.Output {
 	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType()))
 }
 
-func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
-	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex, rand.Uint32())
+func randLSTransactionSpents(msIndexSpent milestone.Index, msTimestampSpent uint32) *utxo.Spent {
+	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndexSpent, msTimestampSpent)
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
