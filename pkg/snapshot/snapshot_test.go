@@ -26,12 +26,12 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo
 	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), output)
 }
 
-func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
-	confirmationIndex := utils.RandMilestoneIndex()
-	if len(msIndex) > 0 {
-		confirmationIndex = msIndex[0]
+func randomSpent(output *utxo.Output, msIndexSpent ...milestone.Index) *utxo.Spent {
+	milestoneIndexSpent := utils.RandMilestoneIndex()
+	if len(msIndexSpent) > 0 {
+		milestoneIndexSpent = msIndexSpent[0]
 	}
-	return utxo.NewSpent(output, utils.RandTransactionID(), confirmationIndex, rand.Uint32())
+	return utxo.NewSpent(output, utils.RandTransactionID(), milestoneIndexSpent, rand.Uint32())
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
@@ -87,8 +87,9 @@ func EqualOutputs(t *testing.T, expected utxo.Outputs, actual utxo.Outputs) {
 
 func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
 	require.Equal(t, expected.OutputID(), actual.OutputID())
-	require.Equal(t, expected.TargetTransactionID(), actual.TargetTransactionID())
-	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
+	require.Equal(t, expected.TransactionIDSpent(), actual.TransactionIDSpent())
+	require.Equal(t, expected.MilestoneIndexSpent(), actual.MilestoneIndexSpent())
+	require.Equal(t, expected.MilestoneTimestampSpent(), actual.MilestoneTimestampSpent())
 	EqualOutput(t, expected.Output(), actual.Output())
 }
 

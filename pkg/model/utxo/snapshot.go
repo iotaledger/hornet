@@ -17,8 +17,8 @@ func (o *Output) SnapshotBytes() []byte {
 	m := marshalutil.New()
 	m.WriteBytes(o.outputID[:])
 	m.WriteBytes(o.blockID[:])
-	m.WriteUint32(uint32(o.milestoneIndex))
-	m.WriteUint32(o.milestoneTimestamp)
+	m.WriteUint32(uint32(o.msIndexBooked))
+	m.WriteUint32(o.msTimestampBooked)
 
 	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -40,14 +40,14 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("unable to read LS block ID: %w", err)
 	}
 
-	var confirmationIndex uint32
-	if err := binary.Read(reader, binary.LittleEndian, &confirmationIndex); err != nil {
-		return nil, fmt.Errorf("unable to read LS output milestone index: %w", err)
+	var msIndexBooked uint32
+	if err := binary.Read(reader, binary.LittleEndian, &msIndexBooked); err != nil {
+		return nil, fmt.Errorf("unable to read LS output milestone index booked: %w", err)
 	}
 
-	var milestoneTimestamp uint32
-	if err := binary.Read(reader, binary.LittleEndian, &milestoneTimestamp); err != nil {
-		return nil, fmt.Errorf("unable to read LS output milestone timestamp: %w", err)
+	var msTimestampBooked uint32
+	if err := binary.Read(reader, binary.LittleEndian, &msTimestampBooked); err != nil {
+		return nil, fmt.Errorf("unable to read LS output milestone timestamp booked: %w", err)
 	}
 
 	buffer := make([]byte, iotago.BlockBinSerializedMaxSize)
@@ -76,26 +76,27 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("invalid LS output length: %w", err)
 	}
 
-	return CreateOutput(outputID, blockID, milestone.Index(confirmationIndex), milestoneTimestamp, output), nil
+	return CreateOutput(outputID, blockID, milestone.Index(msIndexBooked), msTimestampBooked, output), nil
 }
 
 func (s *Spent) SnapshotBytes() []byte {
 	m := marshalutil.New()
 	m.WriteBytes(s.Output().SnapshotBytes())
-	m.WriteBytes(s.targetTransactionID[:])
+	m.WriteBytes(s.transactionIDSpent[:])
+	// we do not need to write msIndexSpent and msTimestampSpent because this info is available in the milestoneDiff that consumes the output
 	return m.Bytes()
 }
 
-func SpentFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndex milestone.Index, msTimestamp uint32) (*Spent, error) {
+func SpentFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndexSpent milestone.Index, msTimestampSpent uint32) (*Spent, error) {
 	output, err := OutputFromSnapshotReader(reader, protoParas)
 	if err != nil {
 		return nil, err
 	}
 
-	transactionID := iotago.TransactionID{}
-	if _, err := io.ReadFull(reader, transactionID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS target transaction ID: %w", err)
+	transactionIDSpent := iotago.TransactionID{}
+	if _, err := io.ReadFull(reader, transactionIDSpent[:]); err != nil {
+		return nil, fmt.Errorf("unable to read LS transaction ID spent: %w", err)
 	}
 
-	return NewSpent(output, transactionID, msIndex, msTimestamp), nil
+	return NewSpent(output, transactionIDSpent, msIndexSpent, msTimestampSpent), nil
 }

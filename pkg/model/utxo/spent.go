@@ -30,10 +30,13 @@ func (l LexicalOrderedSpents) Swap(i, j int) {
 type Spent struct {
 	kvStorable
 
-	outputID            iotago.OutputID
-	targetTransactionID iotago.TransactionID
-	milestoneIndex      milestone.Index
-	milestoneTimestamp  uint32
+	outputID iotago.OutputID
+	// the ID of the transaction that spent the output
+	transactionIDSpent iotago.TransactionID
+	// the index of the milestone that spent the output
+	msIndexSpent milestone.Index
+	// the timestamp of the milestone that spent the output
+	msTimestampSpent uint32
 
 	output *Output
 }
@@ -62,27 +65,30 @@ func (s *Spent) Deposit() uint64 {
 	return s.output.Deposit()
 }
 
-func (s *Spent) TargetTransactionID() iotago.TransactionID {
-	return s.targetTransactionID
+// TransactionIDSpent returns the ID of the transaction that spent the output
+func (s *Spent) TransactionIDSpent() iotago.TransactionID {
+	return s.transactionIDSpent
 }
 
-func (s *Spent) MilestoneIndex() milestone.Index {
-	return s.milestoneIndex
+// MilestoneIndexSpent returns the index of the milestone that spent the output
+func (s *Spent) MilestoneIndexSpent() milestone.Index {
+	return s.msIndexSpent
 }
 
-func (s *Spent) MilestoneTimestamp() uint32 {
-	return s.milestoneTimestamp
+// MilestoneTimestampSpent returns the timestamp of the milestone that spent the output
+func (s *Spent) MilestoneTimestampSpent() uint32 {
+	return s.msTimestampSpent
 }
 
 type Spents []*Spent
 
-func NewSpent(output *Output, targetTransactionID iotago.TransactionID, confirmationIndex milestone.Index, confirmationTimestamp uint32) *Spent {
+func NewSpent(output *Output, transactionIDSpent iotago.TransactionID, msIndexSpent milestone.Index, msTimestampSpent uint32) *Spent {
 	return &Spent{
-		outputID:            output.outputID,
-		output:              output,
-		targetTransactionID: targetTransactionID,
-		milestoneIndex:      confirmationIndex,
-		milestoneTimestamp:  confirmationTimestamp,
+		outputID:           output.outputID,
+		output:             output,
+		transactionIDSpent: transactionIDSpent,
+		msIndexSpent:       msIndexSpent,
+		msTimestampSpent:   msTimestampSpent,
 	}
 }
 
@@ -99,9 +105,9 @@ func (s *Spent) KVStorableKey() (key []byte) {
 
 func (s *Spent) KVStorableValue() (value []byte) {
 	ms := marshalutil.New(40)
-	ms.WriteBytes(s.targetTransactionID[:])  // 32 bytes
-	ms.WriteUint32(uint32(s.milestoneIndex)) // 4 bytes
-	ms.WriteUint32(s.milestoneTimestamp)     // 4 bytes
+	ms.WriteBytes(s.transactionIDSpent[:]) // 32 bytes
+	ms.WriteUint32(uint32(s.msIndexSpent)) // 4 bytes
+	ms.WriteUint32(s.msTimestampSpent)     // 4 bytes
 	return ms.Bytes()
 }
 
@@ -125,7 +131,7 @@ func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	valueUtil := marshalutil.New(value)
 
 	// Read transaction ID
-	if s.targetTransactionID, err = parseTransactionID(valueUtil); err != nil {
+	if s.transactionIDSpent, err = parseTransactionID(valueUtil); err != nil {
 		return err
 	}
 
@@ -134,10 +140,10 @@ func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	if err != nil {
 		return err
 	}
-	s.milestoneIndex = milestone.Index(index)
+	s.msIndexSpent = milestone.Index(index)
 
 	// Read milestone timestamp
-	if s.milestoneTimestamp, err = valueUtil.ReadUint32(); err != nil {
+	if s.msTimestampSpent, err = valueUtil.ReadUint32(); err != nil {
 		return err
 	}
 

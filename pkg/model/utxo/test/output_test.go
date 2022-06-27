@@ -58,7 +58,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *utxo.Output, s
 	require.True(t, has)
 
 	// Spend it with a milestone
-	require.NoError(t, manager.ApplyConfirmation(spent.MilestoneIndex(), utxo.Outputs{}, utxo.Spents{spent}, nil, nil))
+	require.NoError(t, manager.ApplyConfirmation(spent.MilestoneIndexSpent(), utxo.Outputs{}, utxo.Spents{spent}, nil, nil))
 
 	// Read Spent from DB and compare
 	readSpent, err := manager.ReadSpentForOutputIDWithoutLocking(outputID)
@@ -76,7 +76,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *utxo.Output, s
 	require.False(t, has)
 
 	// Rollback milestone
-	require.NoError(t, manager.RollbackConfirmation(spent.MilestoneIndex(), utxo.Outputs{}, utxo.Spents{spent}, nil, nil))
+	require.NoError(t, manager.RollbackConfirmation(spent.MilestoneIndexSpent(), utxo.Outputs{}, utxo.Spents{spent}, nil, nil))
 
 	// Verify that it is unspent
 	unspent, err = manager.IsOutputIDUnspentWithoutLocking(outputID)

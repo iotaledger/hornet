@@ -294,7 +294,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 
 			consumedCount := rand.Intn(500) + 1
 			for i := 0; i < consumedCount; i++ {
-				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents(milestone.Index(milestonePayload.Index)))
+				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents(milestone.Index(milestonePayload.Index), milestonePayload.Timestamp))
 			}
 
 			msDiff.SpentTreasuryOutput = &utxo.TreasuryOutput{
@@ -338,14 +338,14 @@ func randLSTransactionUnspentOutputs() *utxo.Output {
 	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType()))
 }
 
-func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
-	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex, rand.Uint32())
+func randLSTransactionSpents(msIndexSpent milestone.Index, msTimestampSpent uint32) *utxo.Spent {
+	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndexSpent, msTimestampSpent)
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.OutputID(), actual.OutputID())
 	require.Equal(t, expected.BlockID(), actual.BlockID())
-	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
+	require.Equal(t, expected.MilestoneIndexBooked(), actual.MilestoneIndexBooked())
 	require.Equal(t, expected.OutputType(), actual.OutputType())
 	require.Equal(t, expected.Deposit(), actual.Deposit())
 	require.EqualValues(t, expected.Output(), actual.Output())
@@ -353,8 +353,9 @@ func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 
 func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
 	require.Equal(t, expected.OutputID(), actual.OutputID())
-	require.Equal(t, expected.TargetTransactionID(), actual.TargetTransactionID())
-	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
+	require.Equal(t, expected.TransactionIDSpent(), actual.TransactionIDSpent())
+	require.Equal(t, expected.MilestoneIndexSpent(), actual.MilestoneIndexSpent())
+	require.Equal(t, expected.MilestoneTimestampSpent(), actual.MilestoneTimestampSpent())
 	EqualOutput(t, expected.Output(), actual.Output())
 }
 
