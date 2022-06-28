@@ -1,13 +1,13 @@
 package main
 
 import (
-	"crypto/rand"
 	"os"
 	"time"
 
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -114,7 +114,7 @@ func writeFullSnapshot() {
 		if seps > sepsMax {
 			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 		}
-		return randBlockID(), nil
+		return tpkg.RandBlockID(), nil
 	}
 
 	var currentOutput int
@@ -213,7 +213,7 @@ func writeDeltaSnapshot() {
 		if seps > sepsMax {
 			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 		}
-		return randBlockID(), nil
+		return tpkg.RandBlockID(), nil
 	}
 
 	var currentMsDiff int
@@ -234,13 +234,6 @@ func must(err error) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func randBlockID() iotago.BlockID {
-	b := iotago.BlockID{}
-	_, err := rand.Read(b[:])
-	must(err)
-	return b
 }
 
 func static64ByteID(fill byte) [64]byte {

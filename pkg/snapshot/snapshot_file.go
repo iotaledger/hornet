@@ -463,7 +463,7 @@ func StreamSnapshotDataFrom(reader io.ReadSeeker,
 
 	if readHeader.Type == Full {
 		for i := uint64(0); i < readHeader.OutputCount; i++ {
-			output, err := readOutput(reader, protoParas)
+			output, err := ReadOutput(reader, protoParas)
 			if err != nil {
 				return fmt.Errorf("at pos %d: %w", i, err)
 			}
@@ -528,7 +528,7 @@ func readMilestoneDiff(reader io.ReadSeeker, protoParas *iotago.ProtocolParamete
 
 	msDiff.Created = make(utxo.Outputs, createdCount)
 	for i := uint64(0); i < createdCount; i++ {
-		diffCreatedOutput, err := readOutput(reader, protoParas)
+		diffCreatedOutput, err := ReadOutput(reader, protoParas)
 		if err != nil {
 			return nil, fmt.Errorf("(ms-diff created-output) at pos %d: %w", i, err)
 		}
@@ -541,7 +541,7 @@ func readMilestoneDiff(reader io.ReadSeeker, protoParas *iotago.ProtocolParamete
 
 	msDiff.Consumed = make(utxo.Spents, consumedCount)
 	for i := uint64(0); i < consumedCount; i++ {
-		diffConsumedSpent, err := readSpent(reader, protoParas, milestone.Index(milestonePayload.Index), milestonePayload.Timestamp)
+		diffConsumedSpent, err := ReadSpent(reader, protoParas, milestone.Index(milestonePayload.Index), milestonePayload.Timestamp)
 		if err != nil {
 			return nil, fmt.Errorf("(ms-diff consumed-output) at pos %d: %w", i, err)
 		}
@@ -552,12 +552,12 @@ func readMilestoneDiff(reader io.ReadSeeker, protoParas *iotago.ProtocolParamete
 }
 
 // reads an Output from the given reader.
-func readOutput(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters) (*utxo.Output, error) {
+func ReadOutput(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters) (*utxo.Output, error) {
 	return utxo.OutputFromSnapshotReader(reader, protoParas)
 }
 
-func readSpent(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndex milestone.Index, msTimestamp uint32) (*utxo.Spent, error) {
-	return utxo.SpentFromSnapshotReader(reader, protoParas, msIndex, msTimestamp)
+func ReadSpent(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndexSpent milestone.Index, msTimestampSpent uint32) (*utxo.Spent, error) {
+	return utxo.SpentFromSnapshotReader(reader, protoParas, msIndexSpent, msTimestampSpent)
 }
 
 // ReadSnapshotHeaderFromFile reads the header of the given snapshot file.

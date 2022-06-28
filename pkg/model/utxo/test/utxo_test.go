@@ -1,7 +1,6 @@
 package utxo_test
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -17,21 +17,21 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	manager := utxo.New(mapdb.NewMapDB())
 
 	outputs := utxo.Outputs{
-		RandUTXOOutput(iotago.OutputBasic),
-		RandUTXOOutput(iotago.OutputBasic),
-		RandUTXOOutput(iotago.OutputNFT),   // spent
-		RandUTXOOutput(iotago.OutputBasic), // spent
-		RandUTXOOutput(iotago.OutputAlias),
-		RandUTXOOutput(iotago.OutputNFT),
-		RandUTXOOutput(iotago.OutputFoundry),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+		tpkg.RandUTXOOutputWithType(iotago.OutputNFT),   // spent
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic), // spent
+		tpkg.RandUTXOOutputWithType(iotago.OutputAlias),
+		tpkg.RandUTXOOutputWithType(iotago.OutputNFT),
+		tpkg.RandUTXOOutputWithType(iotago.OutputFoundry),
 	}
 
 	msIndex := milestone.Index(756)
-	msTimestamp := rand.Uint32()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	spents := utxo.Spents{
-		RandUTXOSpent(outputs[3], msIndex, msTimestamp),
-		RandUTXOSpent(outputs[2], msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(outputs[3], msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(outputs[2], msIndex, msTimestamp),
 	}
 
 	require.NoError(t, manager.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
@@ -80,15 +80,15 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	manager := utxo.New(mapdb.NewMapDB())
 
 	previousOutputs := utxo.Outputs{
-		RandUTXOOutput(iotago.OutputBasic),
-		RandUTXOOutput(iotago.OutputBasic), // spent
-		RandUTXOOutput(iotago.OutputNFT),   // spent on 2nd confirmation
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic), // spent
+		tpkg.RandUTXOOutputWithType(iotago.OutputNFT),   // spent on 2nd confirmation
 	}
 
 	previousMsIndex := milestone.Index(48)
-	previousMsTimestamp := rand.Uint32()
+	previousMsTimestamp := tpkg.RandMilestoneTimestamp()
 	previousSpents := utxo.Spents{
-		RandUTXOSpent(previousOutputs[1], previousMsIndex, previousMsTimestamp),
+		tpkg.RandUTXOSpentWithOutput(previousOutputs[1], previousMsIndex, previousMsTimestamp),
 	}
 	require.NoError(t, manager.ApplyConfirmationWithoutLocking(previousMsIndex, previousOutputs, previousSpents, nil, nil))
 
@@ -97,16 +97,16 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	require.Equal(t, previousMsIndex, ledgerIndex)
 
 	outputs := utxo.Outputs{
-		RandUTXOOutput(iotago.OutputBasic),
-		RandUTXOOutput(iotago.OutputFoundry),
-		RandUTXOOutput(iotago.OutputBasic), // spent
-		RandUTXOOutput(iotago.OutputAlias),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+		tpkg.RandUTXOOutputWithType(iotago.OutputFoundry),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic), // spent
+		tpkg.RandUTXOOutputWithType(iotago.OutputAlias),
 	}
 	msIndex := milestone.Index(49)
-	msTimestamp := rand.Uint32()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 	spents := utxo.Spents{
-		RandUTXOSpent(previousOutputs[2], msIndex, msTimestamp),
-		RandUTXOSpent(outputs[2], msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(previousOutputs[2], msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(outputs[2], msIndex, msTimestamp),
 	}
 	require.NoError(t, manager.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 

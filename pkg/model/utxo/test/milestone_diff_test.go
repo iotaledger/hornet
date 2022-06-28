@@ -2,7 +2,6 @@ package utxo_test
 
 import (
 	"encoding/binary"
-	"math/rand"
 	"sort"
 	"testing"
 
@@ -12,17 +11,17 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hornet/pkg/model/utxo/utils"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	msIndexBooked := milestone.Index(255975)
-	msTimestampBooked := rand.Uint32()
+	msTimestampBooked := tpkg.RandMilestoneTimestamp()
 
-	outputID := utils.RandOutputID()
-	blockID := utils.RandBlockID()
-	address := utils.RandAddress(iotago.AddressEd25519)
+	outputID := tpkg.RandOutputID()
+	blockID := tpkg.RandBlockID()
+	address := tpkg.RandAddress(iotago.AddressEd25519)
 	amount := uint64(832493)
 	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
@@ -34,8 +33,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	}
 	output := utxo.CreateOutput(outputID, blockID, msIndexBooked, msTimestampBooked, iotaOutput)
 
-	transactionIDSpent := iotago.TransactionID{}
-	copy(transactionIDSpent[:], utils.RandBytes(iotago.TransactionIDLength))
+	transactionIDSpent := tpkg.RandTransactionID()
 
 	msIndexSpent := msIndexBooked + 1
 	msTimestampSpent := msTimestampBooked + 1
@@ -63,12 +61,12 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 }
 
 func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
-	outputID := utils.RandOutputID()
-	blockID := utils.RandBlockID()
-	address := utils.RandAddress(iotago.AddressEd25519)
+	outputID := tpkg.RandOutputID()
+	blockID := tpkg.RandBlockID()
+	address := tpkg.RandAddress(iotago.AddressEd25519)
 	amount := uint64(235234)
-	msIndexBooked := utils.RandMilestoneIndex()
-	msTimestampBooked := rand.Uint32()
+	msIndexBooked := tpkg.RandMilestoneIndex()
+	msTimestampBooked := tpkg.RandMilestoneTimestamp()
 	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
 		Conditions: iotago.UnlockConditions{
@@ -79,26 +77,21 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	}
 	output := utxo.CreateOutput(outputID, blockID, msIndexBooked, msTimestampBooked, iotaOutput)
 
-	transactionIDSpent := iotago.TransactionID{}
-	copy(transactionIDSpent[:], utils.RandBytes(iotago.TransactionIDLength))
+	transactionIDSpent := tpkg.RandTransactionID()
 
 	msIndexSpent := milestone.Index(255975)
-	msTimestampSpent := rand.Uint32()
+	msTimestampSpent := tpkg.RandMilestoneTimestamp()
 
 	spent := utxo.NewSpent(output, transactionIDSpent, msIndexSpent, msTimestampSpent)
 
-	spentMilestoneID := iotago.MilestoneID{}
-	copy(spentMilestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
-
+	spentMilestoneID := tpkg.RandMilestoneID()
 	spentTreasuryOutput := &utxo.TreasuryOutput{
 		MilestoneID: spentMilestoneID,
 		Amount:      1337,
 		Spent:       true,
 	}
 
-	milestoneID := iotago.MilestoneID{}
-	copy(milestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
-
+	milestoneID := tpkg.RandMilestoneID()
 	treasuryOutput := &utxo.TreasuryOutput{
 		MilestoneID: milestoneID,
 		Amount:      0,
@@ -134,23 +127,22 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	manager := utxo.New(mapdb.NewMapDB())
 
 	outputs := utxo.Outputs{
-		RandUTXOOutput(iotago.OutputBasic),
-		RandUTXOOutput(iotago.OutputBasic),
-		RandUTXOOutput(iotago.OutputBasic),
-		RandUTXOOutput(iotago.OutputBasic),
-		RandUTXOOutput(iotago.OutputBasic),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
 	}
 
 	msIndex := milestone.Index(756)
-	msTimestamp := rand.Uint32()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	spents := utxo.Spents{
-		RandUTXOSpent(outputs[3], msIndex, msTimestamp),
-		RandUTXOSpent(outputs[2], msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(outputs[3], msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(outputs[2], msIndex, msTimestamp),
 	}
 
-	spentMilestoneID := iotago.MilestoneID{}
-	copy(spentMilestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
+	spentMilestoneID := tpkg.RandMilestoneID()
 
 	spentTreasuryOutput := &utxo.TreasuryOutput{
 		MilestoneID: spentMilestoneID,
@@ -158,8 +150,7 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 		Spent:       true,
 	}
 
-	milestoneID := iotago.MilestoneID{}
-	copy(milestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
+	milestoneID := tpkg.RandMilestoneID()
 
 	treasuryOutput := &utxo.TreasuryOutput{
 		MilestoneID: milestoneID,
@@ -184,8 +175,8 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	sort.Sort(sortedSpents)
 
 	require.Equal(t, msIndex, readDiff.Index)
-	EqualOutputs(t, utxo.Outputs(sortedOutputs), readDiff.Outputs)
-	EqualSpents(t, utxo.Spents(sortedSpents), readDiff.Spents)
+	tpkg.EqualOutputs(t, utxo.Outputs(sortedOutputs), readDiff.Outputs)
+	tpkg.EqualSpents(t, utxo.Spents(sortedSpents), readDiff.Spents)
 	require.Equal(t, treasuryOutput, readDiff.TreasuryOutput)
 	require.Equal(t, spentTreasuryOutput, readDiff.SpentTreasuryOutput)
 }

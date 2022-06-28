@@ -1,9 +1,7 @@
-package snapshot
+package snapshot_test
 
 import (
 	"bytes"
-	"math/rand"
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,106 +10,10 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hornet/pkg/model/utxo/utils"
+	"github.com/iotaledger/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
-
-func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo.Output {
-	var output iotago.Output
-	if len(address) > 0 {
-		output = utils.RandOutputOnAddress(outputType, address[0])
-	} else {
-		output = utils.RandOutput(outputType)
-	}
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), output)
-}
-
-func randomSpent(output *utxo.Output, msIndexSpent ...milestone.Index) *utxo.Spent {
-	milestoneIndexSpent := utils.RandMilestoneIndex()
-	if len(msIndexSpent) > 0 {
-		milestoneIndexSpent = msIndexSpent[0]
-	}
-	return utxo.NewSpent(output, utils.RandTransactionID(), milestoneIndexSpent, rand.Uint32())
-}
-
-func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
-	require.Equal(t, expected.OutputID(), actual.OutputID())
-	require.Equal(t, expected.BlockID(), actual.BlockID())
-	require.Equal(t, expected.OutputType(), actual.OutputType())
-
-	var expectedIdent iotago.Address
-	switch output := expected.Output().(type) {
-	case iotago.TransIndepIdentOutput:
-		expectedIdent = output.Ident()
-	case iotago.TransDepIdentOutput:
-		expectedIdent = output.Chain().ToAddress()
-	default:
-		require.Fail(t, "unsupported output type")
-	}
-
-	var actualIdent iotago.Address
-	switch output := actual.Output().(type) {
-	case iotago.TransIndepIdentOutput:
-		actualIdent = output.Ident()
-	case iotago.TransDepIdentOutput:
-		actualIdent = output.Chain().ToAddress()
-	default:
-		require.Fail(t, "unsupported output type")
-	}
-
-	require.NotNil(t, expectedIdent)
-	require.NotNil(t, actualIdent)
-	require.True(t, expectedIdent.Equal(actualIdent))
-	require.Equal(t, expected.Deposit(), actual.Deposit())
-}
-
-func EqualOutputs(t *testing.T, expected utxo.Outputs, actual utxo.Outputs) {
-	require.Equal(t, len(expected), len(actual))
-
-	// Sort Outputs by output ID.
-	sort.Slice(expected, func(i, j int) bool {
-		iOutputID := expected[i].OutputID()
-		jOutputID := expected[j].OutputID()
-		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
-	})
-	sort.Slice(actual, func(i, j int) bool {
-		iOutputID := actual[i].OutputID()
-		jOutputID := actual[j].OutputID()
-		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
-	})
-
-	for i := 0; i < len(expected); i++ {
-		EqualOutput(t, expected[i], actual[i])
-	}
-}
-
-func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
-	require.Equal(t, expected.OutputID(), actual.OutputID())
-	require.Equal(t, expected.TransactionIDSpent(), actual.TransactionIDSpent())
-	require.Equal(t, expected.MilestoneIndexSpent(), actual.MilestoneIndexSpent())
-	require.Equal(t, expected.MilestoneTimestampSpent(), actual.MilestoneTimestampSpent())
-	EqualOutput(t, expected.Output(), actual.Output())
-}
-
-func EqualSpents(t *testing.T, expected utxo.Spents, actual utxo.Spents) {
-	require.Equal(t, len(expected), len(actual))
-
-	// Sort Spents by output ID.
-	sort.Slice(expected, func(i, j int) bool {
-		iOutputID := expected[i].OutputID()
-		jOutputID := expected[j].OutputID()
-		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
-	})
-	sort.Slice(actual, func(i, j int) bool {
-		iOutputID := actual[i].OutputID()
-		jOutputID := actual[j].OutputID()
-		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
-	})
-
-	for i := 0; i < len(expected); i++ {
-		EqualSpent(t, expected[i], actual[i])
-	}
-}
 
 func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	map1 := mapdb.NewMapDB()
@@ -124,16 +26,16 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	// Fill up the UTXO
 	var err error
 	for i := 0; i < count; i++ {
-		err = u1.AddUnspentOutput(randomOutput(iotago.OutputBasic))
+		err = u1.AddUnspentOutput(tpkg.RandUTXOOutputWithType(iotago.OutputBasic))
 		require.NoError(t, err)
 
-		err = u1.AddUnspentOutput(randomOutput(iotago.OutputAlias))
+		err = u1.AddUnspentOutput(tpkg.RandUTXOOutputWithType(iotago.OutputAlias))
 		require.NoError(t, err)
 
-		err = u1.AddUnspentOutput(randomOutput(iotago.OutputNFT))
+		err = u1.AddUnspentOutput(tpkg.RandUTXOOutputWithType(iotago.OutputNFT))
 		require.NoError(t, err)
 
-		err = u1.AddUnspentOutput(randomOutput(iotago.OutputFoundry))
+		err = u1.AddUnspentOutput(tpkg.RandUTXOOutputWithType(iotago.OutputFoundry))
 		require.NoError(t, err)
 	}
 
@@ -164,8 +66,8 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	require.Equal(t, count, aliasCount)
 
 	// Pass all outputs from u1 to u2 over the snapshot serialization functions
-	producer := newCMIUTXOProducer(u1)
-	consumer := newOutputConsumer(u2)
+	producer := snapshot.NewCMIUTXOProducer(u1)
+	consumer := snapshot.NewOutputConsumer(u2)
 
 	for {
 		output, err := producer()
@@ -179,7 +81,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		outputBytes := output.SnapshotBytes()
 
 		// Unmarshal the output again
-		newOutput, err := readOutput(bytes.NewReader(outputBytes), nil)
+		newOutput, err := snapshot.ReadOutput(bytes.NewReader(outputBytes), nil)
 		require.NoError(t, err)
 
 		err = consumer(newOutput)
@@ -228,7 +130,7 @@ func TestMsIndexIteratorOnwards(t *testing.T) {
 
 	var startIndex milestone.Index = 1000
 	var targetIndex milestone.Index = 1050
-	msIterator := newMsIndexIterator(MsDiffDirectionOnwards, startIndex, targetIndex)
+	msIterator := snapshot.NewMsIndexIterator(snapshot.MsDiffDirectionOnwards, startIndex, targetIndex)
 
 	var done bool
 	var msIndex milestone.Index
@@ -246,7 +148,7 @@ func TestMsIndexIteratorBackwards(t *testing.T) {
 
 	var startIndex milestone.Index = 1050
 	var targetIndex milestone.Index = 1000
-	msIterator := newMsIndexIterator(MsDiffDirectionBackwards, startIndex, targetIndex)
+	msIterator := snapshot.NewMsIndexIterator(snapshot.MsDiffDirectionBackwards, startIndex, targetIndex)
 
 	var done bool
 	var msIndex milestone.Index
@@ -270,7 +172,7 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 	// fill the first UTXO manager with some data
 	var startIndex milestone.Index = 1000
 	var targetIndex milestone.Index = 1050
-	msIterator := newMsIndexIterator(MsDiffDirectionOnwards, startIndex, targetIndex)
+	msIterator := snapshot.NewMsIndexIterator(snapshot.MsDiffDirectionOnwards, startIndex, targetIndex)
 
 	var done bool
 	var msIndex milestone.Index
@@ -278,25 +180,25 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 	for msIndex, done = msIterator(); !done; msIndex, done = msIterator() {
 
 		outputs := utxo.Outputs{
-			randomOutput(iotago.OutputBasic),
-			randomOutput(iotago.OutputBasic),
-			randomOutput(iotago.OutputBasic),
-			randomOutput(iotago.OutputBasic),
-			randomOutput(iotago.OutputBasic),
+			tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+			tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+			tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+			tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
+			tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
 		}
 
 		spents := utxo.Spents{
-			randomSpent(outputs[3], msIndex),
-			randomSpent(outputs[2], msIndex),
+			tpkg.RandUTXOSpentWithOutput(outputs[3], msIndex, tpkg.RandMilestoneTimestamp()),
+			tpkg.RandUTXOSpentWithOutput(outputs[2], msIndex, tpkg.RandMilestoneTimestamp()),
 		}
 
 		require.NoError(t, u1.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 	}
 
-	producerU1 := newMsDiffsProducer(func(index milestone.Index) (*iotago.Milestone, error) {
+	producerU1 := snapshot.NewMsDiffsProducer(func(index milestone.Index) (*iotago.Milestone, error) {
 		return &iotago.Milestone{Index: uint32(index)}, nil
-	}, u1, MsDiffDirectionOnwards, startIndex, targetIndex)
-	consumerU2 := newMsDiffConsumer(u2)
+	}, u1, snapshot.MsDiffDirectionOnwards, startIndex, targetIndex)
+	consumerU2 := snapshot.NewMsDiffConsumer(u2)
 
 	err := u2.StoreLedgerIndex(startIndex)
 	require.NoError(t, err)
@@ -328,8 +230,8 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Compare all Outputs and Spents
-	EqualOutputs(t, loadedUnspentU1, loadedUnspentU2)
-	EqualSpents(t, loadedSpentsU1, loadedSpentsU2)
+	tpkg.EqualOutputs(t, loadedUnspentU1, loadedUnspentU2)
+	tpkg.EqualSpents(t, loadedSpentsU1, loadedSpentsU2)
 
 	// Compare the raw keys values in the backing store
 	err = map1.Iterate(kvstore.EmptyPrefix, func(key kvstore.Key, value kvstore.Value) bool {

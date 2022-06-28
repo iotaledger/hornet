@@ -1,38 +1,24 @@
 package gossip_test
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
-
-func randBytes(length int) []byte {
-	var b []byte
-	for i := 0; i < length; i++ {
-		b = append(b, byte(rand.Intn(256)))
-	}
-	return b
-}
-
-func randBlockID() iotago.BlockID {
-	blockID := iotago.BlockID{}
-	copy(blockID[:], randBytes(iotago.BlockIDLength))
-	return blockID
-}
 
 func TestRequestQueue(t *testing.T) {
 	q := gossip.NewRequestQueue()
 
 	var (
-		hashA = randBlockID()
-		hashB = randBlockID()
-		hashZ = randBlockID()
-		hashC = randBlockID()
-		hashD = randBlockID()
+		hashA = tpkg.RandBlockID()
+		hashB = tpkg.RandBlockID()
+		hashZ = tpkg.RandBlockID()
+		hashC = tpkg.RandBlockID()
+		hashD = tpkg.RandBlockID()
 	)
 
 	requests := []*gossip.Request{

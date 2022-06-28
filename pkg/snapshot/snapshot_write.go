@@ -65,7 +65,7 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 }
 
 // returns a producer which produces solid entry points.
-func newSEPsProducer(
+func NewSEPsProducer(
 	ctx context.Context,
 	dbStorage *storage.Storage,
 	targetIndex milestone.Index,
@@ -106,7 +106,7 @@ func newSEPsProducer(
 }
 
 // returns a producer which produces unspent outputs which exist for the current confirmed milestone.
-func newCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
+func NewCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
@@ -133,7 +133,7 @@ func newCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 }
 
 // returns an iterator producing milestone indices with the given direction from/to the milestone range.
-func newMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, targetIndex milestone.Index) func() (msIndex milestone.Index, done bool) {
+func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, targetIndex milestone.Index) func() (msIndex milestone.Index, done bool) {
 	var firstPassDone bool
 	switch direction {
 	case MsDiffDirectionOnwards:
@@ -201,7 +201,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage 
 		// TODO: check whether previous snapshot already hit the target index?
 
 		prevDeltaMsDiffProducerFinished = true
-		dbMsDiffProducer = newMsDiffsProducer(mrf, utxoManager, MsDiffDirectionOnwards, prevDeltaUpToIndex, targetIndex)
+		dbMsDiffProducer = NewMsDiffsProducer(mrf, utxoManager, MsDiffDirectionOnwards, prevDeltaUpToIndex, targetIndex)
 		return dbMsDiffProducer()
 	}, nil
 }
@@ -269,12 +269,12 @@ func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieve
 }
 
 // returns a producer which produces milestone diffs from/to with the given direction.
-func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex milestone.Index, targetIndex milestone.Index) MilestoneDiffProducerFunc {
+func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex milestone.Index, targetIndex milestone.Index) MilestoneDiffProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
 	go func() {
-		msIndexIterator := newMsIndexIterator(direction, ledgerMilestoneIndex, targetIndex)
+		msIndexIterator := NewMsIndexIterator(direction, ledgerMilestoneIndex, targetIndex)
 
 		var done bool
 		var msIndex milestone.Index
@@ -430,8 +430,8 @@ func (s *Manager) createSnapshotWithoutLocking(
 
 		// a full snapshot contains the ledger UTXOs as of the CMI
 		// and the milestone diffs from the CMI back to the target index (excluding the target index)
-		utxoProducer = newCMIUTXOProducer(s.utxoManager)
-		milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
+		utxoProducer = NewCMIUTXOProducer(s.utxoManager)
+		milestoneDiffProducer = NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
 
 	case Delta:
 		// ledger index corresponds to the origin snapshot snapshot ledger.
@@ -456,7 +456,7 @@ func (s *Manager) createSnapshotWithoutLocking(
 			fallthrough
 		case snapshotInfo.PruningIndex < header.LedgerMilestoneIndex:
 			// we have the needed milestone diffs in the database
-			milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
+			milestoneDiffProducer = NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
 		default:
 			// as the needed milestone diffs are pruned from the database, we need to use
 			// the previous delta snapshot file to extract those in conjunction with what the database has available
@@ -475,7 +475,7 @@ func (s *Manager) createSnapshotWithoutLocking(
 	}
 
 	// stream data into snapshot file
-	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint32(targetMsTimestamp.Unix()), header, newSEPsProducer(ctx, s.storage, targetIndex, s.solidEntryPointCheckThresholdPast), utxoProducer, milestoneDiffProducer)
+	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint32(targetMsTimestamp.Unix()), header, NewSEPsProducer(ctx, s.storage, targetIndex, s.solidEntryPointCheckThresholdPast), utxoProducer, milestoneDiffProducer)
 	if err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[snapshotType], err)
@@ -591,7 +591,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 
 	// create a prepped output producer which counts how many went through
 	unspentOutputsCount := 0
-	cmiUTXOProducer := newCMIUTXOProducer(dbStorage.UTXOManager())
+	cmiUTXOProducer := NewCMIUTXOProducer(dbStorage.UTXOManager())
 	countingOutputProducer := func() (*utxo.Output, error) {
 		output, err := cmiUTXOProducer()
 		if output != nil {
@@ -733,7 +733,7 @@ func CreateSnapshotFromStorage(
 
 	// create a prepped solid entry point producer which counts how many went through
 	sepsCount := 0
-	sepProducer := newSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
+	sepProducer := NewSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
 	countingSepProducer := func() (iotago.BlockID, error) {
 		sep, err := sepProducer()
 		if err != nil {
@@ -744,7 +744,7 @@ func CreateSnapshotFromStorage(
 
 	// create a prepped output producer which counts how many went through
 	unspentOutputsCount := 0
-	cmiUTXOProducer := newCMIUTXOProducer(utxoManagerTemp)
+	cmiUTXOProducer := NewCMIUTXOProducer(utxoManagerTemp)
 	countingOutputProducer := func() (*utxo.Output, error) {
 		output, err := cmiUTXOProducer()
 		if output != nil {

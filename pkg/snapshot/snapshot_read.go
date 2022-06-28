@@ -57,14 +57,14 @@ func newSEPsConsumer(dbStorage *storage.Storage, header *ReadFileHeader) SEPCons
 }
 
 // returns an output consumer storing them into the database.
-func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
+func NewOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 	return func(output *utxo.Output) error {
 		return utxoManager.AddUnspentOutput(output)
 	}
 }
 
 // returns a treasury output consumer which overrides an existing unspent treasury output with the new one.
-func newUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasuryOutputConsumerFunc {
+func NewUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasuryOutputConsumerFunc {
 	// leave like this for now in case we need to do more in the future
 	return utxoManager.StoreUnspentTreasuryOutput
 }
@@ -74,7 +74,7 @@ func newUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasury
 // then its changes are roll-backed, otherwise, if the index is higher than the ledger index,
 // its mutations are applied on top of the latest state.
 // the caller needs to make sure to set the ledger index accordingly beforehand.
-func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
+func NewMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 	return func(msDiff *MilestoneDiff) error {
 		msIndex := milestone.Index(msDiff.Milestone.Index)
 		ledgerIndex, err := utxoManager.ReadLedgerIndex()
@@ -137,10 +137,10 @@ func loadSnapshotFileToStorage(
 	var treasuryOutputConsumer UnspentTreasuryOutputConsumerFunc
 	if snapshotType == Full {
 		// not needed if Delta snapshot is applied
-		outputConsumer = newOutputConsumer(dbStorage.UTXOManager())
-		treasuryOutputConsumer = newUnspentTreasuryOutputConsumer(dbStorage.UTXOManager())
+		outputConsumer = NewOutputConsumer(dbStorage.UTXOManager())
+		treasuryOutputConsumer = NewUnspentTreasuryOutputConsumer(dbStorage.UTXOManager())
 	}
-	msDiffConsumer := newMsDiffConsumer(dbStorage.UTXOManager())
+	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
 
 	if err = StreamSnapshotDataFrom(lsFile, protoParas, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
 		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)

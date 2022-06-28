@@ -17,6 +17,7 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	"github.com/iotaledger/hornet/pkg/utils"
 )
 
@@ -73,7 +74,7 @@ func benchmarkIO(args []string) error {
 	lastStatusTime := time.Now()
 	for i := 0; i < objectCnt; i++ {
 		// one read operation and one write operation per cycle
-		batchWriter.Enqueue(newBenchmarkObject(store, writeDoneWaitGroup, randBytes(32), randBytes(size)))
+		batchWriter.Enqueue(newBenchmarkObject(store, writeDoneWaitGroup, tpkg.RandBytes(32), tpkg.RandBytes(size)))
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
@@ -148,7 +149,7 @@ func benchmarkCPU(args []string) error {
 		)
 
 		// random digest
-		powDigest := randBytes(32)
+		powDigest := tpkg.RandBytes(32)
 
 		// stop when the context has been canceled
 		go func() {

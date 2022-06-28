@@ -2,8 +2,8 @@ package utxo_test
 
 import (
 	"encoding/binary"
+	"math"
 	"math/big"
-	"math/rand"
 	"testing"
 	"time"
 
@@ -15,25 +15,9 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hornet/pkg/model/utxo/utils"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
-
-func RandUTXOOutput(outputType iotago.OutputType) *utxo.Output {
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(outputType))
-}
-
-func RandUTXOOutputOnAddress(outputType iotago.OutputType, address iotago.Address) *utxo.Output {
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddress(outputType, address))
-}
-
-func RandUTXOOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.Address, amount uint64) *utxo.Output {
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddressWithAmount(outputType, address, amount))
-}
-
-func RandUTXOSpent(output *utxo.Output, msIndexSpent milestone.Index, msTimestampSpent uint32) *utxo.Spent {
-	return utxo.NewSpent(output, utils.RandTransactionID(), msIndexSpent, msTimestampSpent)
-}
 
 func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *utxo.Output, spent *utxo.Spent) {
 
@@ -45,7 +29,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *utxo.Output, s
 	// Read Output from DB and compare
 	readOutput, err := manager.ReadOutputByOutputID(outputID)
 	require.NoError(t, err)
-	EqualOutput(t, output, readOutput)
+	tpkg.EqualOutput(t, output, readOutput)
 
 	// Verify that it is unspent
 	unspent, err := manager.IsOutputIDUnspentWithoutLocking(outputID)
@@ -63,7 +47,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *utxo.Output, s
 	// Read Spent from DB and compare
 	readSpent, err := manager.ReadSpentForOutputIDWithoutLocking(outputID)
 	require.NoError(t, err)
-	EqualSpent(t, spent, readSpent)
+	tpkg.EqualSpent(t, spent, readSpent)
 
 	// Verify that it is spent
 	unspent, err = manager.IsOutputIDUnspentWithoutLocking(outputID)
@@ -110,11 +94,10 @@ func CreateOutputAndAssertSerialization(t *testing.T, blockID iotago.BlockID, ms
 }
 
 func CreateSpentAndAssertSerialization(t *testing.T, output *utxo.Output) *utxo.Spent {
-	transactionID := iotago.TransactionID{}
-	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
+	transactionID := tpkg.RandTransactionID()
 
 	msIndexSpent := milestone.Index(6788362)
-	msTimestampSpent := rand.Uint32()
+	msTimestampSpent := tpkg.RandMilestoneTimestamp()
 
 	spent := utxo.NewSpent(output, transactionID, msIndexSpent, msTimestampSpent)
 
@@ -133,14 +116,14 @@ func CreateSpentAndAssertSerialization(t *testing.T, output *utxo.Output) *utxo.
 
 func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.T) {
 
-	outputID := utils.RandOutputID()
-	blockID := utils.RandBlockID()
-	address := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	senderAddress := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	tag := utils.RandBytes(23)
-	amount := rand.Uint64()
-	msIndex := utils.RandMilestoneIndex()
-	msTimestamp := rand.Uint32()
+	outputID := tpkg.RandOutputID()
+	blockID := tpkg.RandBlockID()
+	address := tpkg.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	senderAddress := tpkg.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	tag := tpkg.RandBytes(23)
+	amount := tpkg.RandAmount()
+	msIndex := tpkg.RandMilestoneIndex()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
@@ -168,13 +151,13 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 
 func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) {
 
-	outputID := utils.RandOutputID()
-	blockID := utils.RandBlockID()
-	address := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	senderAddress := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	amount := rand.Uint64()
-	msIndex := utils.RandMilestoneIndex()
-	msTimestamp := rand.Uint32()
+	outputID := tpkg.RandOutputID()
+	blockID := tpkg.RandBlockID()
+	address := tpkg.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	senderAddress := tpkg.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	amount := tpkg.RandAmount()
+	msIndex := tpkg.RandMilestoneIndex()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
@@ -202,20 +185,20 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 
 func TestNFTOutputSerialization(t *testing.T) {
 
-	outputID := utils.RandOutputID()
-	blockID := utils.RandBlockID()
-	address := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	nftID := utils.RandNFTID()
-	amount := rand.Uint64()
-	msIndex := utils.RandMilestoneIndex()
-	msTimestamp := rand.Uint32()
+	outputID := tpkg.RandOutputID()
+	blockID := tpkg.RandBlockID()
+	address := tpkg.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	nftID := tpkg.RandNFTID()
+	amount := tpkg.RandAmount()
+	msIndex := tpkg.RandMilestoneIndex()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	iotaOutput := &iotago.NFTOutput{
 		Amount: amount,
 		NFTID:  nftID,
 		ImmutableFeatures: iotago.Features{
 			&iotago.MetadataFeature{
-				Data: utils.RandBytes(12),
+				Data: tpkg.RandBytes(12),
 			},
 		},
 		Conditions: iotago.UnlockConditions{
@@ -234,21 +217,21 @@ func TestNFTOutputSerialization(t *testing.T) {
 
 func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 
-	outputID := utils.RandOutputID()
-	blockID := utils.RandBlockID()
-	address := utils.RandNFTID()
-	issuerAddress := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	nftID := utils.RandNFTID()
-	amount := rand.Uint64()
-	msIndex := utils.RandMilestoneIndex()
-	msTimestamp := rand.Uint32()
+	outputID := tpkg.RandOutputID()
+	blockID := tpkg.RandBlockID()
+	address := tpkg.RandNFTID()
+	issuerAddress := tpkg.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	nftID := tpkg.RandNFTID()
+	amount := tpkg.RandAmount()
+	msIndex := tpkg.RandMilestoneIndex()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	iotaOutput := &iotago.NFTOutput{
 		Amount: amount,
 		NFTID:  nftID,
 		ImmutableFeatures: iotago.Features{
 			&iotago.MetadataFeature{
-				Data: utils.RandBytes(12),
+				Data: tpkg.RandBytes(12),
 			},
 			&iotago.IssuerFeature{
 				Address: issuerAddress,
@@ -274,16 +257,16 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 
 func TestAliasOutputSerialization(t *testing.T) {
 
-	outputID := utils.RandOutputID()
-	blockID := utils.RandBlockID()
-	aliasID := utils.RandAliasID()
-	stateController := utils.RandAliasID()
-	governor := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	issuer := utils.RandNFTID()
-	sender := utils.RandAliasID()
-	amount := rand.Uint64()
-	msIndex := utils.RandMilestoneIndex()
-	msTimestamp := rand.Uint32()
+	outputID := tpkg.RandOutputID()
+	blockID := tpkg.RandBlockID()
+	aliasID := tpkg.RandAliasID()
+	stateController := tpkg.RandAliasID()
+	governor := tpkg.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	issuer := tpkg.RandNFTID()
+	sender := tpkg.RandAliasID()
+	amount := tpkg.RandAmount()
+	msIndex := tpkg.RandMilestoneIndex()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	iotaOutput := &iotago.AliasOutput{
 		Amount:  amount,
@@ -317,17 +300,17 @@ func TestAliasOutputSerialization(t *testing.T) {
 
 func TestFoundryOutputSerialization(t *testing.T) {
 
-	outputID := utils.RandOutputID()
-	blockID := utils.RandBlockID()
-	aliasID := utils.RandAliasID()
-	amount := rand.Uint64()
-	msIndex := utils.RandMilestoneIndex()
-	msTimestamp := rand.Uint32()
-	supply := new(big.Int).SetUint64(rand.Uint64())
+	outputID := tpkg.RandOutputID()
+	blockID := tpkg.RandBlockID()
+	aliasID := tpkg.RandAliasID()
+	amount := tpkg.RandAmount()
+	msIndex := tpkg.RandMilestoneIndex()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
+	supply := new(big.Int).SetUint64(tpkg.RandAmount())
 
 	iotaOutput := &iotago.FoundryOutput{
 		Amount:       amount,
-		SerialNumber: rand.Uint32(),
+		SerialNumber: tpkg.RandUint32(math.MaxUint32),
 		TokenScheme: &iotago.SimpleTokenScheme{
 			MintedTokens:  supply,
 			MeltedTokens:  new(big.Int).SetBytes([]byte{0}),
