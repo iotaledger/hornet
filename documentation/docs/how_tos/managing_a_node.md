@@ -75,7 +75,7 @@ Hornet can be extended by plugins. You can control plugins using the `node` sect
   },
 ```
 
-You can also control plugins using the [Dashboard/web interface](https://wiki.iota.org/hornet/post_installation#dashboard).
+You can also control plugins using the [Dashboard/web interface](post_installation.md#dashboard).
 
 ## Snapshots
 Your node's ledger accumulates many messages, which uses a significant disk capacity over time. This section discusses configuring local snapshots to prune old transactions from your node's database and create backup snapshot files.
