@@ -43,7 +43,7 @@ By default, Hornet searches for configuration files in the working directory and
 
 You can change this behavior by running Hornet with some altering arguments.
 
-Please see the [config.json](https://wiki.iota.org/hornet/post_installation/configuration) and [peering.json](https://wiki.iota.org/hornet/post_installation/peering) articles for more information regarding their respective configuration files.
+Please see the [config.json](../references/configuration.md) and [peering.json](../key_concepts/peering.md) articles for more information regarding their respective configuration files.
 
 Once you have executed Hornet, it will output all loaded configuration parameters to `stdout` to show what configuration Hornet actually loaded (omitting sensitive values for things like passwords).
 
@@ -110,9 +110,9 @@ For the new password to take effect, you must restart Hornet.
 
 ## Configuring HTTP REST API
 
-One of the tasks the the node is responsible for is exposing the [HTTP REST ](https://wiki.iota.org/hornet/getting_started/nodes_101#http-rest-api) to clients that would like to interact with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
+One of the tasks the the node is responsible for is exposing the [HTTP REST ](../key_concepts/nodes_101.md#http-rest-api) to clients that would like to interact with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
 
-By default, Hornet will publicly expose the [HTTP REST ](https://wiki.iota.org/hornet/getting_started/nodes_101#http-rest-api) on port 14265, as it is ready to accept incoming connections from the Internet.
+By default, Hornet will publicly expose the [HTTP REST ](../key_concepts/nodes_101.md#http-rest-api) on port 14265, as it is ready to accept incoming connections from the Internet.
 
 Since offering the HTTP REST API to the public can consume your node's resources, there are options to restrict which routes can be called and other request limitations.
 
@@ -158,6 +158,6 @@ If you are concerned with resource consumption, consider turning off `restAPI.po
 
 We recommend that you provide your HTTP REST API behind a reverse proxy, such as [HAProxy](http://www.haproxy.org/), [Traefik](https://traefik.io/), [Nginx](https://www.nginx.com/), or [Apache](https://www.apache.org/) configured with TLS.
 
-Please see some of our additional security recommendations in our [Security 101 article](https://wiki.iota.org/hornet/getting_started/security_101).
+Please see some of our additional security recommendations in our [Security 101 article](../key_concepts/security_101.md).
 
 You can explore more details regarding different API calls at the [IOTA client library documentation](https://wiki.iota.org/chrysalis-docs/libraries/client).
