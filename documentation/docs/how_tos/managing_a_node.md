@@ -7,7 +7,7 @@ keywords:
 - storage
 - configuration
 - snapshots
-- reference
+- how to
 ---
 
 
