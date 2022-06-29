@@ -70,17 +70,17 @@ module.exports = {
       items: [
         {
           type: 'doc',
-          id: 'key_concepts/nodes_101',
+          id: 'explanations/nodes_101',
           label: 'Nodes 101',
         }, 
         {
           type: 'doc',
-          id: 'key_concepts/security_101',
+          id: 'explanations/security_101',
           label: 'Security 101',
         },
         {
           type: 'doc',
-          id: 'key_concepts/peering',
+          id: 'explanations/peering',
           label: 'Peering',
         }, 
       ]
