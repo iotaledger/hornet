@@ -156,7 +156,7 @@ func (p *Manager) calcTargetIndexBySize(targetSizeBytes ...int64) (iotago.Milest
 		return 0, ErrNoPruningNeeded
 	}
 
-	milestoneRange := p.syncManager.ConfirmedMilestoneIndex() - p.storage.SnapshotInfo().PruningIndex
+	milestoneRange := p.syncManager.ConfirmedMilestoneIndex() - p.storage.SnapshotInfo().PruningIndex()
 	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - p.pruningSizeThresholdPercentage) / 100.0)
 	diffPercentage := prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes)
 	milestoneDiff := syncmanager.MilestoneIndexDelta(math.Ceil(float64(milestoneRange) * diffPercentage))
@@ -198,7 +198,7 @@ func (p *Manager) pruneUnreferencedBlocks(targetIndex iotago.MilestoneIndex) (bl
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
-func (p *Manager) pruneMilestone(milestoneIndex iotago.MilestoneIndex, receiptMigratedAtIndex ...uint32) error {
+func (p *Manager) pruneMilestone(milestoneIndex iotago.MilestoneIndex, receiptMigratedAtIndex ...iotago.MilestoneIndex) error {
 
 	if err := p.storage.UTXOManager().PruneMilestoneIndexWithoutLocking(milestoneIndex, p.pruneReceipts, receiptMigratedAtIndex...); err != nil {
 		return err
@@ -255,27 +255,27 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 	}
 
 	//lint:ignore SA5011 nil pointer is already checked before with a panic
-	//if snapshotInfo.SnapshotIndex < p.solidEntryPointCheckThresholdPast+p.additionalPruningThreshold+1 {
-	if snapshotInfo.SnapshotIndex < p.additionalPruningThreshold+1 {
+	//if snapshotInfo.SnapshotIndex() < p.solidEntryPointCheckThresholdPast+p.additionalPruningThreshold+1 {
+	if snapshotInfo.SnapshotIndex() < p.additionalPruningThreshold+1 {
 		// Not enough history
 		//return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", p.solidEntryPointCheckThresholdPast+p.additionalPruningThreshold+1, targetIndex)
 		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", p.additionalPruningThreshold+1, targetIndex)
 	}
 
 	// TODO
-	//targetIndexMax := snapshotInfo.SnapshotIndex - p.solidEntryPointCheckThresholdPast - p.additionalPruningThreshold - 1
+	//targetIndexMax := snapshotInfo.SnapshotIndex() - p.solidEntryPointCheckThresholdPast - p.additionalPruningThreshold - 1
 	if targetIndex > targetIndexMax {
 		targetIndex = targetIndexMax
 	}
 
-	if snapshotInfo.PruningIndex >= targetIndex {
+	if snapshotInfo.PruningIndex() >= targetIndex {
 		// no pruning needed
-		return 0, errors.Wrapf(ErrNoPruningNeeded, "pruning index: %d, target index: %d", snapshotInfo.PruningIndex, targetIndex)
+		return 0, errors.Wrapf(ErrNoPruningNeeded, "pruning index: %d, target index: %d", snapshotInfo.PruningIndex(), targetIndex)
 	}
 
-	if snapshotInfo.EntryPointIndex+p.additionalPruningThreshold+1 > targetIndex {
+	if snapshotInfo.EntryPointIndex()+p.additionalPruningThreshold+1 > targetIndex {
 		// we prune in "additionalPruningThreshold" steps to recalculate the solidEntryPoints
-		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", snapshotInfo.EntryPointIndex+p.additionalPruningThreshold+1, targetIndex)
+		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", snapshotInfo.EntryPointIndex()+p.additionalPruningThreshold+1, targetIndex)
 	}
 
 	p.setIsPruning(true)
@@ -313,16 +313,15 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 
 	// we have to set the new solid entry point index.
 	// this way we can cleanly prune even if the pruning was aborted last time
-	snapshotInfo.EntryPointIndex = targetIndex
-	if err = p.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+	if err = p.storage.SetEntryPointIndex(targetIndex); err != nil {
 		p.LogPanic(err)
 	}
 
 	// unreferenced blocks have to be pruned for PruningIndex as well, since this could be CMI at startup of the node
-	p.pruneUnreferencedBlocks(snapshotInfo.PruningIndex)
+	p.pruneUnreferencedBlocks(snapshotInfo.PruningIndex())
 
 	// Iterate through all milestones that have to be pruned
-	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
+	for milestoneIndex := snapshotInfo.PruningIndex() + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
 
 		if err := contextutils.ReturnErrIfCtxDone(ctx, ErrPruningAborted); err != nil {
 			// stop pruning if node was shutdown
@@ -376,7 +375,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 		timeTraverseMilestoneCone := time.Now()
 
 		// check whether milestone contained receipt and delete it accordingly
-		var migratedAtIndex []uint32
+		var migratedAtIndex []iotago.MilestoneIndex
 
 		opts, err := cachedMilestone.Milestone().Milestone().Opts.Set()
 		if err == nil && opts != nil {
@@ -396,8 +395,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 		blocksCountDeleted += p.pruneBlocks(blockIDsToDeleteMap)
 		timePruneBlocks := time.Now()
 
-		snapshotInfo.PruningIndex = milestoneIndex
-		if err = p.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+		if err = p.storage.SetPruningIndex(milestoneIndex); err != nil {
 			p.LogPanic(err)
 		}
 		timeSetSnapshotInfo := time.Now()

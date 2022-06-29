@@ -423,3 +423,18 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownChildrenStorage()
 	s.ShutdownUnreferencedBlocksStorage()
 }
+
+// CheckLedgerState checks if the total balance of the ledger fits the token supply in the protocol parameters.
+func (s *Storage) CheckLedgerState() error {
+
+	protocolParameters, err := s.CurrentProtocolParameters()
+	if err != nil {
+		return err
+	}
+
+	if err = s.UTXOManager().CheckLedgerState(protocolParameters.TokenSupply); err != nil {
+		return err
+	}
+
+	return nil
+}

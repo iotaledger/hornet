@@ -242,7 +242,7 @@ func RandUTXOSpentWithOutput(output *utxo.Output, msIndexSpent iotago.MilestoneI
 	return utxo.NewSpent(output, RandTransactionID(), msIndexSpent, msTimestampSpent)
 }
 
-func RandReceipt(msIndex uint32, protoParas *iotago.ProtocolParameters) (*iotago.ReceiptMilestoneOpt, error) {
+func RandReceipt(msIndex iotago.MilestoneIndex, protoParas *iotago.ProtocolParameters) (*iotago.ReceiptMilestoneOpt, error) {
 	treasuryInput := &iotago.TreasuryInput{}
 	copy(treasuryInput[:], RandBytes(32))
 	ed25519Addr := RandAddress(iotago.AddressEd25519)

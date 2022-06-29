@@ -55,7 +55,7 @@ func (s *INXServer) Stop() {
 }
 
 func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
-	pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+	pruningIndex := deps.Storage.SnapshotInfo().PruningIndex()
 
 	index, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {

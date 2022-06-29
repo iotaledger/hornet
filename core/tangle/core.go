@@ -71,7 +71,7 @@ type dependencies struct {
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
-	SnapshotImporter         *snapshot.SnapshotImporter
+	SnapshotImporter         *snapshot.Importer
 	PruningManager           *pruning.Manager
 	DatabaseDebug            bool `name:"databaseDebug"`
 	DatabaseAutoRevalidation bool `name:"databaseAutoRevalidation"`

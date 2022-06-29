@@ -1,6 +1,7 @@
 package utxo
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -32,6 +33,41 @@ type TreasuryOutput struct {
 	Amount uint64
 	// Whether this output was already spent
 	Spent bool
+}
+
+type jsonTreasuryOutput struct {
+	MilestoneID string `json:"milestoneID"`
+	Amount      uint64 `json:"amount"`
+}
+
+func (t *TreasuryOutput) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&jsonTreasuryOutput{
+		MilestoneID: t.MilestoneID.ToHex(),
+		Amount:      t.Amount,
+	})
+}
+
+func (t *TreasuryOutput) UnmarshalJSON(bytes []byte) error {
+	j := &jsonTreasuryOutput{}
+	if err := json.Unmarshal(bytes, j); err != nil {
+		return err
+	}
+
+	if len(j.MilestoneID) == 0 {
+		return errors.New("missing milestone ID")
+	}
+	milestoneID, err := iotago.DecodeHex(j.MilestoneID)
+	if err != nil {
+		return err
+	}
+	if len(milestoneID) != iotago.MilestoneIDLength {
+		return fmt.Errorf("invalid milestone ID length: %d", len(milestoneID))
+	}
+
+	copy(t.MilestoneID[:], milestoneID)
+	t.Amount = j.Amount
+
+	return nil
 }
 
 func (t *TreasuryOutput) kvStorableKey() (key []byte) {

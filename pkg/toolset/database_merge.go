@@ -503,19 +503,23 @@ func mergeDatabase(
 	var msIndexStartSource, msIndexEndSource iotago.MilestoneIndex = 0, 0
 	msIndexStartTarget, msIndexEndTarget := getStorageMilestoneRange(tangleStoreTarget)
 	if tangleStoreSourceAvailable {
-		sourceNetworkID = tangleStoreSource.SnapshotInfo().NetworkID
+		protocolParametersSource, err := tangleStoreSource.CurrentProtocolParameters()
+		if err != nil {
+			return errors.Wrapf(ErrCritical, "loading source protocol parameters failed: %s", err.Error())
+		}
+		sourceNetworkID = protocolParametersSource.NetworkID()
 		msIndexStartSource, msIndexEndSource = getStorageMilestoneRange(tangleStoreSource)
 	}
 
 	if msIndexEndTarget == 0 {
 		// no ledger state in database available => load the genesis snapshot
 		println("loading genesis snapshot...")
-		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, protoParas, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
+		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
 			return errors.Wrapf(ErrCritical, "loading genesis snapshot failed: %s", err.Error())
 		}
 
 		// set the new start and end indexes after applying the genesis snapshot
-		msIndexStartTarget, msIndexEndTarget = tangleStoreTarget.SnapshotInfo().EntryPointIndex, tangleStoreTarget.SnapshotInfo().EntryPointIndex
+		msIndexStartTarget, msIndexEndTarget = tangleStoreTarget.SnapshotInfo().EntryPointIndex(), tangleStoreTarget.SnapshotInfo().EntryPointIndex()
 	}
 
 	if tangleStoreSourceAvailable {
@@ -523,10 +527,17 @@ func mergeDatabase(
 	}
 	println(fmt.Sprintf("milestone range in database: %d-%d (target)", msIndexStartTarget, msIndexEndTarget))
 
-	// check network ID
-	targetNetworkID := tangleStoreTarget.SnapshotInfo().NetworkID
-	if tangleStoreSourceAvailable && sourceNetworkID != targetNetworkID {
-		return fmt.Errorf("source storage networkID not equal to target storage networkID (%d != %d)", sourceNetworkID, targetNetworkID)
+	if tangleStoreSourceAvailable {
+		// check network ID
+		protocolParametersTarget, err := tangleStoreTarget.CurrentProtocolParameters()
+		if err != nil {
+			return errors.Wrapf(ErrCritical, "loading target protocol parameters failed: %s", err.Error())
+		}
+
+		targetNetworkID := protocolParametersTarget.NetworkID()
+		if sourceNetworkID != targetNetworkID {
+			return fmt.Errorf("source storage networkID not equal to target storage networkID (%d != %d)", sourceNetworkID, targetNetworkID)
+		}
 	}
 
 	msIndexStart := msIndexEndTarget + 1

@@ -30,7 +30,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	}
 
 	// save snapshot info
-	err := te.storage.SetSnapshotMilestone(te.protoParas.NetworkID(), 0, 0, 0, time.Now())
+	err := te.storage.SetInitialSnapshotInfo(0, 0, 0, 0, time.Now())
 	require.NoError(te.TestInterface, err)
 
 	te.coo.bootstrap()

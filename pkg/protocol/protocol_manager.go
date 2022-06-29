@@ -62,12 +62,7 @@ func (m *Manager) init(ledgerIndex iotago.MilestoneIndex) error {
 		return err
 	}
 
-	protoParas := &iotago.ProtocolParameters{}
-	if _, err := protoParas.Deserialize(currentProtoParas.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
-		return fmt.Errorf("failed to deserialize protocol parameters: %w", err)
-	}
-
-	m.current = protoParas
+	m.current = currentProtoParas
 	m.loadPending(ledgerIndex)
 
 	return nil

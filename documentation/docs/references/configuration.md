@@ -73,26 +73,12 @@ Example:
 
 ## <a id="protocol"></a> 3. Protocol
 
-| Name                                         | Description                              | Type   | Default value     |
-| -------------------------------------------- | ---------------------------------------- | ------ | ----------------- |
-| [parameters](#protocol_parameters)           | Configuration for parameters             | object |                   |
-| milestonePublicKeyCount                      | The amount of public keys in a milestone | int    | 2                 |
-| [baseToken](#protocol_basetoken)             | Configuration for baseToken              | object |                   |
-| [publicKeyRanges](#protocol_publickeyranges) | Configuration for publicKeyRanges        | array  | see example below |
-
-### <a id="protocol_parameters"></a> Parameters
-
-| Name            | Description                                                                                                      | Type   | Default value       |
-| --------------- | ---------------------------------------------------------------------------------------------------------------- | ------ | ------------------- |
-| version         | The protocol version this node supports                                                                          | uint   | 2                   |
-| networkName     | The network ID on which this node operates on                                                                    | string | "chrysalis-mainnet" |
-| bech32HRP       | The HRP which should be used for Bech32 addresses                                                                | string | "iota"              |
-| minPoWScore     | The minimum PoW score required by the network                                                                    | uint   | 4000                |
-| belowMaxDepth   | The maximum allowed delta value for the OCRI of a given block in relation to the current CMI before it gets lazy | uint   | 15                  |
-| vByteCost       | The vByte cost used for the storage deposit                                                                      | uint   | 500                 |
-| vByteFactorData | The vByte factor used for data fields                                                                            | uint   | 1                   |
-| vByteFactorKey  | The vByte factor used for key fields                                                                             | uint   | 10                  |
-| tokenSupply     | The token supply of the native protocol token                                                                    | uint   | 2779530283277761    |
+| Name                                         | Description                                             | Type   | Default value     |
+| -------------------------------------------- | ------------------------------------------------------- | ------ | ----------------- |
+| targetNetworkName                            | The initial network name on which this node operates on | string | "alphanet-7"      |
+| milestonePublicKeyCount                      | The amount of public keys in a milestone                | int    | 2                 |
+| [baseToken](#protocol_basetoken)             | Configuration for baseToken                             | object |                   |
+| [publicKeyRanges](#protocol_publickeyranges) | Configuration for publicKeyRanges                       | array  | see example below |
 
 ### <a id="protocol_basetoken"></a> BaseToken
 
@@ -118,17 +104,7 @@ Example:
 ```json
   {
     "protocol": {
-      "parameters": {
-        "version": 2,
-        "networkName": "chrysalis-mainnet",
-        "bech32HRP": "iota",
-        "minPoWScore": 4000,
-        "belowMaxDepth": 15,
-        "vByteCost": 500,
-        "vByteFactorData": 1,
-        "vByteFactorKey": 10,
-        "tokenSupply": 2779530283277761
-      },
+      "targetNetworkName": "alphanet-7",
       "milestonePublicKeyCount": 2,
       "baseToken": {
         "name": "IOTA",
@@ -439,14 +415,14 @@ Example:
 
 ## <a id="restapi"></a> 12. RestAPI
 
-| Name                        | Description                                                                                    | Type   | Default value                                                                                                                                                                                                                                                                                                                                                                                        |
-| --------------------------- | ---------------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| bindAddress                 | The bind address on which the REST API listens on                                              | string | "0.0.0.0:14265"                                                                                                                                                                                                                                                                                                                                                                                      |
-| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using \* are allowed  | array  | /health<br/>/api/v2/info<br/>/api/v2/tips<br/>/api/v2/blocks\*<br/>/api/v2/transactions\*<br/>/api/v2/milestones\*<br/>/api/v2/outputs\*<br/>/api/v2/treasury<br/>/api/v2/receipts\*<br/>/api/plugins/debug/v1/\*<br/>/api/plugins/indexer/v1/\*<br/>/api/plugins/mqtt/v1<br/>/api/plugins/participation/v1/events\*<br/>/api/plugins/participation/v1/outputs\*<br/>/api/plugins/participation/v1/addresses\* |
-| protectedRoutes             | The HTTP REST routes which need to be called with authorization. Wildcards using \* are allowed | array  | /api/v2/\*<br/>/api/plugins/\*                                                                                                                                                                                                                                                                                                                                                                         |
-| [jwtAuth](#restapi_jwtauth) | Configuration for JWT Auth                                                                     | object |                                                                                                                                                                                                                                                                                                                                                                                                      |
-| [pow](#restapi_pow)         | Configuration for Proof of Work                                                                | object |                                                                                                                                                                                                                                                                                                                                                                                                      |
-| [limits](#restapi_limits)   | Configuration for limits                                                                       | object |                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Name                        | Description                                                                                    | Type   | Default value                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------- | ---------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| bindAddress                 | The bind address on which the REST API listens on                                              | string | "0.0.0.0:14265"                                                                                                                                                                                                                                                                                                                                                                                              |
+| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using \* are allowed  | array  | /health<br/>/api/routes<br/>/api/core/v2/info<br/>/api/core/v2/tips<br/>/api/core/v2/blocks\*<br/>/api/core/v2/transactions\*<br/>/api/core/v2/milestones\*<br/>/api/core/v2/outputs\*<br/>/api/core/v2/treasury<br/>/api/core/v2/receipts\*<br/>/api/debug/v1/\*<br/>/api/indexer/v1/\*<br/>/api/mqtt/v1<br/>/api/participation/v1/events\*<br/>/api/participation/v1/outputs\*<br/>/api/participation/v1/addresses\* |
+| protectedRoutes             | The HTTP REST routes which need to be called with authorization. Wildcards using \* are allowed | array  | /api/\*                                                                                                                                                                                                                                                                                                                                                                                                       |
+| [jwtAuth](#restapi_jwtauth) | Configuration for JWT Auth                                                                     | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [pow](#restapi_pow)         | Configuration for Proof of Work                                                                | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [limits](#restapi_limits)   | Configuration for limits                                                                       | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 ### <a id="restapi_jwtauth"></a> JWT Auth
 

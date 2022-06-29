@@ -32,7 +32,7 @@ type ConfirmedMilestoneMetric struct {
 
 // TriggerSolidifier can be used to manually trigger the solidifier from other plugins.
 func (t *Tangle) TriggerSolidifier() {
-	t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), true)
+	t.milestoneSolidifierWorkerPool.TrySubmit(0, true)
 }
 
 func (t *Tangle) markBlockAsSolid(cachedBlockMeta *storage.CachedMetadata) {
@@ -314,7 +314,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		// rerun to solidify the older one
 		t.setSolidifierMilestoneIndex(0)
 
-		t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), true)
+		t.milestoneSolidifierWorkerPool.TrySubmit(0, true)
 		return
 	}
 
@@ -465,7 +465,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		return
 	}
 
-	t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), false)
+	t.milestoneSolidifierWorkerPool.TrySubmit(0, false)
 }
 
 func (t *Tangle) calcConfirmedMilestoneMetric(milestonePayloadToSolidify *iotago.Milestone) (*ConfirmedMilestoneMetric, error) {

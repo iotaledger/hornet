@@ -12,32 +12,14 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/require"
 
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
-
-type test struct {
-	name                          string
-	snapshotFileName              string
-	originHeader                  *snapshot.FileHeader
-	originTimestamp               uint32
-	sepGenerator                  snapshot.SEPProducerFunc
-	sepGenRetriever               sepRetrieverFunc
-	outputGenerator               snapshot.OutputProducerFunc
-	outputGenRetriever            outputRetrieverFunc
-	msDiffGenerator               snapshot.MilestoneDiffProducerFunc
-	msDiffGenRetriever            msDiffRetrieverFunc
-	headerConsumer                snapshot.HeaderConsumerFunc
-	sepConsumer                   snapshot.SEPConsumerFunc
-	sepConRetriever               sepRetrieverFunc
-	outputConsumer                snapshot.OutputConsumerFunc
-	outputConRetriever            outputRetrieverFunc
-	unspentTreasuryOutputConsumer snapshot.UnspentTreasuryOutputConsumerFunc
-	msDiffConsumer                snapshot.MilestoneDiffConsumerFunc
-	msDiffConRetriever            msDiffRetrieverFunc
-}
 
 var protoParas = &iotago.ProtocolParameters{
 	Version:       2,
@@ -49,89 +31,220 @@ var protoParas = &iotago.ProtocolParameters{
 	TokenSupply:   0,
 }
 
-func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
+func TestMilestoneDiffSerialization(t *testing.T) {
+
+	type test struct {
+		name               string
+		testFileName       string
+		msDiffGenerator    snapshot.MilestoneDiffProducerFunc
+		msDiffGenRetriever msDiffRetrieverFunc
+	}
+
+	testCases := []test{
+		func() test {
+			// generate a milestone diff
+			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(1, 50, snapshot.MsDiffDirectionOnwards)
+
+			t := test{
+				name:               "ok",
+				testFileName:       "test_milestone_diff.bin",
+				msDiffGenerator:    msDiffIterFunc,
+				msDiffGenRetriever: msDiffGenRetriever,
+			}
+			return t
+		}(),
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+
+			filePath := tt.testFileName
+			fs := memfs.Create()
+			milestoneDiffWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
+			require.NoError(t, err)
+
+			writtenMsDiffs := []*snapshot.MilestoneDiff{}
+
+			msDiffCount := 0
+			for {
+				msDiff, err := tt.msDiffGenerator()
+				require.NoError(t, err)
+
+				if msDiff == nil {
+					break
+				}
+
+				writtenMsDiffs = append(writtenMsDiffs, msDiff)
+
+				msDiffBytes, err := msDiff.MarshalBinary()
+				require.NoError(t, err)
+
+				_, err = milestoneDiffWrite.Write(msDiffBytes)
+				require.NoError(t, err)
+				msDiffCount++
+			}
+			require.NoError(t, milestoneDiffWrite.Close())
+
+			fileInfo, err := fs.Stat(filePath)
+			require.NoError(t, err)
+			fmt.Printf("%s: written milestone diff, file size: %s\n", tt.name, humanize.Bytes(uint64(fileInfo.Size())))
+
+			// read back written data and verify that it is equal
+			milestoneDiffRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
+			require.NoError(t, err)
+
+			for i := 0; i < msDiffCount; i++ {
+				_, msDiff, err := snapshot.ReadMilestoneDiff(milestoneDiffRead, getSnapshotProtocolManager(protoParas), false)
+				require.NoError(t, err)
+				writtenMsDiff := writtenMsDiffs[i]
+
+				// verify that what has been written also has been read again
+				equalMilestoneDiff(t, writtenMsDiff, msDiff)
+			}
+		})
+	}
+}
+
+func TestMilestoneDiffReadProtocolParameters(t *testing.T) {
+
+	type test struct {
+		name               string
+		testFileName       string
+		msDiffGenerator    snapshot.MilestoneDiffProducerFunc
+		msDiffGenRetriever msDiffRetrieverFunc
+	}
+
+	testCases := []test{
+		func() test {
+			// generate a milestone diff
+			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(1, 50, snapshot.MsDiffDirectionOnwards)
+
+			t := test{
+				name:               "ok",
+				testFileName:       "test_milestone_diff_read_protocol_pars.bin",
+				msDiffGenerator:    msDiffIterFunc,
+				msDiffGenRetriever: msDiffGenRetriever,
+			}
+			return t
+		}(),
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+
+			filePath := tt.testFileName
+			fs := memfs.Create()
+			milestoneDiffWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
+			require.NoError(t, err)
+
+			writtenProtocolParametersUpdates := []*iotago.ProtocolParamsMilestoneOpt{}
+
+			msDiffCount := 0
+			for {
+				msDiff, err := tt.msDiffGenerator()
+				require.NoError(t, err)
+
+				if msDiff == nil {
+					break
+				}
+
+				if msDiff.Milestone.Opts.MustSet().ProtocolParams() != nil {
+					writtenProtocolParametersUpdates = append(writtenProtocolParametersUpdates, msDiff.Milestone.Opts.MustSet().ProtocolParams())
+				}
+
+				msDiffBytes, err := msDiff.MarshalBinary()
+				require.NoError(t, err)
+
+				_, err = milestoneDiffWrite.Write(msDiffBytes)
+				require.NoError(t, err)
+				msDiffCount++
+			}
+			require.NoError(t, milestoneDiffWrite.Close())
+
+			fileInfo, err := fs.Stat(filePath)
+			require.NoError(t, err)
+			fmt.Printf("%s: written milestone diff, file size: %s\n", tt.name, humanize.Bytes(uint64(fileInfo.Size())))
+
+			// read back written data and verify that it is equal
+			milestoneDiffRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
+			require.NoError(t, err)
+
+			readProtocolParametersUpdates := []*iotago.ProtocolParamsMilestoneOpt{}
+			onProtocolParametersUpdateAdded := events.NewClosure(func(protocolParamsMilestoneOpt *iotago.ProtocolParamsMilestoneOpt) {
+				readProtocolParametersUpdates = append(readProtocolParametersUpdates, protocolParamsMilestoneOpt)
+			})
+
+			snapshotProtocolManager := getSnapshotProtocolManager(protoParas)
+			snapshotProtocolManager.Events.ProtocolParametersUpdateAdded.Attach(onProtocolParametersUpdateAdded)
+
+			for i := 0; i < msDiffCount; i++ {
+				_, err := snapshot.ReadMilestoneDiffProtocolParameters(milestoneDiffRead, snapshotProtocolManager)
+				require.NoError(t, err)
+			}
+
+			// verify that what has been written also has been read again
+			require.EqualValues(t, writtenProtocolParametersUpdates, readProtocolParametersUpdates)
+		})
+	}
+}
+func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
 	rand.Seed(time.Now().Unix())
 
+	type test struct {
+		name                          string
+		snapshotFileName              string
+		originFullHeader              *snapshot.FullSnapshotHeader
+		fullHeaderConsumer            snapshot.FullHeaderConsumerFunc
+		unspentTreasuryOutputConsumer snapshot.UnspentTreasuryOutputConsumerFunc
+		outputGenerator               snapshot.OutputProducerFunc
+		outputGenRetriever            outputRetrieverFunc
+		outputConsumer                snapshot.OutputConsumerFunc
+		outputConRetriever            outputRetrieverFunc
+		msDiffGenerator               snapshot.MilestoneDiffProducerFunc
+		msDiffGenRetriever            msDiffRetrieverFunc
+		msDiffConsumer                snapshot.MilestoneDiffConsumerFunc
+		msDiffConRetriever            msDiffRetrieverFunc
+		sepGenerator                  snapshot.SEPProducerFunc
+		sepGenRetriever               sepRetrieverFunc
+		sepConsumer                   snapshot.SEPConsumerFunc
+		sepConRetriever               sepRetrieverFunc
+	}
+
 	testCases := []test{
 		func() test {
-			originHeader := &snapshot.FileHeader{
-				Type:                 snapshot.Full,
-				Version:              snapshot.SupportedFormatVersion,
-				NetworkID:            1337133713371337,
-				SEPMilestoneIndex:    tpkg.RandMilestoneIndex(),
-				LedgerMilestoneIndex: tpkg.RandMilestoneIndex(),
-				TreasuryOutput:       &utxo.TreasuryOutput{MilestoneID: iotago.MilestoneID{}, Amount: 13337},
-			}
-
-			originTimestamp := uint32(time.Now().Unix())
+			originFullHeader := randFullSnapshotHeader(1000000, 50, 150)
 
 			// create generators and consumers
-			sepIterFunc, sepGenRetriever := newSEPGenerator(150)
-			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
-
-			outputIterFunc, outputGenRetriever := newOutputsGenerator(1000000)
+			outputIterFunc, outputGenRetriever := newOutputsGenerator(originFullHeader.OutputCount)
 			outputConsumerFunc, outputCollRetriever := newOutputCollector()
 
-			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(50)
+			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(originFullHeader.TargetMilestoneIndex, originFullHeader.MilestoneDiffCount, snapshot.MsDiffDirectionOnwards)
 			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
+
+			sepIterFunc, sepGenRetriever := newSEPGenerator(originFullHeader.SEPCount)
+			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
 
 			t := test{
 				name:                          "full: 150 seps, 1 mil outputs, 50 ms diffs",
 				snapshotFileName:              "full_snapshot.bin",
-				originHeader:                  originHeader,
-				originTimestamp:               originTimestamp,
-				sepGenerator:                  sepIterFunc,
-				sepGenRetriever:               sepGenRetriever,
+				originFullHeader:              originFullHeader,
+				fullHeaderConsumer:            fullHeaderEqualFunc(t, originFullHeader),
+				unspentTreasuryOutputConsumer: unspentTreasuryOutputEqualFunc(t, originFullHeader.TreasuryOutput),
 				outputGenerator:               outputIterFunc,
 				outputGenRetriever:            outputGenRetriever,
-				msDiffGenerator:               msDiffIterFunc,
-				msDiffGenRetriever:            msDiffGenRetriever,
-				headerConsumer:                headerEqualFunc(t, originHeader),
-				sepConsumer:                   sepConsumerFunc,
-				sepConRetriever:               sepsCollRetriever,
 				outputConsumer:                outputConsumerFunc,
 				outputConRetriever:            outputCollRetriever,
-				unspentTreasuryOutputConsumer: unspentTreasuryOutputEqualFunc(t, originHeader.TreasuryOutput),
+				msDiffGenerator:               msDiffIterFunc,
+				msDiffGenRetriever:            msDiffGenRetriever,
 				msDiffConsumer:                msDiffConsumerFunc,
 				msDiffConRetriever:            msDiffCollRetriever,
-			}
-			return t
-		}(),
-		func() test {
-			originHeader := &snapshot.FileHeader{
-				Type:                 snapshot.Delta,
-				Version:              snapshot.SupportedFormatVersion,
-				NetworkID:            666666666,
-				SEPMilestoneIndex:    tpkg.RandMilestoneIndex(),
-				LedgerMilestoneIndex: tpkg.RandMilestoneIndex(),
-			}
-
-			originTimestamp := uint32(time.Now().Unix())
-
-			// create generators and consumers
-			sepIterFunc, sepGenRetriever := newSEPGenerator(150)
-			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
-
-			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(50)
-			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
-
-			t := test{
-				name:               "delta: 150 seps, 50 ms diffs",
-				snapshotFileName:   "delta_snapshot.bin",
-				originHeader:       originHeader,
-				originTimestamp:    originTimestamp,
-				sepGenerator:       sepIterFunc,
-				sepGenRetriever:    sepGenRetriever,
-				msDiffGenerator:    msDiffIterFunc,
-				msDiffGenRetriever: msDiffGenRetriever,
-				headerConsumer:     headerEqualFunc(t, originHeader),
-				sepConsumer:        sepConsumerFunc,
-				sepConRetriever:    sepsCollRetriever,
-				msDiffConsumer:     msDiffConsumerFunc,
-				msDiffConRetriever: msDiffCollRetriever,
+				sepGenerator:                  sepIterFunc,
+				sepGenRetriever:               sepGenRetriever,
+				sepConsumer:                   sepConsumerFunc,
+				sepConRetriever:               sepsCollRetriever,
 			}
 			return t
 		}(),
@@ -144,44 +257,233 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 			require.NoError(t, err)
 
-			_, err = snapshot.StreamSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator)
+			_, err = snapshot.StreamFullSnapshotDataTo(snapshotFileWrite, tt.originFullHeader, tt.outputGenerator, tt.msDiffGenerator, tt.sepGenerator)
 			require.NoError(t, err)
 			require.NoError(t, snapshotFileWrite.Close())
 
 			fileInfo, err := fs.Stat(filePath)
 			require.NoError(t, err)
-			fmt.Printf("%s: written (snapshot type: %d) snapshot file size: %s\n", tt.name, tt.originHeader.Type, humanize.Bytes(uint64(fileInfo.Size())))
+			fmt.Printf("%s: written (snapshot type: %d) snapshot file size: %s\n", tt.name, snapshot.Full, humanize.Bytes(uint64(fileInfo.Size())))
 
 			// read back written data and verify that it is equal
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamSnapshotDataFrom(snapshotFileRead, protoParas, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.unspentTreasuryOutputConsumer, tt.msDiffConsumer))
+			require.NoError(t, snapshot.StreamFullSnapshotDataFrom(snapshotFileRead, snapshot.NewSnapshotProtocolManager(), tt.fullHeaderConsumer, tt.unspentTreasuryOutputConsumer, tt.outputConsumer, tt.msDiffConsumer, tt.sepConsumer))
 
 			// verify that what has been written also has been read again
-			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
-			if tt.originHeader.Type == snapshot.Full {
-				tpkg.EqualOutputs(t, tt.outputGenRetriever(), tt.outputConRetriever())
-			}
+			tpkg.EqualOutputs(t, tt.outputGenRetriever(), tt.outputConRetriever())
 
 			msDiffGen := tt.msDiffGenRetriever()
 			msDiffCon := tt.msDiffConRetriever()
 			for i := range msDiffGen {
 				gen := msDiffGen[i]
 				con := msDiffCon[i]
-				require.EqualValues(t, gen.Milestone, con.Milestone)
-				require.EqualValues(t, gen.SpentTreasuryOutput, con.SpentTreasuryOutput)
-				tpkg.EqualOutputs(t, gen.Created, con.Created)
-				tpkg.EqualSpents(t, gen.Consumed, con.Consumed)
+				require.NotNil(t, con)
+				equalMilestoneDiff(t, gen, con)
 			}
+			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
 		})
 	}
+}
 
+func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	rand.Seed(time.Now().Unix())
+
+	type test struct {
+		name                string
+		snapshotFileName    string
+		originDeltaHeader   *snapshot.DeltaSnapshotHeader
+		deltaHeaderConsumer snapshot.DeltaHeaderConsumerFunc
+		msDiffGenerator     snapshot.MilestoneDiffProducerFunc
+		msDiffGenRetriever  msDiffRetrieverFunc
+		msDiffConsumer      snapshot.MilestoneDiffConsumerFunc
+		msDiffConRetriever  msDiffRetrieverFunc
+		sepGenerator        snapshot.SEPProducerFunc
+		sepGenRetriever     sepRetrieverFunc
+		sepConsumer         snapshot.SEPConsumerFunc
+		sepConRetriever     sepRetrieverFunc
+	}
+
+	testCases := []test{
+		func() test {
+			originDeltaHeader := randDeltaSnapshotHeader(50, 150)
+
+			// create generators and consumers
+			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(originDeltaHeader.TargetMilestoneIndex-syncmanager.MilestoneIndexDelta(originDeltaHeader.MilestoneDiffCount), originDeltaHeader.MilestoneDiffCount, snapshot.MsDiffDirectionOnwards)
+			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
+
+			sepIterFunc, sepGenRetriever := newSEPGenerator(originDeltaHeader.SEPCount)
+			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
+
+			t := test{
+				name:                "delta: 150 seps, 50 ms diffs",
+				snapshotFileName:    "delta_snapshot.bin",
+				originDeltaHeader:   originDeltaHeader,
+				deltaHeaderConsumer: deltaHeaderEqualFunc(t, originDeltaHeader),
+				msDiffGenerator:     msDiffIterFunc,
+				msDiffGenRetriever:  msDiffGenRetriever,
+				msDiffConsumer:      msDiffConsumerFunc,
+				msDiffConRetriever:  msDiffCollRetriever,
+				sepGenerator:        sepIterFunc,
+				sepGenRetriever:     sepGenRetriever,
+				sepConsumer:         sepConsumerFunc,
+				sepConRetriever:     sepsCollRetriever,
+			}
+			return t
+		}(),
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			filePath := tt.snapshotFileName
+			fs := memfs.Create()
+			snapshotFileWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
+			require.NoError(t, err)
+
+			_, err = snapshot.StreamDeltaSnapshotDataTo(snapshotFileWrite, tt.originDeltaHeader, tt.msDiffGenerator, tt.sepGenerator)
+			require.NoError(t, err)
+			require.NoError(t, snapshotFileWrite.Close())
+
+			fileInfo, err := fs.Stat(filePath)
+			require.NoError(t, err)
+			fmt.Printf("%s: written (snapshot type: %d) snapshot file size: %s\n", tt.name, snapshot.Delta, humanize.Bytes(uint64(fileInfo.Size())))
+
+			// read back written data and verify that it is equal
+			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
+			require.NoError(t, err)
+
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, getSnapshotProtocolManager(protoParas), tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
+
+			// verify that what has been written also has been read again
+			msDiffGen := tt.msDiffGenRetriever()
+			msDiffCon := tt.msDiffConRetriever()
+			for i := range msDiffGen {
+				gen := msDiffGen[i]
+				con := msDiffCon[i]
+				require.NotNil(t, con)
+				equalMilestoneDiff(t, gen, con)
+			}
+			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
+		})
+	}
+}
+
+func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	rand.Seed(time.Now().Unix())
+
+	type test struct {
+		name                          string
+		snapshotFileName              string
+		originDeltaHeader             *snapshot.DeltaSnapshotHeader
+		deltaHeaderConsumer           snapshot.DeltaHeaderConsumerFunc
+		snapshotExtensionGenerator    deltaSnapshotExtensionGeneratorFunc
+		snapshotExtensionGenRetriever deltaSnapshotExtensionRetrieverFunc
+		msDiffConsumer                snapshot.MilestoneDiffConsumerFunc
+		msDiffConRetriever            msDiffRetrieverFunc
+		sepConsumer                   snapshot.SEPConsumerFunc
+		sepConRetriever               sepRetrieverFunc
+	}
+
+	testCases := []test{
+		func() test {
+			originDeltaHeader := randDeltaSnapshotHeader(50, 150)
+
+			// create generators and consumers
+			snapshotExtensionGenerator, snapshotExtensionGenRetriever := newDeltaSnapshotExtensionGenerator(originDeltaHeader, 10, 50, 30)
+
+			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
+			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
+
+			t := test{
+				name:                          "delta: 150 seps, 50 ms diffs",
+				snapshotFileName:              "delta_snapshot.bin",
+				originDeltaHeader:             originDeltaHeader,
+				deltaHeaderConsumer:           deltaHeaderEqualFunc(t, originDeltaHeader),
+				snapshotExtensionGenerator:    snapshotExtensionGenerator,
+				snapshotExtensionGenRetriever: snapshotExtensionGenRetriever,
+				msDiffConsumer:                msDiffConsumerFunc,
+				msDiffConRetriever:            msDiffCollRetriever,
+				sepConsumer:                   sepConsumerFunc,
+				sepConRetriever:               sepsCollRetriever,
+			}
+			return t
+		}(),
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			filePath := tt.snapshotFileName
+			fs := memfs.Create()
+
+			snapshotFileCreated := false
+			for {
+				msDiffGen, sepGen := tt.snapshotExtensionGenerator()
+				if msDiffGen == nil || sepGen == nil {
+					break
+				}
+
+				if !snapshotFileCreated {
+
+					snapshotFileWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
+					require.NoError(t, err)
+
+					// create the initial delta snapshot file
+					_, err = snapshot.StreamDeltaSnapshotDataTo(snapshotFileWrite, tt.originDeltaHeader, msDiffGen, sepGen)
+					require.NoError(t, err)
+					require.NoError(t, snapshotFileWrite.Close())
+
+					snapshotFileCreated = true
+					continue
+				}
+
+				snapshotFileWrite, err := fs.OpenFile(filePath, os.O_RDWR, 0666)
+				require.NoError(t, err)
+
+				tt.originDeltaHeader.TargetMilestoneIndex += 1
+				tt.originDeltaHeader.TargetMilestoneTimestamp += 1
+
+				// extend the existing delta snapshot file
+				snapshot.StreamDeltaSnapshotDataToExisting(snapshotFileWrite, tt.originDeltaHeader, msDiffGen, sepGen)
+				require.NoError(t, err)
+				require.NoError(t, snapshotFileWrite.Close())
+			}
+
+			fileInfo, err := fs.Stat(filePath)
+			require.NoError(t, err)
+			fmt.Printf("%s: written (snapshot type: %d) snapshot file size: %s\n", tt.name, snapshot.Delta, humanize.Bytes(uint64(fileInfo.Size())))
+
+			// read back written data and verify that it is equal
+			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
+			require.NoError(t, err)
+
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, getSnapshotProtocolManager(protoParas), tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
+
+			// verify that what has been written also has been read again
+			msDiffGenRetriever, sepGenRetriever := tt.snapshotExtensionGenRetriever()
+
+			msDiffGen := msDiffGenRetriever()
+			msDiffCon := tt.msDiffConRetriever()
+			for i := range msDiffGen {
+				gen := msDiffGen[i]
+				con := msDiffCon[i]
+				require.NotNil(t, con)
+				equalMilestoneDiff(t, gen, con)
+			}
+			require.EqualValues(t, sepGenRetriever(), tt.sepConRetriever())
+		})
+	}
 }
 
 type sepRetrieverFunc func() iotago.BlockIDs
 
-func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
+func newSEPGenerator(count uint16) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 	var generatedSEPs iotago.BlockIDs
 	return func() (iotago.BlockID, error) {
 			if count == 0 {
@@ -198,7 +500,7 @@ func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 
 func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
 	var generatedSEPs iotago.BlockIDs
-	return func(sep iotago.BlockID) error {
+	return func(sep iotago.BlockID, targetMilestoneIndex iotago.MilestoneIndex) error {
 			generatedSEPs = append(generatedSEPs, sep)
 			return nil
 		}, func() iotago.BlockIDs {
@@ -208,7 +510,7 @@ func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
 
 type outputRetrieverFunc func() utxo.Outputs
 
-func newOutputsGenerator(count int) (snapshot.OutputProducerFunc, outputRetrieverFunc) {
+func newOutputsGenerator(count uint64) (snapshot.OutputProducerFunc, outputRetrieverFunc) {
 	var generatedOutputs utxo.Outputs
 	return func() (*utxo.Output, error) {
 			if count == 0 {
@@ -235,8 +537,8 @@ func newOutputCollector() (snapshot.OutputConsumerFunc, outputRetrieverFunc) {
 
 type msDiffRetrieverFunc func() []*snapshot.MilestoneDiff
 
-func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRetrieverFunc) {
-	var generateMsDiffs []*snapshot.MilestoneDiff
+func newMsDiffGenerator(startIndex iotago.MilestoneIndex, count syncmanager.MilestoneIndexDelta, direction snapshot.MsDiffDirection) (snapshot.MilestoneDiffProducerFunc, msDiffRetrieverFunc) {
+	var generatedMsDiffs []*snapshot.MilestoneDiff
 	pub, prv, err := ed25519.GenerateKey(nil)
 	if err != nil {
 		panic(err)
@@ -249,21 +551,42 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 	keyMapping := iotago.MilestonePublicKeyMapping{}
 	keyMapping[mappingPubKey] = prv
 
+	startCount := count
+
 	return func() (*snapshot.MilestoneDiff, error) {
 			if count == 0 {
 				return nil, nil
 			}
 			count--
 
+			milestoneIndex := startIndex
+			switch direction {
+			case snapshot.MsDiffDirectionOnwards:
+				milestoneIndex += startCount - count
+			case snapshot.MsDiffDirectionBackwards:
+				milestoneIndex -= startCount - count
+			}
+
 			parents := iotago.BlockIDs{tpkg.RandBlockID()}
-			milestonePayload := iotago.NewMilestone(tpkg.RandMilestoneIndex(), tpkg.RandMilestoneTimestamp(), protoParas.Version, tpkg.RandMilestoneID(), parents, tpkg.Rand32ByteHash(), tpkg.Rand32ByteHash())
+			milestonePayload := iotago.NewMilestone(milestoneIndex, tpkg.RandMilestoneTimestamp(), protoParas.Version, tpkg.RandMilestoneID(), parents, tpkg.Rand32ByteHash(), tpkg.Rand32ByteHash())
 
 			receipt, err := tpkg.RandReceipt(milestonePayload.Index, protoParas)
 			if err != nil {
 				panic(err)
 			}
 
-			milestonePayload.Opts = iotago.MilestoneOpts{receipt}
+			newProtocolParameterBytes, err := tpkg.RandProtocolParameters().Serialize(serializer.DeSeriModePerformValidation, nil)
+			if err != nil {
+				panic(err)
+			}
+
+			protocolParameterMilestoneOption := &iotago.ProtocolParamsMilestoneOpt{
+				TargetMilestoneIndex: milestonePayload.Index + 15,
+				ProtocolVersion:      tpkg.RandByte(),
+				Params:               newProtocolParameterBytes,
+			}
+
+			milestonePayload.Opts = iotago.MilestoneOpts{receipt, protocolParameterMilestoneOption}
 
 			if err := milestonePayload.Sign(pubKeys, iotago.InMemoryEd25519MilestoneSigner(keyMapping)); err != nil {
 				panic(err)
@@ -289,10 +612,10 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 				Spent:       true, // doesn't matter
 			}
 
-			generateMsDiffs = append(generateMsDiffs, msDiff)
+			generatedMsDiffs = append(generatedMsDiffs, msDiff)
 			return msDiff, nil
 		}, func() []*snapshot.MilestoneDiff {
-			return generateMsDiffs
+			return generatedMsDiffs
 		}
 }
 
@@ -306,9 +629,84 @@ func newMsDiffCollector() (snapshot.MilestoneDiffConsumerFunc, msDiffRetrieverFu
 		}
 }
 
-func headerEqualFunc(t *testing.T, originHeader *snapshot.FileHeader) snapshot.HeaderConsumerFunc {
-	return func(readHeader *snapshot.ReadFileHeader) error {
-		require.EqualValues(t, *originHeader, readHeader.FileHeader)
+type deltaSnapshotExtensionGeneratorFunc func() (snapshot.MilestoneDiffProducerFunc, snapshot.SEPProducerFunc)
+type deltaSnapshotExtensionRetrieverFunc func() (msDiffRetrieverFunc, sepRetrieverFunc)
+
+func newDeltaSnapshotExtensionGenerator(deltaHeader *snapshot.DeltaSnapshotHeader, extensionsCount uint16, msDiffCount uint32, sepCount uint16) (deltaSnapshotExtensionGeneratorFunc, deltaSnapshotExtensionRetrieverFunc) {
+	var generatedSEPs iotago.BlockIDs
+	var generatedMsDiffs []*snapshot.MilestoneDiff
+
+	startMilestoneIndex := deltaHeader.TargetMilestoneIndex
+
+	return func() (snapshot.MilestoneDiffProducerFunc, snapshot.SEPProducerFunc) {
+			if extensionsCount == 0 {
+				return nil, nil
+			}
+			extensionsCount--
+
+			msDiffIterFunc, _ := newMsDiffGenerator(startMilestoneIndex-syncmanager.MilestoneIndexDelta(msDiffCount), msDiffCount, snapshot.MsDiffDirectionOnwards)
+			sepIterFunc, _ := newSEPGenerator(sepCount)
+
+			// reset the SEP every time
+			generatedSEPs = make(iotago.BlockIDs, 0)
+
+			return func() (*snapshot.MilestoneDiff, error) {
+					msDiff, err := msDiffIterFunc()
+					if err != nil {
+						return nil, err
+					}
+					if msDiff == nil {
+						return nil, nil
+					}
+					startMilestoneIndex++
+					generatedMsDiffs = append(generatedMsDiffs, msDiff)
+					return msDiff, nil
+				}, func() (iotago.BlockID, error) {
+
+					sep, err := sepIterFunc()
+					if err != nil {
+						return iotago.EmptyBlockID(), err
+					}
+					generatedSEPs = append(generatedSEPs, sep)
+					return sep, nil
+				}
+		}, func() (msDiffRetrieverFunc, sepRetrieverFunc) {
+			return func() []*snapshot.MilestoneDiff {
+					return generatedMsDiffs
+				}, func() iotago.BlockIDs {
+					return generatedSEPs
+				}
+		}
+}
+
+func fullHeaderEqualFunc(t *testing.T, expected *snapshot.FullSnapshotHeader) snapshot.FullHeaderConsumerFunc {
+	return func(actual *snapshot.FullSnapshotHeader) error {
+		require.EqualValues(t, expected.Version, actual.Version)
+		require.EqualValues(t, expected.Type, actual.Type)
+		require.EqualValues(t, expected.FirstMilestoneIndex, actual.FirstMilestoneIndex)
+		require.EqualValues(t, expected.LedgerMilestoneIndex, actual.LedgerMilestoneIndex)
+		require.EqualValues(t, expected.TargetMilestoneIndex, actual.TargetMilestoneIndex)
+		require.EqualValues(t, expected.TargetMilestoneTimestamp, actual.TargetMilestoneTimestamp)
+		require.EqualValues(t, expected.TargetMilestoneID, actual.TargetMilestoneID)
+		require.EqualValues(t, expected.TreasuryOutput, actual.TreasuryOutput)
+		require.EqualValues(t, expected.ProtocolParameters, actual.ProtocolParameters)
+		require.EqualValues(t, expected.OutputCount, actual.OutputCount)
+		require.EqualValues(t, expected.MilestoneDiffCount, actual.MilestoneDiffCount)
+		require.EqualValues(t, expected.SEPCount, actual.SEPCount)
+		return nil
+	}
+}
+
+func deltaHeaderEqualFunc(t *testing.T, expected *snapshot.DeltaSnapshotHeader) snapshot.DeltaHeaderConsumerFunc {
+	return func(actual *snapshot.DeltaSnapshotHeader) error {
+		require.EqualValues(t, expected.Version, actual.Version)
+		require.EqualValues(t, expected.Type, actual.Type)
+		require.EqualValues(t, expected.TargetMilestoneIndex, actual.TargetMilestoneIndex)
+		require.EqualValues(t, expected.TargetMilestoneTimestamp, actual.TargetMilestoneTimestamp)
+		require.EqualValues(t, expected.FullSnapshotTargetMilestoneID, actual.FullSnapshotTargetMilestoneID)
+		require.EqualValues(t, expected.SEPFileOffset, actual.SEPFileOffset)
+		require.EqualValues(t, expected.MilestoneDiffCount, actual.MilestoneDiffCount)
+		require.EqualValues(t, expected.SEPCount, actual.SEPCount)
 		return nil
 	}
 }
@@ -318,4 +716,60 @@ func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *u
 		require.EqualValues(t, *originUnspentTreasuryOutput, *readUnspentTreasuryOutput)
 		return nil
 	}
+}
+
+func randFullSnapshotHeader(outputCount uint64, msDiffCount uint32, sepCount uint16) *snapshot.FullSnapshotHeader {
+
+	targetMilestoneIndex := tpkg.RandMilestoneIndex()
+	for targetMilestoneIndex < iotago.MilestoneIndex(msDiffCount+1) {
+		targetMilestoneIndex = tpkg.RandMilestoneIndex()
+	}
+
+	return &snapshot.FullSnapshotHeader{
+		Type:                     snapshot.Full,
+		Version:                  snapshot.SupportedFormatVersion,
+		FirstMilestoneIndex:      tpkg.RandMilestoneIndex(),
+		LedgerMilestoneIndex:     tpkg.RandMilestoneIndex(),
+		TargetMilestoneIndex:     targetMilestoneIndex,
+		TargetMilestoneTimestamp: tpkg.RandMilestoneTimestamp(),
+		TargetMilestoneID:        tpkg.RandMilestoneID(),
+		TreasuryOutput:           tpkg.RandTreasuryOutput(),
+		ProtocolParameters:       tpkg.RandProtocolParameters(),
+		OutputCount:              outputCount,
+		MilestoneDiffCount:       msDiffCount,
+		SEPCount:                 sepCount,
+	}
+}
+
+func randDeltaSnapshotHeader(msDiffCount uint32, sepCount uint16) *snapshot.DeltaSnapshotHeader {
+	return &snapshot.DeltaSnapshotHeader{
+		Version:                       snapshot.SupportedFormatVersion,
+		Type:                          snapshot.Delta,
+		TargetMilestoneIndex:          tpkg.RandMilestoneIndex(),
+		TargetMilestoneTimestamp:      tpkg.RandMilestoneTimestamp(),
+		FullSnapshotTargetMilestoneID: tpkg.RandMilestoneID(),
+		SEPFileOffset:                 0,
+		MilestoneDiffCount:            msDiffCount,
+		SEPCount:                      sepCount,
+	}
+}
+
+func getSnapshotProtocolManager(protoParas *iotago.ProtocolParameters) *snapshot.ProtocolManager {
+	protoParasBytes, err := protoParas.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	snapshotProtocolManager := snapshot.NewSnapshotProtocolManager()
+	snapshotProtocolManager.AddProtocolParametersUpdate(&iotago.ProtocolParamsMilestoneOpt{TargetMilestoneIndex: 1, ProtocolVersion: protoParas.Version, Params: protoParasBytes})
+	snapshotProtocolManager.SetCurrentMilestoneIndex(1)
+
+	return snapshotProtocolManager
+}
+
+func equalMilestoneDiff(t *testing.T, expected *snapshot.MilestoneDiff, actual *snapshot.MilestoneDiff) {
+	require.EqualValues(t, expected.Milestone, actual.Milestone)
+	require.EqualValues(t, expected.SpentTreasuryOutput, actual.SpentTreasuryOutput)
+	tpkg.EqualOutputs(t, expected.Created, actual.Created)
+	tpkg.EqualSpents(t, expected.Consumed, actual.Consumed)
 }

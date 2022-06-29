@@ -67,7 +67,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	// read out treasury tx
 	treasuryOutput, err := dbStorage.UTXOManager().UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get unspent treasury output: %w", err)
 	}
 
 	if treasuryOutput != nil {
@@ -108,6 +108,11 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		return true
 	})
 
+	protocolParameters, err := dbStorage.ProtocolParameters(ledgerIndex)
+	if err != nil {
+		return errors.Wrapf(ErrCritical, "loading protocol parameters failed: %s", err.Error())
+	}
+
 	// write all solid entry points in lexicographical order
 	for _, solidEntryPoint := range solidEntryPoints.RemoveDupsAndSort() {
 		if err := binary.Write(lsHash, binary.LittleEndian, solidEntryPoint[:]); err != nil {
@@ -147,11 +152,11 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		}{
 			Healthy:                !corrupted,
 			Tainted:                tainted,
-			SnapshotTime:           snapshotInfo.Timestamp,
-			NetworkID:              snapshotInfo.NetworkID,
+			SnapshotTime:           snapshotInfo.SnapshotTimestamp(),
+			NetworkID:              protocolParameters.NetworkID(),
 			Treasury:               treasury,
 			LedgerIndex:            ledgerIndex,
-			SnapshotIndex:          snapshotInfo.SnapshotIndex,
+			SnapshotIndex:          snapshotInfo.SnapshotIndex(),
 			UTXOsCount:             len(outputIDs),
 			SEPsCount:              len(solidEntryPoints),
 			LedgerStateHash:        hex.EncodeToString(snapshotHashSumWithoutSEPs),
@@ -175,8 +180,8 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
         - Ledger state hash (with solid entry points): %s`+"\n\n",
 		yesOrNo(!corrupted),
 		yesOrNo(tainted),
-		snapshotInfo.Timestamp,
-		snapshotInfo.NetworkID,
+		snapshotInfo.SnapshotTimestamp(),
+		protocolParameters.NetworkID(),
 		func() string {
 			if treasuryOutput == nil {
 				return "no treasury output found"
@@ -184,7 +189,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			return fmt.Sprintf("milestone ID %s, tokens %d", iotago.EncodeHex(treasuryOutput.MilestoneID[:]), treasuryOutput.Amount)
 		}(),
 		ledgerIndex,
-		snapshotInfo.SnapshotIndex,
+		snapshotInfo.SnapshotIndex(),
 		len(outputIDs),
 		len(solidEntryPoints),
 		hex.EncodeToString(snapshotHashSumWithoutSEPs),

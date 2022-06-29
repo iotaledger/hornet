@@ -52,7 +52,7 @@ var (
 //			- Diffs							=> will be removed and loaded again from last snapshot
 //			- Treasury						=> will be removed and loaded again from last snapshot
 //			- Receipts						=> will be removed and loaded again from last snapshot (if pruneReceipts is enabled)
-func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.SnapshotImporter, pruneReceipts bool) error {
+func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.Importer, pruneReceipts bool) error {
 
 	// mark the database as tainted forever.
 	// this is used to signal the coordinator plugin that it should never use a revalidated database.
@@ -69,7 +69,7 @@ func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.SnapshotImporter,
 
 	latestMilestoneIndex := t.storage.SearchLatestMilestoneIndexInStore()
 
-	if snapshotInfo.SnapshotIndex > latestMilestoneIndex && (latestMilestoneIndex != 0) {
+	if snapshotInfo.SnapshotIndex() > latestMilestoneIndex && (latestMilestoneIndex != 0) {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
 	}
 
@@ -79,11 +79,11 @@ func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.SnapshotImporter,
 		return err
 	}
 
-	if snapshotLedgerIndex != snapshotInfo.SnapshotIndex {
-		return fmt.Errorf("snapshot files (index: %d) do not fit the revalidation target (index: %d)", snapshotLedgerIndex, snapshotInfo.SnapshotIndex)
+	if snapshotLedgerIndex != snapshotInfo.SnapshotIndex() {
+		return fmt.Errorf("snapshot files (index: %d) do not fit the revalidation target (index: %d)", snapshotLedgerIndex, snapshotInfo.SnapshotIndex())
 	}
 
-	t.LogInfof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
+	t.LogInfof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex())
 
 	// deletes all ledger entries (unspent, spent, diffs, balances, treasury, receipts).
 	if err := t.cleanupLedger(pruneReceipts); err != nil {
@@ -125,7 +125,7 @@ func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.SnapshotImporter,
 		return err
 	}
 
-	t.LogInfof("reverted state back to snapshot %d, took %v", snapshotInfo.SnapshotIndex, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("reverted state back to snapshot %d, took %v", snapshotInfo.SnapshotIndex(), time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -167,7 +167,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 		}
 
 		// do not delete older milestones
-		if msIndex <= info.SnapshotIndex {
+		if msIndex <= info.SnapshotIndex() {
 			return true
 		}
 
@@ -246,7 +246,7 @@ func (t *Tangle) cleanupBlocks(info *storage.SnapshotInfo) error {
 		}
 
 		// not referenced or above snapshot index
-		if referenced, by := storedTxMeta.ReferencedWithIndex(); !referenced || by > info.SnapshotIndex {
+		if referenced, by := storedTxMeta.ReferencedWithIndex(); !referenced || by > info.SnapshotIndex() {
 			blocksToDelete[blockID] = struct{}{}
 			return true
 		}
@@ -485,7 +485,7 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 }
 
 // apply the ledger from the last snapshot to the database
-func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshotImporter *snapshot.SnapshotImporter) error {
+func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshotImporter *snapshot.Importer) error {
 
 	t.LogInfo("applying snapshot balances to the ledger state...")
 
@@ -498,7 +498,7 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 		t.LogPanic(err)
 	}
 
-	if err := snapshotImporter.CheckCurrentSnapshot(snapshotInfo); err != nil {
+	if err := t.storage.CheckLedgerState(); err != nil {
 		t.LogPanic(err)
 	}
 
@@ -507,7 +507,7 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 		t.LogPanic(err)
 	}
 
-	if snapshotInfo.SnapshotIndex != ledgerIndex {
+	if snapshotInfo.SnapshotIndex() != ledgerIndex {
 		return ErrSnapshotIndexWrong
 	}
 

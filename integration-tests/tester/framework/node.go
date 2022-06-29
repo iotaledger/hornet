@@ -109,16 +109,23 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 			defer wg.Done()
 			for time.Now().Before(end) {
 
+				nodeInfo, err := p.DebugNodeAPIClient.Info(context.Background())
+				if err != nil {
+					spamErr = err
+					return
+				}
+				protocolParameters := &nodeInfo.Protocol
+
 				txCount := atomic.AddInt32(&spammed, 1)
 				data := fmt.Sprintf("Count: %06d, Timestamp: %s", txCount, time.Now().Format(time.RFC3339))
 				iotaBlock := &iotago.Block{
-					ProtocolVersion: p.Config.Protocol.ProtocolParameters().Version,
+					ProtocolVersion: protocolParameters.Version,
 					Payload: &iotago.TaggedData{
 						Tag:  []byte("SPAM"),
 						Data: []byte(data)},
 				}
 
-				if _, err := p.DebugNodeAPIClient.SubmitBlock(context.Background(), iotaBlock, p.Config.Protocol.ProtocolParameters()); err != nil {
+				if _, err := p.DebugNodeAPIClient.SubmitBlock(context.Background(), iotaBlock, protocolParameters); err != nil {
 					spamErr = err
 					return
 				}

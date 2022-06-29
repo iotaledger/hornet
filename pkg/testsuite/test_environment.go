@@ -168,7 +168,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SyncManager
-	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), syncmanager.MilestoneIndexDelta(belowMaxDepth))
+	te.syncManager, err = syncmanager.New(ledgerIndex, te.protocolManager)
 	require.NoError(te.TestInterface, err)
 
 	// Initialize MilestoneManager

@@ -41,12 +41,11 @@ const (
 	FlagToolPrivateKey = "privateKey"
 	FlagToolPublicKey  = "publicKey"
 
-	FlagToolHRP         = "hrp"
-	FlagToolBIP32Path   = "bip32Path"
-	FlagToolMnemonic    = "mnemonic"
-	FlagToolNetworkName = "networkName"
-	FlagToolPassword    = "password"
-	FlagToolSalt        = "salt"
+	FlagToolHRP       = "hrp"
+	FlagToolBIP32Path = "bip32Path"
+	FlagToolMnemonic  = "mnemonic"
+	FlagToolPassword  = "password"
+	FlagToolSalt      = "salt"
 
 	FlagToolOutputJSON            = "json"
 	FlagToolDescriptionOutputJSON = "format output as JSON"

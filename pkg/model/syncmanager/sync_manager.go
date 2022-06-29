@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -18,10 +18,7 @@ const (
 type MilestoneIndexDelta = uint32
 
 type SyncManager struct {
-	utxoManager *utxo.Manager
-	// belowMaxDepth is the maximum allowed delta
-	// value between OCRI of a given block in relation to the current CMI before it gets lazy.
-	belowMaxDepth MilestoneIndexDelta
+	protocolManager *protocol.Manager
 
 	// milestones
 	confirmedMilestoneIndex iotago.MilestoneIndex
@@ -37,28 +34,17 @@ type SyncManager struct {
 	waitForNodeSyncedChannels       []chan struct{}
 }
 
-func New(utxoManager *utxo.Manager, belowMaxDepth MilestoneIndexDelta) (*SyncManager, error) {
+func New(ledgerIndex iotago.MilestoneIndex, protocolManager *protocol.Manager) (*SyncManager, error) {
 	s := &SyncManager{
-		utxoManager:   utxoManager,
-		belowMaxDepth: belowMaxDepth,
+		protocolManager: protocolManager,
 	}
 
-	if err := s.loadConfirmedMilestoneFromDatabase(); err != nil {
+	// set the confirmed milestone index based on the ledger milestone
+	if err := s.SetConfirmedMilestoneIndex(ledgerIndex, false); err != nil {
 		return nil, err
 	}
 
 	return s, nil
-}
-
-func (s *SyncManager) loadConfirmedMilestoneFromDatabase() error {
-
-	ledgerMilestoneIndex, err := s.utxoManager.ReadLedgerIndex()
-	if err != nil {
-		return err
-	}
-
-	// set the confirmed milestone index based on the ledger milestone
-	return s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
 }
 
 func (s *SyncManager) ResetMilestoneIndexes() {
@@ -172,11 +158,11 @@ func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex iotago.Milest
 	s.isNodeAlmostSynced = confirmedIndex >= (latestIndex - isNodeAlmostSyncedThreshold)
 
 	// catch overflow
-	if latestIndex < s.belowMaxDepth {
+	if latestIndex < iotago.MilestoneIndex(s.protocolManager.Current().BelowMaxDepth) {
 		s.isNodeSyncedWithinBelowMaxDepth = true
 		return
 	}
-	s.isNodeSyncedWithinBelowMaxDepth = confirmedIndex >= (latestIndex - s.belowMaxDepth)
+	s.isNodeSyncedWithinBelowMaxDepth = confirmedIndex >= (latestIndex - MilestoneIndexDelta(s.protocolManager.Current().BelowMaxDepth))
 }
 
 // SetConfirmedMilestoneIndex sets the confirmed milestone index.

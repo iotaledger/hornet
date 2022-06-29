@@ -9,6 +9,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -17,7 +18,7 @@ import (
 func snapshotGen(args []string) error {
 
 	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
-	networkNameFlag := fs.String(FlagToolNetworkName, "", "the network ID for which this snapshot is meant for")
+	protocolParametersPathFlag := fs.String(FlagToolProtocolParametersPath, "", "the path to the initial protocol parameters file")
 	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial ed25519 address all the tokens will be minted to")
 	treasuryAllocationFlag := fs.Uint64(FlagToolSnapGenTreasuryAllocation, 0, "the amount of tokens to reside within the treasury, the delta from the supply will be allocated to 'mintAddress'")
 	outputFilePathFlag := fs.String(FlagToolOutputPath, "", "the file path to the generated snapshot file")
@@ -27,8 +28,8 @@ func snapshotGen(args []string) error {
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s",
 			ToolSnapGen,
-			FlagToolNetworkName,
-			"private_tangle@1",
+			FlagToolProtocolParametersPath,
+			"protocol_parameters.json",
 			FlagToolSnapGenMintAddress,
 			"[MINT_ADDRESS]",
 			FlagToolSnapGenTreasuryAllocation,
@@ -41,44 +42,19 @@ func snapshotGen(args []string) error {
 		return err
 	}
 
-	if len(*networkNameFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolNetworkName)
+	if len(*protocolParametersPathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolProtocolParametersPath)
 	}
-
-	protoParas := &iotago.ProtocolParameters{
-		Version:       2,
-		NetworkName:   *networkNameFlag,
-		Bech32HRP:     iotago.PrefixTestnet,
-		MinPoWScore:   0,
-		BelowMaxDepth: 15,
-		RentStructure: iotago.RentStructure{
-			VByteCost:    0,
-			VBFactorData: 0,
-			VBFactorKey:  0,
-		},
-		TokenSupply: 2_779_530_283_277_761,
-	}
-
-	// check mint address
 	if len(*mintAddressFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapGenMintAddress)
 	}
-	addressBytes, err := hex.DecodeString(*mintAddressFlag)
-	if err != nil {
-		return fmt.Errorf("can't decode '%s': %w'", FlagToolSnapGenMintAddress, err)
-	}
-	if len(addressBytes) != iotago.Ed25519AddressBytesLength {
-		return fmt.Errorf("incorrect '%s' length: %d != %d (%s)", FlagToolSnapGenMintAddress, len(addressBytes), iotago.Ed25519AddressBytesLength, *mintAddressFlag)
-	}
-
-	var address iotago.Ed25519Address
-	copy(address[:], addressBytes)
-
-	treasury := *treasuryAllocationFlag
-
-	// check filepath
 	if len(*outputFilePathFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolOutputPath)
+	}
+
+	protocolParametersPath := *protocolParametersPathFlag
+	if _, err := os.Stat(protocolParametersPath); err != nil || os.IsNotExist(err) {
+		return fmt.Errorf("'%s' (%s) does not exist", FlagToolProtocolParametersPath, protocolParametersPath)
 	}
 
 	outputFilePath := *outputFilePathFlag
@@ -86,29 +62,54 @@ func snapshotGen(args []string) error {
 		return fmt.Errorf("'%s' already exists", FlagToolOutputPath)
 	}
 
+	println("loading protocol parameters...")
+	protocolParameters := &iotago.ProtocolParameters{}
+	if err := ioutils.ReadJSONFromFile(protocolParametersPath, protocolParameters); err != nil {
+		return fmt.Errorf("failed to load protocol parameters: %w", err)
+	}
+
+	// check mint address
+	addressBytes, err := hex.DecodeString(*mintAddressFlag)
+	if err != nil {
+		return fmt.Errorf("can't decode '%s': %w'", FlagToolSnapGenMintAddress, err)
+	}
+	if len(addressBytes) != iotago.Ed25519AddressBytesLength {
+		return fmt.Errorf("incorrect '%s' length: %d != %d (%s)", FlagToolSnapGenMintAddress, len(addressBytes), iotago.Ed25519AddressBytesLength, *mintAddressFlag)
+	}
+	var address iotago.Ed25519Address
+	copy(address[:], addressBytes)
+
+	treasury := *treasuryAllocationFlag
+
 	// build temp file path
 	outputFilePathTmp := outputFilePath + "_tmp"
 
 	// we don't need to check the error, maybe the file doesn't exist
 	_ = os.Remove(outputFilePathTmp)
 
-	snapshotFile, err := os.OpenFile(outputFilePathTmp, os.O_RDWR|os.O_CREATE, 0666)
+	fileHandle, err := os.OpenFile(outputFilePathTmp, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return fmt.Errorf("unable to create snapshot file: %w", err)
 	}
 
 	// create snapshot file
-	targetIndex := iotago.MilestoneIndex(0)
-	header := &snapshot.FileHeader{
-		Version:              snapshot.SupportedFormatVersion,
-		Type:                 snapshot.Full,
-		NetworkID:            protoParas.NetworkID(),
-		SEPMilestoneIndex:    targetIndex,
-		LedgerMilestoneIndex: targetIndex,
+	var targetIndex iotago.MilestoneIndex = 0
+	fullHeader := &snapshot.FullSnapshotHeader{
+		Version:                  snapshot.SupportedFormatVersion,
+		Type:                     snapshot.Full,
+		FirstMilestoneIndex:      0,
+		LedgerMilestoneIndex:     targetIndex,
+		TargetMilestoneIndex:     targetIndex,
+		TargetMilestoneTimestamp: uint32(time.Now().Unix()),
+		TargetMilestoneID:        iotago.MilestoneID{},
 		TreasuryOutput: &utxo.TreasuryOutput{
 			MilestoneID: iotago.MilestoneID{},
 			Amount:      treasury,
 		},
+		ProtocolParameters: protocolParameters,
+		OutputCount:        0,
+		MilestoneDiffCount: 0,
+		SEPCount:           0,
 	}
 
 	// solid entry points
@@ -132,7 +133,7 @@ func snapshotGen(args []string) error {
 		outputAdded = true
 
 		return utxo.CreateOutput(iotago.OutputID{}, iotago.EmptyBlockID(), 0, 0, &iotago.BasicOutput{
-			Amount: protoParas.TokenSupply - treasury,
+			Amount: protocolParameters.TokenSupply - treasury,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: &address},
 			},
@@ -145,12 +146,18 @@ func snapshotGen(args []string) error {
 		return nil, nil
 	}
 
-	if _, err := snapshot.StreamSnapshotDataTo(snapshotFile, uint32(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
-		_ = snapshotFile.Close()
+	if _, err := snapshot.StreamFullSnapshotDataTo(
+		fileHandle,
+		fullHeader,
+		outputProducerFunc,
+		milestoneDiffProducerFunc,
+		solidEntryPointProducerFunc,
+	); err != nil {
+		_ = fileHandle.Close()
 		return fmt.Errorf("couldn't generate snapshot file: %w", err)
 	}
 
-	if err := snapshotFile.Close(); err != nil {
+	if err := fileHandle.Close(); err != nil {
 		return fmt.Errorf("unable to close snapshot file: %w", err)
 	}
 

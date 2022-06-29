@@ -247,7 +247,7 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 	if requested && !t.syncManager.IsNodeSynced() && t.requestQueue.Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
-		t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), true)
+		t.milestoneSolidifierWorkerPool.TrySubmit(0, true)
 	}
 }
 

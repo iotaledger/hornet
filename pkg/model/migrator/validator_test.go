@@ -24,7 +24,7 @@ func TestValidator_QueryMigratedFunds(t *testing.T) {
 
 	// valid milestone indices
 	for msIndex := 1; msIndex < len(validatorTests.confirmations); msIndex++ {
-		entries, err := v.QueryMigratedFunds(uint32(msIndex))
+		entries, err := v.QueryMigratedFunds(iotago.MilestoneIndex(msIndex))
 		require.NoError(t, err)
 		requireEntriesEqual(t, validatorTests.confirmations[msIndex].IncludedBundles, entries)
 	}
@@ -77,16 +77,16 @@ func (mockAPI) GetNodeInfo() (*api.GetNodeInfoResponse, error) {
 	}, nil
 }
 
-func (mockAPI) GetWhiteFlagConfirmation(milestoneIndex uint32) (*api.WhiteFlagConfirmation, error) {
-	if milestoneIndex >= uint32(len(validatorTests.confirmations)) {
+func (mockAPI) GetWhiteFlagConfirmation(msIndex iotago.MilestoneIndex) (*api.WhiteFlagConfirmation, error) {
+	if msIndex >= iotago.MilestoneIndex(len(validatorTests.confirmations)) {
 		return nil, errInvalidIndex
 	}
-	return &validatorTests.confirmations[milestoneIndex], nil
+	return &validatorTests.confirmations[msIndex], nil
 }
 
 var validatorTests = struct {
 	latestMilestoneHash        trinary.Hash
-	latestMilestoneIndex       uint32
+	latestMilestoneIndex       iotago.MilestoneIndex
 	coordinatorAddress         trinary.Hash
 	coordinatorMerkleTreeDepth int
 	confirmations              []api.WhiteFlagConfirmation

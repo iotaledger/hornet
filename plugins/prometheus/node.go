@@ -131,8 +131,8 @@ func collectInfo() {
 	milestones.WithLabelValues("snapshot").Set(0)
 	milestones.WithLabelValues("pruning").Set(0)
 	if snapshotInfo != nil {
-		milestones.WithLabelValues("snapshot").Set(float64(snapshotInfo.SnapshotIndex))
-		milestones.WithLabelValues("pruning").Set(float64(snapshotInfo.PruningIndex))
+		milestones.WithLabelValues("snapshot").Set(float64(snapshotInfo.SnapshotIndex()))
+		milestones.WithLabelValues("pruning").Set(float64(snapshotInfo.PruningIndex()))
 	}
 
 	if deps.TipSelector != nil {

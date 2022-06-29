@@ -118,7 +118,7 @@ const (
 	RouteControlDatabasePrune = "/control/database/prune"
 
 	// RouteControlSnapshotsCreate is the control route to manually create a snapshot files.
-	// POST creates a snapshot (full, delta or both).
+	// POST creates a full snapshot.
 	RouteControlSnapshotsCreate = "/control/snapshots/create"
 )
 

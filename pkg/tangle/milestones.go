@@ -23,7 +23,7 @@ func (t *Tangle) processValidMilestone(blockID iotago.BlockID, cachedMilestone *
 		t.LogInfof("Valid milestone detected! Index: %d", msIndex)
 		t.requester.RequestMilestoneParents(cachedMilestone.Retain()) // milestone pass +1
 	} else if requested {
-		pruningIndex := t.storage.SnapshotInfo().PruningIndex
+		pruningIndex := t.storage.SnapshotInfo().PruningIndex()
 		if msIndex < pruningIndex {
 			// this should not happen. we requested a milestone that is below pruning index
 			t.LogPanicf("Synced too far back! Index: %d, PruningIndex: %d", msIndex, pruningIndex)

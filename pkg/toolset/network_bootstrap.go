@@ -31,10 +31,10 @@ import (
 
 // CoordinatorState is the JSON representation of a coordinator state.
 type CoordinatorState struct {
-	LatestMilestoneIndex   uint32 `json:"latestMilestoneIndex"`
-	LatestMilestoneBlockID string `json:"latestMilestoneBlockID"`
-	LatestMilestoneID      string `json:"latestMilestoneID"`
-	LatestMilestoneTime    int64  `json:"latestMilestoneTime"`
+	LatestMilestoneIndex   iotago.MilestoneIndex `json:"latestMilestoneIndex"`
+	LatestMilestoneBlockID string                `json:"latestMilestoneBlockID"`
+	LatestMilestoneID      string                `json:"latestMilestoneID"`
+	LatestMilestoneTime    int64                 `json:"latestMilestoneTime"`
 }
 
 func networkBootstrap(args []string) error {
@@ -42,7 +42,6 @@ func networkBootstrap(args []string) error {
 	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	configFilePathFlag := fs.String(FlagToolConfigFilePath, "", "the path to the config file")
 	genesisSnapshotPathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the genesis snapshot file")
-	protocolParametersPathFlag := fs.String(FlagToolProtocolParametersPath, "", "the path to the initial protocol parameters file")
 	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the coordinator database")
 	cooStatePathFlag := fs.String(FlagToolCoordinatorStatePath, "", "the path to the coordinator state file")
 	databaseEngineFlag := fs.String(FlagToolDatabaseEngine, string(DefaultValueDatabaseEngine), "database engine (optional, values: pebble, rocksdb)")
@@ -50,14 +49,12 @@ func networkBootstrap(args []string) error {
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolBootstrapPrivateTangle)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s --%s %s --%s %s",
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s --%s %s",
 			ToolBootstrapPrivateTangle,
 			FlagToolConfigFilePath,
 			"config.json",
 			FlagToolSnapshotPath,
 			"genesis_snapshot.bin",
-			FlagToolProtocolParametersPath,
-			"protocol_parameters.json",
 			FlagToolDatabasePath,
 			"privatedb",
 			FlagToolCoordinatorStatePath,
@@ -76,9 +73,6 @@ func networkBootstrap(args []string) error {
 	if len(*genesisSnapshotPathFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPath)
 	}
-	if len(*protocolParametersPathFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolProtocolParametersPath)
-	}
 	if len(*databasePathFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
 	}
@@ -94,11 +88,6 @@ func networkBootstrap(args []string) error {
 	genesisSnapshotPath := *genesisSnapshotPathFlag
 	if _, err := os.Stat(genesisSnapshotPath); err != nil || os.IsNotExist(err) {
 		return fmt.Errorf("'%s' (%s) does not exist", FlagToolSnapshotPath, genesisSnapshotPath)
-	}
-
-	protocolParametersPath := *protocolParametersPathFlag
-	if _, err := os.Stat(protocolParametersPath); err != nil || os.IsNotExist(err) {
-		return fmt.Errorf("'%s' (%s) does not exist", FlagToolProtocolParametersPath, protocolParametersPath)
 	}
 
 	databasePath := *databasePathFlag
@@ -132,12 +121,6 @@ func networkBootstrap(args []string) error {
 		return fmt.Errorf("failed to load milestone signing provider: %w", err)
 	}
 
-	println("loading protocol parameters...")
-	protocolParameters := &iotago.ProtocolParameters{}
-	if err := ioutils.ReadJSONFromFile(protocolParametersPath, protocolParameters); err != nil {
-		return fmt.Errorf("failed to load protocol parameters: %w", err)
-	}
-
 	println("creating databases...")
 	tangleStore, err := createTangleStorage(
 		"",
@@ -158,13 +141,13 @@ func networkBootstrap(args []string) error {
 
 	// load the genesis ledger state into the storage (SEP and ledger state only)
 	println("loading genesis snapshot...")
-	if err := loadGenesisSnapshot(tangleStore, genesisSnapshotPath, protocolParameters, false, 0); err != nil {
+	if err := loadGenesisSnapshot(tangleStore, genesisSnapshotPath, false, 0); err != nil {
 		return fmt.Errorf("failed to load genesis snapshot: %w", err)
 	}
 
 	// create first milestone to bootstrap the network
 	println("create first milestone...")
-	cooState, err := createInitialMilestone(tangleStore, signer, protocolParameters)
+	cooState, err := createInitialMilestone(tangleStore, signer)
 	if err != nil {
 		return fmt.Errorf("failed to create initial milestone: %w", err)
 	}
@@ -281,10 +264,7 @@ func createMilestone(
 }
 
 // createInitialMilestone creates a milestone block and stores it to the given storage.
-func createInitialMilestone(
-	dbStorage *storage.Storage,
-	signer signingprovider.MilestoneSignerProvider,
-	protocolParameters *iotago.ProtocolParameters) (*CoordinatorState, error) {
+func createInitialMilestone(dbStorage *storage.Storage, signer signingprovider.MilestoneSignerProvider) (*CoordinatorState, error) {
 
 	var index iotago.MilestoneIndex = 1
 	parents := iotago.BlockIDs{iotago.EmptyBlockID()}
@@ -302,6 +282,11 @@ func createInitialMilestone(
 		previousMilestoneID,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	protocolParameters, err := dbStorage.CurrentProtocolParameters()
 	if err != nil {
 		return nil, err
 	}

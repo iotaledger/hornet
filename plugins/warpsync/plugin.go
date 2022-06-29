@@ -102,7 +102,7 @@ func configureEvents() {
 		}
 	})
 
-	onWarpSyncCheckpointUpdated = events.NewClosure(func(nextCheckpoint iotago.MilestoneIndex, oldCheckpoint iotago.MilestoneIndex, advRange uint32, target iotago.MilestoneIndex) {
+	onWarpSyncCheckpointUpdated = events.NewClosure(func(nextCheckpoint iotago.MilestoneIndex, oldCheckpoint iotago.MilestoneIndex, advRange syncmanager.MilestoneIndexDelta, target iotago.MilestoneIndex) {
 		Plugin.LogInfof("Checkpoint updated to milestone %d (target %d)", nextCheckpoint, target)
 		// prevent any requests in the queue above our next checkpoint
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
@@ -115,7 +115,7 @@ func configureEvents() {
 		Plugin.LogInfof("Target updated to milestone %d (checkpoint %d)", newTarget, checkpoint)
 	})
 
-	onWarpSyncStart = events.NewClosure(func(targetMsIndex iotago.MilestoneIndex, nextCheckpoint iotago.MilestoneIndex, advRange uint32) {
+	onWarpSyncStart = events.NewClosure(func(targetMsIndex iotago.MilestoneIndex, nextCheckpoint iotago.MilestoneIndex, advRange syncmanager.MilestoneIndexDelta) {
 		Plugin.LogInfof("Synchronizing to milestone %d", targetMsIndex)
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint

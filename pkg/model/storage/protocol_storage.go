@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
@@ -24,7 +26,7 @@ func (s *Storage) StoreProtocolParameters(protoParsMsOpt *iotago.ProtocolParamsM
 	return nil
 }
 
-func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParamsMilestoneOpt, error) {
+func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParameters, error) {
 
 	// search the smallest activation index that is smaller than or equal to the given milestone index
 	// to get the valid protocol parameters for the given milestone index.
@@ -46,7 +48,7 @@ func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.Pro
 		if !errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve protocol parameters")
 		}
-		return nil, err
+		return nil, errors.Wrap(NewDatabaseError(err), "protocol parameters not found in database")
 	}
 
 	protoParsMsOpt := &iotago.ProtocolParamsMilestoneOpt{}
@@ -54,7 +56,12 @@ func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.Pro
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters")
 	}
 
-	return protoParsMsOpt, nil
+	protoParas := &iotago.ProtocolParameters{}
+	if _, err := protoParas.Deserialize(protoParsMsOpt.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
+		return nil, errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters")
+	}
+
+	return protoParas, nil
 }
 
 func (s *Storage) ForEachProtocolParameters(consumer ProtocolParametersConsumer) error {
@@ -111,4 +118,14 @@ func (s *Storage) PruneProtocolParameters(pruningIndex iotago.MilestoneIndex) er
 	}
 
 	return innerErr
+}
+
+func (s *Storage) CurrentProtocolParameters() (*iotago.ProtocolParameters, error) {
+
+	ledgerIndex, err := s.UTXOManager().ReadLedgerIndex()
+	if err != nil {
+		return nil, fmt.Errorf("loading current protocol parameters failed: %w", err)
+	}
+
+	return s.ProtocolParameters(ledgerIndex)
 }

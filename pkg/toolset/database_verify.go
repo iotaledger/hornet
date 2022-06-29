@@ -122,9 +122,14 @@ func verifyDatabase(
 		}
 	}()
 
+	protocolParametersSource, err := tangleStoreSource.CurrentProtocolParameters()
+	if err != nil {
+		return errors.Wrapf(ErrCritical, "loading source protocol parameters failed: %s", err.Error())
+	}
+
 	// load the genesis ledger state into the temporary storage (SEP and ledger state only)
 	println("loading genesis snapshot...")
-	if err := loadGenesisSnapshot(tangleStoreTemp, genesisSnapshotFilePath, protoParas, true, tangleStoreSource.SnapshotInfo().NetworkID); err != nil {
+	if err := loadGenesisSnapshot(tangleStoreTemp, genesisSnapshotFilePath, true, protocolParametersSource.NetworkID()); err != nil {
 		return fmt.Errorf("loading genesis snapshot failed: %w", err)
 	}
 
@@ -133,8 +138,8 @@ func verifyDatabase(
 	}
 
 	// compare source database index and genesis snapshot index
-	if tangleStoreSource.SnapshotInfo().EntryPointIndex != tangleStoreTemp.SnapshotInfo().EntryPointIndex {
-		return fmt.Errorf("entry point index does not match genesis snapshot index: (%d != %d)", tangleStoreSource.SnapshotInfo().EntryPointIndex, tangleStoreTemp.SnapshotInfo().EntryPointIndex)
+	if tangleStoreSource.SnapshotInfo().EntryPointIndex() != tangleStoreTemp.SnapshotInfo().EntryPointIndex() {
+		return fmt.Errorf("entry point index does not match genesis snapshot index: (%d != %d)", tangleStoreSource.SnapshotInfo().EntryPointIndex(), tangleStoreTemp.SnapshotInfo().EntryPointIndex())
 	}
 
 	// compare solid entry points in source database and genesis snapshot
@@ -394,7 +399,7 @@ func compareLedgerState(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.M
 
 func cleanupMilestoneFromUTXOManager(utxoManager *utxo.Manager, milestonePayload *iotago.Milestone, msIndex iotago.MilestoneIndex) error {
 
-	var receiptMigratedAtIndex []uint32
+	var receiptMigratedAtIndex []iotago.MilestoneIndex
 
 	opts, err := milestonePayload.Opts.Set()
 	if err == nil && opts != nil {

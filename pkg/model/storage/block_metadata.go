@@ -323,12 +323,12 @@ func (m *BlockMetadata) ObjectStorageValue() (data []byte) {
 
 	/*
 		1 byte  metadata bitmask
-		4 bytes uint32 referencedIndex
+		4 bytes iotago.MilestoneIndex referencedIndex
 		4 bytes uint32 whiteFlagIndex
 		1 byte  uint8 conflict
-		4 bytes uint32 youngestConeRootIndex
-		4 bytes uint32 oldestConeRootIndex
-		4 bytes uint32 coneRootCalculationIndex
+		4 bytes iotago.MilestoneIndex youngestConeRootIndex
+		4 bytes iotago.MilestoneIndex oldestConeRootIndex
+		4 bytes iotago.MilestoneIndex coneRootCalculationIndex
 		1 byte  parents count
 		parents count * 32 bytes parent id
 	*/
@@ -354,12 +354,12 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 
 	/*
 		1 byte  metadata bitmask
-		4 bytes uint32 referencedIndex
+		4 bytes iotago.MilestoneIndex referencedIndex
 		4 bytes uint32 whiteFlagIndex
 		1 byte  uint8 conflict
-		4 bytes uint32 youngestConeRootIndex
-		4 bytes uint32 oldestConeRootIndex
-		4 bytes uint32 coneRootCalculationIndex
+		4 bytes iotago.MilestoneIndex youngestConeRootIndex
+		4 bytes iotago.MilestoneIndex oldestConeRootIndex
+		4 bytes iotago.MilestoneIndex coneRootCalculationIndex
 		1 byte  parents count
 		parents count * 32 bytes parent id
 	*/

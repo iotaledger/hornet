@@ -88,7 +88,7 @@ func (u *Manager) WriteUnlockLedger() {
 	u.utxoLock.Unlock()
 }
 
-func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex iotago.MilestoneIndex, pruneReceipts bool, receiptMigratedAtIndex ...uint32) error {
+func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex iotago.MilestoneIndex, pruneReceipts bool, receiptMigratedAtIndex ...iotago.MilestoneIndex) error {
 
 	diff, err := u.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
@@ -327,7 +327,7 @@ func (u *Manager) RollbackConfirmation(msIndex iotago.MilestoneIndex, newOutputs
 	return u.RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents, tm, rt)
 }
 
-func (u *Manager) CheckLedgerState(protoParas *iotago.ProtocolParameters) error {
+func (u *Manager) CheckLedgerState(tokenSupply uint64) error {
 
 	total, _, err := u.ComputeLedgerBalance()
 	if err != nil {
@@ -336,11 +336,11 @@ func (u *Manager) CheckLedgerState(protoParas *iotago.ProtocolParameters) error 
 
 	treasuryOutput, err := u.UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get unspent treasury output: %w", err)
 	}
 	total += treasuryOutput.Amount
 
-	if total != protoParas.TokenSupply {
+	if total != tokenSupply {
 		return ErrOutputsSumNotEqualTotalSupply
 	}
 

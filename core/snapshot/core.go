@@ -65,7 +65,7 @@ type dependencies struct {
 	Storage            *storage.Storage
 	Tangle             *tangle.Tangle
 	UTXOManager        *utxo.Manager
-	SnapshotImporter   *snapshot.SnapshotImporter
+	SnapshotImporter   *snapshot.Importer
 	SnapshotManager    *snapshot.Manager
 	SnapshotsFullPath  string `name:"snapshotsFullPath"`
 	SnapshotsDeltaPath string `name:"snapshotsDeltaPath"`
@@ -95,15 +95,12 @@ func provide(c *dig.Container) error {
 		DeleteAllFlag        bool `name:"deleteAll"`
 		PruningPruneReceipts bool `name:"pruneReceipts"`
 		Storage              *storage.Storage
-		SyncManager          *syncmanager.SyncManager
-		UTXOManager          *utxo.Manager
-		ProtocolManager      *protocol.Manager
 		SnapshotsFullPath    string `name:"snapshotsFullPath"`
 		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
 		TargetNetworkName    string `name:"targetNetworkName"`
 	}
 
-	if err := c.Provide(func(deps snapshotImporterDeps) *snapshot.SnapshotImporter {
+	if err := c.Provide(func(deps snapshotImporterDeps) *snapshot.Importer {
 
 		if deps.DeleteAllFlag {
 			// delete old snapshot files
@@ -119,9 +116,6 @@ func provide(c *dig.Container) error {
 		importer := snapshot.NewSnapshotImporter(
 			CoreComponent.Logger(),
 			deps.Storage,
-			deps.SyncManager,
-			deps.UTXOManager,
-			deps.ProtocolManager,
 			deps.SnapshotsFullPath,
 			deps.SnapshotsDeltaPath,
 			deps.TargetNetworkName,
@@ -131,7 +125,7 @@ func provide(c *dig.Container) error {
 		switch {
 		case deps.Storage.SnapshotInfo() != nil && !*forceLoadingSnapshot:
 			// snapshot already exists, no need to load it
-			if err := importer.CheckCurrentSnapshot(deps.Storage.SnapshotInfo()); err != nil {
+			if err := deps.Storage.CheckLedgerState(); err != nil {
 				CoreComponent.LogWarn(err)
 				os.Exit(1)
 			}

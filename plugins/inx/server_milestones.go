@@ -140,7 +140,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		}
 
 		// Stream all available milestones first
-		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex()
 		if startIndex <= pruningIndex {
 			return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
 		}
