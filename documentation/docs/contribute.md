@@ -15,7 +15,7 @@ keywords:
 
 :::note
 
-By participating in this project, you agree to abide our [code of conduct](https://wiki.iota.org/hornet/code_of_conduct).
+By participating in this project, you agree to abide our [code of conduct](code_of_conduct.md).
 
 :::
 
