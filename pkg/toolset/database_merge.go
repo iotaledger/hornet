@@ -499,6 +499,11 @@ func mergeDatabase(
 
 	tangleStoreSourceAvailable := tangleStoreSource != nil
 
+	snapshotInfoTarget := tangleStoreTarget.SnapshotInfo()
+	if snapshotInfoTarget == nil {
+		return errors.Wrap(ErrCritical, common.ErrSnapshotInfoNotFound.Error())
+	}
+
 	var sourceNetworkID uint64
 	var msIndexStartSource, msIndexEndSource iotago.MilestoneIndex = 0, 0
 	msIndexStartTarget, msIndexEndTarget := getStorageMilestoneRange(tangleStoreTarget)
@@ -519,7 +524,7 @@ func mergeDatabase(
 		}
 
 		// set the new start and end indexes after applying the genesis snapshot
-		msIndexStartTarget, msIndexEndTarget = tangleStoreTarget.SnapshotInfo().EntryPointIndex(), tangleStoreTarget.SnapshotInfo().EntryPointIndex()
+		msIndexStartTarget, msIndexEndTarget = snapshotInfoTarget.EntryPointIndex(), snapshotInfoTarget.EntryPointIndex()
 	}
 
 	if tangleStoreSourceAvailable {

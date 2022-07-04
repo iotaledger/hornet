@@ -20,7 +20,6 @@ const (
 )
 
 var (
-	ErrSnapshotInfoMissing                   = errors.New("snapshot information not found in database")
 	ErrLatestMilestoneOlderThanSnapshotIndex = errors.New("latest milestone in the database is older than the snapshot index")
 	ErrSnapshotIndexWrong                    = errors.New("snapshot index does not fit the snapshot ledger index")
 )
@@ -64,7 +63,7 @@ func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.Importer, pruneRe
 
 	snapshotInfo := t.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return ErrSnapshotInfoMissing
+		return common.ErrSnapshotInfoNotFound
 	}
 
 	latestMilestoneIndex := t.storage.SearchLatestMilestoneIndexInStore()

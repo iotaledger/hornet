@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	databasecore "github.com/iotaledger/hornet/core/database"
 	"github.com/iotaledger/hornet/core/protocfg"
+	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
@@ -194,7 +195,7 @@ func getTangleStorage(path string,
 
 func checkSnapshotInfo(dbStorage *storage.Storage) error {
 	if dbStorage.SnapshotInfo() == nil {
-		return errors.New("snapshot info not found")
+		return common.ErrSnapshotInfoNotFound
 	}
 	return nil
 }

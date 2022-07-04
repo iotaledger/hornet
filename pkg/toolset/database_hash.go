@@ -14,6 +14,7 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 	coreDatabase "github.com/iotaledger/hornet/core/database"
+	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -53,7 +54,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 
 	snapshotInfo := dbStorage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return errors.New("no snapshot info found")
+		return common.ErrSnapshotInfoNotFound
 	}
 
 	// compute the sha256 of the ledger state

@@ -11,6 +11,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
@@ -137,9 +138,19 @@ func verifyDatabase(
 		return err
 	}
 
+	snapshotInfoSource := tangleStoreSource.SnapshotInfo()
+	if snapshotInfoSource == nil {
+		return errors.Wrap(ErrCritical, common.ErrSnapshotInfoNotFound.Error())
+	}
+
+	snapshotInfoTemp := tangleStoreTemp.SnapshotInfo()
+	if snapshotInfoTemp == nil {
+		return errors.Wrap(ErrCritical, common.ErrSnapshotInfoNotFound.Error())
+	}
+
 	// compare source database index and genesis snapshot index
-	if tangleStoreSource.SnapshotInfo().EntryPointIndex() != tangleStoreTemp.SnapshotInfo().EntryPointIndex() {
-		return fmt.Errorf("entry point index does not match genesis snapshot index: (%d != %d)", tangleStoreSource.SnapshotInfo().EntryPointIndex(), tangleStoreTemp.SnapshotInfo().EntryPointIndex())
+	if snapshotInfoSource.EntryPointIndex() != snapshotInfoTemp.EntryPointIndex() {
+		return fmt.Errorf("entry point index does not match genesis snapshot index: (%d != %d)", snapshotInfoSource.EntryPointIndex(), snapshotInfoTemp.EntryPointIndex())
 	}
 
 	// compare solid entry points in source database and genesis snapshot

@@ -114,7 +114,7 @@ func (s *Manager) MinimumMilestoneIndex() iotago.MilestoneIndex {
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		s.LogPanic("No snapshotInfo found!")
+		s.LogPanic(common.ErrSnapshotInfoNotFound)
 		return 0
 	}
 
@@ -135,7 +135,7 @@ func (s *Manager) shouldTakeSnapshot(confirmedMilestoneIndex iotago.MilestoneInd
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		s.LogPanic("No snapshotInfo found!")
+		s.LogPanic(common.ErrSnapshotInfoNotFound)
 		return false
 	}
 

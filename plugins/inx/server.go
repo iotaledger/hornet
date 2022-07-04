@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/hornet/pkg/common"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -55,7 +56,13 @@ func (s *INXServer) Stop() {
 }
 
 func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
-	pruningIndex := deps.Storage.SnapshotInfo().PruningIndex()
+
+	snapshotInfo := deps.Storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		return nil, common.ErrSnapshotInfoNotFound
+	}
+
+	pruningIndex := snapshotInfo.PruningIndex()
 
 	index, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {

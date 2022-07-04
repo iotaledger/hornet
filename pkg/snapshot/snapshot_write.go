@@ -297,7 +297,7 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return errors.Wrap(common.ErrCritical, "no snapshot info found")
+		return errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
 	}
 
 	if err := checkSnapshotLimits(
@@ -442,7 +442,7 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return errors.Wrap(common.ErrCritical, "no snapshot info found")
+		return errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
 	}
 
 	if err := checkSnapshotLimits(
@@ -572,7 +572,7 @@ func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, fileP
 
 	snapshotInfo := dbStorage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return nil, errors.Wrap(common.ErrCritical, "no snapshot info found")
+		return nil, errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
 	}
 
 	// ledger index corresponds to the CMI
@@ -705,7 +705,7 @@ func CreateSnapshotFromStorage(
 
 	snapshotInfo := dbStorage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return nil, errors.New("no snapshot info found")
+		return nil, errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
 	}
 
 	// ledger index corresponds to the CMI

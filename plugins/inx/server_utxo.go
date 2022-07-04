@@ -9,6 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -168,6 +169,11 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 
 func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
 
+	snapshotInfo := deps.Storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		return common.ErrSnapshotInfoNotFound
+	}
+
 	createLedgerUpdatePayloadAndSend := func(msIndex iotago.MilestoneIndex, outputs utxo.Outputs, spents utxo.Spents) error {
 		payload, err := NewLedgerUpdate(msIndex, outputs, spents)
 		if err != nil {
@@ -213,7 +219,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		}
 
 		// Stream all available milestone diffs first
-		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex()
+		pruningIndex := snapshotInfo.PruningIndex()
 		if startIndex <= pruningIndex {
 			return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
 		}
@@ -295,6 +301,11 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 
 func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToTreasuryUpdatesServer) error {
 
+	snapshotInfo := deps.Storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		return common.ErrSnapshotInfoNotFound
+	}
+
 	var treasuryUpdateSent bool
 
 	createTreasuryUpdatePayloadAndSend := func(msIndex iotago.MilestoneIndex, treasuryOutput *utxo.TreasuryOutput, spentTreasuryOutput *utxo.TreasuryOutput) error {
@@ -345,7 +356,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		}
 
 		// Stream all available milestone diffs first
-		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex()
+		pruningIndex := snapshotInfo.PruningIndex()
 		if startIndex <= pruningIndex {
 			return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
 		}

@@ -216,7 +216,12 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 
 	startBlockReferenced, startBlockReferencedAt := cachedBlockMetaStart.Metadata().ReferencedWithIndex()
 
-	entryPointIndex := deps.Storage.SnapshotInfo().EntryPointIndex()
+	snapshotInfo := deps.Storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		return nil, common.ErrSnapshotInfoNotFound
+	}
+
+	entryPointIndex := snapshotInfo.EntryPointIndex()
 	entryPoints := []*entryPoint{}
 	tanglePath := []*blockWithParents{}
 

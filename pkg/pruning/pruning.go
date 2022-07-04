@@ -156,7 +156,12 @@ func (p *Manager) calcTargetIndexBySize(targetSizeBytes ...int64) (iotago.Milest
 		return 0, ErrNoPruningNeeded
 	}
 
-	milestoneRange := p.syncManager.ConfirmedMilestoneIndex() - p.storage.SnapshotInfo().PruningIndex()
+	snapshotInfo := p.storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		return 0, common.ErrSnapshotInfoNotFound
+	}
+
+	milestoneRange := p.syncManager.ConfirmedMilestoneIndex() - snapshotInfo.PruningIndex()
 	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - p.pruningSizeThresholdPercentage) / 100.0)
 	diffPercentage := prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes)
 	milestoneDiff := syncmanager.MilestoneIndexDelta(math.Ceil(float64(milestoneRange) * diffPercentage))
@@ -248,10 +253,10 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 	}
 
 	targetIndexMax := p.getMinimumTangleHistory()
+
 	snapshotInfo := p.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		p.LogPanic("No snapshotInfo found!")
-		return 0, nil
+		return 0, errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
 	}
 
 	//lint:ignore SA5011 nil pointer is already checked before with a panic
