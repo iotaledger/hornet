@@ -9,8 +9,8 @@ import (
 )
 
 type SnapshotInfo struct {
-	// The index of the first milestone of the network. Zero if there is none.
-	firstMilestoneIndex iotago.MilestoneIndex
+	// The index of the genesis milestone of the network.
+	genesisMilestoneIndex iotago.MilestoneIndex
 	// The index of the snapshot file.
 	snapshotIndex iotago.MilestoneIndex
 	// The index of the milestone of which the SEPs within the database are from.
@@ -22,9 +22,9 @@ type SnapshotInfo struct {
 	snapshotTimestamp time.Time
 }
 
-// The index of the first milestone of the network. Zero if there is none.
-func (i *SnapshotInfo) FirstMilestoneIndex() iotago.MilestoneIndex {
-	return i.firstMilestoneIndex
+// The index of the genesis milestone of the network.
+func (i *SnapshotInfo) GenesisMilestoneIndex() iotago.MilestoneIndex {
+	return i.genesisMilestoneIndex
 }
 
 // The index of the snapshot file.
@@ -51,16 +51,16 @@ func (i *SnapshotInfo) SnapshotTimestamp() time.Time {
 func (i *SnapshotInfo) Deserialize(data []byte, _ serializer.DeSerializationMode, _ interface{}) (int, error) {
 
 	var (
-		firstMilestoneIndex iotago.MilestoneIndex
-		snapshotIndex       iotago.MilestoneIndex
-		entryPointIndex     iotago.MilestoneIndex
-		pruningIndex        iotago.MilestoneIndex
-		timestamp           iotago.MilestoneIndex
+		genesisMilestoneIndex iotago.MilestoneIndex
+		snapshotIndex         iotago.MilestoneIndex
+		entryPointIndex       iotago.MilestoneIndex
+		pruningIndex          iotago.MilestoneIndex
+		timestamp             iotago.MilestoneIndex
 	)
 
 	offset, err := serializer.NewDeserializer(data).
-		ReadNum(&firstMilestoneIndex, func(err error) error {
-			return fmt.Errorf("unable to deserialize first milestone index: %w", err)
+		ReadNum(&genesisMilestoneIndex, func(err error) error {
+			return fmt.Errorf("unable to deserialize genesis milestone index: %w", err)
 		}).
 		ReadNum(&snapshotIndex, func(err error) error {
 			return fmt.Errorf("unable to deserialize snapshot index: %w", err)
@@ -79,7 +79,7 @@ func (i *SnapshotInfo) Deserialize(data []byte, _ serializer.DeSerializationMode
 		return offset, err
 	}
 
-	i.firstMilestoneIndex = firstMilestoneIndex
+	i.genesisMilestoneIndex = genesisMilestoneIndex
 	i.snapshotIndex = snapshotIndex
 	i.entryPointIndex = entryPointIndex
 	i.pruningIndex = pruningIndex
@@ -90,8 +90,8 @@ func (i *SnapshotInfo) Deserialize(data []byte, _ serializer.DeSerializationMode
 
 func (i *SnapshotInfo) Serialize(_ serializer.DeSerializationMode, _ interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
-		WriteNum(i.firstMilestoneIndex, func(err error) error {
-			return fmt.Errorf("unable to serialize first milestone index: %w", err)
+		WriteNum(i.genesisMilestoneIndex, func(err error) error {
+			return fmt.Errorf("unable to serialize genesis milestone index: %w", err)
 		}).
 		WriteNum(i.snapshotIndex, func(err error) error {
 			return fmt.Errorf("unable to serialize snapshot index: %w", err)
@@ -127,24 +127,24 @@ func (s *Storage) PrintSnapshotInfo() {
 
 	if s.snapshot != nil {
 		println(fmt.Sprintf(`SnapshotInfo:
-    FirstMilestoneIndex: %d
+    GenesisMilestoneIndex: %d
     SnapshotIndex: %d
     EntryPointIndex: %d
     PruningIndex: %d
-    Timestamp: %v`, s.snapshot.firstMilestoneIndex, s.snapshot.snapshotIndex, s.snapshot.entryPointIndex, s.snapshot.pruningIndex, s.snapshot.snapshotTimestamp.Truncate(time.Second)))
+    Timestamp: %v`, s.snapshot.genesisMilestoneIndex, s.snapshot.snapshotIndex, s.snapshot.entryPointIndex, s.snapshot.pruningIndex, s.snapshot.snapshotTimestamp.Truncate(time.Second)))
 	}
 }
 
-func (s *Storage) SetInitialSnapshotInfo(firstMilestoneIndex iotago.MilestoneIndex, snapshotIndex iotago.MilestoneIndex, entryPointIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex, timestamp time.Time) error {
+func (s *Storage) SetInitialSnapshotInfo(genesisMilestoneIndex iotago.MilestoneIndex, snapshotIndex iotago.MilestoneIndex, entryPointIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex, timestamp time.Time) error {
 	s.snapshotMutex.Lock()
 	defer s.snapshotMutex.Unlock()
 
 	s.snapshot = &SnapshotInfo{
-		firstMilestoneIndex: firstMilestoneIndex,
-		snapshotIndex:       snapshotIndex,
-		entryPointIndex:     entryPointIndex,
-		pruningIndex:        pruningIndex,
-		snapshotTimestamp:   timestamp,
+		genesisMilestoneIndex: genesisMilestoneIndex,
+		snapshotIndex:         snapshotIndex,
+		entryPointIndex:       entryPointIndex,
+		pruningIndex:          pruningIndex,
+		snapshotTimestamp:     timestamp,
 	}
 
 	return s.storeSnapshotInfo(s.snapshot)

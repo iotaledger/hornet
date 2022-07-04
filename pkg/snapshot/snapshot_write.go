@@ -342,7 +342,7 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 	fullHeader := &FullSnapshotHeader{
 		Version:                  SupportedFormatVersion,
 		Type:                     Full,
-		FirstMilestoneIndex:      snapshotInfo.FirstMilestoneIndex(),
+		GenesisMilestoneIndex:    snapshotInfo.GenesisMilestoneIndex(),
 		LedgerMilestoneIndex:     ledgerIndex,
 		TargetMilestoneIndex:     targetIndex,
 		TargetMilestoneTimestamp: targetMilestoneTimestamp,
@@ -612,7 +612,7 @@ func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, fileP
 	fullHeader := &FullSnapshotHeader{
 		Version:                  SupportedFormatVersion,
 		Type:                     Full,
-		FirstMilestoneIndex:      snapshotInfo.FirstMilestoneIndex(),
+		GenesisMilestoneIndex:    snapshotInfo.GenesisMilestoneIndex(),
 		LedgerMilestoneIndex:     ledgerIndex,
 		TargetMilestoneIndex:     targetIndex,
 		TargetMilestoneTimestamp: targetMilestoneTimestamp,
@@ -790,7 +790,7 @@ func CreateSnapshotFromStorage(
 	fullHeader := &FullSnapshotHeader{
 		Version:                  SupportedFormatVersion,
 		Type:                     Full,
-		FirstMilestoneIndex:      snapshotInfo.FirstMilestoneIndex(),
+		GenesisMilestoneIndex:    snapshotInfo.GenesisMilestoneIndex(),
 		LedgerMilestoneIndex:     ledgerIndex,
 		TargetMilestoneIndex:     targetIndex,
 		TargetMilestoneTimestamp: targetMilestoneTimestamp,

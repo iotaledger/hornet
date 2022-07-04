@@ -123,7 +123,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	msTimestamp uint32,
 	parents iotago.BlockIDs,
 	previousMilestoneID iotago.MilestoneID,
-	firstMilestoneIndex iotago.MilestoneIndex,
+	genesisMilestoneIndex iotago.MilestoneIndex,
 	traversalCondition dag.Predicate) (*WhiteFlagMutations, error) {
 
 	wfConf := &WhiteFlagMutations{
@@ -138,7 +138,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 		},
 	}
 
-	isFirstMilestone := msIndex == firstMilestoneIndex+1
+	isFirstMilestone := msIndex == genesisMilestoneIndex+1
 	if isFirstMilestone && previousMilestoneID != emptyMilestoneID {
 		return nil, fmt.Errorf("invalid previousMilestoneID for initial milestone: %s", iotago.EncodeHex(previousMilestoneID[:]))
 	}

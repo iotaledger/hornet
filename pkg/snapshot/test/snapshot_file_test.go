@@ -683,7 +683,7 @@ func fullHeaderEqualFunc(t *testing.T, expected *snapshot.FullSnapshotHeader) sn
 	return func(actual *snapshot.FullSnapshotHeader) error {
 		require.EqualValues(t, expected.Version, actual.Version)
 		require.EqualValues(t, expected.Type, actual.Type)
-		require.EqualValues(t, expected.FirstMilestoneIndex, actual.FirstMilestoneIndex)
+		require.EqualValues(t, expected.GenesisMilestoneIndex, actual.GenesisMilestoneIndex)
 		require.EqualValues(t, expected.LedgerMilestoneIndex, actual.LedgerMilestoneIndex)
 		require.EqualValues(t, expected.TargetMilestoneIndex, actual.TargetMilestoneIndex)
 		require.EqualValues(t, expected.TargetMilestoneTimestamp, actual.TargetMilestoneTimestamp)
@@ -728,7 +728,7 @@ func randFullSnapshotHeader(outputCount uint64, msDiffCount uint32, sepCount uin
 	return &snapshot.FullSnapshotHeader{
 		Type:                     snapshot.Full,
 		Version:                  snapshot.SupportedFormatVersion,
-		FirstMilestoneIndex:      tpkg.RandMilestoneIndex(),
+		GenesisMilestoneIndex:    tpkg.RandMilestoneIndex(),
 		LedgerMilestoneIndex:     tpkg.RandMilestoneIndex(),
 		TargetMilestoneIndex:     targetMilestoneIndex,
 		TargetMilestoneTimestamp: tpkg.RandMilestoneTimestamp(),

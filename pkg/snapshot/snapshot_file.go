@@ -323,8 +323,8 @@ type FullSnapshotHeader struct {
 	Version byte
 	// Type denotes the type of this snapshot.
 	Type Type
-	// The index of the first milestone of the network. Zero if there is none.
-	FirstMilestoneIndex iotago.MilestoneIndex
+	// The index of the genesis milestone of the network.
+	GenesisMilestoneIndex iotago.MilestoneIndex
 	// The index of the milestone of which the UTXOs within the snapshot are from.
 	LedgerMilestoneIndex iotago.MilestoneIndex
 	// The index of the milestone of which the SEPs within the snapshot are from.
@@ -374,10 +374,10 @@ func writeFullSnapshotHeader(writeSeeker io.WriteSeeker, header *FullSnapshotHea
 	}
 	increaseOffsets(serializer.OneByte, &countersFileOffset)
 
-	// First Milestone Index
-	// The index of the first milestone of the network. Zero if there is none.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.FirstMilestoneIndex); err != nil {
-		return 0, fmt.Errorf("unable to write LS first milestone index: %w", err)
+	// Genesis Milestone Index
+	// The index of the genesis milestone of the network.
+	if err := binary.Write(writeSeeker, binary.LittleEndian, header.GenesisMilestoneIndex); err != nil {
+		return 0, fmt.Errorf("unable to write LS genesis milestone index: %w", err)
 	}
 	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset)
 
@@ -486,8 +486,8 @@ func ReadFullSnapshotHeader(reader io.Reader) (*FullSnapshotHeader, error) {
 		return nil, ErrUnsupportedSnapshot
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &readHeader.FirstMilestoneIndex); err != nil {
-		return nil, fmt.Errorf("unable to read LS first milestone index: %w", err)
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.GenesisMilestoneIndex); err != nil {
+		return nil, fmt.Errorf("unable to read LS genesis milestone index: %w", err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.LedgerMilestoneIndex); err != nil {
@@ -603,14 +603,14 @@ func writeDeltaSnapshotHeader(writeSeeker io.WriteSeeker, header *DeltaSnapshotH
 	// Full Snapshot Target Milestone ID
 	// The ID of the target milestone of the full snapshot this delta snapshot builts up from.
 	if _, err := writeSeeker.Write(header.FullSnapshotTargetMilestoneID[:]); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS full target milestone ID: %w", err)
+		return 0, 0, fmt.Errorf("unable to write LS full snapshot target milestone ID: %w", err)
 	}
 	increaseOffsets(iotago.MilestoneIDLength, &countersFileOffset, &sepFileOffset)
 
 	// SEP File Offset
 	// The file offset of the SEPs field. This is used to easily update an existing delta snapshot without parsing its content.
 	if err := binary.Write(writeSeeker, binary.LittleEndian, sepFileOffset); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS target milestone index: %w", err)
+		return 0, 0, fmt.Errorf("unable to write LS SEP file offset: %w", err)
 	}
 	increaseOffsets(serializer.Int64ByteSize, &sepFileOffset)
 
@@ -655,19 +655,19 @@ func ReadDeltaSnapshotHeader(reader io.Reader) (*DeltaSnapshotHeader, error) {
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &deltaHeader.TargetMilestoneIndex); err != nil {
-		return nil, fmt.Errorf("unable to read LS first milestone index: %w", err)
+		return nil, fmt.Errorf("unable to read LS target milestone index: %w", err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &deltaHeader.TargetMilestoneTimestamp); err != nil {
-		return nil, fmt.Errorf("unable to read LS first milestone timestamp: %w", err)
+		return nil, fmt.Errorf("unable to read LS target milestone timestamp: %w", err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, deltaHeader.FullSnapshotTargetMilestoneID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS target milestone index: %w", err)
+		return nil, fmt.Errorf("unable to read LS full snapshot target milestone ID: %w", err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &deltaHeader.SEPFileOffset); err != nil {
-		return nil, fmt.Errorf("unable to read LS target milestone index: %w", err)
+		return nil, fmt.Errorf("unable to read LS SEP file offset: %w", err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &deltaHeader.MilestoneDiffCount); err != nil {

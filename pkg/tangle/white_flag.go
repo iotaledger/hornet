@@ -125,7 +125,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		timestamp,
 		parents,
 		previousMilestoneID,
-		snapshotInfo.FirstMilestoneIndex(),
+		snapshotInfo.GenesisMilestoneIndex(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 	)
 }

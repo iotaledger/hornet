@@ -97,7 +97,7 @@ func snapshotGen(args []string) error {
 	fullHeader := &snapshot.FullSnapshotHeader{
 		Version:                  snapshot.SupportedFormatVersion,
 		Type:                     snapshot.Full,
-		FirstMilestoneIndex:      0,
+		GenesisMilestoneIndex:    0,
 		LedgerMilestoneIndex:     targetIndex,
 		TargetMilestoneIndex:     targetIndex,
 		TargetMilestoneTimestamp: uint32(time.Now().Unix()),

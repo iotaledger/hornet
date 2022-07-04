@@ -285,7 +285,7 @@ func createInitialMilestone(dbStorage *storage.Storage, signer signingprovider.M
 		uint32(timestamp.Unix()),
 		parents,
 		previousMilestoneID,
-		snapshotInfo.FirstMilestoneIndex(),
+		snapshotInfo.GenesisMilestoneIndex(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 	)
 	if err != nil {

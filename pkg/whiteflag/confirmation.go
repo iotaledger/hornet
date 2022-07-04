@@ -59,7 +59,7 @@ func ConfirmMilestone(
 	parentsTraverserStorage dag.ParentsTraverserStorage,
 	cachedBlockFunc storage.CachedBlockFunc,
 	protoParas *iotago.ProtocolParameters,
-	firstMilestoneIndex iotago.MilestoneIndex,
+	genesisMilestoneIndex iotago.MilestoneIndex,
 	milestonePayload *iotago.Milestone,
 	whiteFlagTraversalCondition dag.Predicate,
 	checkBlockReferencedFunc CheckBlockReferencedFunc,
@@ -146,7 +146,7 @@ func ConfirmMilestone(
 			milestoneTimestamp,
 			milestoneParents,
 			previousMilestoneID,
-			firstMilestoneIndex,
+			genesisMilestoneIndex,
 			whiteFlagTraversalCondition)
 		if err != nil {
 			// According to the RFC we should panic if we encounter any invalid blocks during confirmation

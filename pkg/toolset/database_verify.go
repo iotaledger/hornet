@@ -249,7 +249,7 @@ func verifyDatabase(
 			storeSource,
 			storeSource.CachedBlock,
 			protoParas,
-			snapshotInfoTemp.FirstMilestoneIndex(),
+			snapshotInfoTemp.GenesisMilestoneIndex(),
 			milestonePayload,
 			// traversal stops if no more blocks pass the given condition
 			// Caution: condition func is not in DFS order

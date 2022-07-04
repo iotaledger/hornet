@@ -62,11 +62,11 @@ func blankMilestone(index iotago.MilestoneIndex) *iotago.Milestone {
 var fullSnapshotHeader = &snapshot.FullSnapshotHeader{
 	Version:                  snapshot.SupportedFormatVersion,
 	Type:                     snapshot.Full,
-	FirstMilestoneIndex:      0,
-	LedgerMilestoneIndex:     3,
+	GenesisMilestoneIndex:    0,
 	TargetMilestoneIndex:     1,
 	TargetMilestoneTimestamp: uint32(time.Now().Unix()),
 	TargetMilestoneID:        iotago.MilestoneID{},
+	LedgerMilestoneIndex:     3,
 	TreasuryOutput: &utxo.TreasuryOutput{
 		MilestoneID: iotago.MilestoneID{},
 		Amount:      originTreasurySupply,

@@ -278,7 +278,7 @@ type confStats struct {
 func copyAndVerifyMilestoneCone(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
-	firstMilestoneIndex iotago.MilestoneIndex,
+	genesisMilestoneIndex iotago.MilestoneIndex,
 	msIndex iotago.MilestoneIndex,
 	getMilestonePayload func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error),
 	parentsTraverserInterfaceSource dag.ParentsTraverserInterface,
@@ -324,7 +324,7 @@ func copyAndVerifyMilestoneCone(
 		parentsTraverserStorageTarget,
 		cachedBlockFuncTarget,
 		protoParas,
-		firstMilestoneIndex,
+		genesisMilestoneIndex,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
@@ -406,7 +406,7 @@ func mergeViaAPI(
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
 		protoParas,
-		snapshotInfoTarget.FirstMilestoneIndex(),
+		snapshotInfoTarget.GenesisMilestoneIndex(),
 		msIndex,
 		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 			return getMilestonePayloadViaAPI(client, msIndex)
@@ -466,7 +466,7 @@ func mergeViaSourceDatabase(
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
 		protoParas,
-		snapshotInfoTarget.FirstMilestoneIndex(),
+		snapshotInfoTarget.GenesisMilestoneIndex(),
 		msIndex,
 		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 			return getMilestonePayloadFromStorage(storeSource, msIndex)

@@ -343,7 +343,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		memcachedTraverserStorage,
 		blocksMemcache.CachedBlock,
 		t.protocolManager.Current(),
-		snapshotInfo.FirstMilestoneIndex(),
+		snapshotInfo.GenesisMilestoneIndex(),
 		milestonePayloadToSolidify,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,

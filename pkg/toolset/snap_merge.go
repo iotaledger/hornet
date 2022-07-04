@@ -84,7 +84,7 @@ func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.
 		FilePath                 string                     `json:"filePath"`
 		Version                  byte                       `json:"version"`
 		Type                     string                     `json:"type"`
-		FirstMilestoneIndex      iotago.MilestoneIndex      `json:"firstMilestoneIndex"`
+		GenesisMilestoneIndex    iotago.MilestoneIndex      `json:"genesisMilestoneIndex"`
 		LedgerMilestoneIndex     iotago.MilestoneIndex      `json:"ledgerMilestoneIndex"`
 		TargetMilestoneIndex     iotago.MilestoneIndex      `json:"targetMilestoneIndex"`
 		TargetMilestoneTimestamp time.Time                  `json:"targetMilestoneTimestamp"`
@@ -99,7 +99,7 @@ func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.
 		FilePath:                 path,
 		Version:                  fullHeader.Version,
 		Type:                     "full",
-		FirstMilestoneIndex:      fullHeader.FirstMilestoneIndex,
+		GenesisMilestoneIndex:    fullHeader.GenesisMilestoneIndex,
 		LedgerMilestoneIndex:     fullHeader.LedgerMilestoneIndex,
 		TargetMilestoneIndex:     fullHeader.TargetMilestoneIndex,
 		TargetMilestoneTimestamp: time.Unix(int64(fullHeader.TargetMilestoneTimestamp), 0),

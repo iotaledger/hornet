@@ -179,7 +179,7 @@ func loadFullSnapshotFileToStorage(
 		return nil, errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchTargetIndex, "%d != %d", ledgerIndex, fullHeader.TargetMilestoneIndex)
 	}
 
-	if err = dbStorage.SetInitialSnapshotInfo(fullHeader.FirstMilestoneIndex, fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, time.Unix(int64(fullHeader.TargetMilestoneTimestamp), 0)); err != nil {
+	if err = dbStorage.SetInitialSnapshotInfo(fullHeader.GenesisMilestoneIndex, fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, time.Unix(int64(fullHeader.TargetMilestoneTimestamp), 0)); err != nil {
 		return nil, fmt.Errorf("SetSnapshotMilestone failed: %w", err)
 	}
 

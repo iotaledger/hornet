@@ -24,10 +24,10 @@ import (
 func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager) {
 
 	te.coo = &MockCoo{
-		te:                  te,
-		cooPrivateKeys:      cooPrivateKeys,
-		firstMilestoneIndex: 0,
-		keyManager:          keyManager,
+		te:                    te,
+		cooPrivateKeys:        cooPrivateKeys,
+		genesisMilestoneIndex: 0,
+		keyManager:            keyManager,
 	}
 
 	// save snapshot info
@@ -56,7 +56,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		memcachedParentsTraverserStorage,
 		blocksMemcache.CachedBlock,
 		te.protoParas,
-		te.coo.firstMilestoneIndex,
+		te.coo.genesisMilestoneIndex,
 		te.LastMilestonePayload(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
@@ -158,7 +158,7 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 		memcachedParentsTraverserStorage,
 		blocksMemcache.CachedBlock,
 		te.protoParas,
-		te.coo.firstMilestoneIndex,
+		te.coo.genesisMilestoneIndex,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
