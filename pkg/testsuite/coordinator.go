@@ -24,9 +24,10 @@ import (
 func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager) {
 
 	te.coo = &MockCoo{
-		te:             te,
-		cooPrivateKeys: cooPrivateKeys,
-		keyManager:     keyManager,
+		te:                  te,
+		cooPrivateKeys:      cooPrivateKeys,
+		firstMilestoneIndex: 0,
+		keyManager:          keyManager,
 	}
 
 	// save snapshot info
@@ -55,18 +56,24 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		memcachedParentsTraverserStorage,
 		blocksMemcache.CachedBlock,
 		te.protoParas,
+		te.coo.firstMilestoneIndex,
 		te.LastMilestonePayload(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
 		whiteflag.DefaultSetBlockReferencedFunc,
 		te.serverMetrics,
+		// Hint: Ledger is write locked
 		nil,
+		// Hint: Ledger is write locked
 		func(confirmation *whiteflag.Confirmation) {
 			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
 		},
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
 	)
 	require.NoError(te.TestInterface, err)
@@ -151,23 +158,29 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 		memcachedParentsTraverserStorage,
 		blocksMemcache.CachedBlock,
 		te.protoParas,
+		te.coo.firstMilestoneIndex,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
 		whiteflag.DefaultSetBlockReferencedFunc,
 		te.serverMetrics,
+		// Hint: Ledger is write locked
 		nil,
+		// Hint: Ledger is write locked
 		func(confirmation *whiteflag.Confirmation) {
 			wfConf = confirmation
 			err := te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
 		},
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 			if te.OnLedgerUpdatedFunc != nil {
 				te.OnLedgerUpdatedFunc(index, newOutputs, newSpents)
 			}
 		},
+		// Hint: Ledger is not locked
 		nil,
 	)
 	return wfConf, confirmedMilestoneStats, err

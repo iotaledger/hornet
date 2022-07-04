@@ -24,6 +24,11 @@ var (
 // Therefore the caller needs to be trustful (e.g. coordinator plugin).
 func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, index iotago.MilestoneIndex, timestamp uint32, parents iotago.BlockIDs, previousMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
 
+	snapshotInfo := t.storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		return nil, errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
+	}
+
 	// check if the requested milestone index would be the next one
 	if index > t.syncManager.ConfirmedMilestoneIndex()+1 {
 		return nil, common.ErrNodeNotSynced
@@ -120,6 +125,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		timestamp,
 		parents,
 		previousMilestoneID,
+		snapshotInfo.FirstMilestoneIndex(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 	)
 }

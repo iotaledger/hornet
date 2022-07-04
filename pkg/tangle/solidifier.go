@@ -331,12 +331,19 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 	var newReceipt *iotago.ReceiptMilestoneOpt
 	var newConfirmation *whiteflag.Confirmation
 
+	snapshotInfo := t.storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		t.LogPanic(common.ErrSnapshotInfoNotFound)
+		return
+	}
+
 	timeStart = time.Now()
 	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(
 		t.storage.UTXOManager(),
 		memcachedTraverserStorage,
 		blocksMemcache.CachedBlock,
 		t.protocolManager.Current(),
+		snapshotInfo.FirstMilestoneIndex(),
 		milestonePayloadToSolidify,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,

@@ -266,6 +266,11 @@ func createMilestone(
 // createInitialMilestone creates a milestone block and stores it to the given storage.
 func createInitialMilestone(dbStorage *storage.Storage, signer signingprovider.MilestoneSignerProvider) (*CoordinatorState, error) {
 
+	if err := checkSnapshotInfo(dbStorage); err != nil {
+		return nil, err
+	}
+	snapshotInfo := dbStorage.SnapshotInfo()
+
 	var index iotago.MilestoneIndex = 1
 	parents := iotago.BlockIDs{iotago.EmptyBlockID()}
 	timestamp := time.Now()
@@ -280,6 +285,7 @@ func createInitialMilestone(dbStorage *storage.Storage, signer signingprovider.M
 		uint32(timestamp.Unix()),
 		parents,
 		previousMilestoneID,
+		snapshotInfo.FirstMilestoneIndex(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 	)
 	if err != nil {

@@ -11,7 +11,6 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
@@ -134,19 +133,15 @@ func verifyDatabase(
 		return fmt.Errorf("loading genesis snapshot failed: %w", err)
 	}
 
+	if err := checkSnapshotInfo(tangleStoreSource); err != nil {
+		return err
+	}
+	snapshotInfoSource := tangleStoreSource.SnapshotInfo()
+
 	if err := checkSnapshotInfo(tangleStoreTemp); err != nil {
 		return err
 	}
-
-	snapshotInfoSource := tangleStoreSource.SnapshotInfo()
-	if snapshotInfoSource == nil {
-		return errors.Wrap(ErrCritical, common.ErrSnapshotInfoNotFound.Error())
-	}
-
 	snapshotInfoTemp := tangleStoreTemp.SnapshotInfo()
-	if snapshotInfoTemp == nil {
-		return errors.Wrap(ErrCritical, common.ErrSnapshotInfoNotFound.Error())
-	}
 
 	// compare source database index and genesis snapshot index
 	if snapshotInfoSource.EntryPointIndex() != snapshotInfoTemp.EntryPointIndex() {
@@ -254,6 +249,7 @@ func verifyDatabase(
 			storeSource,
 			storeSource.CachedBlock,
 			protoParas,
+			snapshotInfoTemp.FirstMilestoneIndex(),
 			milestonePayload,
 			// traversal stops if no more blocks pass the given condition
 			// Caution: condition func is not in DFS order
@@ -280,10 +276,15 @@ func verifyDatabase(
 				}
 			},
 			nil,
+			// Hint: Ledger is write locked
 			nil,
+			// Hint: Ledger is write locked
 			nil,
+			// Hint: Ledger is not locked
 			nil,
+			// Hint: Ledger is not locked
 			nil,
+			// Hint: Ledger is not locked
 			nil,
 		)
 		if err != nil {

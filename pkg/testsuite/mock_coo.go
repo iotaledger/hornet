@@ -19,8 +19,9 @@ import (
 type MockCoo struct {
 	te *TestEnvironment
 
-	cooPrivateKeys []ed25519.PrivateKey
-	keyManager     *keymanager.KeyManager
+	cooPrivateKeys      []ed25519.PrivateKey
+	firstMilestoneIndex iotago.MilestoneIndex
+	keyManager          *keymanager.KeyManager
 
 	lastMilestonePayload *iotago.Milestone
 	lastMilestoneBlockID iotago.BlockID
@@ -125,6 +126,7 @@ func (coo *MockCoo) computeWhiteflag(index iotago.MilestoneIndex, timestamp uint
 		timestamp,
 		parents,
 		lastMilestoneID,
+		coo.firstMilestoneIndex,
 		whiteflag.DefaultWhiteFlagTraversalCondition)
 }
 

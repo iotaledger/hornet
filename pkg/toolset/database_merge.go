@@ -278,6 +278,7 @@ type confStats struct {
 func copyAndVerifyMilestoneCone(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
+	firstMilestoneIndex iotago.MilestoneIndex,
 	msIndex iotago.MilestoneIndex,
 	getMilestonePayload func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error),
 	parentsTraverserInterfaceSource dag.ParentsTraverserInterface,
@@ -323,15 +324,21 @@ func copyAndVerifyMilestoneCone(
 		parentsTraverserStorageTarget,
 		cachedBlockFuncTarget,
 		protoParas,
+		firstMilestoneIndex,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
 		whiteflag.DefaultSetBlockReferencedFunc,
 		nil,
+		// Hint: Ledger is write locked
 		nil,
+		// Hint: Ledger is write locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
 	)
 	if err != nil {
@@ -383,6 +390,11 @@ func mergeViaAPI(
 		return ms, nil
 	}
 
+	if err := checkSnapshotInfo(storeTarget); err != nil {
+		return err
+	}
+	snapshotInfoTarget := storeTarget.SnapshotInfo()
+
 	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getBlockViaAPI)
 	if err != nil {
 		return err
@@ -394,6 +406,7 @@ func mergeViaAPI(
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
 		protoParas,
+		snapshotInfoTarget.FirstMilestoneIndex(),
 		msIndex,
 		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 			return getMilestonePayloadViaAPI(client, msIndex)
@@ -437,6 +450,11 @@ func mergeViaSourceDatabase(
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
+	if err := checkSnapshotInfo(storeTarget); err != nil {
+		return err
+	}
+	snapshotInfoTarget := storeTarget.SnapshotInfo()
+
 	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, storeSource.Block)
 	if err != nil {
 		return err
@@ -448,6 +466,7 @@ func mergeViaSourceDatabase(
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
 		protoParas,
+		snapshotInfoTarget.FirstMilestoneIndex(),
 		msIndex,
 		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 			return getMilestonePayloadFromStorage(storeSource, msIndex)
@@ -499,10 +518,10 @@ func mergeDatabase(
 
 	tangleStoreSourceAvailable := tangleStoreSource != nil
 
-	snapshotInfoTarget := tangleStoreTarget.SnapshotInfo()
-	if snapshotInfoTarget == nil {
-		return errors.Wrap(ErrCritical, common.ErrSnapshotInfoNotFound.Error())
+	if err := checkSnapshotInfo(tangleStoreTarget); err != nil {
+		return err
 	}
+	snapshotInfoTarget := tangleStoreTarget.SnapshotInfo()
 
 	var sourceNetworkID uint64
 	var msIndexStartSource, msIndexEndSource iotago.MilestoneIndex = 0, 0
