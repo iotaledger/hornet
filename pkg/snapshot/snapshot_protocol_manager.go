@@ -11,10 +11,6 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-var (
-	supportedVersions = protocol.Versions{2} // make sure to add the versions sorted asc
-)
-
 func ProtocolParametersUpdateAddedCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*iotago.ProtocolParamsMilestoneOpt))(params[0].(*iotago.ProtocolParamsMilestoneOpt))
 }
@@ -47,7 +43,7 @@ func NewSnapshotProtocolManager() *ProtocolManager {
 
 // SupportedVersions returns a slice of supported protocol versions.
 func (m *ProtocolManager) SupportedVersions() protocol.Versions {
-	return supportedVersions
+	return protocol.SupportedVersions
 }
 
 // Current returns the current protocol parameters under which the node is operating.
