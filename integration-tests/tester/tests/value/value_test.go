@@ -3,7 +3,6 @@ package value
 import (
 	"context"
 	"crypto/ed25519"
-	"crypto/rand"
 	"log"
 	"testing"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hornet/integration-tests/tester/framework"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/builder"
 )
@@ -32,10 +32,10 @@ func TestValue(t *testing.T) {
 	protoParas := &infoRes.Protocol
 
 	// create two targets
-	target1 := ed25519.NewKeyFromSeed(randSeed())
+	target1 := ed25519.NewKeyFromSeed(tpkg.RandSeed())
 	target1Addr := iotago.Ed25519AddressFromPubKey(target1.Public().(ed25519.PublicKey))
 
-	target2 := ed25519.NewKeyFromSeed(randSeed())
+	target2 := ed25519.NewKeyFromSeed(tpkg.RandSeed())
 	target2Addr := iotago.Ed25519AddressFromPubKey(target2.Public().(ed25519.PublicKey))
 
 	var target1Deposit, target2Deposit uint64 = 10_000_000, protoParas.TokenSupply - 10_000_000
@@ -116,15 +116,4 @@ func TestValue(t *testing.T) {
 	outputRes, err := n.Coordinator().DebugNodeAPIClient.OutputByID(context.Background(), genesisInputID.ID())
 	require.NoError(t, err)
 	require.True(t, outputRes.Metadata.Spent)
-}
-
-const seedLength = ed25519.SeedSize
-
-func randSeed() []byte {
-	var b [seedLength]byte
-	_, err := rand.Read(b[:])
-	if err != nil {
-		panic(err)
-	}
-	return b[:]
 }

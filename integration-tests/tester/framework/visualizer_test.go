@@ -11,27 +11,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type Vertex struct {
 	BlockID string   `json:"id"`
 	Parents []string `json:"parents"`
-}
-
-// returns length amount random bytes
-func randBytes(length int) []byte {
-	var b []byte
-	for i := 0; i < length; i++ {
-		b = append(b, byte(rand.Intn(256)))
-	}
-	return b
-}
-
-func randBlockID() iotago.BlockID {
-	blockID := iotago.BlockID{}
-	copy(blockID[:], randBytes(iotago.BlockIDLength))
-	return blockID
 }
 
 func TestVisualizer(t *testing.T) {
@@ -45,7 +31,7 @@ func TestVisualizer(t *testing.T) {
 	var vertices []Vertex
 	const getFromLast = 30
 	for i := 0; i < 1000; i++ {
-		v := Vertex{BlockID: randBlockID().ToHex()}
+		v := Vertex{BlockID: tpkg.RandBlockID().ToHex()}
 		if i <= getFromLast {
 			// only one parent at the beginning
 			v.Parents = iotago.BlockIDs{iotago.EmptyBlockID()}.ToHex()

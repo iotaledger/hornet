@@ -1,7 +1,6 @@
 package utxo_test
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,7 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hornet/pkg/model/utxo/utils"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -17,22 +16,22 @@ func TestUTXOComputeBalance(t *testing.T) {
 
 	manager := utxo.New(mapdb.NewMapDB())
 
-	initialOutput := RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, utils.RandAddress(iotago.AddressEd25519), 2_134_656_365)
+	initialOutput := tpkg.RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressEd25519), 2_134_656_365)
 	require.NoError(t, manager.AddUnspentOutput(initialOutput))
-	require.NoError(t, manager.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputAlias, utils.RandAddress(iotago.AddressAlias), 56_549_524)))
-	require.NoError(t, manager.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputFoundry, utils.RandAddress(iotago.AddressAlias), 25_548_858)))
-	require.NoError(t, manager.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputNFT, utils.RandAddress(iotago.AddressEd25519), 545_699_656)))
-	require.NoError(t, manager.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, utils.RandAddress(iotago.AddressAlias), 626_659_696)))
+	require.NoError(t, manager.AddUnspentOutput(tpkg.RandUTXOOutputOnAddressWithAmount(iotago.OutputAlias, tpkg.RandAddress(iotago.AddressAlias), 56_549_524)))
+	require.NoError(t, manager.AddUnspentOutput(tpkg.RandUTXOOutputOnAddressWithAmount(iotago.OutputFoundry, tpkg.RandAddress(iotago.AddressAlias), 25_548_858)))
+	require.NoError(t, manager.AddUnspentOutput(tpkg.RandUTXOOutputOnAddressWithAmount(iotago.OutputNFT, tpkg.RandAddress(iotago.AddressEd25519), 545_699_656)))
+	require.NoError(t, manager.AddUnspentOutput(tpkg.RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressAlias), 626_659_696)))
 
 	msIndex := milestone.Index(756)
-	msTimestamp := rand.Uint32()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	outputs := utxo.Outputs{
-		RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, utils.RandAddress(iotago.AddressNFT), 2_134_656_365),
+		tpkg.RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressNFT), 2_134_656_365),
 	}
 
 	spents := utxo.Spents{
-		RandUTXOSpent(initialOutput, msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(initialOutput, msIndex, msTimestamp),
 	}
 
 	require.NoError(t, manager.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
@@ -56,30 +55,30 @@ func TestUTXOIteration(t *testing.T) {
 	manager := utxo.New(mapdb.NewMapDB())
 
 	outputs := utxo.Outputs{
-		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressEd25519)),
-		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressNFT)),
-		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressAlias)),
-		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressEd25519)),
-		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressNFT)),
-		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressAlias)),
-		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressEd25519)),
-		RandUTXOOutputOnAddress(iotago.OutputNFT, utils.RandAddress(iotago.AddressEd25519)),
-		RandUTXOOutputOnAddress(iotago.OutputNFT, utils.RandAddress(iotago.AddressAlias)),
-		RandUTXOOutputOnAddress(iotago.OutputNFT, utils.RandAddress(iotago.AddressNFT)),
-		RandUTXOOutputOnAddress(iotago.OutputNFT, utils.RandAddress(iotago.AddressAlias)),
-		RandUTXOOutputOnAddress(iotago.OutputAlias, utils.RandAddress(iotago.AddressEd25519)),
-		RandUTXOOutputOnAddress(iotago.OutputFoundry, utils.RandAddress(iotago.AddressAlias)),
-		RandUTXOOutputOnAddress(iotago.OutputFoundry, utils.RandAddress(iotago.AddressAlias)),
-		RandUTXOOutputOnAddress(iotago.OutputFoundry, utils.RandAddress(iotago.AddressAlias)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressEd25519)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressNFT)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressAlias)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressEd25519)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressNFT)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressAlias)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressEd25519)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputNFT, tpkg.RandAddress(iotago.AddressEd25519)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputNFT, tpkg.RandAddress(iotago.AddressAlias)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputNFT, tpkg.RandAddress(iotago.AddressNFT)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputNFT, tpkg.RandAddress(iotago.AddressAlias)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputAlias, tpkg.RandAddress(iotago.AddressEd25519)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputFoundry, tpkg.RandAddress(iotago.AddressAlias)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputFoundry, tpkg.RandAddress(iotago.AddressAlias)),
+		tpkg.RandUTXOOutputOnAddress(iotago.OutputFoundry, tpkg.RandAddress(iotago.AddressAlias)),
 	}
 
 	msIndex := milestone.Index(756)
-	msTimestamp := rand.Uint32()
+	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	spents := utxo.Spents{
-		RandUTXOSpent(outputs[3], msIndex, msTimestamp),
-		RandUTXOSpent(outputs[2], msIndex, msTimestamp),
-		RandUTXOSpent(outputs[9], msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(outputs[3], msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(outputs[2], msIndex, msTimestamp),
+		tpkg.RandUTXOSpentWithOutput(outputs[9], msIndex, msTimestamp),
 	}
 
 	require.NoError(t, manager.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))

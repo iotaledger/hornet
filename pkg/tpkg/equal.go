@@ -1,4 +1,4 @@
-package utxo_test
+package tpkg
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hornet/pkg/model/utxo"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
@@ -15,6 +16,30 @@ func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.BlockID(), actual.BlockID())
 	require.Equal(t, expected.MilestoneIndexBooked(), actual.MilestoneIndexBooked())
 	require.Equal(t, expected.OutputType(), actual.OutputType())
+
+	var expectedIdent iotago.Address
+	switch output := expected.Output().(type) {
+	case iotago.TransIndepIdentOutput:
+		expectedIdent = output.Ident()
+	case iotago.TransDepIdentOutput:
+		expectedIdent = output.Chain().ToAddress()
+	default:
+		require.Fail(t, "unsupported output type")
+	}
+
+	var actualIdent iotago.Address
+	switch output := actual.Output().(type) {
+	case iotago.TransIndepIdentOutput:
+		actualIdent = output.Ident()
+	case iotago.TransDepIdentOutput:
+		actualIdent = output.Chain().ToAddress()
+	default:
+		require.Fail(t, "unsupported output type")
+	}
+
+	require.NotNil(t, expectedIdent)
+	require.NotNil(t, actualIdent)
+	require.True(t, expectedIdent.Equal(actualIdent))
 	require.Equal(t, expected.Deposit(), actual.Deposit())
 	require.EqualValues(t, expected.Output(), actual.Output())
 }
