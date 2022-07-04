@@ -337,7 +337,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		t.storage.UTXOManager(),
 		memcachedTraverserStorage,
 		blocksMemcache.CachedBlock,
-		t.protoMng.Current(),
+		t.protocolManager.Current(),
 		milestonePayloadToSolidify,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,

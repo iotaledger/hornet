@@ -26,7 +26,7 @@ func (t *Tangle) IsNodeHealthy() bool {
 		return false
 	}
 
-	if !t.protoMng.NextPendingSupported() {
+	if !t.protocolManager.NextPendingSupported() {
 		return false
 	}
 

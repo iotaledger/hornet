@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	ProtocolVersion                         = 2
 	MaxDeltaBlockYoungestConeRootIndexToCMI = 8
 	MaxDeltaBlockOldestConeRootIndexToCMI   = 13
 	BelowMaxDepth                           = 15
@@ -33,7 +34,7 @@ const (
 
 func TestTipSelect(t *testing.T) {
 
-	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
+	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, ProtocolVersion, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
 	serverMetrics := metrics.ServerMetrics{}

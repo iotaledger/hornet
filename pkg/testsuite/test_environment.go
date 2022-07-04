@@ -16,6 +16,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/metrics"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
@@ -23,6 +24,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/keymanager"
@@ -70,6 +72,9 @@ type TestEnvironment struct {
 	// syncManager is used to determine the sync status of the node in this test.
 	syncManager *syncmanager.SyncManager
 
+	// protocolManager is used to determine the current protocol parameters in this test.
+	protocolManager *protocol.Manager
+
 	// milestoneManager is used to retrieve, verify and store milestones.
 	milestoneManager *milestonemanager.MilestoneManager
 
@@ -88,7 +93,7 @@ type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, ne
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
-func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, belowMaxDepth uint8, targetScore uint32, showConfirmationGraphs bool) *TestEnvironment {
+func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, protocolVersion byte, belowMaxDepth uint8, targetScore uint32, showConfirmationGraphs bool) *TestEnvironment {
 
 	te := &TestEnvironment{
 		TestInterface:          testInterface,
@@ -97,7 +102,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(targetScore, 5*time.Second),
 		protoParas: &iotago.ProtocolParameters{
-			Version:       2,
+			Version:       protocolVersion,
 			NetworkName:   "alphapnet1",
 			Bech32HRP:     iotago.PrefixTestnet,
 			MinPoWScore:   targetScore,
@@ -145,6 +150,23 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 
 	// Initialize SEP
 	te.storage.SolidEntryPointsAddWithoutLocking(iotago.EmptyBlockID(), 0)
+
+	// Initialize ProtocolManager
+	ledgerIndex, err := te.storage.UTXOManager().ReadLedgerIndex()
+	require.NoError(te.TestInterface, err)
+
+	protoParasBytes, err := te.protoParas.Serialize(serializer.DeSeriModeNoValidation, nil)
+	require.NoError(te.TestInterface, err)
+
+	err = te.Storage().StoreProtocolParameters(&iotago.ProtocolParamsMilestoneOpt{
+		TargetMilestoneIndex: 0,
+		ProtocolVersion:      te.protoParas.Version,
+		Params:               protoParasBytes,
+	})
+	require.NoError(te.TestInterface, err)
+
+	te.protocolManager, err = protocol.NewManager(te.Storage(), ledgerIndex)
+	require.NoError(te.TestInterface, err)
 
 	// Initialize SyncManager
 	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), milestone.Index(belowMaxDepth))
@@ -206,6 +228,10 @@ func (te *TestEnvironment) UTXOManager() *utxo.Manager {
 
 func (te *TestEnvironment) SyncManager() *syncmanager.SyncManager {
 	return te.syncManager
+}
+
+func (te *TestEnvironment) ProtocolManager() *protocol.Manager {
+	return te.protocolManager
 }
 
 func (te *TestEnvironment) BelowMaxDepth() milestone.Index {
