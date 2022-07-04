@@ -9,7 +9,6 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/app/core/shutdown"
-	"github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
@@ -111,20 +110,6 @@ func initConfigPars(c *dig.Container) error {
 	}
 
 	return nil
-}
-
-func KeyManagerWithConfigPublicKeyRanges(coordinatorPublicKeyRanges ConfigPublicKeyRanges) (*keymanager.KeyManager, error) {
-	keyManager := keymanager.New()
-	for _, keyRange := range coordinatorPublicKeyRanges {
-		pubKey, err := crypto.ParseEd25519PublicKeyFromString(keyRange.Key)
-		if err != nil {
-			return nil, err
-		}
-
-		keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
-	}
-
-	return keyManager, nil
 }
 
 func configure() error {

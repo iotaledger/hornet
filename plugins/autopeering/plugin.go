@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/iotaledger/hornet/core/protocfg"
+	"github.com/iotaledger/hornet/core/pruning"
 	"github.com/iotaledger/hornet/pkg/protocol"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -123,6 +124,7 @@ func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error 
 		initConfig.ForceDisableComponent(tangle.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(protocfg.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(snapshot.CoreComponent.Identifier())
+		initConfig.ForceDisableComponent(pruning.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(coreapi.Plugin.Identifier())
 		initConfig.ForceDisableComponent(warpsync.Plugin.Identifier())
 		initConfig.ForceDisableComponent(urts.Plugin.Identifier())

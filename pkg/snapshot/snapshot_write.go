@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	coreDatabase "github.com/iotaledger/hornet/core/database"
 	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
@@ -75,7 +76,7 @@ func newSEPsProducer(
 
 	go func() {
 		// calculate solid entry points for the target index
-		if err := forEachSolidEntryPoint(
+		if err := dag.ForEachSolidEntryPoint(
 			ctx,
 			dbStorage,
 			targetIndex,
@@ -324,21 +325,21 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 }
 
 // reads out the index of the milestone which currently represents the ledger state.
-func (s *SnapshotManager) readLedgerIndex() (milestone.Index, error) {
+func (s *Manager) readLedgerIndex() (milestone.Index, error) {
 	ledgerMilestoneIndex, err := s.utxoManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
 	}
 
 	if !s.storage.ContainsMilestoneIndex(ledgerMilestoneIndex) {
-		return 0, errors.Wrapf(ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
+		return 0, errors.Wrapf(common.ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
 	}
 
 	return ledgerMilestoneIndex, nil
 }
 
 // reads out the snapshot milestone index from the full snapshot file.
-func (s *SnapshotManager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...string) (milestone.Index, error) {
+func (s *Manager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...string) (milestone.Index, error) {
 	filePath := s.snapshotFullPath
 	if len(snapshotFullPath) > 0 && snapshotFullPath[0] != "" {
 		filePath = snapshotFullPath[0]
@@ -356,7 +357,7 @@ func (s *SnapshotManager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath
 }
 
 // creates a snapshot file by streaming data from the database into a snapshot file.
-func (s *SnapshotManager) createSnapshotWithoutLocking(
+func (s *Manager) createSnapshotWithoutLocking(
 	ctx context.Context,
 	snapshotType Type,
 	targetIndex milestone.Index,
@@ -384,7 +385,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return errors.Wrap(ErrCritical, "no snapshot info found")
+		return errors.Wrap(common.ErrCritical, "no snapshot info found")
 	}
 
 	if err := checkSnapshotLimits(
@@ -407,7 +408,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 
 	targetMsTimestamp, err := s.storage.MilestoneTimestampByIndex(targetIndex)
 	if err != nil {
-		return errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
+		return errors.Wrapf(common.ErrCritical, "target milestone (%d) not found", targetIndex)
 	}
 
 	// generate producers
@@ -502,7 +503,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 		// since we write to the database, the targetIndex should exist
 		targetMsTimestamp, err := s.storage.MilestoneTimestampByIndex(targetIndex)
 		if err != nil {
-			return errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
+			return errors.Wrapf(common.ErrCritical, "target milestone (%d) not found", targetIndex)
 		}
 
 		snapshotInfo.SnapshotIndex = targetIndex
@@ -532,7 +533,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 
 	snapshotInfo := dbStorage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return nil, errors.Wrap(ErrCritical, "no snapshot info found")
+		return nil, errors.Wrap(common.ErrCritical, "no snapshot info found")
 	}
 
 	ledgerIndex, err := dbStorage.UTXOManager().ReadLedgerIndex()

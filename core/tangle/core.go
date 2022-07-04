@@ -23,6 +23,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/pkg/pruning"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/iota.go/v3/keymanager"
@@ -70,7 +71,8 @@ type dependencies struct {
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
-	SnapshotManager          *snapshot.SnapshotManager
+	SnapshotManager          *snapshot.Manager
+	PruningManager           *pruning.Manager
 	DatabaseDebug            bool `name:"databaseDebug"`
 	DatabaseAutoRevalidation bool `name:"databaseAutoRevalidation"`
 	PruneReceipts            bool `name:"pruneReceipts"`
@@ -276,12 +278,12 @@ func configureEvents() {
 
 func attachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+	deps.PruningManager.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
 
 func detachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
-	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	deps.PruningManager.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 }
