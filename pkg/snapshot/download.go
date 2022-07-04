@@ -10,12 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/contextutils"
-
-	"github.com/dustin/go-humanize"
-
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 )
 
@@ -28,8 +26,8 @@ const (
 // and we can pass this into io.TeeReader() which will report progress on each write cycle.
 type WriteCounter struct {
 	// context that is done when the node is shutting down.
-	shutdownCtx context.Context
-	Expected    uint64
+	ctx      context.Context
+	Expected uint64
 
 	total            uint64
 	last             uint64
@@ -37,10 +35,10 @@ type WriteCounter struct {
 }
 
 // NewWriteCounter creates a new WriteCounter.
-func NewWriteCounter(shutdownCtx context.Context, expected uint64) *WriteCounter {
+func NewWriteCounter(ctx context.Context, expected uint64) *WriteCounter {
 	return &WriteCounter{
-		shutdownCtx: shutdownCtx,
-		Expected:    expected,
+		ctx:      ctx,
+		Expected: expected,
 	}
 }
 
@@ -48,7 +46,7 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.total += uint64(n)
 
-	if err := contextutils.ReturnErrIfCtxDone(wc.shutdownCtx, ErrSnapshotDownloadWasAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(wc.ctx, ErrSnapshotDownloadWasAborted); err != nil {
 		return n, err
 	}
 
@@ -83,7 +81,7 @@ type DownloadTarget struct {
 	Delta string `usage:"URL of the delta snapshot file" json:"delta"`
 }
 
-func (s *Manager) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
+func (s *SnapshotImporter) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
 
 	// check if the remote snapshot files fit the network ID and if delta fits the full snapshot.
 	checkTargetConsistency := func(wantedNetworkID uint64, fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) error {
@@ -169,7 +167,7 @@ func (s *Manager) filterTargets(wantedNetworkID uint64, targets []*DownloadTarge
 }
 
 // DownloadSnapshotFiles tries to download snapshots files from the given targets.
-func (s *Manager) DownloadSnapshotFiles(ctx context.Context, wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
+func (s *SnapshotImporter) DownloadSnapshotFiles(ctx context.Context, wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
 
 	for _, target := range s.filterTargets(wantedNetworkID, targets) {
 
@@ -194,7 +192,7 @@ func (s *Manager) DownloadSnapshotFiles(ctx context.Context, wantedNetworkID uin
 }
 
 // downloads a snapshot header from the given url.
-func (s *Manager) downloadHeader(url string) (*ReadFileHeader, error) {
+func (s *SnapshotImporter) downloadHeader(url string) (*ReadFileHeader, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotHeader)
 	defer cancel()
 
@@ -217,7 +215,7 @@ func (s *Manager) downloadHeader(url string) (*ReadFileHeader, error) {
 }
 
 // downloads a snapshot file from the given url to the specified path.
-func (s *Manager) downloadFile(ctx context.Context, path string, url string) error {
+func (s *SnapshotImporter) downloadFile(ctx context.Context, path string, url string) error {
 	downloadCtx, downloadCtxCancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
 	defer downloadCtxCancel()
 
@@ -260,7 +258,10 @@ func (s *Manager) downloadFile(ctx context.Context, path string, url string) err
 	// the progress indicator uses the same line so print a new line once it's finished downloading
 	fmt.Print("\n")
 
-	_ = out.Close()
+	if err = out.Close(); err != nil {
+		return fmt.Errorf("unable to close downloaded snapshot file: %w", err)
+	}
+
 	if err = os.Rename(tempFileName, path); err != nil {
 		return fmt.Errorf("unable to rename downloaded snapshot file: %w", err)
 	}

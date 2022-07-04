@@ -71,7 +71,7 @@ type dependencies struct {
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
-	SnapshotManager          *snapshot.Manager
+	SnapshotImporter         *snapshot.SnapshotImporter
 	PruningManager           *pruning.Manager
 	DatabaseDebug            bool `name:"databaseDebug"`
 	DatabaseAutoRevalidation bool `name:"databaseAutoRevalidation"`
@@ -207,7 +207,7 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 		}
 		CoreComponent.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		if err := deps.Tangle.RevalidateDatabase(deps.SnapshotManager, deps.PruneReceipts); err != nil {
+		if err := deps.Tangle.RevalidateDatabase(deps.SnapshotImporter, deps.PruneReceipts); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				CoreComponent.LogInfo("database revalidation aborted")
 				os.Exit(0)

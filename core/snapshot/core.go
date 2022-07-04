@@ -2,7 +2,6 @@ package snapshot
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/iotaledger/hornet/pkg/protocol"
@@ -50,7 +49,6 @@ func init() {
 			Params:         params,
 			InitConfigPars: initConfigPars,
 			Provide:        provide,
-			Configure:      configure,
 			Run:            run,
 		},
 	}
@@ -65,15 +63,14 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage              *storage.Storage
-	Tangle               *tangle.Tangle
-	UTXOManager          *utxo.Manager
-	SnapshotManager      *snapshot.Manager
-	DeleteAllFlag        bool   `name:"deleteAll"`
-	PruningPruneReceipts bool   `name:"pruneReceipts"`
-	SnapshotsFullPath    string `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
-	StorageMetrics       *metrics.StorageMetrics
+	Storage            *storage.Storage
+	Tangle             *tangle.Tangle
+	UTXOManager        *utxo.Manager
+	SnapshotImporter   *snapshot.SnapshotImporter
+	SnapshotManager    *snapshot.Manager
+	SnapshotsFullPath  string `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath string `name:"snapshotsDeltaPath"`
+	StorageMetrics     *metrics.StorageMetrics
 }
 
 func initConfigPars(c *dig.Container) error {
@@ -93,6 +90,63 @@ func initConfigPars(c *dig.Container) error {
 }
 
 func provide(c *dig.Container) error {
+
+	type snapshotImporterDeps struct {
+		dig.In
+		DeleteAllFlag        bool `name:"deleteAll"`
+		PruningPruneReceipts bool `name:"pruneReceipts"`
+		Storage              *storage.Storage
+		SyncManager          *syncmanager.SyncManager
+		UTXOManager          *utxo.Manager
+		ProtocolManager      *protocol.Manager
+		SnapshotsFullPath    string `name:"snapshotsFullPath"`
+		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
+		TargetNetworkName    string `name:"targetNetworkName"`
+	}
+
+	if err := c.Provide(func(deps snapshotImporterDeps) *snapshot.SnapshotImporter {
+
+		if deps.DeleteAllFlag {
+			// delete old snapshot files
+			if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
+				CoreComponent.LogErrorfAndExit("deleting full snapshot file failed: %s", err)
+			}
+
+			if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
+				CoreComponent.LogErrorfAndExit("deleting delta snapshot file failed: %s", err)
+			}
+		}
+
+		importer := snapshot.NewSnapshotImporter(
+			CoreComponent.Logger(),
+			deps.Storage,
+			deps.SyncManager,
+			deps.UTXOManager,
+			deps.ProtocolManager,
+			deps.SnapshotsFullPath,
+			deps.SnapshotsDeltaPath,
+			deps.TargetNetworkName,
+			ParamsSnapshots.DownloadURLs,
+		)
+
+		switch {
+		case deps.Storage.SnapshotInfo() != nil && !*forceLoadingSnapshot:
+			// snapshot already exists, no need to load it
+			if err := importer.CheckCurrentSnapshot(deps.Storage.SnapshotInfo()); err != nil {
+				CoreComponent.LogWarn(err)
+				os.Exit(1)
+			}
+		default:
+			// import the initial snapshot
+			if err := importer.ImportSnapshots(CoreComponent.Daemon().ContextStopped()); err != nil {
+				CoreComponent.LogErrorAndExit(err)
+			}
+		}
+
+		return importer
+	}); err != nil {
+		return err
+	}
 
 	type snapshotDeps struct {
 		dig.In
@@ -128,7 +182,6 @@ func provide(c *dig.Container) error {
 			deps.SnapshotsFullPath,
 			deps.SnapshotsDeltaPath,
 			ParamsSnapshots.DeltaSizeThresholdPercentage,
-			ParamsSnapshots.DownloadURLs,
 			solidEntryPointCheckThresholdPast,
 			solidEntryPointCheckThresholdFuture,
 			pruningThreshold,
@@ -136,35 +189,6 @@ func provide(c *dig.Container) error {
 			milestone.Index(ParamsSnapshots.Interval),
 		)
 	})
-}
-
-func configure() error {
-
-	if deps.DeleteAllFlag {
-		// delete old snapshot files
-		if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("deleting full snapshot file failed: %w", err)
-		}
-
-		if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("deleting delta snapshot file failed: %w", err)
-		}
-	}
-
-	snapshotInfo := deps.Storage.SnapshotInfo()
-
-	switch {
-	case snapshotInfo != nil && !*forceLoadingSnapshot:
-		if err := deps.SnapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
-			return err
-		}
-	default:
-		if err := deps.SnapshotManager.ImportSnapshots(CoreComponent.Daemon().ContextStopped()); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func run() error {
@@ -178,7 +202,7 @@ func run() error {
 	})
 
 	if err := CoreComponent.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
-		CoreComponent.LogInfo("Starting Snapshots ... done")
+		CoreComponent.LogInfo("Starting snapshot background worker ... done")
 
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 		defer deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
@@ -186,8 +210,8 @@ func run() error {
 		for {
 			select {
 			case <-ctx.Done():
-				CoreComponent.LogInfo("Stopping Snapshots...")
-				CoreComponent.LogInfo("Stopping Snapshots... done")
+				CoreComponent.LogInfo("Stopping snapshot background worker...")
+				CoreComponent.LogInfo("Stopping snapshot background worker... done")
 				return
 
 			case confirmedMilestoneIndex := <-newConfirmedMilestoneSignal:
