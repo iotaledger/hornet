@@ -98,10 +98,10 @@ func snapshotGen(args []string) error {
 		Version:                  snapshot.SupportedFormatVersion,
 		Type:                     snapshot.Full,
 		GenesisMilestoneIndex:    0,
-		LedgerMilestoneIndex:     targetIndex,
 		TargetMilestoneIndex:     targetIndex,
 		TargetMilestoneTimestamp: uint32(time.Now().Unix()),
 		TargetMilestoneID:        iotago.MilestoneID{},
+		LedgerMilestoneIndex:     targetIndex,
 		TreasuryOutput: &utxo.TreasuryOutput{
 			MilestoneID: iotago.MilestoneID{},
 			Amount:      treasury,

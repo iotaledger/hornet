@@ -684,10 +684,10 @@ func fullHeaderEqualFunc(t *testing.T, expected *snapshot.FullSnapshotHeader) sn
 		require.EqualValues(t, expected.Version, actual.Version)
 		require.EqualValues(t, expected.Type, actual.Type)
 		require.EqualValues(t, expected.GenesisMilestoneIndex, actual.GenesisMilestoneIndex)
-		require.EqualValues(t, expected.LedgerMilestoneIndex, actual.LedgerMilestoneIndex)
 		require.EqualValues(t, expected.TargetMilestoneIndex, actual.TargetMilestoneIndex)
 		require.EqualValues(t, expected.TargetMilestoneTimestamp, actual.TargetMilestoneTimestamp)
 		require.EqualValues(t, expected.TargetMilestoneID, actual.TargetMilestoneID)
+		require.EqualValues(t, expected.LedgerMilestoneIndex, actual.LedgerMilestoneIndex)
 		require.EqualValues(t, expected.TreasuryOutput, actual.TreasuryOutput)
 		require.EqualValues(t, expected.ProtocolParameters, actual.ProtocolParameters)
 		require.EqualValues(t, expected.OutputCount, actual.OutputCount)
@@ -729,10 +729,10 @@ func randFullSnapshotHeader(outputCount uint64, msDiffCount uint32, sepCount uin
 		Type:                     snapshot.Full,
 		Version:                  snapshot.SupportedFormatVersion,
 		GenesisMilestoneIndex:    tpkg.RandMilestoneIndex(),
-		LedgerMilestoneIndex:     tpkg.RandMilestoneIndex(),
 		TargetMilestoneIndex:     targetMilestoneIndex,
 		TargetMilestoneTimestamp: tpkg.RandMilestoneTimestamp(),
 		TargetMilestoneID:        tpkg.RandMilestoneID(),
+		LedgerMilestoneIndex:     tpkg.RandMilestoneIndex(),
 		TreasuryOutput:           tpkg.RandTreasuryOutput(),
 		ProtocolParameters:       tpkg.RandProtocolParameters(),
 		OutputCount:              outputCount,

@@ -85,10 +85,10 @@ func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.
 		Version                  byte                       `json:"version"`
 		Type                     string                     `json:"type"`
 		GenesisMilestoneIndex    iotago.MilestoneIndex      `json:"genesisMilestoneIndex"`
-		LedgerMilestoneIndex     iotago.MilestoneIndex      `json:"ledgerMilestoneIndex"`
 		TargetMilestoneIndex     iotago.MilestoneIndex      `json:"targetMilestoneIndex"`
 		TargetMilestoneTimestamp time.Time                  `json:"targetMilestoneTimestamp"`
 		TargetMilestoneID        string                     `json:"targetMilestoneID"`
+		LedgerMilestoneIndex     iotago.MilestoneIndex      `json:"ledgerMilestoneIndex"`
 		TreasuryOutput           *utxo.TreasuryOutput       `json:"treasuryOutput"`
 		ProtocolParameters       *iotago.ProtocolParameters `json:"protocolParameters"`
 		OutputCount              uint64                     `json:"outputCount"`
@@ -100,10 +100,10 @@ func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.
 		Version:                  fullHeader.Version,
 		Type:                     "full",
 		GenesisMilestoneIndex:    fullHeader.GenesisMilestoneIndex,
-		LedgerMilestoneIndex:     fullHeader.LedgerMilestoneIndex,
 		TargetMilestoneIndex:     fullHeader.TargetMilestoneIndex,
 		TargetMilestoneTimestamp: time.Unix(int64(fullHeader.TargetMilestoneTimestamp), 0),
 		TargetMilestoneID:        fullHeader.TargetMilestoneID.ToHex(),
+		LedgerMilestoneIndex:     fullHeader.LedgerMilestoneIndex,
 		TreasuryOutput:           fullHeader.TreasuryOutput,
 		ProtocolParameters:       fullHeader.ProtocolParameters,
 		OutputCount:              fullHeader.OutputCount,

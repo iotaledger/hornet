@@ -325,14 +325,14 @@ type FullSnapshotHeader struct {
 	Type Type
 	// The index of the genesis milestone of the network.
 	GenesisMilestoneIndex iotago.MilestoneIndex
-	// The index of the milestone of which the UTXOs within the snapshot are from.
-	LedgerMilestoneIndex iotago.MilestoneIndex
 	// The index of the milestone of which the SEPs within the snapshot are from.
 	TargetMilestoneIndex iotago.MilestoneIndex
 	// The timestamp of the milestone of which the SEPs within the snapshot are from.
 	TargetMilestoneTimestamp uint32
 	// The ID of the milestone of which the SEPs within the snapshot are from.
 	TargetMilestoneID iotago.MilestoneID
+	// The index of the milestone of which the UTXOs within the snapshot are from.
+	LedgerMilestoneIndex iotago.MilestoneIndex
 	// The treasury output existing for the given ledger milestone index.
 	// This field must be populated if a Full snapshot is created/read.
 	TreasuryOutput *utxo.TreasuryOutput
@@ -381,13 +381,6 @@ func writeFullSnapshotHeader(writeSeeker io.WriteSeeker, header *FullSnapshotHea
 	}
 	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset)
 
-	// Ledger Milestone Index
-	// The index of the milestone of which the UTXOs within the snapshot are from.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.LedgerMilestoneIndex); err != nil {
-		return 0, fmt.Errorf("unable to write LS ledger milestone index: %w", err)
-	}
-	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset)
-
 	// Target Milestone Index
 	// The index of the milestone of which the SEPs within the snapshot are from.
 	if err := binary.Write(writeSeeker, binary.LittleEndian, header.TargetMilestoneIndex); err != nil {
@@ -408,6 +401,13 @@ func writeFullSnapshotHeader(writeSeeker io.WriteSeeker, header *FullSnapshotHea
 		return 0, fmt.Errorf("unable to write LS target milestone ID: %w", err)
 	}
 	increaseOffsets(iotago.MilestoneIDLength, &countersFileOffset)
+
+	// Ledger Milestone Index
+	// The index of the milestone of which the UTXOs within the snapshot are from.
+	if err := binary.Write(writeSeeker, binary.LittleEndian, header.LedgerMilestoneIndex); err != nil {
+		return 0, fmt.Errorf("unable to write LS ledger milestone index: %w", err)
+	}
+	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset)
 
 	// Treasury Output Milestone ID
 	// The milestone ID of the milestone which generated the treasury output.
@@ -490,10 +490,6 @@ func ReadFullSnapshotHeader(reader io.Reader) (*FullSnapshotHeader, error) {
 		return nil, fmt.Errorf("unable to read LS genesis milestone index: %w", err)
 	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &readHeader.LedgerMilestoneIndex); err != nil {
-		return nil, fmt.Errorf("unable to read LS ledger milestone index: %w", err)
-	}
-
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.TargetMilestoneIndex); err != nil {
 		return nil, fmt.Errorf("unable to read LS target milestone index: %w", err)
 	}
@@ -504,6 +500,10 @@ func ReadFullSnapshotHeader(reader io.Reader) (*FullSnapshotHeader, error) {
 
 	if _, err := io.ReadFull(reader, readHeader.TargetMilestoneID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS target milestone ID: %w", err)
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.LedgerMilestoneIndex); err != nil {
+		return nil, fmt.Errorf("unable to read LS ledger milestone index: %w", err)
 	}
 
 	to := &utxo.TreasuryOutput{Spent: false}
