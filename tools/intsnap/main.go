@@ -13,13 +13,13 @@ import (
 var protocolParameters = &iotago.ProtocolParameters{
 	Version:       2,
 	NetworkName:   "alphanet1",
-	Bech32HRP:     iotago.PrefixTestnet,
+	Bech32HRP:     iotago.PrefixDevnet,
 	MinPoWScore:   10,
 	BelowMaxDepth: 15,
 	RentStructure: iotago.RentStructure{
-		VByteCost:    500,
-		VBFactorKey:  10,
-		VBFactorData: 1,
+		VByteCost:    0,
+		VBFactorKey:  0,
+		VBFactorData: 0,
 	},
 	TokenSupply: 2_779_530_283_277_761,
 }
@@ -112,7 +112,7 @@ var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 }
 
 func writeFullSnapshot() {
-	fileHandle, err := os.Create("test_full_snapshot.bin")
+	fileHandle, err := os.Create("snapshot_full_snapshot.bin")
 	must(err)
 	defer func() { _ = fileHandle.Close() }()
 
@@ -224,7 +224,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 }
 
 func writeDeltaSnapshot() {
-	fileHandle, err := os.Create("test_delta_snapshot.bin")
+	fileHandle, err := os.Create("snapshot_delta_snapshot.bin")
 	must(err)
 	defer func() { _ = fileHandle.Close() }()
 

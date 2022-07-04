@@ -60,10 +60,6 @@ func newDeltaHeaderConsumer(targetHeader *DeltaSnapshotHeader, utxoManager *utxo
 
 		*targetHeader = *header
 
-		if err := utxoManager.StoreLedgerIndex(header.TargetMilestoneIndex); err != nil {
-			return err
-		}
-
 		return nil
 	}
 }
@@ -125,7 +121,7 @@ func NewMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 		case ledgerIndex+1 == msIndex:
 			return utxoManager.ApplyConfirmation(msIndex, msDiff.Created, msDiff.Consumed, treasuryMut, rt)
 		default:
-			return ErrWrongMilestoneDiffIndex
+			return errors.Wrapf(ErrWrongMilestoneDiffIndex, "ledgerIndex: %d, msDiffIndex: %d", ledgerIndex, msIndex)
 		}
 	}
 }
