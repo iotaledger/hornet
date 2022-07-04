@@ -17,9 +17,13 @@ type milestoneInfoResponse struct {
 	// The index of the milestone.
 	Index iotago.MilestoneIndex `json:"index"`
 	// The unix time of the milestone payload.
-	Timestamp uint32 `json:"timestamp"`
+	// The timestamp can be omitted if the milestone is not available
+	// (no milestone received yet after starting from snapshot).
+	Timestamp uint32 `json:"timestamp,omitempty"`
 	// The ID of the milestone.
-	MilestoneID string `json:"milestoneId"`
+	// The ID can be omitted if the milestone is not available.
+	// (no milestone received yet after starting from snapshot).
+	MilestoneID string `json:"milestoneId,omitempty"`
 }
 
 type nodeStatus struct {

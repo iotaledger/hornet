@@ -77,7 +77,6 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 			return nil, err
 		}
 	} else {
-		//TODO: we should have the milestone here when we store it in the snapshot
 		lmi = &inx.Milestone{
 			MilestoneInfo: &inx.MilestoneInfo{
 				MilestoneIndex: latestMilestoneIndex,
@@ -94,7 +93,6 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 			return nil, err
 		}
 	} else {
-		//TODO: we should have the milestone here when we store it in the snapshot
 		cmi = &inx.Milestone{
 			MilestoneInfo: &inx.MilestoneInfo{
 				MilestoneIndex: confirmedMilestoneIndex,
