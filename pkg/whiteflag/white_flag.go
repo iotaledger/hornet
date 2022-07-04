@@ -138,7 +138,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 		},
 	}
 
-	isFirstMilestone := msIndex == firstMilestoneIndex
+	isFirstMilestone := msIndex == firstMilestoneIndex+1
 	if isFirstMilestone && previousMilestoneID != emptyMilestoneID {
 		return nil, fmt.Errorf("invalid previousMilestoneID for initial milestone: %s", iotago.EncodeHex(previousMilestoneID[:]))
 	}
