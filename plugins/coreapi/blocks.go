@@ -59,19 +59,15 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 	if referenced {
 		response.WhiteFlagIndex = &wfIndex
-
-		inclusionState := "noTransaction"
+		response.LedgerInclusionState = "noTransaction"
 
 		conflict := metadata.Conflict()
-
 		if conflict != storage.ConflictNone {
-			inclusionState = "conflicting"
+			response.LedgerInclusionState = "conflicting"
 			response.ConflictReason = &conflict
 		} else if metadata.IsIncludedTxInLedger() {
-			inclusionState = "included"
+			response.LedgerInclusionState = "included"
 		}
-
-		response.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()

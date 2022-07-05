@@ -88,7 +88,7 @@ type blockMetadataResponse struct {
 	// If this block represents a milestone this is the milestone index
 	MilestoneIndex iotago.MilestoneIndex `json:"milestoneIndex,omitempty"`
 	// The ledger inclusion state of the transaction payload.
-	LedgerInclusionState *string `json:"ledgerInclusionState,omitempty"`
+	LedgerInclusionState string `json:"ledgerInclusionState,omitempty"`
 	// The reason why this block is marked as conflicting.
 	ConflictReason *storage.Conflict `json:"conflictReason,omitempty"`
 	// If this block is referenced by a milestone this returns the index of that block inside the milestone by whiteflag ordering.
