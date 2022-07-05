@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/storage"
 	storagepkg "github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
@@ -150,7 +149,7 @@ func (s *Manager) shouldTakeSnapshot(confirmedMilestoneIndex iotago.MilestoneInd
 }
 
 func checkSnapshotLimits(
-	snapshotInfo *storage.SnapshotInfo,
+	snapshotInfo *storagepkg.SnapshotInfo,
 	confirmedMilestoneIndex iotago.MilestoneIndex,
 	targetIndex iotago.MilestoneIndex,
 	solidEntryPointCheckThresholdPast iotago.MilestoneIndex,

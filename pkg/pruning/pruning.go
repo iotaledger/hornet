@@ -14,7 +14,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/storage"
 	storagepkg "github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -220,7 +219,7 @@ func (p *Manager) pruneBlocks(blockIDsToDeleteMap map[iotago.BlockID]struct{}) i
 			continue
 		}
 
-		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
+		cachedBlockMeta.ConsumeMetadata(func(metadata *storagepkg.BlockMetadata) { // meta -1
 			// Delete the reference in the parents
 			for _, parent := range metadata.Parents() {
 				p.storage.DeleteChild(parent, blockID)
@@ -283,7 +282,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 	defer p.setIsPruning(false)
 
 	// calculate solid entry points for the new end of the tangle history
-	var solidEntryPoints []*storage.SolidEntryPoint
+	var solidEntryPoints []*storagepkg.SolidEntryPoint
 	err := dag.ForEachSolidEntryPoint(
 		ctx,
 		p.storage,
@@ -291,7 +290,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 		// TODO
 		//p.solidEntryPointCheckThresholdPast,
 		15,
-		func(sep *storage.SolidEntryPoint) bool {
+		func(sep *storagepkg.SolidEntryPoint) bool {
 			solidEntryPoints = append(solidEntryPoints, sep)
 			return true
 		})
@@ -352,13 +351,13 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 			cachedMilestone.Milestone().Parents(),
 			// traversal stops if no more blocks pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			func(cachedBlockMeta *storagepkg.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 				// everything that was referenced by that milestone can be pruned (even blocks of older milestones)
 				return true, nil
 			},
 			// consumer
-			func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
+			func(cachedBlockMeta *storagepkg.CachedMetadata) error { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 				blockIDsToDeleteMap[cachedBlockMeta.Metadata().BlockID()] = struct{}{}
 				return nil
