@@ -216,6 +216,7 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 		sepGenRetriever               sepRetrieverFunc
 		sepConsumer                   snapshot.SEPConsumerFunc
 		sepConRetriever               sepRetrieverFunc
+		protoParamsMsOptionsConsumer  snapshot.ProtocolParamsMilestoneOptConsumerFunc
 	}
 
 	testCases := []test{
@@ -231,6 +232,8 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 
 			sepIterFunc, sepGenRetriever := newSEPGenerator(originFullHeader.SEPCount)
 			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
+
+			protoParamsMsOptionsConsumerFunc := newProtocolParamsMilestoneOptConsumerFunc()
 
 			t := test{
 				name:                          "full: 150 seps, 1 mil outputs, 50 ms diffs",
@@ -250,6 +253,7 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 				sepGenRetriever:               sepGenRetriever,
 				sepConsumer:                   sepConsumerFunc,
 				sepConRetriever:               sepsCollRetriever,
+				protoParamsMsOptionsConsumer:  protoParamsMsOptionsConsumerFunc,
 			}
 			return t
 		}(),
@@ -277,7 +281,16 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 			// initialize a temporary protocol storage in memory
 			protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
 
-			require.NoError(t, snapshot.StreamFullSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.fullHeaderConsumer, tt.unspentTreasuryOutputConsumer, tt.outputConsumer, tt.msDiffConsumer, tt.sepConsumer))
+			require.NoError(t, snapshot.StreamFullSnapshotDataFrom(
+				snapshotFileRead,
+				protocolStorage,
+				tt.fullHeaderConsumer,
+				tt.unspentTreasuryOutputConsumer,
+				tt.outputConsumer,
+				tt.msDiffConsumer,
+				tt.sepConsumer,
+				tt.protoParamsMsOptionsConsumer,
+			))
 
 			// verify that what has been written also has been read again
 			tpkg.EqualOutputs(t, tt.outputGenRetriever(), tt.outputConRetriever())
@@ -302,18 +315,19 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 	rand.Seed(time.Now().Unix())
 
 	type test struct {
-		name                string
-		snapshotFileName    string
-		originDeltaHeader   *snapshot.DeltaSnapshotHeader
-		deltaHeaderConsumer snapshot.DeltaHeaderConsumerFunc
-		msDiffGenerator     snapshot.MilestoneDiffProducerFunc
-		msDiffGenRetriever  msDiffRetrieverFunc
-		msDiffConsumer      snapshot.MilestoneDiffConsumerFunc
-		msDiffConRetriever  msDiffRetrieverFunc
-		sepGenerator        snapshot.SEPProducerFunc
-		sepGenRetriever     sepRetrieverFunc
-		sepConsumer         snapshot.SEPConsumerFunc
-		sepConRetriever     sepRetrieverFunc
+		name                         string
+		snapshotFileName             string
+		originDeltaHeader            *snapshot.DeltaSnapshotHeader
+		deltaHeaderConsumer          snapshot.DeltaHeaderConsumerFunc
+		msDiffGenerator              snapshot.MilestoneDiffProducerFunc
+		msDiffGenRetriever           msDiffRetrieverFunc
+		msDiffConsumer               snapshot.MilestoneDiffConsumerFunc
+		msDiffConRetriever           msDiffRetrieverFunc
+		sepGenerator                 snapshot.SEPProducerFunc
+		sepGenRetriever              sepRetrieverFunc
+		sepConsumer                  snapshot.SEPConsumerFunc
+		sepConRetriever              sepRetrieverFunc
+		protoParamsMsOptionsConsumer snapshot.ProtocolParamsMilestoneOptConsumerFunc
 	}
 
 	testCases := []test{
@@ -327,19 +341,22 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 			sepIterFunc, sepGenRetriever := newSEPGenerator(originDeltaHeader.SEPCount)
 			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
 
+			protoParamsMsOptionsConsumerFunc := newProtocolParamsMilestoneOptConsumerFunc()
+
 			t := test{
-				name:                "delta: 150 seps, 50 ms diffs",
-				snapshotFileName:    "delta_snapshot.bin",
-				originDeltaHeader:   originDeltaHeader,
-				deltaHeaderConsumer: deltaHeaderEqualFunc(t, originDeltaHeader),
-				msDiffGenerator:     msDiffIterFunc,
-				msDiffGenRetriever:  msDiffGenRetriever,
-				msDiffConsumer:      msDiffConsumerFunc,
-				msDiffConRetriever:  msDiffCollRetriever,
-				sepGenerator:        sepIterFunc,
-				sepGenRetriever:     sepGenRetriever,
-				sepConsumer:         sepConsumerFunc,
-				sepConRetriever:     sepsCollRetriever,
+				name:                         "delta: 150 seps, 50 ms diffs",
+				snapshotFileName:             "delta_snapshot.bin",
+				originDeltaHeader:            originDeltaHeader,
+				deltaHeaderConsumer:          deltaHeaderEqualFunc(t, originDeltaHeader),
+				msDiffGenerator:              msDiffIterFunc,
+				msDiffGenRetriever:           msDiffGenRetriever,
+				msDiffConsumer:               msDiffConsumerFunc,
+				msDiffConRetriever:           msDiffCollRetriever,
+				sepGenerator:                 sepIterFunc,
+				sepGenRetriever:              sepGenRetriever,
+				sepConsumer:                  sepConsumerFunc,
+				sepConRetriever:              sepsCollRetriever,
+				protoParamsMsOptionsConsumer: protoParamsMsOptionsConsumerFunc,
 			}
 			return t
 		}(),
@@ -366,7 +383,7 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 
 			protocolStorage := getProtocolStorage(protoParams)
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGen := tt.msDiffGenRetriever()
@@ -399,6 +416,7 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 		msDiffConRetriever            msDiffRetrieverFunc
 		sepConsumer                   snapshot.SEPConsumerFunc
 		sepConRetriever               sepRetrieverFunc
+		protoParamsMsOptionsConsumer  snapshot.ProtocolParamsMilestoneOptConsumerFunc
 	}
 
 	testCases := []test{
@@ -411,6 +429,8 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
 			sepConsumerFunc, sepsCollRetriever := newSEPCollector()
 
+			protoParamsMsOptionsConsumerFunc := newProtocolParamsMilestoneOptConsumerFunc()
+
 			t := test{
 				name:                          "delta: 150 seps, 50 ms diffs",
 				snapshotFileName:              "delta_snapshot.bin",
@@ -422,6 +442,7 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 				msDiffConRetriever:            msDiffCollRetriever,
 				sepConsumer:                   sepConsumerFunc,
 				sepConRetriever:               sepsCollRetriever,
+				protoParamsMsOptionsConsumer:  protoParamsMsOptionsConsumerFunc,
 			}
 			return t
 		}(),
@@ -475,7 +496,7 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 
 			protocolStorage := getProtocolStorage(protoParams)
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGenRetriever, sepGenRetriever := tt.snapshotExtensionGenRetriever()
@@ -518,6 +539,18 @@ func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
 		}, func() iotago.BlockIDs {
 			return generatedSEPs
 		}
+}
+
+func newProtocolParamsMilestoneOptConsumerFunc() snapshot.ProtocolParamsMilestoneOptConsumerFunc {
+	// we check for duplicated entries in the protocol parameter milestone options
+	existingProtoParamsMsOpts := make(map[iotago.MilestoneIndex]struct{})
+
+	return func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) error {
+		if _, exists := existingProtoParamsMsOpts[protoParamsMsOption.TargetMilestoneIndex]; exists {
+			return storage.ErrProtocolParamsMilestoneOptAlreadyExists
+		}
+		return nil
+	}
 }
 
 type outputRetrieverFunc func() utxo.Outputs

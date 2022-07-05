@@ -39,7 +39,7 @@ func newFullHeaderConsumer(targetFullHeader *FullSnapshotHeader, dbStorage *stor
 
 		// store initial protocol parameters milestone option
 		if err := dbStorage.StoreProtocolParametersMilestoneOption(header.ProtocolParamsMilestoneOpt); err != nil {
-			return err
+			return fmt.Errorf("unable to store protocol parameters milestone option: %w", err)
 		}
 
 		*targetFullHeader = *header
@@ -81,6 +81,13 @@ func newSEPsConsumer(dbStorage *storage.Storage) SEPConsumerFunc {
 	return func(solidEntryPointBlockID iotago.BlockID, targetMilestoneIndex iotago.MilestoneIndex) error {
 		dbStorage.SolidEntryPointsAddWithoutLocking(solidEntryPointBlockID, targetMilestoneIndex)
 		return nil
+	}
+}
+
+// returns a ProtocolParamsMilestoneOpt consumer storing them into the database.
+func newProtocolParamsMilestoneOptConsumerFunc(dbStorage *storage.Storage) ProtocolParamsMilestoneOptConsumerFunc {
+	return func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) error {
+		return dbStorage.StoreProtocolParametersMilestoneOption(protoParamsMsOption)
 	}
 }
 
@@ -162,8 +169,17 @@ func loadFullSnapshotFileToStorage(
 	outputConsumer := NewOutputConsumer(dbStorage.UTXOManager())
 	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
 	sepConsumer := newSEPsConsumer(dbStorage)
+	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
 
-	if err = StreamFullSnapshotDataFrom(lsFile, protocolStorage, fullHeaderConsumer, treasuryOutputConsumer, outputConsumer, msDiffConsumer, sepConsumer); err != nil {
+	if err = StreamFullSnapshotDataFrom(
+		lsFile,
+		protocolStorage,
+		fullHeaderConsumer,
+		treasuryOutputConsumer,
+		outputConsumer,
+		msDiffConsumer,
+		sepConsumer,
+		protocolParamsMilestoneOptConsumer); err != nil {
 		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[Full], err)
 	}
 
@@ -226,8 +242,15 @@ func loadDeltaSnapshotFileToStorage(
 	deltaHeaderConsumer := newDeltaHeaderConsumer(deltaHeader, dbStorage.UTXOManager())
 	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
 	sepConsumer := newSEPsConsumer(dbStorage)
+	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
 
-	if err = StreamDeltaSnapshotDataFrom(lsFile, protocolStorage, deltaHeaderConsumer, msDiffConsumer, sepConsumer); err != nil {
+	if err = StreamDeltaSnapshotDataFrom(
+		lsFile,
+		protocolStorage,
+		deltaHeaderConsumer,
+		msDiffConsumer,
+		sepConsumer,
+		protocolParamsMilestoneOptConsumer); err != nil {
 		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[Delta], err)
 	}
 

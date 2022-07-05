@@ -51,7 +51,7 @@ func TestProtocolStorage(t *testing.T) {
 	checkProtoParamsMsOptionCount := func(expected int) {
 		collectedProtoParamsMsOptions := []*iotago.ProtocolParamsMilestoneOpt{}
 
-		// loop over all existing protocol parameter milestone options
+		// loop over all existing protocol parameters milestone options
 		err = protoStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
 			collectedProtoParamsMsOptions = append(collectedProtoParamsMsOptions, protoParamsMsOption)
 			return true

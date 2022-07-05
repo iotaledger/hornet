@@ -203,7 +203,9 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolStorage *storage.ProtocolSt
 	msDiff.Milestone = milestonePayload
 
 	if milestonePayload.Opts.MustSet().ProtocolParams() != nil && addProtocolParameterUpdates {
-		protocolStorage.StoreProtocolParametersMilestoneOption(milestonePayload.Opts.MustSet().ProtocolParams())
+		if err := protocolStorage.StoreProtocolParametersMilestoneOption(milestonePayload.Opts.MustSet().ProtocolParams()); err != nil {
+			return 0, nil, fmt.Errorf("unable to store protocol parameters milestone option: %w", err)
+		}
 	}
 
 	protoParams, err := protocolStorage.ProtocolParameters(msDiff.Milestone.Index)
@@ -279,7 +281,9 @@ func ReadMilestoneDiffProtocolParameters(reader io.ReadSeeker, protocolStorage *
 	}
 
 	if milestonePayload.Opts.MustSet().ProtocolParams() != nil {
-		protocolStorage.StoreProtocolParametersMilestoneOption(milestonePayload.Opts.MustSet().ProtocolParams())
+		if err := protocolStorage.StoreProtocolParametersMilestoneOption(milestonePayload.Opts.MustSet().ProtocolParams()); err != nil {
+			return 0, fmt.Errorf("unable to store protocol parameters milestone option: %w", err)
+		}
 	}
 
 	// seek to the end of the MilestoneDiff
@@ -297,6 +301,10 @@ type SEPProducerFunc func() (iotago.BlockID, error)
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
 type SEPConsumerFunc func(iotago.BlockID, iotago.MilestoneIndex) error
+
+// ProtocolParamsMilestoneOptConsumerFunc consumes the given ProtocolParamsMilestoneOpt.
+// A returned error signals to cancel further reading.
+type ProtocolParamsMilestoneOptConsumerFunc func(*iotago.ProtocolParamsMilestoneOpt) error
 
 // FullHeaderConsumerFunc consumes the full snapshot file header.
 // A returned error signals to cancel further reading.
@@ -1143,7 +1151,8 @@ func StreamFullSnapshotDataFrom(
 	unspentTreasuryOutputConsumer UnspentTreasuryOutputConsumerFunc,
 	outputConsumer OutputConsumerFunc,
 	msDiffConsumer MilestoneDiffConsumerFunc,
-	sepConsumer SEPConsumerFunc) error {
+	sepConsumer SEPConsumerFunc,
+	protoParamsMsOptionsConsumer ProtocolParamsMilestoneOptConsumerFunc) error {
 
 	fullHeader, err := ReadFullSnapshotHeader(reader)
 	if err != nil {
@@ -1164,7 +1173,9 @@ func StreamFullSnapshotDataFrom(
 	}
 
 	// the protocol parameters milestone option in the full snapshot is valid for the ledger milestone index.
-	protocolStorage.StoreProtocolParametersMilestoneOption(fullHeader.ProtocolParamsMilestoneOpt)
+	if err := protocolStorage.StoreProtocolParametersMilestoneOption(fullHeader.ProtocolParamsMilestoneOpt); err != nil {
+		return fmt.Errorf("unable to store protocol parameters milestone option: %w", err)
+	}
 
 	for i := uint64(0); i < fullHeader.OutputCount; i++ {
 		output, err := ReadOutput(reader, fullHeaderProtoParams)
@@ -1229,18 +1240,32 @@ func StreamFullSnapshotDataFrom(
 		}
 	}
 
+	// consume all parsed protocol parameters milestone options.
+	var innerErr error
+	if err := protocolStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+		if err := protoParamsMsOptionsConsumer(protoParamsMsOption); err != nil {
+			innerErr = err
+			return false
+		}
+		return true
+	}); err != nil {
+		return fmt.Errorf("failed to iterate over LS protocol parameters milestone options: %w", err)
+	}
+	if innerErr != nil {
+		return fmt.Errorf("unable to consume LS protocol parameters milestone options: %w", innerErr)
+	}
+
 	return nil
 }
 
 // StreamDeltaSnapshotDataFrom consumes a delta snapshot from the given reader.
-// The current milestone index of the protocol manager must be set to the
-// target index of the full snapshot file before entering this function.
 func StreamDeltaSnapshotDataFrom(
 	reader io.ReadSeeker,
 	protocolStorage *storage.ProtocolStorage,
 	headerConsumer DeltaHeaderConsumerFunc,
 	msDiffConsumer MilestoneDiffConsumerFunc,
-	sepConsumer SEPConsumerFunc) error {
+	sepConsumer SEPConsumerFunc,
+	protoParamsMsOptionsConsumer ProtocolParamsMilestoneOptConsumerFunc) error {
 
 	deltaHeader, err := ReadDeltaSnapshotHeader(reader)
 	if err != nil {
@@ -1249,6 +1274,16 @@ func StreamDeltaSnapshotDataFrom(
 
 	if err := headerConsumer(deltaHeader); err != nil {
 		return err
+	}
+
+	// we need to remember the already stored protocol parameter milestone options
+	// from the full snapshot to avoid duplicates.
+	existingProtoParamsMsOpts := make(map[iotago.MilestoneIndex]struct{})
+	if err := protocolStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+		existingProtoParamsMsOpts[protoParamsMsOption.TargetMilestoneIndex] = struct{}{}
+		return true
+	}); err != nil {
+		return fmt.Errorf("failed to iterate over LS protocol parameters milestone options: %w", err)
 	}
 
 	for i := uint32(0); i < deltaHeader.MilestoneDiffCount; i++ {
@@ -1270,6 +1305,26 @@ func StreamDeltaSnapshotDataFrom(
 		if err := sepConsumer(solidEntryPointBlockID, deltaHeader.TargetMilestoneIndex); err != nil {
 			return fmt.Errorf("SEP consumer error at pos %d: %w", i, err)
 		}
+	}
+
+	// consume all parsed protocol parameters milestone options.
+	var innerErr error
+	if err := protocolStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+		if _, exists := existingProtoParamsMsOpts[protoParamsMsOption.TargetMilestoneIndex]; exists {
+			// do not consume already existing protocol parameter milestone options.
+			return true
+		}
+
+		if err := protoParamsMsOptionsConsumer(protoParamsMsOption); err != nil {
+			innerErr = err
+			return false
+		}
+		return true
+	}); err != nil {
+		return fmt.Errorf("failed to iterate over LS protocol parameters milestone options: %w", err)
+	}
+	if innerErr != nil {
+		return fmt.Errorf("unable to consume LS protocol parameters milestone options: %w", innerErr)
 	}
 
 	return nil

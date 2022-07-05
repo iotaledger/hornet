@@ -10,6 +10,10 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+var (
+	ErrProtocolParamsMilestoneOptAlreadyExists = errors.New("protocol parameters milestone option already exists")
+)
+
 // ProtocolParamsMilestoneOptConsumer consumes the given ProtocolParamsMilestoneOpt.
 type ProtocolParamsMilestoneOptConsumer func(*iotago.ProtocolParamsMilestoneOpt) bool
 
@@ -28,12 +32,22 @@ func (s *ProtocolStorage) StoreProtocolParametersMilestoneOption(protoParamsMsOp
 	s.protocolStoreLock.Lock()
 	defer s.protocolStoreLock.Unlock()
 
+	key := databaseKeyForMilestoneIndex(protoParamsMsOption.TargetMilestoneIndex)
+
+	exists, err := s.protocolStore.Has(key)
+	if err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to check if protocol parameters milestone option exists")
+	}
+	if exists {
+		return errors.Wrapf(NewDatabaseError(ErrProtocolParamsMilestoneOptAlreadyExists), "target index %d already exists", protoParamsMsOption.TargetMilestoneIndex)
+	}
+
 	data, err := protoParamsMsOption.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to serialize protocol parameters milestone option")
 	}
 
-	if err := s.protocolStore.Set(databaseKeyForMilestoneIndex(protoParamsMsOption.TargetMilestoneIndex), data); err != nil {
+	if err := s.protocolStore.Set(key, data); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store protocol parameters milestone option")
 	}
 
