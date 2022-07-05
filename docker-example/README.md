@@ -8,13 +8,6 @@ This example lets you run an [IOTA Hornet node](https://wiki.iota.org/hornet/wel
 ## Usage
 *NOTE: The example commands assume you are using Linux.*
 
-### Download and unpack the archive
-Change to the directory where you want to run your node from. Download the version of the example release archive that you want to use, unpack it and remove the archive.
-
-```
-wget https://github.com/iotaledger/hornet/releases/download/v2.0.0-alpha.22/HORNET-2.0.0-alpha.22-docker-example.tar.gz && tar -xf HORNET-2.0.0-alpha.22-docker-example.tar.gz && rm HORNET-2.0.0-alpha.22-docker-example.tar.gz
-```
-
 ### Configure your node
 Create a file named `.env`, add the following to the file and change the email and domain to your own:
 
