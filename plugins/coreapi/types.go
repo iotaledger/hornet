@@ -6,7 +6,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/protocol"
 
 	"github.com/iotaledger/hornet/core/protocfg"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
@@ -16,7 +15,7 @@ import (
 // milestoneInfoResponse defines the milestone info response.
 type milestoneInfoResponse struct {
 	// The index of the milestone.
-	Index milestone.Index `json:"index"`
+	Index iotago.MilestoneIndex `json:"index"`
 	// The unix time of the milestone payload.
 	Timestamp uint32 `json:"timestamp"`
 	// The ID of the milestone.
@@ -31,7 +30,7 @@ type nodeStatus struct {
 	// The current confirmed milestone's index.
 	ConfirmedMilestone milestoneInfoResponse `json:"confirmedMilestone"`
 	// The milestone index at which the last pruning commenced.
-	PruningIndex milestone.Index `json:"pruningIndex"`
+	PruningIndex iotago.MilestoneIndex `json:"pruningIndex"`
 }
 
 type nodeMetrics struct {
@@ -85,17 +84,19 @@ type blockMetadataResponse struct {
 	// Whether the block is solid.
 	Solid bool `json:"isSolid"`
 	// The milestone index that references this block.
-	ReferencedByMilestoneIndex *milestone.Index `json:"referencedByMilestoneIndex,omitempty"`
+	ReferencedByMilestoneIndex iotago.MilestoneIndex `json:"referencedByMilestoneIndex,omitempty"`
 	// If this block represents a milestone this is the milestone index
-	MilestoneIndex *milestone.Index `json:"milestoneIndex,omitempty"`
+	MilestoneIndex iotago.MilestoneIndex `json:"milestoneIndex,omitempty"`
 	// The ledger inclusion state of the transaction payload.
-	LedgerInclusionState *string `json:"ledgerInclusionState,omitempty"`
+	LedgerInclusionState string `json:"ledgerInclusionState,omitempty"`
 	// The reason why this block is marked as conflicting.
 	ConflictReason *storage.Conflict `json:"conflictReason,omitempty"`
 	// Whether the block should be promoted.
 	ShouldPromote *bool `json:"shouldPromote,omitempty"`
 	// Whether the block should be reattached.
 	ShouldReattach *bool `json:"shouldReattach,omitempty"`
+	// If this block is referenced by a milestone this returns the index of that block inside the milestone by whiteflag ordering.
+	WhiteFlagIndex *uint32 `json:"whiteFlagIndex,omitempty"`
 }
 
 // blockCreatedResponse defines the response of a POST blocks REST API call.
@@ -125,17 +126,17 @@ type OutputMetadataResponse struct {
 	// Whether this output is spent.
 	Spent bool `json:"isSpent"`
 	// The milestone index at which this output was spent.
-	MilestoneIndexSpent milestone.Index `json:"milestoneIndexSpent,omitempty"`
+	MilestoneIndexSpent iotago.MilestoneIndex `json:"milestoneIndexSpent,omitempty"`
 	// The milestone timestamp this output was spent.
 	MilestoneTimestampSpent uint32 `json:"milestoneTimestampSpent,omitempty"`
 	// The transaction this output was spent with.
 	TransactionIDSpent string `json:"transactionIdSpent,omitempty"`
 	// The milestone index at which this output was booked into the ledger.
-	MilestoneIndexBooked milestone.Index `json:"milestoneIndexBooked"`
+	MilestoneIndexBooked iotago.MilestoneIndex `json:"milestoneIndexBooked"`
 	// The milestone timestamp this output was booked in the ledger.
 	MilestoneTimestampBooked uint32 `json:"milestoneTimestampBooked"`
 	// The ledger index at which this output was available at.
-	LedgerIndex milestone.Index `json:"ledgerIndex"`
+	LedgerIndex iotago.MilestoneIndex `json:"ledgerIndex"`
 }
 
 // OutputResponse defines the response of a GET outputs REST API call.
@@ -178,9 +179,9 @@ type PeerResponse struct {
 // pruneDatabaseRequest defines the request of a prune database REST API call.
 type pruneDatabaseRequest struct {
 	// The pruning target index.
-	Index *milestone.Index `json:"index,omitempty"`
+	Index *iotago.MilestoneIndex `json:"index,omitempty"`
 	// The pruning depth.
-	Depth *milestone.Index `json:"depth,omitempty"`
+	Depth *iotago.MilestoneIndex `json:"depth,omitempty"`
 	// The target size of the database.
 	TargetDatabaseSize *string `json:"targetDatabaseSize,omitempty"`
 }
@@ -188,23 +189,23 @@ type pruneDatabaseRequest struct {
 // pruneDatabaseResponse defines the response of a prune database REST API call.
 type pruneDatabaseResponse struct {
 	// The index of the snapshot.
-	Index milestone.Index `json:"index"`
+	Index iotago.MilestoneIndex `json:"index"`
 }
 
 // createSnapshotsRequest defines the request of a create snapshots REST API call.
 type createSnapshotsRequest struct {
 	// The index of the full snapshot.
-	FullIndex *milestone.Index `json:"fullIndex,omitempty"`
+	FullIndex *iotago.MilestoneIndex `json:"fullIndex,omitempty"`
 	// The index of the delta snapshot.
-	DeltaIndex *milestone.Index `json:"deltaIndex,omitempty"`
+	DeltaIndex *iotago.MilestoneIndex `json:"deltaIndex,omitempty"`
 }
 
 // createSnapshotsResponse defines the response of a create snapshots REST API call.
 type createSnapshotsResponse struct {
 	// The index of the full snapshot.
-	FullIndex milestone.Index `json:"fullIndex,omitempty"`
+	FullIndex iotago.MilestoneIndex `json:"fullIndex,omitempty"`
 	// The index of the delta snapshot.
-	DeltaIndex milestone.Index `json:"deltaIndex,omitempty"`
+	DeltaIndex iotago.MilestoneIndex `json:"deltaIndex,omitempty"`
 	// The file path of the full snapshot file.
 	FullFilePath string `json:"fullFilePath,omitempty"`
 	// The file path of the delta snapshot file.
@@ -214,7 +215,7 @@ type createSnapshotsResponse struct {
 // ComputeWhiteFlagMutationsRequest defines the request for a POST debugComputeWhiteFlagMutations REST API call.
 type ComputeWhiteFlagMutationsRequest struct {
 	// The index of the milestone.
-	Index milestone.Index `json:"index"`
+	Index iotago.MilestoneIndex `json:"index"`
 	// The timestamp of the milestone.
 	Timestamp uint32 `json:"timestamp"`
 	// The hex encoded block IDs of the parents the milestone references.

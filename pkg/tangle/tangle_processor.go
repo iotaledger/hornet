@@ -11,7 +11,6 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/daemon"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -37,7 +36,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 	}, workerpool.WorkerCount(t.processValidMilestoneWorkerCount), workerpool.QueueSize(t.processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	t.milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.solidifyMilestone(task.Param(0).(milestone.Index), task.Param(1).(bool))
+		t.solidifyMilestone(task.Param(0).(iotago.MilestoneIndex), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.milestoneSolidifierWorkerCount), workerpool.QueueSize(t.milestoneSolidifierQueueSize))
 }
@@ -59,7 +58,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.receiveBlockWorkerPool.Submit(block, requests, proto)
 	})
 
-	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
+	onLatestMilestoneIndexChanged := events.NewClosure(func(_ iotago.MilestoneIndex) {
 		// cleanup the future cone solidifier to free the caches
 		t.futureConeSolidifier.Cleanup(true)
 
@@ -248,7 +247,7 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 	if requested && !t.syncManager.IsNodeSynced() && t.requestQueue.Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
-		t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
+		t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), true)
 	}
 }
 
@@ -273,7 +272,7 @@ func (t *Tangle) DeregisterBlockSolidEvent(blockID iotago.BlockID) {
 }
 
 func (t *Tangle) PrintStatus() {
-	var currentLowestMilestoneIndexInReqQ milestone.Index
+	var currentLowestMilestoneIndexInReqQ iotago.MilestoneIndex
 	if peekedRequest := t.requestQueue.Peek(); peekedRequest != nil {
 		currentLowestMilestoneIndexInReqQ = peekedRequest.MilestoneIndex
 	}

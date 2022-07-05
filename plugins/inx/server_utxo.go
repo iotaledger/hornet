@@ -3,12 +3,12 @@ package inx
 import (
 	"context"
 	"fmt"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -22,8 +22,8 @@ func NewLedgerOutput(o *utxo.Output) (*inx.LedgerOutput, error) {
 	return &inx.LedgerOutput{
 		OutputId:                 inx.NewOutputId(o.OutputID()),
 		BlockId:                  inx.NewBlockId(o.BlockID()),
-		MilestoneIndexBooked:     uint32(o.MilestoneIndex()),
-		MilestoneTimestampBooked: o.MilestoneTimestamp(),
+		MilestoneIndexBooked:     o.MilestoneIndexBooked(),
+		MilestoneTimestampBooked: o.MilestoneTimestampBooked(),
 		Output:                   output,
 	}, nil
 }
@@ -35,17 +35,17 @@ func NewLedgerSpent(s *utxo.Spent) (*inx.LedgerSpent, error) {
 	}
 	l := &inx.LedgerSpent{
 		Output:                  output,
-		TransactionIdSpent:      inx.NewTransactionId(s.TargetTransactionID()),
-		MilestoneIndexSpent:     uint32(s.MilestoneIndex()),
-		MilestoneTimestampSpent: s.MilestoneTimestamp(),
+		TransactionIdSpent:      inx.NewTransactionId(s.TransactionIDSpent()),
+		MilestoneIndexSpent:     s.MilestoneIndexSpent(),
+		MilestoneTimestampSpent: s.MilestoneTimestampSpent(),
 	}
 
 	return l, nil
 }
 
-func NewLedgerUpdate(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) (*inx.LedgerUpdate, error) {
+func NewLedgerUpdate(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) (*inx.LedgerUpdate, error) {
 	u := &inx.LedgerUpdate{
-		MilestoneIndex: uint32(index),
+		MilestoneIndex: index,
 		Created:        make([]*inx.LedgerOutput, len(newOutputs)),
 		Consumed:       make([]*inx.LedgerSpent, len(newSpents)),
 	}
@@ -66,9 +66,9 @@ func NewLedgerUpdate(index milestone.Index, newOutputs utxo.Outputs, newSpents u
 	return u, nil
 }
 
-func NewTreasuryUpdate(index milestone.Index, created *utxo.TreasuryOutput, consumed *utxo.TreasuryOutput) (*inx.TreasuryUpdate, error) {
+func NewTreasuryUpdate(index iotago.MilestoneIndex, created *utxo.TreasuryOutput, consumed *utxo.TreasuryOutput) (*inx.TreasuryUpdate, error) {
 	u := &inx.TreasuryUpdate{
-		MilestoneIndex: uint32(index),
+		MilestoneIndex: index,
 		Created: &inx.TreasuryOutput{
 			MilestoneId: inx.NewMilestoneId(created.MilestoneID),
 			Amount:      created.Amount,
@@ -110,7 +110,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 			return nil, err
 		}
 		return &inx.OutputResponse{
-			LedgerIndex: uint32(ledgerIndex),
+			LedgerIndex: ledgerIndex,
 			Payload: &inx.OutputResponse_Output{
 				Output: ledgerOutput,
 			},
@@ -126,7 +126,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 		return nil, err
 	}
 	return &inx.OutputResponse{
-		LedgerIndex: uint32(ledgerIndex),
+		LedgerIndex: ledgerIndex,
 		Payload: &inx.OutputResponse_Spent{
 			Spent: ledgerSpent,
 		},
@@ -151,7 +151,7 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 			return false
 		}
 		payload := &inx.UnspentOutput{
-			LedgerIndex: uint32(ledgerIndex),
+			LedgerIndex: ledgerIndex,
 			Output:      ledgerOutput,
 		}
 		if err := srv.Send(payload); err != nil {
@@ -168,7 +168,7 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 
 func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
 
-	createLedgerUpdatePayloadAndSend := func(msIndex milestone.Index, outputs utxo.Outputs, spents utxo.Spents) error {
+	createLedgerUpdatePayloadAndSend := func(msIndex iotago.MilestoneIndex, outputs utxo.Outputs, spents utxo.Spents) error {
 		payload, err := NewLedgerUpdate(msIndex, outputs, spents)
 		if err != nil {
 			return err
@@ -179,7 +179,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		return nil
 	}
 
-	sendMilestoneDiffsRange := func(startIndex milestone.Index, endIndex milestone.Index) error {
+	sendMilestoneDiffsRange := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
 		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
 			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
 			if err != nil {
@@ -196,7 +196,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	// if a startIndex is given, we send all available milestone diffs including the start index.
 	// if an endIndex is given, we send all available milestone diffs up to and including min(ledgerIndex, endIndex).
 	// if no startIndex is given, but an endIndex, we do not send previous milestone diffs.
-	sendPreviousMilestoneDiffs := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
+	sendPreviousMilestoneDiffs := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 		if startIndex == 0 {
 			// no need to send previous milestone diffs
 			return 0, nil
@@ -230,8 +230,8 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	}
 
 	stream := &streamRange{
-		start: milestone.Index(req.GetStartMilestoneIndex()),
-		end:   milestone.Index(req.GetEndMilestoneIndex()),
+		start: req.GetStartMilestoneIndex(),
+		end:   req.GetEndMilestoneIndex(),
 	}
 
 	var err error
@@ -245,7 +245,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		return nil
 	}
 
-	catchUpFunc := func(start milestone.Index, end milestone.Index) error {
+	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
 		err := sendMilestoneDiffsRange(start, end)
 		if err != nil {
 			Plugin.LogInfof("sendMilestoneDiffsRange error: %v", err)
@@ -253,7 +253,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		return err
 	}
 
-	sendFunc := func(task *workerpool.Task, index milestone.Index) error {
+	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
 		newOutputs := task.Param(1).(utxo.Outputs)
 		newSpents := task.Param(2).(utxo.Spents)
 
@@ -268,7 +268,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		done, err := handleRangedSend(&task, task.Param(0).(milestone.Index), stream, catchUpFunc, sendFunc)
+		done, err := handleRangedSend(&task, task.Param(0).(iotago.MilestoneIndex), stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
@@ -280,7 +280,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	closure := events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+	closure := events.NewClosure(func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 		wp.Submit(index, newOutputs, newSpents)
 	})
 
@@ -297,7 +297,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 
 	var treasuryUpdateSent bool
 
-	createTreasuryUpdatePayloadAndSend := func(msIndex milestone.Index, treasuryOutput *utxo.TreasuryOutput, spentTreasuryOutput *utxo.TreasuryOutput) error {
+	createTreasuryUpdatePayloadAndSend := func(msIndex iotago.MilestoneIndex, treasuryOutput *utxo.TreasuryOutput, spentTreasuryOutput *utxo.TreasuryOutput) error {
 		if treasuryOutput != nil {
 			payload, err := NewTreasuryUpdate(msIndex, treasuryOutput, spentTreasuryOutput)
 			if err != nil {
@@ -311,7 +311,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		return nil
 	}
 
-	sendTreasuryUpdatesRange := func(startIndex milestone.Index, endIndex milestone.Index) error {
+	sendTreasuryUpdatesRange := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
 		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
 			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
 			if err != nil {
@@ -328,7 +328,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 	// if a startIndex is given, we send all available treasury updates including the start index.
 	// if an endIndex is given, we send all available treasury updates up to and including min(ledgerIndex, endIndex).
 	// if no startIndex is given, but an endIndex, we do not send previous treasury updates.
-	sendPreviousTreasuryUpdates := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
+	sendPreviousTreasuryUpdates := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 		if startIndex == 0 {
 			// no need to send treasury updates diffs
 			return 0, nil
@@ -361,9 +361,9 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		return endIndex, nil
 	}
 
-	sendCurrentTreasuryOutput := func() (milestone.Index, error) {
+	sendCurrentTreasuryOutput := func() (iotago.MilestoneIndex, error) {
 
-		getCurrentTreasuryOutputAndIndex := func() (milestone.Index, *utxo.TreasuryOutput, error) {
+		getCurrentTreasuryOutputAndIndex := func() (iotago.MilestoneIndex, *utxo.TreasuryOutput, error) {
 			deps.UTXOManager.ReadLockLedger()
 			defer deps.UTXOManager.ReadUnlockLedger()
 
@@ -393,8 +393,8 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 	}
 
 	stream := &streamRange{
-		start: milestone.Index(req.GetStartMilestoneIndex()),
-		end:   milestone.Index(req.GetEndMilestoneIndex()),
+		start: req.GetStartMilestoneIndex(),
+		end:   req.GetEndMilestoneIndex(),
 	}
 
 	var err error
@@ -417,7 +417,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		return nil
 	}
 
-	catchUpFunc := func(start milestone.Index, end milestone.Index) error {
+	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
 		err := sendTreasuryUpdatesRange(start, end)
 		if err != nil {
 			Plugin.LogInfof("sendTreasuryUpdatesRange error: %v", err)
@@ -425,7 +425,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		return err
 	}
 
-	sendFunc := func(task *workerpool.Task, index milestone.Index) error {
+	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
 		tm := task.Param(1).(*utxo.TreasuryMutationTuple)
 		if err := createTreasuryUpdatePayloadAndSend(index, tm.NewOutput, tm.SpentOutput); err != nil {
 			Plugin.LogInfof("send error: %v", err)
@@ -438,7 +438,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		done, err := handleRangedSend(&task, task.Param(0).(milestone.Index), stream, catchUpFunc, sendFunc)
+		done, err := handleRangedSend(&task, task.Param(0).(iotago.MilestoneIndex), stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
@@ -450,7 +450,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	closure := events.NewClosure(func(index milestone.Index, tuple *utxo.TreasuryMutationTuple) {
+	closure := events.NewClosure(func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) {
 		wp.Submit(index, tuple)
 	})
 

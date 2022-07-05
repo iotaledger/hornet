@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"github.com/iotaledger/hornet/pkg/protocol"
 	"os"
 	"path/filepath"
 
@@ -14,11 +13,11 @@ import (
 	"github.com/iotaledger/hornet/pkg/daemon"
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/pkg/protocol"
 )
 
 const (
@@ -227,7 +226,7 @@ func provide(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func(deps syncManagerDeps) *syncmanager.SyncManager {
-		sync, err := syncmanager.New(deps.UTXOManager, milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth))
+		sync, err := syncmanager.New(deps.UTXOManager, syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth))
 		if err != nil {
 			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
 		}

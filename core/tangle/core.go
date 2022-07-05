@@ -17,14 +17,15 @@ import (
 	"github.com/iotaledger/hornet/pkg/daemon"
 	"github.com/iotaledger/hornet/pkg/metrics"
 	"github.com/iotaledger/hornet/pkg/model/migrator"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/pkg/pruning"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
+	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
@@ -70,7 +71,8 @@ type dependencies struct {
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
-	SnapshotManager          *snapshot.SnapshotManager
+	SnapshotImporter         *snapshot.SnapshotImporter
+	PruningManager           *pruning.Manager
 	DatabaseDebug            bool `name:"databaseDebug"`
 	DatabaseAutoRevalidation bool `name:"databaseAutoRevalidation"`
 	PruneReceipts            bool `name:"pruneReceipts"`
@@ -205,7 +207,7 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 		}
 		CoreComponent.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		if err := deps.Tangle.RevalidateDatabase(deps.SnapshotManager, deps.PruneReceipts); err != nil {
+		if err := deps.Tangle.RevalidateDatabase(deps.SnapshotImporter, deps.PruneReceipts); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				CoreComponent.LogInfo("database revalidation aborted")
 				os.Exit(0)
@@ -257,18 +259,18 @@ func run() error {
 }
 
 func configureEvents() {
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
 		// notify peers about our new solid milestone index
 		// bee differentiates between solid and confirmed milestone, for hornet it is the same.
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
-	onPruningMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
+	onPruningMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
 		// notify peers about our new pruning milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
-	onLatestMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
+	onLatestMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
 		// notify peers about our new latest milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
@@ -276,12 +278,12 @@ func configureEvents() {
 
 func attachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+	deps.PruningManager.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
 
 func detachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
-	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	deps.PruningManager.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 }

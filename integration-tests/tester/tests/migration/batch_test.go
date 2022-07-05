@@ -91,9 +91,9 @@ func TestBatch(t *testing.T) {
 
 	// check that indeed the funds were correctly minted
 	log.Println("checking that migrated funds are available...")
-	for i := 0; i < migratedFundsCount; i++ {
+	for i := uint32(0); i < migratedFundsCount; i++ {
 		var addr iotago.Ed25519Address
-		binary.LittleEndian.PutUint32(addr[:], uint32(i))
+		binary.LittleEndian.PutUint32(addr[:], i)
 		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), &addr)
 		require.NoError(t, err)
 		require.EqualValues(t, migrationTokens, balance)

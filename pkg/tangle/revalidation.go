@@ -8,7 +8,6 @@ import (
 
 	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/utils"
@@ -53,7 +52,7 @@ var (
 //			- Diffs							=> will be removed and loaded again from last snapshot
 //			- Treasury						=> will be removed and loaded again from last snapshot
 //			- Receipts						=> will be removed and loaded again from last snapshot (if pruneReceipts is enabled)
-func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, pruneReceipts bool) error {
+func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.SnapshotImporter, pruneReceipts bool) error {
 
 	// mark the database as tainted forever.
 	// this is used to signal the coordinator plugin that it should never use a revalidated database.
@@ -75,7 +74,7 @@ func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, p
 	}
 
 	// check if the ledger index of the snapshot files fit the revalidation target.
-	snapshotLedgerIndex, err := snapshotManager.SnapshotsFilesLedgerIndex()
+	snapshotLedgerIndex, err := snapshotImporter.SnapshotsFilesLedgerIndex()
 	if err != nil {
 		return err
 	}
@@ -122,7 +121,7 @@ func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, p
 	t.LogInfo("flushing storages... done!")
 
 	// apply the ledger from the last snapshot to the database
-	if err := t.applySnapshotLedger(snapshotInfo, snapshotManager); err != nil {
+	if err := t.applySnapshotLedger(snapshotInfo, snapshotImporter); err != nil {
 		return err
 	}
 
@@ -150,11 +149,11 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 
 	start := time.Now()
 
-	milestonesToDelete := make(map[milestone.Index]struct{})
+	milestonesToDelete := make(map[iotago.MilestoneIndex]struct{})
 
 	lastStatusTime := time.Now()
 	var milestonesCounter int64
-	t.storage.NonCachedStorage().ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
+	t.storage.NonCachedStorage().ForEachMilestoneIndex(func(msIndex iotago.MilestoneIndex) bool {
 		milestonesCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -432,11 +431,11 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 
 	start := time.Now()
 
-	unreferencedMilestoneIndexes := make(map[milestone.Index]struct{})
+	unreferencedMilestoneIndexes := make(map[iotago.MilestoneIndex]struct{})
 
 	lastStatusTime := time.Now()
 	var unreferencedBlocksCounter int64
-	t.storage.NonCachedStorage().ForEachUnreferencedBlock(func(msIndex milestone.Index, _ iotago.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachUnreferencedBlock(func(msIndex iotago.MilestoneIndex, _ iotago.BlockID) bool {
 		unreferencedBlocksCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -486,7 +485,7 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 }
 
 // apply the ledger from the last snapshot to the database
-func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshotManager *snapshot.SnapshotManager) error {
+func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshotImporter *snapshot.SnapshotImporter) error {
 
 	t.LogInfo("applying snapshot balances to the ledger state...")
 
@@ -495,11 +494,11 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 	t.syncManager.OverwriteConfirmedMilestoneIndex(0)
 
 	// Restore the ledger state of the last snapshot
-	if err := snapshotManager.ImportSnapshots(t.shutdownCtx); err != nil {
+	if err := snapshotImporter.ImportSnapshots(t.shutdownCtx); err != nil {
 		t.LogPanic(err)
 	}
 
-	if err := snapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
+	if err := snapshotImporter.CheckCurrentSnapshot(snapshotInfo); err != nil {
 		t.LogPanic(err)
 	}
 

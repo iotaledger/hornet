@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 )
 
 type benchmarkObject struct {
@@ -32,7 +33,7 @@ func (bo *benchmarkObject) BatchWrite(batchedMuts kvstore.BatchedMutations) {
 func (bo *benchmarkObject) BatchWriteDone() {
 	// do a read operation after the batchwrite is done,
 	// so the write and read operations are equally distributed over the whole benchmark run.
-	if _, err := bo.store.Has(randBytes(32)); err != nil {
+	if _, err := bo.store.Has(tpkg.RandBytes(32)); err != nil {
 		panic(fmt.Errorf("read operation failed: %w", err))
 	}
 

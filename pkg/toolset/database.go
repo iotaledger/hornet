@@ -12,7 +12,6 @@ import (
 	databasecore "github.com/iotaledger/hornet/core/database"
 	"github.com/iotaledger/hornet/core/protocfg"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/restapi"
@@ -71,7 +70,7 @@ func checkDatabaseHealth(storage *storage.Storage, markTainted bool) error {
 }
 
 // getMilestonePayloadFromStorage returns the milestone payload from the storage.
-func getMilestonePayloadFromStorage(tangleStore *storage.Storage, msIndex milestone.Index) (*iotago.Milestone, error) {
+func getMilestonePayloadFromStorage(tangleStore *storage.Storage, msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 
 	cachedMilestone := tangleStore.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
@@ -83,11 +82,11 @@ func getMilestonePayloadFromStorage(tangleStore *storage.Storage, msIndex milest
 }
 
 // getStorageMilestoneRange returns the range of milestones that are found in the storage.
-func getStorageMilestoneRange(tangleStore *storage.Storage) (milestone.Index, milestone.Index) {
-	var msIndexStart milestone.Index = math.MaxUint32
-	var msIndexEnd milestone.Index = 0
+func getStorageMilestoneRange(tangleStore *storage.Storage) (iotago.MilestoneIndex, iotago.MilestoneIndex) {
+	var msIndexStart iotago.MilestoneIndex = math.MaxUint32
+	var msIndexEnd iotago.MilestoneIndex = 0
 
-	tangleStore.ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
+	tangleStore.ForEachMilestoneIndex(func(msIndex iotago.MilestoneIndex) bool {
 		if msIndexStart > msIndex {
 			msIndexStart = msIndex
 		}

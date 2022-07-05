@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -203,7 +202,7 @@ func (r *Requester) AddBackPressureFunc(pressureFunc RequestBackPressureFunc) {
 
 // Request enqueues a request to the request queue for the given block if it isn't a solid entry point
 // and is not contained in the database already.
-func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDiscard ...bool) bool {
+func (r *Requester) Request(data interface{}, msIndex iotago.MilestoneIndex, preventDiscard ...bool) bool {
 
 	var request *Request
 
@@ -222,7 +221,7 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 		}
 		request = NewBlockIDRequest(blockID, msIndex)
 
-	case milestone.Index:
+	case iotago.MilestoneIndex:
 		msIndex := value
 		if r.storage.ContainsMilestoneIndex(msIndex) {
 			return false
@@ -241,7 +240,7 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 }
 
 // RequestMultiple works like Request but takes multiple block IDs.
-func (r *Requester) RequestMultiple(blockIDs iotago.BlockIDs, msIndex milestone.Index, preventDiscard ...bool) int {
+func (r *Requester) RequestMultiple(blockIDs iotago.BlockIDs, msIndex iotago.MilestoneIndex, preventDiscard ...bool) int {
 	requested := 0
 	for _, blockID := range blockIDs {
 		if r.Request(blockID, msIndex, preventDiscard...) {
@@ -253,7 +252,7 @@ func (r *Requester) RequestMultiple(blockIDs iotago.BlockIDs, msIndex milestone.
 
 // RequestParents enqueues requests for the parents of the given block to the request queue, if the
 // given block is not a solid entry point and neither its parents are and also not in the database.
-func (r *Requester) RequestParents(cachedBlock *storage.CachedBlock, msIndex milestone.Index, preventDiscard ...bool) {
+func (r *Requester) RequestParents(cachedBlock *storage.CachedBlock, msIndex iotago.MilestoneIndex, preventDiscard ...bool) {
 	cachedBlock.ConsumeMetadata(func(metadata *storage.BlockMetadata) {
 		blockID := metadata.BlockID()
 

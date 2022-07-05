@@ -5,6 +5,7 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hornet/pkg/pruning"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 )
@@ -23,7 +24,7 @@ var (
 
 	metricsLock                syncutils.RWMutex
 	lastSnapshotMetrics        *snapshot.SnapshotMetrics
-	lastDatabasePruningMetrics *snapshot.PruningMetrics
+	lastDatabasePruningMetrics *pruning.PruningMetrics
 	lastConfirmationMetrics    *whiteflag.ConfirmationMetrics
 )
 
@@ -93,7 +94,7 @@ func configureDebug() {
 		lastSnapshotMetrics = metrics
 	}))
 
-	deps.SnapshotManager.Events.PruningMetricsUpdated.Attach(events.NewClosure(func(metrics *snapshot.PruningMetrics) {
+	deps.PruningManager.Events.PruningMetricsUpdated.Attach(events.NewClosure(func(metrics *pruning.PruningMetrics) {
 		databasePruningTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()
@@ -147,9 +148,7 @@ func collectDebug() {
 		milestoneConfirmationDurations.WithLabelValues("whiteflag").Set(lastConfirmationMetrics.DurationWhiteflag.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("receipts").Set(lastConfirmationMetrics.DurationReceipts.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("confirmation").Set(lastConfirmationMetrics.DurationConfirmation.Seconds())
-		milestoneConfirmationDurations.WithLabelValues("apply_included_with_transactions").Set(lastConfirmationMetrics.DurationApplyIncludedWithTransactions.Seconds())
-		milestoneConfirmationDurations.WithLabelValues("apply_excluded_without_transactions").Set(lastConfirmationMetrics.DurationApplyExcludedWithoutTransactions.Seconds())
-		milestoneConfirmationDurations.WithLabelValues("apply_excluded_with_conflicting_transactions").Set(lastConfirmationMetrics.DurationApplyExcludedWithConflictingTransactions.Seconds())
+		milestoneConfirmationDurations.WithLabelValues("apply_confirmation").Set(lastConfirmationMetrics.DurationApplyConfirmation.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("on_ledger_updated").Set(lastConfirmationMetrics.DurationLedgerUpdated.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("on_treasury_updated").Set(lastConfirmationMetrics.DurationTreasuryMutated.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("on_milestone_confirmed").Set(lastConfirmationMetrics.DurationOnMilestoneConfirmed.Seconds())

@@ -4,7 +4,6 @@ import (
 	"math"
 
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -55,7 +54,7 @@ func (m *MilestoneManager) KeyManager() *keymanager.KeyManager {
 }
 
 // FindClosestNextMilestoneIndex searches for the next known milestone in the persistence layer.
-func (m *MilestoneManager) FindClosestNextMilestoneIndex(index milestone.Index) (milestone.Index, error) {
+func (m *MilestoneManager) FindClosestNextMilestoneIndex(index iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 	lmi := m.syncManager.LatestMilestoneIndex()
 	if lmi == 0 {
 		// no milestone received yet, check the next 100 milestones as a workaround

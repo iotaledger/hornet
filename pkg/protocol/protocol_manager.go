@@ -6,51 +6,9 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
-
-var (
-	supportedVersions = Versions{2} // make sure to add the versions sorted asc
-)
-
-// Versions is a slice of protocol versions.
-type Versions []uint32
-
-// Highest returns the highest version.
-func (ver Versions) Highest() byte {
-	return byte(ver[len(ver)-1])
-}
-
-// Lowest returns the lowest version.
-func (ver Versions) Lowest() byte {
-	return byte(ver[0])
-}
-
-// Supports tells whether the given version is supported.
-func (ver Versions) Supports(v byte) bool {
-	for _, value := range ver {
-		if value == uint32(v) {
-			return true
-		}
-	}
-	return false
-}
-
-// NewManager creates a new Manager.
-func NewManager(storage *storage.Storage, initProtoParas *iotago.ProtocolParameters) *Manager {
-	return &Manager{
-		Events: &Events{
-			NextMilestoneUnsupported: events.NewEvent(protoParasMsOptCaller),
-			CriticalErrors:           events.NewEvent(events.ErrorCaller),
-		},
-		storage: storage,
-		current: initProtoParas,
-		pending: nil,
-	}
-}
 
 func protoParasMsOptCaller(handler interface{}, params ...interface{}) {
 	handler.(func(protoParas *iotago.ProtocolParamsMilestoneOpt))(params[0].(*iotago.ProtocolParamsMilestoneOpt))
@@ -64,63 +22,71 @@ type Events struct {
 	CriticalErrors *events.Event
 }
 
+// NewManager creates a new Manager.
+func NewManager(storage *storage.Storage, ledgerIndex iotago.MilestoneIndex) (*Manager, error) {
+	manager := &Manager{
+		Events: &Events{
+			NextMilestoneUnsupported: events.NewEvent(protoParasMsOptCaller),
+			CriticalErrors:           events.NewEvent(events.ErrorCaller),
+		},
+		storage: storage,
+		current: nil,
+		pending: nil,
+	}
+
+	if err := manager.init(ledgerIndex); err != nil {
+		return nil, err
+	}
+
+	return manager, nil
+}
+
 // Manager handles the knowledge about current, pending and supported protocol versions and parameters.
 type Manager struct {
 	// Events holds the events happening within the Manager.
 	Events      *Events
 	storage     *storage.Storage
-	syncManager *syncmanager.SyncManager
-	currentRWMu sync.RWMutex
+	currentLock sync.RWMutex
 	current     *iotago.ProtocolParameters
-	pendingRWMu sync.RWMutex
+	pendingLock sync.RWMutex
 	pending     []*iotago.ProtocolParamsMilestoneOpt
 }
 
-// Init initialises the Manager by loading the last stored or persisting the parameters passed in via constructor.
-// If the Manager got initialised with no storage, then Manager.Init() is a no-op and initProtoParas are used instead.
-func (m *Manager) Init() error {
-	// can only run with provided protocol parameters
-	if m.storage == nil {
-		return nil
-	}
+// init initialises the Manager by loading the last stored parameters and pending parameters.
+func (m *Manager) init(ledgerIndex iotago.MilestoneIndex) error {
+	m.currentLock.Lock()
+	defer m.currentLock.Unlock()
 
-	m.currentRWMu.Lock()
-	defer m.currentRWMu.Unlock()
-
-	currentProtoParas, err := m.storage.ProtocolParameters()
+	currentProtoParas, err := m.storage.ProtocolParameters(ledgerIndex)
 	if err != nil {
 		return err
 	}
 
-	// aka store therefore what the manager was initialised with
-	if currentProtoParas == nil {
-		if err := m.storage.StoreProtocolParameters(m.current); err != nil {
-			return fmt.Errorf("unable to persist init protocol parameters: %w", err)
-		}
-		return nil
+	protoParas := &iotago.ProtocolParameters{}
+	if _, err := protoParas.Deserialize(currentProtoParas.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
+		return fmt.Errorf("failed to deserialize protocol parameters: %w", err)
 	}
 
-	m.current = currentProtoParas
+	m.current = protoParas
+	m.loadPending(ledgerIndex)
 
 	return nil
 }
 
-// LoadPending examines the database back to below max depth for pending protocol parameter changes.
-func (m *Manager) LoadPending(syncManager *syncmanager.SyncManager) {
-	m.pendingRWMu.Lock()
-	defer m.pendingRWMu.Unlock()
+// loadPending initializes the pending protocol parameter changes from database.
+func (m *Manager) loadPending(ledgerIndex iotago.MilestoneIndex) {
+	m.pendingLock.Lock()
+	defer m.pendingLock.Unlock()
 
-	// examine below max depth milestone to reconstruct pending protocol changes
-	confMsIndex := syncManager.ConfirmedMilestoneIndex()
-	belowMaxDepthTarget := confMsIndex - milestone.Index(m.current.BelowMaxDepth)
-	for i := belowMaxDepthTarget; i < confMsIndex; i-- {
-		if protoParasMsOpt := m.readProtocolParasFromMilestone(i); protoParasMsOpt != nil {
-			m.pending = append(m.pending, protoParasMsOpt)
+	m.storage.ForEachProtocolParameters(func(protoParsMsOpt *iotago.ProtocolParamsMilestoneOpt) bool {
+		if protoParsMsOpt.TargetMilestoneIndex > ledgerIndex {
+			m.pending = append(m.pending, protoParsMsOpt)
 		}
-	}
+		return true
+	})
 }
 
-func (m *Manager) readProtocolParasFromMilestone(index milestone.Index) *iotago.ProtocolParamsMilestoneOpt {
+func (m *Manager) readProtocolParasFromMilestone(index iotago.MilestoneIndex) *iotago.ProtocolParamsMilestoneOpt {
 	cachedMs := m.storage.CachedMilestoneByIndexOrNil(index)
 	if cachedMs == nil {
 		return nil
@@ -131,20 +97,20 @@ func (m *Manager) readProtocolParasFromMilestone(index milestone.Index) *iotago.
 
 // SupportedVersions returns a slice of supported protocol versions.
 func (m *Manager) SupportedVersions() Versions {
-	return supportedVersions
+	return SupportedVersions
 }
 
 // Current returns the current protocol parameters under which the node is operating.
 func (m *Manager) Current() *iotago.ProtocolParameters {
-	m.currentRWMu.RLock()
-	defer m.currentRWMu.RUnlock()
+	m.currentLock.RLock()
+	defer m.currentLock.RUnlock()
 	return m.current
 }
 
 // Pending returns the currently pending protocol changes.
 func (m *Manager) Pending() []*iotago.ProtocolParamsMilestoneOpt {
-	m.pendingRWMu.RLock()
-	defer m.pendingRWMu.RUnlock()
+	m.pendingLock.RLock()
+	defer m.pendingLock.RUnlock()
 	cpy := make([]*iotago.ProtocolParamsMilestoneOpt, len(m.pending))
 	for i, ele := range m.pending {
 		cpy[i] = ele.Clone().(*iotago.ProtocolParamsMilestoneOpt)
@@ -154,8 +120,8 @@ func (m *Manager) Pending() []*iotago.ProtocolParamsMilestoneOpt {
 
 // NextPendingSupported tells whether the next pending protocol parameters changes are supported.
 func (m *Manager) NextPendingSupported() bool {
-	m.pendingRWMu.RLock()
-	defer m.pendingRWMu.RUnlock()
+	m.pendingLock.RLock()
+	defer m.pendingLock.RUnlock()
 	if len(m.pending) == 0 {
 		return true
 	}
@@ -168,9 +134,14 @@ func (m *Manager) HandleConfirmedMilestone(cachedMilestone *storage.CachedMilest
 	ms := cachedMilestone.Milestone()
 
 	if msProtoParas := ms.Milestone().Opts.MustSet().ProtocolParams(); msProtoParas != nil {
-		m.pendingRWMu.Lock()
+		m.pendingLock.Lock()
 		m.pending = append(m.pending, msProtoParas)
-		m.pendingRWMu.Unlock()
+		m.pendingLock.Unlock()
+
+		if err := m.storage.StoreProtocolParameters(msProtoParas); err != nil {
+			m.Events.CriticalErrors.Trigger(fmt.Errorf("unable to persist new protocol parameters: %w", err))
+			return
+		}
 	}
 
 	if !m.currentShouldChange(ms) {
@@ -185,8 +156,8 @@ func (m *Manager) HandleConfirmedMilestone(cachedMilestone *storage.CachedMilest
 
 // checks whether the current protocol parameters need to be updated.
 func (m *Manager) currentShouldChange(milestone *storage.Milestone) bool {
-	m.pendingRWMu.RLock()
-	defer m.pendingRWMu.RUnlock()
+	m.pendingLock.RLock()
+	defer m.pendingLock.RUnlock()
 	if len(m.pending) == 0 {
 		return false
 	}
@@ -207,10 +178,10 @@ func (m *Manager) currentShouldChange(milestone *storage.Milestone) bool {
 }
 
 func (m *Manager) updateCurrent() error {
-	m.currentRWMu.Lock()
-	defer m.currentRWMu.Unlock()
-	m.pendingRWMu.Lock()
-	defer m.pendingRWMu.Unlock()
+	m.currentLock.Lock()
+	defer m.currentLock.Unlock()
+	m.pendingLock.Lock()
+	defer m.pendingLock.Unlock()
 
 	nextMsProtoParamOpt := m.pending[0]
 	nextParams := nextMsProtoParamOpt.Params
@@ -223,10 +194,6 @@ func (m *Manager) updateCurrent() error {
 
 	m.current = nextProtoParams
 	m.pending = m.pending[1:]
-
-	if err := m.storage.StoreProtocolParameters(m.current); err != nil {
-		return fmt.Errorf("unable to persist new protocol parameters: %w", err)
-	}
 
 	return nil
 }

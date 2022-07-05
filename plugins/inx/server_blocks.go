@@ -3,7 +3,6 @@ package inx
 import (
 	"context"
 
-	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,7 +12,6 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/tipselect"
@@ -28,9 +26,10 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		Solid:   metadata.IsSolid(),
 	}
 
-	referenced, msIndex := metadata.ReferencedWithIndex()
+	referenced, msIndex, wfIndex := metadata.ReferencedWithIndexAndWhiteFlagIndex()
 	if referenced {
-		m.ReferencedByMilestoneIndex = uint32(msIndex)
+		m.ReferencedByMilestoneIndex = msIndex
+		m.WhiteFlagIndex = wfIndex
 		inclusionState := inx.BlockMetadata_NO_TRANSACTION
 		conflict := metadata.Conflict()
 		if conflict != storage.ConflictNone {
@@ -42,7 +41,17 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		m.LedgerInclusionState = inclusionState
 
 		if metadata.IsMilestone() {
-			m.MilestoneIndex = uint32(msIndex)
+			cachedBlock := deps.Storage.CachedBlockOrNil(blockID)
+			if cachedBlock == nil {
+				return nil, status.Errorf(codes.NotFound, "block not found: %s", blockID.ToHex())
+			}
+			defer cachedBlock.Release(true)
+
+			milestone := cachedBlock.Block().Milestone()
+			if milestone == nil {
+				return nil, status.Errorf(codes.NotFound, "milestone for block not found: %s", blockID.ToHex())
+			}
+			m.MilestoneIndex = milestone.Index
 		}
 
 		return m, nil
@@ -71,14 +80,14 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), blockID, cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
-				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
+				return nil, status.Errorf(codes.Unavailable, err.Error())
 			}
-			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+			return nil, status.Errorf(codes.Internal, err.Error())
 		}
 
 		switch tipScore {
 		case tangle.TipScoreNotFound:
-			return nil, errors.WithMessage(echo.ErrInternalServerError, "tip score could not be calculated")
+			return nil, status.Errorf(codes.Internal, "tip score could not be calculated")
 		case tangle.TipScoreOCRIThresholdReached, tangle.TipScoreYCRIThresholdReached:
 			m.ShouldPromote = true
 			// reattach is false
@@ -134,7 +143,7 @@ func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksSe
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
+	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex) {
 		wp.Submit(cachedBlock)
 	})
 	wp.Start()
@@ -192,7 +201,7 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
+	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32) {
 		wp.Submit(blockMeta)
 	})
 	wp.Start()

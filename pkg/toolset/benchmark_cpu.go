@@ -2,7 +2,6 @@ package toolset
 
 import (
 	"encoding/binary"
-	"math/rand"
 	"sync/atomic"
 
 	legacy "github.com/iotaledger/iota.go/consts"
@@ -14,15 +13,6 @@ import (
 const (
 	nonceBytes = 8 // len(uint64)
 )
-
-// returns length amount random bytes
-func randBytes(length int) []byte {
-	b := make([]byte, length)
-	for i := 0; i < length; i++ {
-		b[i] = byte(rand.Intn(256))
-	}
-	return b
-}
 
 // encodeNonce encodes nonce as 48 trits using the b1t6 encoding.
 func encodeNonce(dst trinary.Trits, nonce uint64) {

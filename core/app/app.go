@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hornet/core/pow"
 	"github.com/iotaledger/hornet/core/profile"
 	"github.com/iotaledger/hornet/core/protocfg"
+	"github.com/iotaledger/hornet/core/pruning"
 	"github.com/iotaledger/hornet/core/snapshot"
 	"github.com/iotaledger/hornet/core/tangle"
 	"github.com/iotaledger/hornet/pkg/toolset"
@@ -56,6 +57,7 @@ Command line flags:
 			gossip.CoreComponent,
 			tangle.CoreComponent,
 			snapshot.CoreComponent,
+			pruning.CoreComponent,
 		}...),
 		app.WithPlugins([]*app.Plugin{
 			profiling.Plugin,

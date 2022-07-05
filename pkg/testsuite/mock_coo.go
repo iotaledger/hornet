@@ -9,7 +9,6 @@ import (
 
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -31,12 +30,12 @@ func (coo *MockCoo) LastMilestonePayload() *iotago.Milestone {
 	return coo.lastMilestonePayload
 }
 
-func (coo *MockCoo) LastMilestoneIndex() milestone.Index {
+func (coo *MockCoo) LastMilestoneIndex() iotago.MilestoneIndex {
 	lastMilestonePayload := coo.LastMilestonePayload()
 	if lastMilestonePayload == nil {
 		return 0
 	}
-	return milestone.Index(lastMilestonePayload.Index)
+	return lastMilestonePayload.Index
 }
 
 // LastMilestoneID calculates the milestone ID of the last issued milestone.
@@ -87,7 +86,7 @@ func (coo *MockCoo) storeBlock(iotaBlock *iotago.Block) iotago.BlockID {
 	milestonePayload := cachedBlock.Block().Milestone()
 	if milestonePayload != nil {
 		// iotaBlock is a milestone
-		coo.te.syncManager.SetLatestMilestoneIndex(milestone.Index(milestonePayload.Index))
+		coo.te.syncManager.SetLatestMilestoneIndex(milestonePayload.Index)
 	}
 	return block.BlockID()
 }
@@ -99,7 +98,7 @@ func (coo *MockCoo) bootstrap() {
 	require.NoError(coo.te.TestInterface, err)
 }
 
-func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, parents iotago.BlockIDs, lastMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
+func (coo *MockCoo) computeWhiteflag(index iotago.MilestoneIndex, timestamp uint32, parents iotago.BlockIDs, lastMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
 	blocksMemcache := storage.NewBlocksMemcache(coo.te.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(coo.te.storage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(coo.te.storage, metadataMemcache)
@@ -134,16 +133,16 @@ func (coo *MockCoo) milestonePayload(parents iotago.BlockIDs) (*iotago.Milestone
 	sortedParents := parents.RemoveDupsAndSort()
 
 	milestoneIndex := coo.LastMilestoneIndex() + 1
-	milestoneTimestamp := uint32(milestoneIndex * 100)
+	milestoneTimestamp := milestoneIndex * 100
 
 	mutations, err := coo.computeWhiteflag(milestoneIndex, milestoneTimestamp, sortedParents, coo.LastMilestoneID())
 	if err != nil {
 		return nil, err
 	}
 
-	milestonePayload := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.te.protoParas.Version, coo.LastMilestoneID(), sortedParents, mutations.InclusionMerkleRoot, mutations.AppliedMerkleRoot)
+	milestonePayload := iotago.NewMilestone(milestoneIndex, milestoneTimestamp, coo.te.protoParas.Version, coo.LastMilestoneID(), sortedParents, mutations.InclusionMerkleRoot, mutations.AppliedMerkleRoot)
 
-	keymapping := coo.keyManager.MilestonePublicKeyMappingForMilestoneIndex(uint32(milestoneIndex), coo.cooPrivateKeys, len(coo.cooPrivateKeys))
+	keymapping := coo.keyManager.MilestonePublicKeyMappingForMilestoneIndex(milestoneIndex, coo.cooPrivateKeys, len(coo.cooPrivateKeys))
 
 	pubKeys := []iotago.MilestonePublicKey{}
 	pubKeysSet := iotago.MilestonePublicKeySet{}

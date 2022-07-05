@@ -13,7 +13,6 @@ import (
 
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
@@ -24,16 +23,16 @@ var (
 )
 
 type ConfirmedMilestoneMetric struct {
-	MilestoneIndex         milestone.Index `json:"ms_index"`
-	BPS                    float64         `json:"bps"`
-	RBPS                   float64         `json:"rbps"`
-	ReferencedRate         float64         `json:"referenced_rate"`
-	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
+	MilestoneIndex         iotago.MilestoneIndex `json:"ms_index"`
+	BPS                    float64               `json:"bps"`
+	RBPS                   float64               `json:"rbps"`
+	ReferencedRate         float64               `json:"referenced_rate"`
+	TimeSinceLastMilestone float64               `json:"time_since_last_ms"`
 }
 
 // TriggerSolidifier can be used to manually trigger the solidifier from other plugins.
 func (t *Tangle) TriggerSolidifier() {
-	t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
+	t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), true)
 }
 
 func (t *Tangle) markBlockAsSolid(cachedBlockMeta *storage.CachedMetadata) {
@@ -52,7 +51,7 @@ func (t *Tangle) markBlockAsSolid(cachedBlockMeta *storage.CachedMetadata) {
 func (t *Tangle) SolidQueueCheck(
 	ctx context.Context,
 	memcachedTraverserStorage dag.TraverserStorage,
-	milestoneIndex milestone.Index,
+	milestoneIndex iotago.MilestoneIndex,
 	parents iotago.BlockIDs) (solid bool, aborted bool) {
 
 	ts := time.Now()
@@ -167,7 +166,7 @@ func (t *Tangle) AbortMilestoneSolidification() {
 }
 
 // solidifyMilestone tries to solidify the next known non-solid milestone and requests missing block
-func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool) {
+func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, force bool) {
 
 	/* How milestone solidification works:
 
@@ -315,7 +314,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		// rerun to solidify the older one
 		t.setSolidifierMilestoneIndex(0)
 
-		t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
+		t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), true)
 		return
 	}
 
@@ -337,7 +336,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		t.storage.UTXOManager(),
 		memcachedTraverserStorage,
 		blocksMemcache.CachedBlock,
-		t.protoMng.Current(),
+		t.protocolManager.Current(),
 		milestonePayloadToSolidify,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
@@ -378,7 +377,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			if t.syncManager.IsNodeAlmostSynced() {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, block broadcasting, etc...)
 				// we can safely ignore errors of the future cone solidifier.
-				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.BlocksReferenced, confirmation.MilestoneIndex)
+				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.ReferencedBlocks.BlockIDs(), confirmation.MilestoneIndex)
 			}
 			timeUpdateConeRootIndexesEnd = time.Now()
 
@@ -386,15 +385,15 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			timeConfirmedMilestoneIndexChangedEnd = time.Now()
 		},
 		// Hint: Ledger is not locked
-		func(blockMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
+		func(blockMeta *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32) {
 			t.Events.BlockReferenced.Trigger(blockMeta, index, confTime)
 		},
 		// Hint: Ledger is not locked
-		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+		func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 			t.Events.LedgerUpdated.Trigger(index, newOutputs, newSpents)
 		},
 		// Hint: Ledger is not locked
-		func(index milestone.Index, tuple *utxo.TreasuryMutationTuple) {
+		func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) {
 			t.Events.TreasuryMutated.Trigger(index, tuple)
 		})
 
@@ -411,7 +410,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	timeConfirmedMilestoneChangedEnd = time.Now()
 
 	if newConfirmation != nil {
-		t.Events.ReferencedBlocksCountUpdated.Trigger(milestoneIndexToSolidify, len(newConfirmation.Mutations.BlocksReferenced))
+		t.Events.ReferencedBlocksCountUpdated.Trigger(milestoneIndexToSolidify, len(newConfirmation.Mutations.ReferencedBlocks))
 	}
 
 	t.LogInfof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
@@ -466,12 +465,12 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
-	t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
+	t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), false)
 }
 
 func (t *Tangle) calcConfirmedMilestoneMetric(milestonePayloadToSolidify *iotago.Milestone) (*ConfirmedMilestoneMetric, error) {
 
-	index := milestone.Index(milestonePayloadToSolidify.Index)
+	index := milestonePayloadToSolidify.Index
 
 	timestampNew := milestonePayloadToSolidify.Timestamp
 	timestampOld, err := t.storage.MilestoneTimestampUnixByIndex(index - 1)
@@ -511,14 +510,14 @@ func (t *Tangle) calcConfirmedMilestoneMetric(milestonePayloadToSolidify *iotago
 	return metric, nil
 }
 
-func (t *Tangle) setSolidifierMilestoneIndex(index milestone.Index) {
+func (t *Tangle) setSolidifierMilestoneIndex(index iotago.MilestoneIndex) {
 	t.solidifierMilestoneIndexLock.Lock()
 	t.solidifierMilestoneIndex = index
 	t.solidifierMilestoneIndexLock.Unlock()
 }
 
 // searchMissingMilestones searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
-func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneParents iotago.BlockIDs) (found bool, err error) {
+func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestoneIndex iotago.MilestoneIndex, startMilestoneIndex iotago.MilestoneIndex, milestoneParents iotago.BlockIDs) (found bool, err error) {
 
 	var milestoneFound bool
 
@@ -550,7 +549,7 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 				return true, nil
 			}
 
-			msIndex := milestone.Index(milestonePayload.Index)
+			msIndex := milestonePayload.Index
 			if (msIndex <= confirmedMilestoneIndex) || (msIndex >= startMilestoneIndex) {
 				return true, nil
 			}

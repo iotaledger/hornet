@@ -28,7 +28,7 @@ const (
                     1 byte
 
    Value:
-       milestone.Index
+       iotago.MilestoneIndex
           4 bytes
 
    Output:
@@ -48,7 +48,7 @@ const (
                  1 byte        +     34 bytes
 
    Value:
-       TargetTransactionID (iotago.TransactionID) + ConfirmationIndex (milestone.Index) + ConfirmationTimestamp
+       TargetTransactionID (iotago.TransactionID) + ConfirmationIndex (iotago.MilestoneIndex) + ConfirmationTimestamp
                   32 bytes                        +            4 bytes                  +       4 bytes
 
    Unspent Output:
@@ -64,7 +64,7 @@ const (
    Milestone diffs:
    ================
    Key:
-       UTXOStoreKeyPrefixMilestoneDiffs + milestone.Index
+       UTXOStoreKeyPrefixMilestoneDiffs + iotago.MilestoneIndex
                  1 byte                 +     4 bytes
 
    Value:

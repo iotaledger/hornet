@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/profile"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -22,9 +21,9 @@ var (
 	ErrMilestoneNotFound = errors.New("milestone not found")
 )
 
-func databaseKeyForMilestoneIndex(milestoneIndex milestone.Index) []byte {
+func databaseKeyForMilestoneIndex(milestoneIndex iotago.MilestoneIndex) []byte {
 	bytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, uint32(milestoneIndex))
+	binary.LittleEndian.PutUint32(bytes, milestoneIndex)
 	return bytes
 }
 
@@ -34,8 +33,8 @@ func databaseKeyForMilestone(milestoneID iotago.MilestoneID) []byte {
 	return bytes
 }
 
-func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
-	return milestone.Index(binary.LittleEndian.Uint32(key))
+func milestoneIndexFromDatabaseKey(key []byte) iotago.MilestoneIndex {
+	return binary.LittleEndian.Uint32(key)
 }
 
 func milestoneIDFromDatabaseKey(key []byte) iotago.MilestoneID {
@@ -134,7 +133,7 @@ func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile
 type MilestoneIndex struct {
 	objectstorage.StorableObjectFlags
 
-	Index       milestone.Index
+	Index       iotago.MilestoneIndex
 	milestoneID iotago.MilestoneID
 	blockID     iotago.BlockID
 }
@@ -153,7 +152,7 @@ func NewMilestoneIndex(milestonePayload *iotago.Milestone, blockID iotago.BlockI
 	}
 
 	msIndex := &MilestoneIndex{
-		Index:       milestone.Index(milestonePayload.Index),
+		Index:       milestonePayload.Index,
 		milestoneID: msID,
 		blockID:     blockID,
 	}
@@ -205,7 +204,7 @@ func (c *cachedMilestoneIndex) MilestoneIndex() *MilestoneIndex {
 
 // cachedMilestoneIndexOrNil returns a cached milestone index object.
 // milestone index +1
-func (s *Storage) cachedMilestoneIndexOrNil(milestoneIndex milestone.Index) *cachedMilestoneIndex {
+func (s *Storage) cachedMilestoneIndexOrNil(milestoneIndex iotago.MilestoneIndex) *cachedMilestoneIndex {
 	cachedMilestoneIdx := s.milestoneIndexStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex)) // milestone index +1
 	if !cachedMilestoneIdx.Exists() {
 		cachedMilestoneIdx.Release(true) // milestone index -1
@@ -215,12 +214,12 @@ func (s *Storage) cachedMilestoneIndexOrNil(milestoneIndex milestone.Index) *cac
 }
 
 // ContainsMilestoneIndex returns if the given milestone exists in the cache/persistence layer.
-func (s *Storage) ContainsMilestoneIndex(milestoneIndex milestone.Index, readOptions ...ReadOption) bool {
+func (s *Storage) ContainsMilestoneIndex(milestoneIndex iotago.MilestoneIndex, readOptions ...ReadOption) bool {
 	return s.milestoneIndexStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex), readOptions...)
 }
 
 // MilestoneIndexConsumer consumes the given index during looping through all milestones.
-type MilestoneIndexConsumer func(index milestone.Index) bool
+type MilestoneIndexConsumer func(index iotago.MilestoneIndex) bool
 
 // ForEachMilestoneIndex loops through all milestones.
 func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, iteratorOptions ...IteratorOption) {
@@ -293,8 +292,8 @@ func (ms *Milestone) Data() []byte {
 	return ms.data
 }
 
-func (ms *Milestone) Index() milestone.Index {
-	return milestone.Index(ms.Milestone().Index)
+func (ms *Milestone) Index() iotago.MilestoneIndex {
+	return ms.Milestone().Index
 }
 
 func (ms *Milestone) Parents() iotago.BlockIDs {
@@ -391,7 +390,7 @@ func (s *Storage) CachedMilestoneOrNil(milestoneID iotago.MilestoneID) *CachedMi
 
 // CachedMilestoneByIndexOrNil returns a cached milestone object.
 // milestone +1
-func (s *Storage) CachedMilestoneByIndexOrNil(milestoneIndex milestone.Index) *CachedMilestone {
+func (s *Storage) CachedMilestoneByIndexOrNil(milestoneIndex iotago.MilestoneIndex) *CachedMilestone {
 	cachedMilestoneIdx := s.cachedMilestoneIndexOrNil(milestoneIndex) // milestoneIndex +1
 	if cachedMilestoneIdx == nil {
 		return nil
@@ -404,7 +403,7 @@ func (s *Storage) CachedMilestoneByIndexOrNil(milestoneIndex milestone.Index) *C
 // MilestoneBlockIDByIndex returns the block ID of a milestone.
 // Attention: this can be different from node to node, because only the first seen reattachment of milestone payload
 // is stored in a node. This information should never be exposed via external API in any way.
-func (s *Storage) MilestoneBlockIDByIndex(milestoneIndex milestone.Index) (iotago.BlockID, error) {
+func (s *Storage) MilestoneBlockIDByIndex(milestoneIndex iotago.MilestoneIndex) (iotago.BlockID, error) {
 	cachedMilestoneIdx := s.cachedMilestoneIndexOrNil(milestoneIndex) // milestoneIndex +1
 	if cachedMilestoneIdx == nil {
 		return iotago.EmptyBlockID(), ErrMilestoneNotFound
@@ -415,7 +414,7 @@ func (s *Storage) MilestoneBlockIDByIndex(milestoneIndex milestone.Index) (iotag
 }
 
 // MilestoneParentsByIndex returns the parents of a milestone.
-func (s *Storage) MilestoneParentsByIndex(milestoneIndex milestone.Index) (iotago.BlockIDs, error) {
+func (s *Storage) MilestoneParentsByIndex(milestoneIndex iotago.MilestoneIndex) (iotago.BlockIDs, error) {
 	cachedMilestone := s.CachedMilestoneByIndexOrNil(milestoneIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, ErrMilestoneNotFound
@@ -426,7 +425,7 @@ func (s *Storage) MilestoneParentsByIndex(milestoneIndex milestone.Index) (iotag
 }
 
 // MilestoneTimestampByIndex returns the timestamp of a milestone.
-func (s *Storage) MilestoneTimestampByIndex(milestoneIndex milestone.Index) (time.Time, error) {
+func (s *Storage) MilestoneTimestampByIndex(milestoneIndex iotago.MilestoneIndex) (time.Time, error) {
 	cachedMilestone := s.CachedMilestoneByIndexOrNil(milestoneIndex) // milestone +1
 	if cachedMilestone == nil {
 		return time.Time{}, ErrMilestoneNotFound
@@ -437,7 +436,7 @@ func (s *Storage) MilestoneTimestampByIndex(milestoneIndex milestone.Index) (tim
 }
 
 // MilestoneTimestampUnixByIndex returns the unix timestamp of a milestone.
-func (s *Storage) MilestoneTimestampUnixByIndex(milestoneIndex milestone.Index) (uint32, error) {
+func (s *Storage) MilestoneTimestampUnixByIndex(milestoneIndex iotago.MilestoneIndex) (uint32, error) {
 	cachedMilestone := s.CachedMilestoneByIndexOrNil(milestoneIndex) // milestone +1
 	if cachedMilestone == nil {
 		return 0, ErrMilestoneNotFound
@@ -448,10 +447,10 @@ func (s *Storage) MilestoneTimestampUnixByIndex(milestoneIndex milestone.Index) 
 }
 
 // SearchLatestMilestoneIndexInStore searches the latest milestone without accessing the cache layer.
-func (s *Storage) SearchLatestMilestoneIndexInStore() milestone.Index {
-	var latestMilestoneIndex milestone.Index
+func (s *Storage) SearchLatestMilestoneIndexInStore() iotago.MilestoneIndex {
+	var latestMilestoneIndex iotago.MilestoneIndex
 
-	s.NonCachedStorage().ForEachMilestoneIndex(func(index milestone.Index) bool {
+	s.NonCachedStorage().ForEachMilestoneIndex(func(index iotago.MilestoneIndex) bool {
 		if latestMilestoneIndex < index {
 			latestMilestoneIndex = index
 		}
@@ -511,7 +510,7 @@ func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blo
 
 // DeleteMilestone deletes the milestone in the cache/persistence layer.
 // +-0
-func (s *Storage) DeleteMilestone(milestoneIndex milestone.Index) {
+func (s *Storage) DeleteMilestone(milestoneIndex iotago.MilestoneIndex) {
 	cachedMilestoneIdx := s.cachedMilestoneIndexOrNil(milestoneIndex) // milestone index +1
 	if cachedMilestoneIdx == nil {
 		return

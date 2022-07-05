@@ -1,7 +1,6 @@
 package dag
 
 import (
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -30,7 +29,7 @@ func (m *MemcachedTraverserStorage) SolidEntryPointsContain(blockID iotago.Block
 	return m.traverserStorage.SolidEntryPointsContain(blockID)
 
 }
-func (m *MemcachedTraverserStorage) SolidEntryPointsIndex(blockID iotago.BlockID) (milestone.Index, bool, error) {
+func (m *MemcachedTraverserStorage) SolidEntryPointsIndex(blockID iotago.BlockID) (iotago.MilestoneIndex, bool, error) {
 	return m.traverserStorage.SolidEntryPointsIndex(blockID)
 }
 
@@ -58,7 +57,7 @@ func (m *MemcachedParentsTraverserStorage) SolidEntryPointsContain(blockID iotag
 	return m.parentsTraverserStorage.SolidEntryPointsContain(blockID)
 
 }
-func (m *MemcachedParentsTraverserStorage) SolidEntryPointsIndex(blockID iotago.BlockID) (milestone.Index, bool, error) {
+func (m *MemcachedParentsTraverserStorage) SolidEntryPointsIndex(blockID iotago.BlockID) (iotago.MilestoneIndex, bool, error) {
 	return m.parentsTraverserStorage.SolidEntryPointsIndex(blockID)
 }
 

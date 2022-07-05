@@ -15,8 +15,8 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	coreDatabase "github.com/iotaledger/hornet/core/database"
 	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -33,7 +33,7 @@ const (
 )
 
 // MilestoneRetrieverFunc is a function which returns the milestone for the given index.
-type MilestoneRetrieverFunc func(index milestone.Index) (*iotago.Milestone, error)
+type MilestoneRetrieverFunc func(index iotago.MilestoneIndex) (*iotago.Milestone, error)
 
 // MergeInfo holds information about a merge of a full and delta snapshot.
 type MergeInfo struct {
@@ -64,18 +64,18 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 }
 
 // returns a producer which produces solid entry points.
-func newSEPsProducer(
+func NewSEPsProducer(
 	ctx context.Context,
 	dbStorage *storage.Storage,
-	targetIndex milestone.Index,
-	solidEntryPointCheckThresholdPast milestone.Index) SEPProducerFunc {
+	targetIndex iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdPast iotago.MilestoneIndex) SEPProducerFunc {
 
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
 	go func() {
 		// calculate solid entry points for the target index
-		if err := forEachSolidEntryPoint(
+		if err := dag.ForEachSolidEntryPoint(
 			ctx,
 			dbStorage,
 			targetIndex,
@@ -105,7 +105,7 @@ func newSEPsProducer(
 }
 
 // returns a producer which produces unspent outputs which exist for the current confirmed milestone.
-func newCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
+func NewCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
@@ -132,13 +132,13 @@ func newCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 }
 
 // returns an iterator producing milestone indices with the given direction from/to the milestone range.
-func newMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, targetIndex milestone.Index) func() (msIndex milestone.Index, done bool) {
+func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex iotago.MilestoneIndex, targetIndex iotago.MilestoneIndex) func() (msIndex iotago.MilestoneIndex, done bool) {
 	var firstPassDone bool
 	switch direction {
 	case MsDiffDirectionOnwards:
 		// we skip the diff of the ledger milestone
 		msIndex := ledgerIndex + 1
-		return func() (milestone.Index, bool) {
+		return func() (iotago.MilestoneIndex, bool) {
 			if firstPassDone {
 				msIndex++
 			}
@@ -153,7 +153,7 @@ func newMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, 
 		// targetIndex is not included, since we only need the diff of targetIndex+1 to
 		// calculate the ledger index of targetIndex
 		msIndex := ledgerIndex
-		return func() (milestone.Index, bool) {
+		return func() (iotago.MilestoneIndex, bool) {
 			if firstPassDone {
 				msIndex--
 			}
@@ -171,7 +171,7 @@ func newMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, 
 
 // returns a milestone diff producer which first reads out milestone diffs from an existing delta
 // snapshot file and then the remaining diffs from the database up to the target index.
-func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
+func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex iotago.MilestoneIndex, targetIndex iotago.MilestoneIndex, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
 	prevDeltaFileMsDiffsProducer, err := newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath, ledgerIndex, protoParas)
 	if err != nil {
 		return nil, err
@@ -193,21 +193,21 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage 
 		}
 
 		if msDiff != nil {
-			prevDeltaUpToIndex = milestone.Index(msDiff.Milestone.Index)
+			prevDeltaUpToIndex = msDiff.Milestone.Index
 			return msDiff, nil
 		}
 
 		// TODO: check whether previous snapshot already hit the target index?
 
 		prevDeltaMsDiffProducerFinished = true
-		dbMsDiffProducer = newMsDiffsProducer(mrf, utxoManager, MsDiffDirectionOnwards, prevDeltaUpToIndex, targetIndex)
+		dbMsDiffProducer = NewMsDiffsProducer(mrf, utxoManager, MsDiffDirectionOnwards, prevDeltaUpToIndex, targetIndex)
 		return dbMsDiffProducer()
 	}, nil
 }
 
 // returns a milestone diff producer which reads out the milestone diffs from an existing delta snapshot file.
 // the existing delta snapshot file is closed as soon as its milestone diffs are read.
-func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerIndex milestone.Index, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
+func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerIndex iotago.MilestoneIndex, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
 	existingDeltaFile, err := os.OpenFile(snapshotDeltaPath, os.O_RDONLY, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read previous delta snapshot file for milestone diffs: %w", err)
@@ -257,7 +257,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 // MilestoneRetrieverFromStorage creates a MilestoneRetrieverFunc which access the storage.
 // If it can not retrieve a wanted milestone it panics.
 func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieverFunc {
-	return func(index milestone.Index) (*iotago.Milestone, error) {
+	return func(index iotago.MilestoneIndex) (*iotago.Milestone, error) {
 		cachedMilestone := dbStorage.CachedMilestoneByIndexOrNil(index) // milestone +1
 		if cachedMilestone == nil {
 			return nil, fmt.Errorf("block for milestone with index %d is not stored in the database", index)
@@ -268,15 +268,15 @@ func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieve
 }
 
 // returns a producer which produces milestone diffs from/to with the given direction.
-func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex milestone.Index, targetIndex milestone.Index) MilestoneDiffProducerFunc {
+func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex iotago.MilestoneIndex, targetIndex iotago.MilestoneIndex) MilestoneDiffProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
 	go func() {
-		msIndexIterator := newMsIndexIterator(direction, ledgerMilestoneIndex, targetIndex)
+		msIndexIterator := NewMsIndexIterator(direction, ledgerMilestoneIndex, targetIndex)
 
 		var done bool
-		var msIndex milestone.Index
+		var msIndex iotago.MilestoneIndex
 
 		for msIndex, done = msIndexIterator(); !done; msIndex, done = msIndexIterator() {
 			diff, err := utxoManager.MilestoneDiffWithoutLocking(msIndex)
@@ -324,21 +324,21 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 }
 
 // reads out the index of the milestone which currently represents the ledger state.
-func (s *SnapshotManager) readLedgerIndex() (milestone.Index, error) {
+func (s *Manager) readLedgerIndex() (iotago.MilestoneIndex, error) {
 	ledgerMilestoneIndex, err := s.utxoManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
 	}
 
 	if !s.storage.ContainsMilestoneIndex(ledgerMilestoneIndex) {
-		return 0, errors.Wrapf(ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
+		return 0, errors.Wrapf(common.ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
 	}
 
 	return ledgerMilestoneIndex, nil
 }
 
 // reads out the snapshot milestone index from the full snapshot file.
-func (s *SnapshotManager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...string) (milestone.Index, error) {
+func (s *Manager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...string) (iotago.MilestoneIndex, error) {
 	filePath := s.snapshotFullPath
 	if len(snapshotFullPath) > 0 && snapshotFullPath[0] != "" {
 		filePath = snapshotFullPath[0]
@@ -356,10 +356,10 @@ func (s *SnapshotManager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath
 }
 
 // creates a snapshot file by streaming data from the database into a snapshot file.
-func (s *SnapshotManager) createSnapshotWithoutLocking(
+func (s *Manager) createSnapshotWithoutLocking(
 	ctx context.Context,
 	snapshotType Type,
-	targetIndex milestone.Index,
+	targetIndex iotago.MilestoneIndex,
 	filePath string,
 	writeToDatabase bool,
 	snapshotFullPath ...string) error {
@@ -384,7 +384,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return errors.Wrap(ErrCritical, "no snapshot info found")
+		return errors.Wrap(common.ErrCritical, "no snapshot info found")
 	}
 
 	if err := checkSnapshotLimits(
@@ -407,7 +407,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 
 	targetMsTimestamp, err := s.storage.MilestoneTimestampByIndex(targetIndex)
 	if err != nil {
-		return errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
+		return errors.Wrapf(common.ErrCritical, "target milestone (%d) not found", targetIndex)
 	}
 
 	// generate producers
@@ -429,8 +429,8 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 
 		// a full snapshot contains the ledger UTXOs as of the CMI
 		// and the milestone diffs from the CMI back to the target index (excluding the target index)
-		utxoProducer = newCMIUTXOProducer(s.utxoManager)
-		milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
+		utxoProducer = NewCMIUTXOProducer(s.utxoManager)
+		milestoneDiffProducer = NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
 
 	case Delta:
 		// ledger index corresponds to the origin snapshot snapshot ledger.
@@ -455,11 +455,11 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 			fallthrough
 		case snapshotInfo.PruningIndex < header.LedgerMilestoneIndex:
 			// we have the needed milestone diffs in the database
-			milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
+			milestoneDiffProducer = NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
 		default:
 			// as the needed milestone diffs are pruned from the database, we need to use
 			// the previous delta snapshot file to extract those in conjunction with what the database has available
-			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxoManager, header.LedgerMilestoneIndex, targetIndex, s.protoMng.Current())
+			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxoManager, header.LedgerMilestoneIndex, targetIndex, s.protocolManager.Current())
 			if err != nil {
 				return err
 			}
@@ -474,7 +474,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 	}
 
 	// stream data into snapshot file
-	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint32(targetMsTimestamp.Unix()), header, newSEPsProducer(ctx, s.storage, targetIndex, s.solidEntryPointCheckThresholdPast), utxoProducer, milestoneDiffProducer)
+	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint32(targetMsTimestamp.Unix()), header, NewSEPsProducer(ctx, s.storage, targetIndex, s.solidEntryPointCheckThresholdPast), utxoProducer, milestoneDiffProducer)
 	if err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[snapshotType], err)
@@ -502,7 +502,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 		// since we write to the database, the targetIndex should exist
 		targetMsTimestamp, err := s.storage.MilestoneTimestampByIndex(targetIndex)
 		if err != nil {
-			return errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
+			return errors.Wrapf(common.ErrCritical, "target milestone (%d) not found", targetIndex)
 		}
 
 		snapshotInfo.SnapshotIndex = targetIndex
@@ -532,7 +532,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 
 	snapshotInfo := dbStorage.SnapshotInfo()
 	if snapshotInfo == nil {
-		return nil, errors.Wrap(ErrCritical, "no snapshot info found")
+		return nil, errors.Wrap(common.ErrCritical, "no snapshot info found")
 	}
 
 	ledgerIndex, err := dbStorage.UTXOManager().ReadLedgerIndex()
@@ -590,7 +590,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 
 	// create a prepped output producer which counts how many went through
 	unspentOutputsCount := 0
-	cmiUTXOProducer := newCMIUTXOProducer(dbStorage.UTXOManager())
+	cmiUTXOProducer := NewCMIUTXOProducer(dbStorage.UTXOManager())
 	countingOutputProducer := func() (*utxo.Output, error) {
 		output, err := cmiUTXOProducer()
 		if output != nil {
@@ -641,9 +641,9 @@ func CreateSnapshotFromStorage(
 	dbStorage *storage.Storage,
 	utxoManager *utxo.Manager,
 	filePath string,
-	targetIndex milestone.Index,
-	solidEntryPointCheckThresholdPast milestone.Index,
-	solidEntryPointCheckThresholdFuture milestone.Index,
+	targetIndex iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdPast iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdFuture iotago.MilestoneIndex,
 ) (*ReadFileHeader, error) {
 
 	snapshotInfo := dbStorage.SnapshotInfo()
@@ -732,7 +732,7 @@ func CreateSnapshotFromStorage(
 
 	// create a prepped solid entry point producer which counts how many went through
 	sepsCount := 0
-	sepProducer := newSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
+	sepProducer := NewSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
 	countingSepProducer := func() (iotago.BlockID, error) {
 		sep, err := sepProducer()
 		if err != nil {
@@ -743,7 +743,7 @@ func CreateSnapshotFromStorage(
 
 	// create a prepped output producer which counts how many went through
 	unspentOutputsCount := 0
-	cmiUTXOProducer := newCMIUTXOProducer(utxoManagerTemp)
+	cmiUTXOProducer := NewCMIUTXOProducer(utxoManagerTemp)
 	countingOutputProducer := func() (*utxo.Output, error) {
 		output, err := cmiUTXOProducer()
 		if output != nil {

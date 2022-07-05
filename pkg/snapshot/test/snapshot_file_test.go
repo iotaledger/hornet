@@ -1,12 +1,10 @@
 package snapshot_test
 
 import (
-	"bytes"
 	"crypto/ed25519"
 	"fmt"
 	"math/rand"
 	"os"
-	"sort"
 	"testing"
 	"time"
 
@@ -14,10 +12,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hornet/pkg/model/utxo/utils"
 	"github.com/iotaledger/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -56,7 +53,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rand.Seed(346587549867)
+	rand.Seed(time.Now().Unix())
 
 	testCases := []test{
 		func() test {
@@ -64,8 +61,8 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				Type:                 snapshot.Full,
 				Version:              snapshot.SupportedFormatVersion,
 				NetworkID:            1337133713371337,
-				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
-				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
+				SEPMilestoneIndex:    tpkg.RandMilestoneIndex(),
+				LedgerMilestoneIndex: tpkg.RandMilestoneIndex(),
 				TreasuryOutput:       &utxo.TreasuryOutput{MilestoneID: iotago.MilestoneID{}, Amount: 13337},
 			}
 
@@ -108,8 +105,8 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				Type:                 snapshot.Delta,
 				Version:              snapshot.SupportedFormatVersion,
 				NetworkID:            666666666,
-				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
-				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
+				SEPMilestoneIndex:    tpkg.RandMilestoneIndex(),
+				LedgerMilestoneIndex: tpkg.RandMilestoneIndex(),
 			}
 
 			originTimestamp := uint32(time.Now().Unix())
@@ -164,7 +161,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			// verify that what has been written also has been read again
 			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
 			if tt.originHeader.Type == snapshot.Full {
-				EqualOutputs(t, tt.outputGenRetriever(), tt.outputConRetriever())
+				tpkg.EqualOutputs(t, tt.outputGenRetriever(), tt.outputConRetriever())
 			}
 
 			msDiffGen := tt.msDiffGenRetriever()
@@ -174,8 +171,8 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				con := msDiffCon[i]
 				require.EqualValues(t, gen.Milestone, con.Milestone)
 				require.EqualValues(t, gen.SpentTreasuryOutput, con.SpentTreasuryOutput)
-				EqualOutputs(t, gen.Created, con.Created)
-				EqualSpents(t, gen.Consumed, con.Consumed)
+				tpkg.EqualOutputs(t, gen.Created, con.Created)
+				tpkg.EqualSpents(t, gen.Consumed, con.Consumed)
 			}
 		})
 	}
@@ -191,7 +188,7 @@ func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 				return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 			}
 			count--
-			blockID := utils.RandBlockID()
+			blockID := tpkg.RandBlockID()
 			generatedSEPs = append(generatedSEPs, blockID)
 			return blockID, nil
 		}, func() iotago.BlockIDs {
@@ -218,7 +215,7 @@ func newOutputsGenerator(count int) (snapshot.OutputProducerFunc, outputRetrieve
 				return nil, nil
 			}
 			count--
-			output := randLSTransactionUnspentOutputs()
+			output := tpkg.RandUTXOOutput()
 			generatedOutputs = append(generatedOutputs, output)
 			return output, nil
 		}, func() utxo.Outputs {
@@ -258,21 +255,10 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			}
 			count--
 
-			parents := iotago.BlockIDs{utils.RandBlockID()}
-			milestonePayload := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), protoParas.Version, utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
+			parents := iotago.BlockIDs{tpkg.RandBlockID()}
+			milestonePayload := iotago.NewMilestone(tpkg.RandMilestoneIndex(), tpkg.RandMilestoneTimestamp(), protoParas.Version, tpkg.RandMilestoneID(), parents, tpkg.Rand32ByteHash(), tpkg.Rand32ByteHash())
 
-			treasuryInput := &iotago.TreasuryInput{}
-			copy(treasuryInput[:], utils.RandBytes(32))
-			ed25519Addr := utils.RandAddress(iotago.AddressEd25519)
-			migratedFundsEntry := &iotago.MigratedFundsEntry{Address: ed25519Addr, Deposit: rand.Uint64()}
-			copy(migratedFundsEntry.TailTransactionHash[:], utils.RandBytes(49))
-			receipt, err := iotago.NewReceiptBuilder(milestonePayload.Index).
-				AddTreasuryTransaction(&iotago.TreasuryTransaction{
-					Input:  treasuryInput,
-					Output: &iotago.TreasuryOutput{Amount: rand.Uint64()},
-				}).
-				AddEntry(migratedFundsEntry).
-				Build(protoParas)
+			receipt, err := tpkg.RandReceipt(milestonePayload.Index, protoParas)
 			if err != nil {
 				panic(err)
 			}
@@ -289,17 +275,17 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 
 			createdCount := rand.Intn(500) + 1
 			for i := 0; i < createdCount; i++ {
-				msDiff.Created = append(msDiff.Created, randLSTransactionUnspentOutputs())
+				msDiff.Created = append(msDiff.Created, tpkg.RandUTXOOutput())
 			}
 
 			consumedCount := rand.Intn(500) + 1
 			for i := 0; i < consumedCount; i++ {
-				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents(milestone.Index(milestonePayload.Index)))
+				msDiff.Consumed = append(msDiff.Consumed, tpkg.RandUTXOSpent(milestonePayload.Index, milestonePayload.Timestamp))
 			}
 
 			msDiff.SpentTreasuryOutput = &utxo.TreasuryOutput{
-				MilestoneID: utils.Rand32ByteHash(),
-				Amount:      uint64(rand.Intn(1000)),
+				MilestoneID: tpkg.RandMilestoneID(),
+				Amount:      tpkg.RandAmount(),
 				Spent:       true, // doesn't matter
 			}
 
@@ -331,69 +317,5 @@ func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *u
 	return func(readUnspentTreasuryOutput *utxo.TreasuryOutput) error {
 		require.EqualValues(t, *originUnspentTreasuryOutput, *readUnspentTreasuryOutput)
 		return nil
-	}
-}
-
-func randLSTransactionUnspentOutputs() *utxo.Output {
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType()))
-}
-
-func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
-	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex, rand.Uint32())
-}
-
-func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
-	require.Equal(t, expected.OutputID(), actual.OutputID())
-	require.Equal(t, expected.BlockID(), actual.BlockID())
-	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
-	require.Equal(t, expected.OutputType(), actual.OutputType())
-	require.Equal(t, expected.Deposit(), actual.Deposit())
-	require.EqualValues(t, expected.Output(), actual.Output())
-}
-
-func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
-	require.Equal(t, expected.OutputID(), actual.OutputID())
-	require.Equal(t, expected.TargetTransactionID(), actual.TargetTransactionID())
-	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
-	EqualOutput(t, expected.Output(), actual.Output())
-}
-
-func EqualOutputs(t *testing.T, expected utxo.Outputs, actual utxo.Outputs) {
-	require.Equal(t, len(expected), len(actual))
-
-	// Sort Outputs by output ID.
-	sort.Slice(expected, func(i, j int) bool {
-		iOutputID := expected[i].OutputID()
-		jOutputID := expected[j].OutputID()
-		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
-	})
-	sort.Slice(actual, func(i, j int) bool {
-		iOutputID := actual[i].OutputID()
-		jOutputID := actual[j].OutputID()
-		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
-	})
-
-	for i := 0; i < len(expected); i++ {
-		EqualOutput(t, expected[i], actual[i])
-	}
-}
-
-func EqualSpents(t *testing.T, expected utxo.Spents, actual utxo.Spents) {
-	require.Equal(t, len(expected), len(actual))
-
-	// Sort Spents by output ID.
-	sort.Slice(expected, func(i, j int) bool {
-		iOutputID := expected[i].OutputID()
-		jOutputID := expected[j].OutputID()
-		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
-	})
-	sort.Slice(actual, func(i, j int) bool {
-		iOutputID := actual[i].OutputID()
-		jOutputID := actual[j].OutputID()
-		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
-	})
-
-	for i := 0; i < len(expected); i++ {
-		EqualSpent(t, expected[i], actual[i])
 	}
 }

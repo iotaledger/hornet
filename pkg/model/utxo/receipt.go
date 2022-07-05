@@ -6,7 +6,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -16,14 +15,14 @@ type ReceiptTuple struct {
 	// The actual receipt.
 	Receipt *iotago.ReceiptMilestoneOpt `json:"receipt"`
 	// The index of the milestone which included the receipt.
-	MilestoneIndex milestone.Index `json:"milestoneIndex"`
+	MilestoneIndex iotago.MilestoneIndex `json:"milestoneIndex"`
 }
 
 func (rt *ReceiptTuple) kvStorableKey() (key []byte) {
 	return marshalutil.New(9).
 		WriteByte(UTXOStoreKeyPrefixReceipts).
 		WriteUint32(rt.Receipt.MigratedAt).
-		WriteUint32(uint32(rt.MilestoneIndex)).
+		WriteUint32(rt.MilestoneIndex).
 		Bytes()
 }
 
@@ -59,7 +58,7 @@ func (rt *ReceiptTuple) kvStorableLoad(_ *Manager, key []byte, value []byte) err
 	}
 
 	rt.Receipt = r
-	rt.MilestoneIndex = milestone.Index(msIndex)
+	rt.MilestoneIndex = msIndex
 
 	return nil
 }
@@ -125,7 +124,7 @@ func (u *Manager) ForEachReceiptTuple(consumer ReceiptTupleConsumer, options ...
 }
 
 // ForEachReceiptTupleMigratedAt iterates over all stored receipt tuples for a given migrated at index.
-func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex milestone.Index, consumer ReceiptTupleConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex iotago.MilestoneIndex, consumer ReceiptTupleConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
@@ -135,7 +134,7 @@ func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex milestone.Index,
 
 	prefix := make([]byte, 5)
 	prefix[0] = UTXOStoreKeyPrefixReceipts
-	binary.LittleEndian.PutUint32(prefix[1:], uint32(migratedAtIndex))
+	binary.LittleEndian.PutUint32(prefix[1:], migratedAtIndex)
 
 	var innerErr error
 	var i int
@@ -162,7 +161,7 @@ func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex milestone.Index,
 }
 
 // ReceiptToOutputs extracts the migrated funds to outputs.
-func ReceiptToOutputs(r *iotago.ReceiptMilestoneOpt, milestoneID iotago.MilestoneID, msIndex milestone.Index, msTimestamp uint32) ([]*Output, error) {
+func ReceiptToOutputs(r *iotago.ReceiptMilestoneOpt, milestoneID iotago.MilestoneID, msIndex iotago.MilestoneIndex, msTimestamp uint32) ([]*Output, error) {
 	outputs := make([]*Output, len(r.Funds))
 	for outputIndex, migFundsEntry := range r.Funds {
 		entry := migFundsEntry

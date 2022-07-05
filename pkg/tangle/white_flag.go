@@ -8,7 +8,6 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -23,7 +22,7 @@ var (
 // with given milestone index, timestamp and previousMilestoneID.
 // Attention: this call puts missing parents of the cone as undiscardable requests into the request queue.
 // Therefore the caller needs to be trustful (e.g. coordinator plugin).
-func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, index milestone.Index, timestamp uint32, parents iotago.BlockIDs, previousMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
+func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, index iotago.MilestoneIndex, timestamp uint32, parents iotago.BlockIDs, previousMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
 
 	// check if the requested milestone index would be the next one
 	if index > t.syncManager.ConfirmedMilestoneIndex()+1 {

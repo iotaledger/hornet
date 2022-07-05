@@ -3,7 +3,6 @@ package gossip_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/iotaledger/hornet/pkg/protocol"
 	"testing"
 
 	"github.com/libp2p/go-libp2p"
@@ -31,7 +30,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
+	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, ProtocolVersion, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
@@ -58,17 +57,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	service := gossip.NewService(protocolID, n, manager, serverMetrics)
 	go service.Start(ctx)
 
-	protoParas := &iotago.ProtocolParameters{
-		Version:       ProtocolVersion,
-		NetworkName:   "testnet4",
-		Bech32HRP:     iotago.PrefixTestnet,
-		MinPoWScore:   MinPoWScore,
-		BelowMaxDepth: BelowMaxDepth,
-		RentStructure: iotago.RentStructure{},
-		TokenSupply:   0,
-	}
-
-	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, protocol.NewManager(te.Storage(), protoParas), &gossip.Options{
+	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, te.ProtocolManager(), &gossip.Options{
 		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingBlocksFilter,
 	})
 	require.NoError(t, err)
@@ -93,7 +82,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	iotaBlock := &iotago.Block{}
 	assert.NoError(t, json.Unmarshal([]byte(blockData), iotaBlock))
 
-	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, te.ProtocolManager().Current())
 	assert.NoError(t, err)
 
 	// should fail because parents not solid
@@ -108,7 +97,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	assert.NoError(t, err)
 
 	// need to create a new block, so the iotago block is serialized again
-	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
+	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, te.ProtocolManager().Current())
 	assert.NoError(t, err)
 
 	// should not fail
@@ -123,7 +112,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	assert.NoError(t, err)
 
 	// need to create a new block, so the iotago block is serialized again
-	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
+	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, te.ProtocolManager().Current())
 	assert.NoError(t, err)
 
 	// block should fail because of wrong network ID
@@ -138,7 +127,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	assert.NoError(t, err)
 
 	// need to create a new block, so the iotago block is serialized again
-	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
+	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, te.ProtocolManager().Current())
 	assert.NoError(t, err)
 
 	// should not fail
@@ -149,7 +138,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	iotaBlock.Nonce = 123
 
 	// need to create a new block, so the iotago block is serialized again
-	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
+	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, te.ProtocolManager().Current())
 	assert.NoError(t, err)
 
 	// should fail because of wrong score

@@ -26,6 +26,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/p2p"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/pkg/pruning"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/tipselect"
@@ -78,7 +79,8 @@ type dependencies struct {
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
 	TipSelector      *tipselect.TipSelector `optional:"true"`
-	SnapshotManager  *snapshot.SnapshotManager
+	SnapshotManager  *snapshot.Manager
+	PruningManager   *pruning.Manager
 	PrometheusEcho   *echo.Echo     `name:"prometheusEcho"`
 	INXServer        *inx.INXServer `optional:"true"`
 }

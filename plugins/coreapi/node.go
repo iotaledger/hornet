@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/tipselect"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -46,7 +45,7 @@ func info() (*infoResponse, error) {
 	}
 
 	// pruning index
-	var pruningIndex milestone.Index
+	var pruningIndex iotago.MilestoneIndex
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo != nil {
 		pruningIndex = snapshotInfo.PruningIndex

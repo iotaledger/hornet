@@ -2,7 +2,6 @@ package testsuite
 
 import (
 	"context"
-	"math/rand"
 
 	"github.com/stretchr/testify/require"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/testsuite/utils"
+	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/builder"
 )
@@ -105,8 +105,7 @@ func (b *BlockBuilder) fromWalletOutputs() ([]*utxo.Output, uint64) {
 	} else {
 		if b.fakeInputs {
 			// Add a fake output with enough balance to create a valid transaction
-			fakeInputID := iotago.OutputID{}
-			copy(fakeInputID[:], randBytes(iotago.TransactionIDLength))
+			fakeInputID := tpkg.RandOutputID()
 			fakeInput := &iotago.BasicOutput{
 				Amount: b.amount,
 				Conditions: iotago.UnlockConditions{
@@ -326,13 +325,4 @@ func (m *Block) StoredBlock() *storage.Block {
 func (m *Block) StoredBlockID() iotago.BlockID {
 	require.NotNil(m.builder.te.TestInterface, m.storedBlockID)
 	return m.storedBlockID
-}
-
-// returns length amount random bytes
-func randBytes(length int) []byte {
-	var b []byte
-	for i := 0; i < length; i++ {
-		b = append(b, byte(rand.Intn(256)))
-	}
-	return b
 }

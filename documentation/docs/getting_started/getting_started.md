@@ -21,10 +21,10 @@ Running a node is an efficient way to use IOTA. By doing so, you have direct acc
 connect to and trust someone else's node. Additionally, you help the IOTA network to become more distributed and resilient.
 
 The node software is the backbone of the IOTA network. For an overview of tasks a node is responsible for, please
-see our [Node 101](https://wiki.iota.org/hornet/getting_started/nodes_101) section.
+see our [Node 101](../explanations/nodes_101.md) section.
 
 To make sure that your device meets the minimum security requirements for running a node, please
-see our [Security 101](https://wiki.iota.org/hornet/getting_started/security_101) section.
+see our [Security 101](../explanations/security_101.md) section.
 
 :::note
 
@@ -54,7 +54,7 @@ Hornet exposes different functionality on different ports:
 
 These ports are important for flawless node operation. The REST HTTP API port is optional and is only needed if
 you want to offer access to your node's API. All ports can be customized inside
-the [config.json](https://wiki.iota.org/hornet/post_installation) file.
+the [config.json](../how_tos/post_installation.md) file.
 
 ## Operating System
 
@@ -66,23 +66,23 @@ Hornet ships as a single executable binary (`hornet` or `hornet.exe`) and some J
 
 You can install Hornet on Linux using:
 
-- [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
+- [The docker image](../how_tos/using_docker.md).
 
 ### MacOS
 
 You can install Hornet on MacOS using:
 
-- [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
+- [The docker image](../how_tos/using_docker.md).
 
 Alternatively, you can build Hornet by following these instructions:
 
-- [Prebuilt binary files](https://wiki.iota.org/hornet/getting_started/using_docker#starting-an-existing-hornet).
+- [Prebuilt binary files](../how_tos/using_docker.md#starting-an-existing-hornet).
 
 ### Windows
 
 You can install Hornet on Windows using:
 
-- [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
+- [The docker image](../how_tos/using_docker.md).
 
 ## Configuration
 
@@ -91,5 +91,5 @@ Hornet uses two JSON configuration files that you can tweak based on your deploy
 - `config.json`: includes all core configuration parameters.
 - `peering.json`: includes connection details to node neighbors (peers).
 
-You can read more about the configuration in the [post installation](https://wiki.iota.org/hornet/post_installation)
+You can read more about the configuration in the [post installation](../how_tos/post_installation.md)
 article.

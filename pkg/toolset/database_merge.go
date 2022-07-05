@@ -19,7 +19,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
@@ -157,7 +156,7 @@ func databaseMerge(args []string) error {
 		tangleStoreSource,
 		tangleStoreTarget,
 		client,
-		milestone.Index(*targetIndexFlag),
+		*targetIndexFlag,
 		*genesisSnapshotFilePathFlag,
 		*chronicleFlag,
 		int(*apiParallelismFlag),
@@ -187,7 +186,7 @@ func databaseMerge(args []string) error {
 func copyMilestoneCone(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
-	msIndex milestone.Index,
+	msIndex iotago.MilestoneIndex,
 	milestonePayload *iotago.Milestone,
 	parentsTraverserInterface dag.ParentsTraverserInterface,
 	cachedBlockFuncSource storage.CachedBlockFunc,
@@ -268,7 +267,7 @@ func copyMilestoneCone(
 }
 
 type confStats struct {
-	msIndex              milestone.Index
+	msIndex              iotago.MilestoneIndex
 	blocksReferenced     int
 	durationCopy         time.Duration
 	durationConfirmation time.Duration
@@ -279,8 +278,8 @@ type confStats struct {
 func copyAndVerifyMilestoneCone(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
-	msIndex milestone.Index,
-	getMilestonePayload func(msIndex milestone.Index) (*iotago.Milestone, error),
+	msIndex iotago.MilestoneIndex,
+	getMilestonePayload func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error),
 	parentsTraverserInterfaceSource dag.ParentsTraverserInterface,
 	cachedBlockFuncSource storage.CachedBlockFunc,
 	cachedBlockFuncTarget storage.CachedBlockFunc,
@@ -353,7 +352,7 @@ func copyAndVerifyMilestoneCone(
 func mergeViaAPI(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
-	msIndex milestone.Index,
+	msIndex iotago.MilestoneIndex,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
 	client *nodeclient.Client,
@@ -372,11 +371,11 @@ func mergeViaAPI(
 		return block, nil
 	}
 
-	getMilestonePayloadViaAPI := func(client *nodeclient.Client, msIndex milestone.Index) (*iotago.Milestone, error) {
+	getMilestonePayloadViaAPI := func(client *nodeclient.Client, msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		ms, err := client.MilestoneByIndex(ctx, uint32(msIndex))
+		ms, err := client.MilestoneByIndex(ctx, msIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -396,7 +395,7 @@ func mergeViaAPI(
 		ctx,
 		protoParas,
 		msIndex,
-		func(msIndex milestone.Index) (*iotago.Milestone, error) {
+		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 			return getMilestonePayloadViaAPI(client, msIndex)
 		},
 		dag.NewConcurrentParentsTraverser(proxyStorage, apiParallelism),
@@ -433,7 +432,7 @@ func mergeViaAPI(
 func mergeViaSourceDatabase(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
-	msIndex milestone.Index,
+	msIndex iotago.MilestoneIndex,
 	storeSource *storage.Storage,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager) error {
@@ -450,7 +449,7 @@ func mergeViaSourceDatabase(
 		ctx,
 		protoParas,
 		msIndex,
-		func(msIndex milestone.Index) (*iotago.Milestone, error) {
+		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 			return getMilestonePayloadFromStorage(storeSource, msIndex)
 		},
 		dag.NewConcurrentParentsTraverser(storeSource),
@@ -493,7 +492,7 @@ func mergeDatabase(
 	tangleStoreSource *storage.Storage,
 	tangleStoreTarget *storage.Storage,
 	client *nodeclient.Client,
-	targetIndex milestone.Index,
+	targetIndex iotago.MilestoneIndex,
 	genesisSnapshotFilePath string,
 	chronicleMode bool,
 	apiParallelism int) error {
@@ -501,7 +500,7 @@ func mergeDatabase(
 	tangleStoreSourceAvailable := tangleStoreSource != nil
 
 	var sourceNetworkID uint64
-	var msIndexStartSource, msIndexEndSource milestone.Index = 0, 0
+	var msIndexStartSource, msIndexEndSource iotago.MilestoneIndex = 0, 0
 	msIndexStartTarget, msIndexEndTarget := getStorageMilestoneRange(tangleStoreTarget)
 	if tangleStoreSourceAvailable {
 		sourceNetworkID = tangleStoreSource.SnapshotInfo().NetworkID
@@ -541,7 +540,7 @@ func mergeDatabase(
 		return fmt.Errorf("%w (start index: %d, target index: %d)", ErrNoNewTangleData, msIndexStart, msIndexEnd)
 	}
 
-	indexAvailableInSource := func(msIndex milestone.Index) bool {
+	indexAvailableInSource := func(msIndex iotago.MilestoneIndex) bool {
 		return (msIndex >= msIndexStartSource) && (msIndex <= msIndexEndSource)
 	}
 
@@ -680,7 +679,7 @@ func (s *ProxyStorage) SolidEntryPointsContain(blockID iotago.BlockID) (bool, er
 	return s.storeTarget.SolidEntryPointsContain(blockID)
 }
 
-func (s *ProxyStorage) SolidEntryPointsIndex(blockID iotago.BlockID) (milestone.Index, bool, error) {
+func (s *ProxyStorage) SolidEntryPointsIndex(blockID iotago.BlockID) (iotago.MilestoneIndex, bool, error) {
 	return s.storeTarget.SolidEntryPointsIndex(blockID)
 }
 

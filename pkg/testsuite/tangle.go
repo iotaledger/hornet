@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/testsuite/utils"
@@ -34,13 +33,13 @@ func (te *TestEnvironment) StoreBlock(block *storage.Block) *storage.CachedBlock
 }
 
 // VerifyCMI checks if the confirmed milestone index is equal to the given milestone index.
-func (te *TestEnvironment) VerifyCMI(index milestone.Index) {
+func (te *TestEnvironment) VerifyCMI(index iotago.MilestoneIndex) {
 	cmi := te.syncManager.ConfirmedMilestoneIndex()
 	require.Equal(te.TestInterface, index, cmi)
 }
 
 // VerifyLMI checks if the latest milestone index is equal to the given milestone index.
-func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
+func (te *TestEnvironment) VerifyLMI(index iotago.MilestoneIndex) {
 	lmi := te.syncManager.LatestMilestoneIndex()
 	require.Equal(te.TestInterface, index, lmi)
 }
@@ -97,8 +96,8 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			return -1
 		}
 
-		for i := 0; i < len(conf.Mutations.BlocksReferenced)-1; i++ {
-			if conf.Mutations.BlocksReferenced[i] == blockID {
+		for i := 0; i < len(conf.Mutations.ReferencedBlocks)-1; i++ {
+			if conf.Mutations.ReferencedBlocks[i].BlockID == blockID {
 				return i
 			}
 		}
@@ -175,7 +174,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 
 		milestonePayload := block.Milestone()
 		if milestonePayload != nil {
-			if conf != nil && milestone.Index(milestonePayload.Index) == conf.MilestoneIndex {
+			if conf != nil && milestonePayload.Index == conf.MilestoneIndex {
 				dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gold];\n", shortIndex)
 			}
 			milestoneBlocks = append(milestoneBlocks, shortIndex)

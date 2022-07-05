@@ -17,6 +17,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/pow"
 	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/pkg/pruning"
 	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
@@ -150,7 +151,8 @@ type dependencies struct {
 	GossipService           *gossip.Service
 	UTXOManager             *utxo.Manager
 	PoWHandler              *pow.Handler
-	SnapshotManager         *snapshot.SnapshotManager
+	SnapshotManager         *snapshot.Manager
+	PruningManager          *pruning.Manager
 	AppInfo                 *app.AppInfo
 	PeeringConfigManager    *p2p.ConfigManager
 	ProtocolManager         *protocol.Manager

@@ -8,7 +8,6 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -16,7 +15,7 @@ import (
 type MilestoneDiff struct {
 	kvStorable
 	// The index of the milestone.
-	Index milestone.Index
+	Index iotago.MilestoneIndex
 	// The outputs newly generated with this diff.
 	Outputs Outputs
 	// The outputs spent with this diff.
@@ -27,18 +26,18 @@ type MilestoneDiff struct {
 	SpentTreasuryOutput *TreasuryOutput
 }
 
-func milestoneDiffKeyForIndex(msIndex milestone.Index) []byte {
+func milestoneDiffKeyForIndex(msIndex iotago.MilestoneIndex) []byte {
 	m := marshalutil.New(5)
 	m.WriteByte(UTXOStoreKeyPrefixMilestoneDiffs)
-	m.WriteUint32(uint32(msIndex))
+	m.WriteUint32(msIndex)
 	return m.Bytes()
 }
 
-func (ms *MilestoneDiff) kvStorableKey() []byte {
+func (ms *MilestoneDiff) KVStorableKey() []byte {
 	return milestoneDiffKeyForIndex(ms.Index)
 }
 
-func (ms *MilestoneDiff) kvStorableValue() []byte {
+func (ms *MilestoneDiff) KVStorableValue() []byte {
 
 	m := marshalutil.New(9)
 
@@ -53,12 +52,14 @@ func (ms *MilestoneDiff) kvStorableValue() []byte {
 	}
 
 	if ms.TreasuryOutput != nil {
+		// hasTreasury is true
 		m.WriteBool(true)
 		m.WriteBytes(ms.TreasuryOutput.MilestoneID[:])
 		m.WriteBytes(ms.SpentTreasuryOutput.MilestoneID[:])
 		return m.Bytes()
 	}
 
+	// hasTreasury is false
 	m.WriteBool(false)
 
 	return m.Bytes()
@@ -143,7 +144,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 		ms.SpentTreasuryOutput = spentTreasuryOutput
 	}
 
-	ms.Index = milestone.Index(binary.LittleEndian.Uint32(key[1:]))
+	ms.Index = binary.LittleEndian.Uint32(key[1:])
 	ms.Outputs = outputs
 	ms.Spents = spents
 
@@ -171,11 +172,11 @@ func (ms *MilestoneDiff) SHA256Sum() ([]byte, error) {
 
 	msDiffHash := sha256.New()
 
-	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.kvStorableKey()); err != nil {
+	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.KVStorableKey()); err != nil {
 		return nil, fmt.Errorf("unable to serialize milestone diff: %w", err)
 	}
 
-	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.kvStorableValue()); err != nil {
+	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.KVStorableValue()); err != nil {
 		return nil, fmt.Errorf("unable to serialize milestone diff: %w", err)
 	}
 
@@ -186,16 +187,16 @@ func (ms *MilestoneDiff) SHA256Sum() ([]byte, error) {
 //- DB helpers
 
 func storeDiff(diff *MilestoneDiff, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(diff.kvStorableKey(), diff.kvStorableValue())
+	return mutations.Set(diff.KVStorableKey(), diff.KVStorableValue())
 }
 
-func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+func deleteDiff(msIndex iotago.MilestoneIndex, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(milestoneDiffKeyForIndex(msIndex))
 }
 
 //- Manager
 
-func (u *Manager) MilestoneDiffWithoutLocking(msIndex milestone.Index) (*MilestoneDiff, error) {
+func (u *Manager) MilestoneDiffWithoutLocking(msIndex iotago.MilestoneIndex) (*MilestoneDiff, error) {
 
 	key := milestoneDiffKeyForIndex(msIndex)
 
@@ -212,7 +213,7 @@ func (u *Manager) MilestoneDiffWithoutLocking(msIndex milestone.Index) (*Milesto
 	return diff, nil
 }
 
-func (u *Manager) MilestoneDiff(msIndex milestone.Index) (*MilestoneDiff, error) {
+func (u *Manager) MilestoneDiff(msIndex iotago.MilestoneIndex) (*MilestoneDiff, error) {
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()
 
