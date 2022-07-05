@@ -49,7 +49,7 @@ type Tangle struct {
 	// used to persist and validate batches of receipts.
 	receiptService *migrator.ReceiptService
 	// the protocol manager
-	protoMng *protocol.Manager
+	protocolManager *protocol.Manager
 
 	milestoneTimeout             time.Duration
 	whiteFlagParentsSolidTimeout time.Duration
@@ -121,7 +121,7 @@ func New(
 	serverMetrics *metrics.ServerMetrics,
 	requester *gossip.Requester,
 	receiptService *migrator.ReceiptService,
-	protoMng *protocol.Manager,
+	protocolManager *protocol.Manager,
 	milestoneTimeout time.Duration,
 	whiteFlagParentsSolidTimeout time.Duration,
 	updateSyncedAtStartup bool) *Tangle {
@@ -139,7 +139,7 @@ func New(
 		serverMetrics:                serverMetrics,
 		requester:                    requester,
 		receiptService:               receiptService,
-		protoMng:                     protoMng,
+		protocolManager:              protocolManager,
 		milestoneTimeout:             milestoneTimeout,
 		whiteFlagParentsSolidTimeout: whiteFlagParentsSolidTimeout,
 		updateSyncedAtStartup:        updateSyncedAtStartup,

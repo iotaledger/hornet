@@ -14,13 +14,14 @@ import (
 )
 
 const (
-	BelowMaxDepth = 5
-	MinPoWScore   = 10.0
+	ProtocolVersion = 2
+	BelowMaxDepth   = 5
+	MinPoWScore     = 10
 )
 
 func TestConeRootIndexes(t *testing.T) {
 
-	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
+	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, ProtocolVersion, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
 	initBlocksCount := 10

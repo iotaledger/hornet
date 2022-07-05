@@ -79,7 +79,7 @@ type MessageProcessor struct {
 	// shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
 	// protocol manager
-	protoMng *protocol.Manager
+	protocolManager *protocol.Manager
 	// holds the message processor options.
 	opts Options
 
@@ -103,17 +103,17 @@ func NewMessageProcessor(
 	requestQueue RequestQueue,
 	peeringManager *p2p.Manager,
 	serverMetrics *metrics.ServerMetrics,
-	protoMng *protocol.Manager,
+	protocolManager *protocol.Manager,
 	opts *Options) (*MessageProcessor, error) {
 
 	proc := &MessageProcessor{
-		storage:        dbStorage,
-		syncManager:    syncManager,
-		requestQueue:   requestQueue,
-		peeringManager: peeringManager,
-		serverMetrics:  serverMetrics,
-		protoMng:       protoMng,
-		opts:           *opts,
+		storage:         dbStorage,
+		syncManager:     syncManager,
+		requestQueue:    requestQueue,
+		peeringManager:  peeringManager,
+		serverMetrics:   serverMetrics,
+		protocolManager: protocolManager,
+		opts:            *opts,
 		Events: &MessageProcessorEvents{
 			BlockProcessed: events.NewEvent(BlockProcessedCaller),
 			BroadcastBlock: events.NewEvent(BroadcastCaller),
@@ -198,8 +198,8 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 // this block would be seen as invalid gossip by other peers.
 func (proc *MessageProcessor) Emit(block *storage.Block) error {
 
-	if block.ProtocolVersion() != proc.protoMng.Current().Version {
-		return fmt.Errorf("block has invalid protocol version %d instead of %d", block.ProtocolVersion(), proc.protoMng.Current().Version)
+	if block.ProtocolVersion() != proc.protocolManager.Current().Version {
+		return fmt.Errorf("block has invalid protocol version %d instead of %d", block.ProtocolVersion(), proc.protocolManager.Current().Version)
 	}
 
 	switch block.Block().Payload.(type) {
@@ -213,7 +213,7 @@ func (proc *MessageProcessor) Emit(block *storage.Block) error {
 	default:
 		// validate PoW score
 		score := pow.Score(block.Data())
-		if score < float64(proc.protoMng.Current().MinPoWScore) {
+		if score < float64(proc.protocolManager.Current().MinPoWScore) {
 			return fmt.Errorf("block has insufficient PoW score %0.2f", score)
 		}
 	}
@@ -232,7 +232,7 @@ func (proc *MessageProcessor) Emit(block *storage.Block) error {
 				return ErrBlockNotSolid
 			}
 
-			if (cmi - entryPointIndex) > milestone.Index(proc.protoMng.Current().BelowMaxDepth) {
+			if (cmi - entryPointIndex) > milestone.Index(proc.protocolManager.Current().BelowMaxDepth) {
 				// the parent is below max depth
 				return ErrBlockBelowMaxDepth
 			}
@@ -253,7 +253,7 @@ func (proc *MessageProcessor) Emit(block *storage.Block) error {
 			return err
 		}
 
-		if (cmi - ocri) > milestone.Index(proc.protoMng.Current().BelowMaxDepth) {
+		if (cmi - ocri) > milestone.Index(proc.protocolManager.Current().BelowMaxDepth) {
 			// the parent is below max depth
 			return ErrBlockBelowMaxDepth
 		}
@@ -312,7 +312,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	}
 	defer cachedMilestone.Release(true) // milestone -1
 
-	milestoneBlock, err := constructMilestoneBlock(proc.protoMng.Current(), cachedMilestone.Retain()) // milestone +1
+	milestoneBlock, err := constructMilestoneBlock(proc.protocolManager.Current(), cachedMilestone.Retain()) // milestone +1
 	if err != nil {
 		// can't reply if creating milestone block fails
 		return
@@ -453,7 +453,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.processingLock.Unlock()
 
 	// build HORNET representation of the block
-	block, err := storage.BlockFromBytes(wu.receivedBytes, serializer.DeSeriModePerformValidation, proc.protoMng.Current())
+	block, err := storage.BlockFromBytes(wu.receivedBytes, serializer.DeSeriModePerformValidation, proc.protocolManager.Current())
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.WithMessagef(err, "peer sent an invalid block"))
@@ -461,7 +461,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	}
 
 	// check the network ID of the block
-	if block.ProtocolVersion() != proc.protoMng.Current().Version {
+	if block.ProtocolVersion() != proc.protocolManager.Current().Version {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a block with an invalid protocol version"))
 		return
@@ -474,7 +474,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 	if !isMilestonePayload {
 		// validate PoW score
-		if !wu.requested && pow.Score(wu.receivedBytes) < float64(proc.protoMng.Current().MinPoWScore) {
+		if !wu.requested && pow.Score(wu.receivedBytes) < float64(proc.protocolManager.Current().MinPoWScore) {
 			wu.UpdateState(Invalid)
 			wu.punish(errors.New("peer sent a block with insufficient PoW score"))
 			return
@@ -527,7 +527,7 @@ func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata)
 		return
 	}
 
-	if (proc.syncManager.LatestMilestoneIndex() - ocri) > milestone.Index(proc.protoMng.Current().BelowMaxDepth) {
+	if (proc.syncManager.LatestMilestoneIndex() - ocri) > milestone.Index(proc.protocolManager.Current().BelowMaxDepth) {
 		// the solid block was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}

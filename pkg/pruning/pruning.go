@@ -430,6 +430,10 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex milestone.Index
 	}
 	p.storage.WriteUnlockSolidEntryPoints()
 
+	if err := p.storage.PruneProtocolParameters(targetIndex); err != nil {
+		return 0, err
+	}
+
 	return targetIndex, nil
 }
 

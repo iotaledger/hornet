@@ -10,8 +10,10 @@ import (
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/app/core/shutdown"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -27,6 +29,7 @@ func init() {
 			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
 			Params:         params,
 			InitConfigPars: initConfigPars,
+			Provide:        provide,
 			Configure:      configure,
 		},
 	}
@@ -63,29 +66,13 @@ func initConfigPars(c *dig.Container) error {
 		dig.Out
 		KeyManager              *keymanager.KeyManager
 		MilestonePublicKeyCount int `name:"milestonePublicKeyCount"`
-		ProtocolManager         *protocol.Manager
 		BaseToken               *BaseToken
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 
-		protoParas := &iotago.ProtocolParameters{
-			Version:       ParamsProtocol.Parameters.Version,
-			NetworkName:   ParamsProtocol.Parameters.NetworkName,
-			Bech32HRP:     iotago.NetworkPrefix(ParamsProtocol.Parameters.Bech32HRP),
-			MinPoWScore:   ParamsProtocol.Parameters.MinPoWScore,
-			BelowMaxDepth: ParamsProtocol.Parameters.BelowMaxDepth,
-			RentStructure: iotago.RentStructure{
-				VByteCost:    ParamsProtocol.Parameters.RentStructureVByteCost,
-				VBFactorData: iotago.VByteCostFactor(ParamsProtocol.Parameters.RentStructureVByteFactorData),
-				VBFactorKey:  iotago.VByteCostFactor(ParamsProtocol.Parameters.RentStructureVByteFactorKey),
-			},
-			TokenSupply: ParamsProtocol.Parameters.TokenSupply,
-		}
-
 		res := cfgResult{
 			MilestonePublicKeyCount: ParamsProtocol.MilestonePublicKeyCount,
-			ProtocolManager:         protocol.NewManager(deps.Storage, protoParas),
 			BaseToken: &BaseToken{
 				Name:            ParamsProtocol.BaseToken.Name,
 				TickerSymbol:    ParamsProtocol.BaseToken.TickerSymbol,
@@ -118,9 +105,62 @@ func initConfigPars(c *dig.Container) error {
 	return nil
 }
 
-func configure() error {
-	deps.ProtocolManager.LoadPending(deps.SyncManager)
+func provide(c *dig.Container) error {
 
+	type protocolManagerDeps struct {
+		dig.In
+		Storage     *storage.Storage
+		UTXOManager *utxo.Manager
+	}
+
+	if err := c.Provide(func(deps protocolManagerDeps) *protocol.Manager {
+
+		protoParas := &iotago.ProtocolParameters{
+			Version:       ParamsProtocol.Parameters.Version,
+			NetworkName:   ParamsProtocol.Parameters.NetworkName,
+			Bech32HRP:     iotago.NetworkPrefix(ParamsProtocol.Parameters.Bech32HRP),
+			MinPoWScore:   ParamsProtocol.Parameters.MinPoWScore,
+			BelowMaxDepth: ParamsProtocol.Parameters.BelowMaxDepth,
+			RentStructure: iotago.RentStructure{
+				VByteCost:    ParamsProtocol.Parameters.RentStructureVByteCost,
+				VBFactorData: iotago.VByteCostFactor(ParamsProtocol.Parameters.RentStructureVByteFactorData),
+				VBFactorKey:  iotago.VByteCostFactor(ParamsProtocol.Parameters.RentStructureVByteFactorKey),
+			},
+			TokenSupply: ParamsProtocol.Parameters.TokenSupply,
+		}
+
+		protoParasBytes, err := protoParas.Serialize(serializer.DeSeriModeNoValidation, nil)
+		if err != nil {
+			CoreComponent.LogPanic(err)
+		}
+
+		// store the initial protocol parameters as milestone 0 for now
+		if err := deps.Storage.StoreProtocolParameters(&iotago.ProtocolParamsMilestoneOpt{
+			TargetMilestoneIndex: 0,
+			ProtocolVersion:      protoParas.Version,
+			Params:               protoParasBytes,
+		}); err != nil {
+			CoreComponent.LogPanic(err)
+		}
+
+		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
+		if err != nil {
+			CoreComponent.LogPanicf("can't initialize protocol manager: %s", err)
+		}
+
+		protocolManager, err := protocol.NewManager(deps.Storage, ledgerIndex)
+		if err != nil {
+			CoreComponent.LogPanic(err)
+		}
+		return protocolManager
+	}); err != nil {
+		CoreComponent.LogPanic(err)
+	}
+
+	return nil
+}
+
+func configure() error {
 	deps.Tangle.Events.ConfirmedMilestoneChanged.Attach(events.NewClosure(deps.ProtocolManager.HandleConfirmedMilestone))
 
 	unsuppProtoParasClosure := events.NewClosure(func(unsupportedProtocolParas *iotago.ProtocolParamsMilestoneOpt) {

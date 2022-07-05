@@ -58,7 +58,7 @@ type Manager struct {
 	storage                              *storage.Storage
 	syncManager                          *syncmanager.SyncManager
 	utxoManager                          *utxo.Manager
-	protoMng                             *protocol.Manager
+	protocolManager                      *protocol.Manager
 	snapshotFullPath                     string
 	snapshotDeltaPath                    string
 	deltaSnapshotSizeThresholdPercentage float64
@@ -80,7 +80,7 @@ func NewSnapshotManager(
 	storage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	utxoManager *utxo.Manager,
-	protoMng *protocol.Manager,
+	protocolManager *protocol.Manager,
 	snapshotFullPath string,
 	snapshotDeltaPath string,
 	deltaSnapshotSizeThresholdPercentage float64,
@@ -96,7 +96,7 @@ func NewSnapshotManager(
 		storage:                              storage,
 		syncManager:                          syncManager,
 		utxoManager:                          utxoManager,
-		protoMng:                             protoMng,
+		protocolManager:                      protocolManager,
 		snapshotFullPath:                     snapshotFullPath,
 		snapshotDeltaPath:                    snapshotDeltaPath,
 		deltaSnapshotSizeThresholdPercentage: deltaSnapshotSizeThresholdPercentage,

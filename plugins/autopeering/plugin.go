@@ -5,10 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iotaledger/hornet/core/protocfg"
-	"github.com/iotaledger/hornet/core/pruning"
-	"github.com/iotaledger/hornet/pkg/protocol"
-
 	"github.com/libp2p/go-libp2p-core/crypto"
 	libp2p "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
@@ -23,6 +19,8 @@ import (
 	databaseCore "github.com/iotaledger/hornet/core/database"
 	"github.com/iotaledger/hornet/core/gossip"
 	"github.com/iotaledger/hornet/core/pow"
+	"github.com/iotaledger/hornet/core/protocfg"
+	"github.com/iotaledger/hornet/core/pruning"
 	"github.com/iotaledger/hornet/core/snapshot"
 	"github.com/iotaledger/hornet/core/tangle"
 	"github.com/iotaledger/hornet/pkg/daemon"
@@ -157,7 +155,7 @@ func provide(c *dig.Container) error {
 
 	type autopeeringDeps struct {
 		dig.In
-		ProtocolManager *protocol.Manager
+		TargetNetworkName string `name:"targetNetworkName"`
 	}
 
 	if err := c.Provide(func(deps autopeeringDeps) *autopeering.AutopeeringManager {
@@ -166,7 +164,7 @@ func provide(c *dig.Container) error {
 			ParamsAutopeering.BindAddress,
 			ParamsAutopeering.EntryNodes,
 			ParamsAutopeering.EntryNodesPreferIPv6,
-			service.Key(deps.ProtocolManager.Current().NetworkName),
+			service.Key(deps.TargetNetworkName),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)

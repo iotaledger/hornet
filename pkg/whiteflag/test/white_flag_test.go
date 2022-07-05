@@ -13,15 +13,18 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+const (
+	ShowConfirmationGraphs = false
+	ProtocolVersion        = 2
+	MinPoWScore            = 1
+	BelowMaxDepth          = 15
+)
+
 var (
 	seed1, _ = hex.DecodeString("96d9ff7a79e4b0a5f3e5848ae7867064402da92a62eabb4ebbe463f12d1f3b1aace1775488f51cb1e3a80732a03ef60b111d6833ab605aa9f8faebeb33bbe3d9")
 	seed2, _ = hex.DecodeString("b15209ddc93cbdb600137ea6a8f88cdd7c5d480d5815c9352a0fb5c4e4b86f7151dcb44c2ba635657a2df5a8fd48cb9bab674a9eceea527dbbb254ef8c9f9cd7")
 	seed3, _ = hex.DecodeString("d5353ceeed380ab89a0f6abe4630c2091acc82617c0edd4ff10bd60bba89e2ed30805ef095b989c2bf208a474f8748d11d954aade374380422d4d812b6f1da90")
 	seed4, _ = hex.DecodeString("bd6fe09d8a309ca309c5db7b63513240490109cd0ac6b123551e9da0d5c8916c4a5a4f817e4b4e9df89885ce1af0986da9f1e56b65153c2af1e87ab3b11dabb4")
-
-	showConfirmationGraphs        = false
-	MinPoWScore            uint32 = 1
-	BelowMaxDepth          uint8  = 15
 )
 
 func TestWhiteFlagSendAllCoins(t *testing.T) {
@@ -31,8 +34,8 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
-	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
@@ -94,8 +97,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
-	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
@@ -259,8 +262,8 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	genesisWallet := utils.NewHDWallet("Seed1", seed1, 0)
 	genesisAddress := genesisWallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 3, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
-	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 3, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
 	genesisWallet.BookOutput(te.GenesisOutput)
@@ -298,8 +301,8 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
-	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
@@ -352,8 +355,8 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
-	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
@@ -454,8 +457,8 @@ func TestWhiteFlagAliasOutput(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
-	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
