@@ -126,6 +126,9 @@ type BlockMetadata struct {
 	// The index of the milestone which referenced this block
 	referencedIndex iotago.MilestoneIndex
 
+	// The index of this block inside the milestone given the whiteflag ordering
+	whiteFlagIndex uint32
+
 	conflict Conflict
 
 	// youngestConeRootIndex is the highest referenced index of the past cone of this block
@@ -194,15 +197,24 @@ func (m *BlockMetadata) ReferencedWithIndex() (bool, iotago.MilestoneIndex) {
 	return m.metadata.HasBit(BlockMetadataReferenced), m.referencedIndex
 }
 
-func (m *BlockMetadata) SetReferenced(referenced bool, referencedIndex iotago.MilestoneIndex) {
+func (m *BlockMetadata) ReferencedWithIndexAndWhiteFlagIndex() (bool, iotago.MilestoneIndex, uint32) {
+	m.RLock()
+	defer m.RUnlock()
+
+	return m.metadata.HasBit(BlockMetadataReferenced), m.referencedIndex, m.whiteFlagIndex
+}
+
+func (m *BlockMetadata) SetReferenced(referenced bool, referencedIndex iotago.MilestoneIndex, whiteFlagIndex uint32) {
 	m.Lock()
 	defer m.Unlock()
 
 	if referenced != m.metadata.HasBit(BlockMetadataReferenced) {
 		if referenced {
 			m.referencedIndex = referencedIndex
+			m.whiteFlagIndex = whiteFlagIndex
 		} else {
 			m.referencedIndex = 0
+			m.whiteFlagIndex = 0
 		}
 		m.metadata = m.metadata.ModifyBit(BlockMetadataReferenced, referenced)
 		m.SetModified(true)
@@ -312,6 +324,7 @@ func (m *BlockMetadata) ObjectStorageValue() (data []byte) {
 	/*
 		1 byte  metadata bitmask
 		4 bytes uint32 referencedIndex
+		4 bytes uint32 whiteFlagIndex
 		1 byte  uint8 conflict
 		4 bytes uint32 youngestConeRootIndex
 		4 bytes uint32 oldestConeRootIndex
@@ -320,10 +333,11 @@ func (m *BlockMetadata) ObjectStorageValue() (data []byte) {
 		parents count * 32 bytes parent id
 	*/
 
-	marshalUtil := marshalutil.New(19 + len(m.parents)*iotago.BlockIDLength)
+	marshalUtil := marshalutil.New(23 + len(m.parents)*iotago.BlockIDLength)
 
 	marshalUtil.WriteByte(byte(m.metadata))
 	marshalUtil.WriteUint32(m.referencedIndex)
+	marshalUtil.WriteUint32(m.whiteFlagIndex)
 	marshalUtil.WriteByte(byte(m.conflict))
 	marshalUtil.WriteUint32(m.youngestConeRootIndex)
 	marshalUtil.WriteUint32(m.oldestConeRootIndex)
@@ -341,6 +355,7 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	/*
 		1 byte  metadata bitmask
 		4 bytes uint32 referencedIndex
+		4 bytes uint32 whiteFlagIndex
 		1 byte  uint8 conflict
 		4 bytes uint32 youngestConeRootIndex
 		4 bytes uint32 oldestConeRootIndex
@@ -360,6 +375,11 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	}
 
 	m.referencedIndex, err = marshalUtil.ReadUint32()
+	if err != nil {
+		return nil, err
+	}
+
+	m.whiteFlagIndex, err = marshalUtil.ReadUint32()
 	if err != nil {
 		return nil, err
 	}

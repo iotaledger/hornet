@@ -48,21 +48,56 @@ type Confirmation struct {
 	Mutations *WhiteFlagMutations
 }
 
-type BlockWithConflict struct {
-	BlockID  iotago.BlockID
-	Conflict storage.Conflict
+type ReferencedBlock struct {
+	BlockID       iotago.BlockID
+	IsTransaction bool
+	Conflict      storage.Conflict
+}
+
+type ReferencedBlocks []ReferencedBlock
+
+func (b ReferencedBlocks) BlockIDs() iotago.BlockIDs {
+	var blockIDs iotago.BlockIDs
+	for _, rb := range b {
+		blockIDs = append(blockIDs, rb.BlockID)
+	}
+	return blockIDs
+}
+
+func (b ReferencedBlocks) IncludedTransactionBlockIDs() iotago.BlockIDs {
+	var blockIDs iotago.BlockIDs
+	for _, rb := range b {
+		if rb.IsTransaction && rb.Conflict == storage.ConflictNone {
+			blockIDs = append(blockIDs, rb.BlockID)
+		}
+	}
+	return blockIDs
+}
+
+func (b ReferencedBlocks) ConflictingTransactionBlockIDs() iotago.BlockIDs {
+	var blockIDs iotago.BlockIDs
+	for _, rb := range b {
+		if rb.IsTransaction && rb.Conflict != storage.ConflictNone {
+			blockIDs = append(blockIDs, rb.BlockID)
+		}
+	}
+	return blockIDs
+}
+
+func (b ReferencedBlocks) NonTransactionBlockIDs() iotago.BlockIDs {
+	var blockIDs iotago.BlockIDs
+	for _, rb := range b {
+		if !rb.IsTransaction {
+			blockIDs = append(blockIDs, rb.BlockID)
+		}
+	}
+	return blockIDs
 }
 
 // WhiteFlagMutations contains the ledger mutations and referenced blocks applied to a cone under the "white-flag" approach.
 type WhiteFlagMutations struct {
-	// The blocks which mutate the ledger in the order in which they were applied.
-	BlocksIncludedWithTransactions iotago.BlockIDs
-	// The blocks which were excluded as they were conflicting with the mutations.
-	BlocksExcludedWithConflictingTransactions []BlockWithConflict
-	// The blocks which were excluded because they did not include a value transaction.
-	BlocksExcludedWithoutTransactions iotago.BlockIDs
-	// The blocks which were referenced by the milestone (should be the sum of BlocksIncludedWithTransactions + BlocksExcludedWithConflictingTransactions + BlocksExcludedWithoutTransactions).
-	BlocksReferenced iotago.BlockIDs
+	// The blocks which were referenced by the milestone
+	ReferencedBlocks ReferencedBlocks
 	// Contains the newly created Unspent Outputs by the given confirmation.
 	NewOutputs map[iotago.OutputID]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
@@ -91,12 +126,9 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	traversalCondition dag.Predicate) (*WhiteFlagMutations, error) {
 
 	wfConf := &WhiteFlagMutations{
-		BlocksIncludedWithTransactions:            make(iotago.BlockIDs, 0),
-		BlocksExcludedWithConflictingTransactions: make([]BlockWithConflict, 0),
-		BlocksExcludedWithoutTransactions:         make(iotago.BlockIDs, 0),
-		BlocksReferenced:                          make(iotago.BlockIDs, 0),
-		NewOutputs:                                make(map[iotago.OutputID]*utxo.Output),
-		NewSpents:                                 make(map[iotago.OutputID]*utxo.Spent),
+		ReferencedBlocks: make(ReferencedBlocks, 0),
+		NewOutputs:       make(map[iotago.OutputID]*utxo.Output),
+		NewSpents:        make(map[iotago.OutputID]*utxo.Spent),
 	}
 
 	semValCtx := &iotago.SemanticValidationContext{
@@ -173,8 +205,11 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 
 		// exclude block without transactions
 		if !block.IsTransaction() {
-			wfConf.BlocksReferenced = append(wfConf.BlocksReferenced, blockID)
-			wfConf.BlocksExcludedWithoutTransactions = append(wfConf.BlocksExcludedWithoutTransactions, blockID)
+			wfConf.ReferencedBlocks = append(wfConf.ReferencedBlocks, ReferencedBlock{
+				BlockID:       blockID,
+				IsTransaction: false,
+				Conflict:      storage.ConflictNone,
+			})
 			return nil
 		}
 
@@ -260,18 +295,15 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			}
 		}
 
-		wfConf.BlocksReferenced = append(wfConf.BlocksReferenced, blockID)
+		wfConf.ReferencedBlocks = append(wfConf.ReferencedBlocks, ReferencedBlock{
+			BlockID:       blockID,
+			IsTransaction: true,
+			Conflict:      conflict,
+		})
 
 		if conflict != storage.ConflictNone {
-			wfConf.BlocksExcludedWithConflictingTransactions = append(wfConf.BlocksExcludedWithConflictingTransactions, BlockWithConflict{
-				BlockID:  blockID,
-				Conflict: conflict,
-			})
 			return nil
 		}
-
-		// mark the given block to be part of milestone ledger by changing block inclusion set
-		wfConf.BlocksIncludedWithTransactions = append(wfConf.BlocksIncludedWithTransactions, blockID)
 
 		newSpents := make(utxo.Spents, len(inputOutputs))
 
@@ -314,14 +346,14 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	}
 
 	// compute past cone merkle tree root hash
-	confirmedMerkleHash := merklehasher.NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.BlocksReferenced)
+	confirmedMerkleHash := merklehasher.NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.ReferencedBlocks.BlockIDs())
 	copy(wfConf.InclusionMerkleRoot[:], confirmedMerkleHash)
 
 	// compute inclusion merkle tree root hash
-	appliedMerkleHash := merklehasher.NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.BlocksIncludedWithTransactions)
+	appliedMerkleHash := merklehasher.NewHasher(crypto.BLAKE2b_256).HashBlockIDs(wfConf.ReferencedBlocks.IncludedTransactionBlockIDs())
 	copy(wfConf.AppliedMerkleRoot[:], appliedMerkleHash)
 
-	if len(wfConf.BlocksIncludedWithTransactions) != (len(wfConf.BlocksReferenced) - len(wfConf.BlocksExcludedWithConflictingTransactions) - len(wfConf.BlocksExcludedWithoutTransactions)) {
+	if len(wfConf.ReferencedBlocks.IncludedTransactionBlockIDs()) != (len(wfConf.ReferencedBlocks) - len(wfConf.ReferencedBlocks.ConflictingTransactionBlockIDs()) - len(wfConf.ReferencedBlocks.NonTransactionBlockIDs())) {
 		return nil, ErrIncludedBlocksSumDoesntMatch
 	}
 

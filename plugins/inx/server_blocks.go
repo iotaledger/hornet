@@ -3,7 +3,6 @@ package inx
 import (
 	"context"
 
-	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,9 +26,10 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		Solid:   metadata.IsSolid(),
 	}
 
-	referenced, msIndex := metadata.ReferencedWithIndex()
+	referenced, msIndex, wfIndex := metadata.ReferencedWithIndexAndWhiteFlagIndex()
 	if referenced {
 		m.ReferencedByMilestoneIndex = msIndex
+		m.WhiteFlagIndex = wfIndex
 		inclusionState := inx.BlockMetadata_NO_TRANSACTION
 		conflict := metadata.Conflict()
 		if conflict != storage.ConflictNone {
@@ -41,7 +41,17 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		m.LedgerInclusionState = inclusionState
 
 		if metadata.IsMilestone() {
-			m.MilestoneIndex = msIndex
+			cachedBlock := deps.Storage.CachedBlockOrNil(blockID)
+			if cachedBlock == nil {
+				return nil, status.Errorf(codes.NotFound, "block not found: %s", blockID.ToHex())
+			}
+			defer cachedBlock.Release(true)
+
+			milestone := cachedBlock.Block().Milestone()
+			if milestone == nil {
+				return nil, status.Errorf(codes.NotFound, "milestone for block not found: %s", blockID.ToHex())
+			}
+			m.MilestoneIndex = milestone.Index
 		}
 
 		return m, nil
@@ -70,14 +80,14 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), blockID, cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
-				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
+				return nil, status.Errorf(codes.Unavailable, err.Error())
 			}
-			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+			return nil, status.Errorf(codes.Internal, err.Error())
 		}
 
 		switch tipScore {
 		case tangle.TipScoreNotFound:
-			return nil, errors.WithMessage(echo.ErrInternalServerError, "tip score could not be calculated")
+			return nil, status.Errorf(codes.Internal, "tip score could not be calculated")
 		case tangle.TipScoreOCRIThresholdReached, tangle.TipScoreYCRIThresholdReached:
 			m.ShouldPromote = true
 			// reattach is false

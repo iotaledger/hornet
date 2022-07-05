@@ -34,36 +34,40 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 	metadata := cachedBlockMeta.Metadata()
 
-	var referencedByMilestone *iotago.MilestoneIndex = nil
-	referenced, referencedIndex := metadata.ReferencedWithIndex()
-	if referenced {
-		referencedByMilestone = &referencedIndex
-	}
+	referenced, referencedIndex, wfIndex := metadata.ReferencedWithIndexAndWhiteFlagIndex()
 
 	response := &blockMetadataResponse{
 		BlockID:                    blockID.ToHex(),
 		Parents:                    metadata.Parents().ToHex(),
 		Solid:                      metadata.IsSolid(),
-		ReferencedByMilestoneIndex: referencedByMilestone,
+		ReferencedByMilestoneIndex: referencedIndex,
 	}
 
 	if metadata.IsMilestone() {
-		response.MilestoneIndex = referencedByMilestone
+		cachedBlock := deps.Storage.CachedBlockOrNil(blockID)
+		if cachedBlock == nil {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
+		}
+		defer cachedBlock.Release(true)
+
+		milestone := cachedBlock.Block().Milestone()
+		if milestone == nil {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "milestone for block not found: %s", blockID.ToHex())
+		}
+		response.MilestoneIndex = milestone.Index
 	}
 
 	if referenced {
-		inclusionState := "noTransaction"
+		response.WhiteFlagIndex = &wfIndex
+		response.LedgerInclusionState = "noTransaction"
 
 		conflict := metadata.Conflict()
-
 		if conflict != storage.ConflictNone {
-			inclusionState = "conflicting"
+			response.LedgerInclusionState = "conflicting"
 			response.ConflictReason = &conflict
 		} else if metadata.IsIncludedTxInLedger() {
-			inclusionState = "included"
+			response.LedgerInclusionState = "included"
 		}
-
-		response.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
