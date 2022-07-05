@@ -14,11 +14,14 @@ const (
 	isNodeAlmostSyncedThreshold = 2
 )
 
+// MilestoneIndexDelta is a the type used to describe an amount of Milestones that should be used to offset a certain Index
+type MilestoneIndexDelta = uint32
+
 type SyncManager struct {
 	utxoManager *utxo.Manager
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given block in relation to the current CMI before it gets lazy.
-	belowMaxDepth iotago.MilestoneIndex
+	belowMaxDepth MilestoneIndexDelta
 
 	// milestones
 	confirmedMilestoneIndex iotago.MilestoneIndex
@@ -34,7 +37,7 @@ type SyncManager struct {
 	waitForNodeSyncedChannels       []chan struct{}
 }
 
-func New(utxoManager *utxo.Manager, belowMaxDepth iotago.MilestoneIndex) (*SyncManager, error) {
+func New(utxoManager *utxo.Manager, belowMaxDepth MilestoneIndexDelta) (*SyncManager, error) {
 	s := &SyncManager{
 		utxoManager:   utxoManager,
 		belowMaxDepth: belowMaxDepth,
@@ -84,7 +87,7 @@ func (s *SyncManager) IsNodeSyncedWithinBelowMaxDepth() bool {
 }
 
 // IsNodeSyncedWithThreshold returns whether the node is synced within a given threshold.
-func (s *SyncManager) IsNodeSyncedWithThreshold(threshold iotago.MilestoneIndex) bool {
+func (s *SyncManager) IsNodeSyncedWithThreshold(threshold MilestoneIndexDelta) bool {
 
 	// catch overflow
 	if s.latestMilestoneIndex < threshold {

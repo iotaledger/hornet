@@ -61,10 +61,10 @@ type Manager struct {
 	snapshotFullPath                     string
 	snapshotDeltaPath                    string
 	deltaSnapshotSizeThresholdPercentage float64
-	solidEntryPointCheckThresholdPast    iotago.MilestoneIndex
-	solidEntryPointCheckThresholdFuture  iotago.MilestoneIndex
-	snapshotDepth                        iotago.MilestoneIndex
-	snapshotInterval                     iotago.MilestoneIndex
+	solidEntryPointCheckThresholdPast    syncmanager.MilestoneIndexDelta
+	solidEntryPointCheckThresholdFuture  syncmanager.MilestoneIndexDelta
+	snapshotDepth                        syncmanager.MilestoneIndexDelta
+	snapshotInterval                     syncmanager.MilestoneIndexDelta
 
 	snapshotLock         syncutils.Mutex
 	statusLock           syncutils.RWMutex
@@ -83,10 +83,10 @@ func NewSnapshotManager(
 	snapshotFullPath string,
 	snapshotDeltaPath string,
 	deltaSnapshotSizeThresholdPercentage float64,
-	solidEntryPointCheckThresholdPast iotago.MilestoneIndex,
-	solidEntryPointCheckThresholdFuture iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdPast syncmanager.MilestoneIndexDelta,
+	solidEntryPointCheckThresholdFuture syncmanager.MilestoneIndexDelta,
 	additionalPruningThreshold iotago.MilestoneIndex,
-	snapshotDepth iotago.MilestoneIndex,
+	snapshotDepth syncmanager.MilestoneIndexDelta,
 	snapshotInterval iotago.MilestoneIndex,
 ) *Manager {
 
@@ -152,8 +152,8 @@ func checkSnapshotLimits(
 	snapshotInfo *storagepkg.SnapshotInfo,
 	confirmedMilestoneIndex iotago.MilestoneIndex,
 	targetIndex iotago.MilestoneIndex,
-	solidEntryPointCheckThresholdPast iotago.MilestoneIndex,
-	solidEntryPointCheckThresholdFuture iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdPast syncmanager.MilestoneIndexDelta,
+	solidEntryPointCheckThresholdFuture syncmanager.MilestoneIndexDelta,
 	checkIncreasingSnapshotIndex bool) error {
 
 	if confirmedMilestoneIndex < solidEntryPointCheckThresholdFuture {

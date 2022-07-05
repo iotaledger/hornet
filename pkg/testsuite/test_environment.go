@@ -51,7 +51,7 @@ type TestEnvironment struct {
 
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given block in relation to the current CMI before it gets lazy.
-	belowMaxDepth iotago.MilestoneIndex
+	belowMaxDepth syncmanager.MilestoneIndexDelta
 
 	// coo holds the coordinator instance.
 	coo *MockCoo
@@ -113,7 +113,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 			},
 			TokenSupply: 2_779_530_283_277_761,
 		},
-		belowMaxDepth: iotago.MilestoneIndex(belowMaxDepth),
+		belowMaxDepth: syncmanager.MilestoneIndexDelta(belowMaxDepth),
 		serverMetrics: &metrics.ServerMetrics{},
 	}
 
@@ -168,7 +168,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SyncManager
-	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), iotago.MilestoneIndex(belowMaxDepth))
+	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), syncmanager.MilestoneIndexDelta(belowMaxDepth))
 	require.NoError(te.TestInterface, err)
 
 	// Initialize MilestoneManager

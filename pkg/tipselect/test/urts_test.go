@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/metrics"
 	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/testsuite"
 	"github.com/iotaledger/hornet/pkg/tipselect"
@@ -120,13 +121,13 @@ func TestTipSelect(t *testing.T) {
 			require.NoError(te.TestInterface, err)
 
 			minOldestConeRootIndex := iotago.MilestoneIndex(0)
-			if cmi > iotago.MilestoneIndex(MaxDeltaBlockOldestConeRootIndexToCMI) {
-				minOldestConeRootIndex = cmi - iotago.MilestoneIndex(MaxDeltaBlockOldestConeRootIndexToCMI)
+			if cmi > syncmanager.MilestoneIndexDelta(MaxDeltaBlockOldestConeRootIndexToCMI) {
+				minOldestConeRootIndex = cmi - syncmanager.MilestoneIndexDelta(MaxDeltaBlockOldestConeRootIndexToCMI)
 			}
 
 			minYoungestConeRootIndex := iotago.MilestoneIndex(0)
-			if cmi > iotago.MilestoneIndex(MaxDeltaBlockYoungestConeRootIndexToCMI) {
-				minYoungestConeRootIndex = cmi - iotago.MilestoneIndex(MaxDeltaBlockYoungestConeRootIndexToCMI)
+			if cmi > syncmanager.MilestoneIndexDelta(MaxDeltaBlockYoungestConeRootIndexToCMI) {
+				minYoungestConeRootIndex = cmi - syncmanager.MilestoneIndexDelta(MaxDeltaBlockYoungestConeRootIndexToCMI)
 			}
 
 			require.GreaterOrEqual(te.TestInterface, oldestConeRootIndex, minOldestConeRootIndex)

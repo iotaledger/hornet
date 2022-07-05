@@ -231,7 +231,7 @@ func (proc *MessageProcessor) Emit(block *storage.Block) error {
 				return ErrBlockNotSolid
 			}
 
-			if (cmi - entryPointIndex) > iotago.MilestoneIndex(proc.protocolManager.Current().BelowMaxDepth) {
+			if (cmi - entryPointIndex) > syncmanager.MilestoneIndexDelta(proc.protocolManager.Current().BelowMaxDepth) {
 				// the parent is below max depth
 				return ErrBlockBelowMaxDepth
 			}
@@ -252,7 +252,7 @@ func (proc *MessageProcessor) Emit(block *storage.Block) error {
 			return err
 		}
 
-		if (cmi - ocri) > iotago.MilestoneIndex(proc.protocolManager.Current().BelowMaxDepth) {
+		if (cmi - ocri) > syncmanager.MilestoneIndexDelta(proc.protocolManager.Current().BelowMaxDepth) {
 			// the parent is below max depth
 			return ErrBlockBelowMaxDepth
 		}
@@ -526,7 +526,7 @@ func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata)
 		return
 	}
 
-	if (proc.syncManager.LatestMilestoneIndex() - ocri) > iotago.MilestoneIndex(proc.protocolManager.Current().BelowMaxDepth) {
+	if (proc.syncManager.LatestMilestoneIndex() - ocri) > syncmanager.MilestoneIndexDelta(proc.protocolManager.Current().BelowMaxDepth) {
 		// the solid block was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}

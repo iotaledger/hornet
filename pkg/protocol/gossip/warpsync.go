@@ -21,7 +21,7 @@ import (
 // If no advancement func is provided, the WarpSync uses AdvanceAtPercentageReached with DefaultAdvancementThreshold.
 func NewWarpSync(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteria) *WarpSync {
 	ws := &WarpSync{
-		AdvancementRange: uint32(advRange),
+		AdvancementRange: syncmanager.MilestoneIndexDelta(advRange),
 		Events: &Events{
 			CheckpointUpdated: events.NewEvent(CheckpointCaller),
 			TargetUpdated:     events.NewEvent(TargetCaller),
@@ -38,7 +38,7 @@ func NewWarpSync(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpoin
 }
 
 func SyncStartCaller(handler interface{}, params ...interface{}) {
-	handler.(func(target iotago.MilestoneIndex, newCheckpoint iotago.MilestoneIndex, msRange uint32))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex), params[2].(uint32))
+	handler.(func(target iotago.MilestoneIndex, newCheckpoint iotago.MilestoneIndex, msRange syncmanager.MilestoneIndexDelta))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex), params[2].(syncmanager.MilestoneIndexDelta))
 }
 
 func SyncDoneCaller(handler interface{}, params ...interface{}) {
@@ -46,7 +46,7 @@ func SyncDoneCaller(handler interface{}, params ...interface{}) {
 }
 
 func CheckpointCaller(handler interface{}, params ...interface{}) {
-	handler.(func(newCheckpoint iotago.MilestoneIndex, oldCheckpoint iotago.MilestoneIndex, msRange uint32, target iotago.MilestoneIndex))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex), params[2].(uint32), params[3].(iotago.MilestoneIndex))
+	handler.(func(newCheckpoint iotago.MilestoneIndex, oldCheckpoint iotago.MilestoneIndex, msRange syncmanager.MilestoneIndexDelta, target iotago.MilestoneIndex))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex), params[2].(syncmanager.MilestoneIndexDelta), params[3].(iotago.MilestoneIndex))
 }
 
 func TargetCaller(handler interface{}, params ...interface{}) {
@@ -93,7 +93,7 @@ type WarpSync struct {
 	sync.Mutex
 
 	// The used advancement range per checkpoint.
-	AdvancementRange uint32
+	AdvancementRange syncmanager.MilestoneIndexDelta
 	// The Events of the warpsync.
 	Events *Events
 	// The criteria whether to advance to the next checkpoint.
@@ -203,7 +203,7 @@ func (ws *WarpSync) AddReferencedBlocksCount(referencedBlocksCount int) {
 // advances the next checkpoint by either incrementing from the current
 // via the checkpoint range or max to the target of the synchronization.
 // returns the chosen range.
-func (ws *WarpSync) advanceCheckpoint() uint32 {
+func (ws *WarpSync) advanceCheckpoint() syncmanager.MilestoneIndexDelta {
 	if ws.CurrentCheckpoint != 0 {
 		ws.PreviousCheckpoint = ws.CurrentCheckpoint
 	}
@@ -333,8 +333,8 @@ func (w *WarpSyncMilestoneRequester) Cleanup() {
 
 // RequestMilestoneRange requests up to N milestones nearest to the current confirmed milestone index.
 // Returns the number of milestones requested.
-func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, rangeToRequest uint32, onExistingMilestoneInRange func(ctx context.Context, msIndex iotago.MilestoneIndex) error, from ...iotago.MilestoneIndex) uint32 {
-	var requested uint32
+func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, rangeToRequest syncmanager.MilestoneIndexDelta, onExistingMilestoneInRange func(ctx context.Context, msIndex iotago.MilestoneIndex) error, from ...iotago.MilestoneIndex) syncmanager.MilestoneIndexDelta {
+	var requested syncmanager.MilestoneIndexDelta
 
 	startingPoint := w.syncManager.ConfirmedMilestoneIndex()
 	if len(from) > 0 {
@@ -342,7 +342,7 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 	}
 
 	var msIndexes []iotago.MilestoneIndex
-	for i := uint32(1); i <= rangeToRequest; i++ {
+	for i := syncmanager.MilestoneIndexDelta(1); i <= rangeToRequest; i++ {
 		msIndexToRequest := startingPoint + i
 
 		if !w.storage.ContainsMilestoneIndex(msIndexToRequest) {

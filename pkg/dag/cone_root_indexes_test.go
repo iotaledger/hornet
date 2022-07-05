@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/testsuite"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -43,8 +44,8 @@ func TestConeRootIndexes(t *testing.T) {
 			require.NoError(te.TestInterface, err)
 
 			minOldestConeRootIndex := iotago.MilestoneIndex(1)
-			if cmi > iotago.MilestoneIndex(BelowMaxDepth) {
-				minOldestConeRootIndex = cmi - iotago.MilestoneIndex(BelowMaxDepth)
+			if cmi > syncmanager.MilestoneIndexDelta(BelowMaxDepth) {
+				minOldestConeRootIndex = cmi - syncmanager.MilestoneIndexDelta(BelowMaxDepth)
 			}
 
 			require.GreaterOrEqual(te.TestInterface, ocri, minOldestConeRootIndex)

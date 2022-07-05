@@ -18,7 +18,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/profile"
 	"github.com/iotaledger/hornet/pkg/protocol"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -227,7 +226,7 @@ func provide(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func(deps syncManagerDeps) *syncmanager.SyncManager {
-		sync, err := syncmanager.New(deps.UTXOManager, iotago.MilestoneIndex(deps.ProtocolManager.Current().BelowMaxDepth))
+		sync, err := syncmanager.New(deps.UTXOManager, syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth))
 		if err != nil {
 			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
 		}

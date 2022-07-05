@@ -73,7 +73,7 @@ func NewPruningManager(
 	utxoDatabase *database.Database,
 	getMinimumTangleHistory getMinimumTangleHistoryFunc,
 	pruningMilestonesEnabled bool,
-	pruningMilestonesMaxMilestonesToKeep iotago.MilestoneIndex,
+	pruningMilestonesMaxMilestonesToKeep syncmanager.MilestoneIndexDelta,
 	pruningSizeEnabled bool,
 	pruningSizeTargetSizeBytes int64,
 	pruningSizeThresholdPercentage float64,
@@ -159,7 +159,7 @@ func (p *Manager) calcTargetIndexBySize(targetSizeBytes ...int64) (iotago.Milest
 	milestoneRange := p.syncManager.ConfirmedMilestoneIndex() - p.storage.SnapshotInfo().PruningIndex
 	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - p.pruningSizeThresholdPercentage) / 100.0)
 	diffPercentage := prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes)
-	milestoneDiff := iotago.MilestoneIndex(math.Ceil(float64(milestoneRange) * diffPercentage))
+	milestoneDiff := syncmanager.MilestoneIndexDelta(math.Ceil(float64(milestoneRange) * diffPercentage))
 
 	return p.syncManager.ConfirmedMilestoneIndex() - milestoneDiff, nil
 }

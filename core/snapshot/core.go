@@ -162,11 +162,11 @@ func provide(c *dig.Container) error {
 
 	return c.Provide(func(deps snapshotDeps) *snapshot.Manager {
 
-		solidEntryPointCheckThresholdPast := iotago.MilestoneIndex(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
-		solidEntryPointCheckThresholdFuture := iotago.MilestoneIndex(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
-		pruningThreshold := iotago.MilestoneIndex(deps.ProtocolManager.Current().BelowMaxDepth + AdditionalPruningThreshold)
+		solidEntryPointCheckThresholdPast := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
+		solidEntryPointCheckThresholdFuture := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
+		pruningThreshold := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + AdditionalPruningThreshold)
 
-		snapshotDepth := iotago.MilestoneIndex(ParamsSnapshots.Depth)
+		snapshotDepth := syncmanager.MilestoneIndexDelta(ParamsSnapshots.Depth)
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {
 			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CoreComponent.App.Config().GetParameterPath(&(ParamsSnapshots.Depth)), snapshotDepth, solidEntryPointCheckThresholdFuture)
 			snapshotDepth = solidEntryPointCheckThresholdFuture
@@ -185,7 +185,7 @@ func provide(c *dig.Container) error {
 			solidEntryPointCheckThresholdFuture,
 			pruningThreshold,
 			snapshotDepth,
-			iotago.MilestoneIndex(ParamsSnapshots.Interval),
+			syncmanager.MilestoneIndexDelta(ParamsSnapshots.Interval),
 		)
 	})
 }

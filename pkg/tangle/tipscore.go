@@ -5,6 +5,7 @@ import (
 
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -34,9 +35,9 @@ type TipScoreCalculator struct {
 func NewTipScoreCalculator(storage *storage.Storage, maxDeltaBlockYoungestConeRootIndexToCMI int, maxDeltaBlockOldestConeRootIndexToCMI int, belowMaxDepth int) *TipScoreCalculator {
 	return &TipScoreCalculator{
 		storage:                                 storage,
-		maxDeltaBlockYoungestConeRootIndexToCMI: iotago.MilestoneIndex(maxDeltaBlockYoungestConeRootIndexToCMI),
-		maxDeltaBlockOldestConeRootIndexToCMI:   iotago.MilestoneIndex(maxDeltaBlockOldestConeRootIndexToCMI),
-		belowMaxDepth:                           iotago.MilestoneIndex(belowMaxDepth),
+		maxDeltaBlockYoungestConeRootIndexToCMI: syncmanager.MilestoneIndexDelta(maxDeltaBlockYoungestConeRootIndexToCMI),
+		maxDeltaBlockOldestConeRootIndexToCMI:   syncmanager.MilestoneIndexDelta(maxDeltaBlockOldestConeRootIndexToCMI),
+		belowMaxDepth:                           syncmanager.MilestoneIndexDelta(belowMaxDepth),
 	}
 }
 

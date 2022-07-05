@@ -70,7 +70,7 @@ func provide(c *dig.Container) error {
 	return c.Provide(func(deps pruningManagerDeps) *pruning.Manager {
 
 		pruningMilestonesEnabled := ParamsPruning.Milestones.Enabled
-		pruningMilestonesMaxMilestonesToKeep := iotago.MilestoneIndex(ParamsPruning.Milestones.MaxMilestonesToKeep)
+		pruningMilestonesMaxMilestonesToKeep := syncmanager.MilestoneIndexDelta(ParamsPruning.Milestones.MaxMilestonesToKeep)
 
 		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
 			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.Enabled)))
