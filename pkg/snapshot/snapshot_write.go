@@ -34,6 +34,13 @@ const (
 	MsDiffDirectionOnwards
 )
 
+const (
+	// AdditionalMilestoneDiffRange defines the maximum number of additional
+	// milestone diffs that are stored in the full snapshot.
+	// These are used to reconstruct pending protocol parameter updates.
+	AdditionalMilestoneDiffRange syncmanager.MilestoneIndexDelta = 30
+)
+
 // MilestoneRetrieverFunc is a function which returns the milestone for the given index.
 type MilestoneRetrieverFunc func(index iotago.MilestoneIndex) (*iotago.Milestone, error)
 
@@ -338,11 +345,6 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 		return fmt.Errorf("loading protocol parameters milestone option failed: %w", err)
 	}
 
-	protoParams := &iotago.ProtocolParameters{}
-	if _, err := protoParams.Deserialize(protoParamsMsOption.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
-		return fmt.Errorf("failed to deserialize protocol parameters: %w", err)
-	}
-
 	timeInit := time.Now()
 
 	fullHeader := &FullSnapshotHeader{
@@ -365,11 +367,11 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 		return err
 	}
 
-	// a full snapshot contains the ledger UTXOs as of the CMI
-	// and the milestone diffs from the CMI back to target index - below max depth (excluding the below max depth index)
-	// the "below max depth" milestone diffs are needed to reconstruct pending protocol parameter updates
+	// a full snapshot contains the ledger UTXOs as of the CMI and the milestone diffs from
+	// the CMI back to target index - AdditionalMilestoneDiffRange (excluding the last index)
+	// the "AdditionalMilestoneDiffRange" milestone diffs are needed to reconstruct pending protocol parameter updates.
 	utxoProducer := NewCMIUTXOProducer(s.utxoManager)
-	milestoneDiffProducer := NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionBackwards, fullHeader.LedgerMilestoneIndex, targetIndex-syncmanager.MilestoneIndexDelta(protoParams.BelowMaxDepth))
+	milestoneDiffProducer := NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionBackwards, fullHeader.LedgerMilestoneIndex, targetIndex-AdditionalMilestoneDiffRange)
 	sepProducer := NewSEPsProducer(ctx, s.storage, targetIndex, s.solidEntryPointCheckThresholdPast)
 
 	// stream data into snapshot file
@@ -507,6 +509,7 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 			return fmt.Errorf("unable to read delta snapshot header: %w", err)
 		}
 
+		// we stream the diff from the old delta header target index to the new target index
 		milestoneDiffProducer := NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionOnwards, oldDeltaHeader.TargetMilestoneIndex, targetIndex)
 
 		tempFilePath = s.snapshotDeltaPath + "_tmp"
@@ -522,6 +525,7 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 		snapshotMetrics, err = StreamDeltaSnapshotDataToExisting(snapshotFile, deltaHeader, milestoneDiffProducer, sepProducer)
 
 	} else {
+		// we stream the diff from the full header target index to the new target index
 		milestoneDiffProducer := NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionOnwards, fullHeader.TargetMilestoneIndex, targetIndex)
 
 		snapshotFile, tempFilePath, err = ioutils.CreateTempFile(s.snapshotDeltaPath)
