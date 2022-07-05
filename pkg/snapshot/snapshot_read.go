@@ -37,11 +37,6 @@ func newFullHeaderConsumer(targetFullHeader *FullSnapshotHeader, dbStorage *stor
 			}
 		}
 
-		// store initial protocol parameters milestone option
-		if err := dbStorage.StoreProtocolParametersMilestoneOption(header.ProtocolParamsMilestoneOpt); err != nil {
-			return fmt.Errorf("unable to store protocol parameters milestone option: %w", err)
-		}
-
 		*targetFullHeader = *header
 
 		if err := utxoManager.StoreLedgerIndex(header.LedgerMilestoneIndex); err != nil {
