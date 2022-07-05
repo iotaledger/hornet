@@ -34,7 +34,7 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 	metadata := cachedBlockMeta.Metadata()
 
-	referenced, referencedIndex, wfIndex := metadata.ReferencedWithIndexAndWhiteflagIndex()
+	referenced, referencedIndex, wfIndex := metadata.ReferencedWithIndexAndWhiteFlagIndex()
 
 	response := &blockMetadataResponse{
 		BlockID:                    blockID.ToHex(),

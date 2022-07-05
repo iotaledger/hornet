@@ -197,7 +197,7 @@ func (m *BlockMetadata) ReferencedWithIndex() (bool, iotago.MilestoneIndex) {
 	return m.metadata.HasBit(BlockMetadataReferenced), m.referencedIndex
 }
 
-func (m *BlockMetadata) ReferencedWithIndexAndWhiteflagIndex() (bool, iotago.MilestoneIndex, uint32) {
+func (m *BlockMetadata) ReferencedWithIndexAndWhiteFlagIndex() (bool, iotago.MilestoneIndex, uint32) {
 	m.RLock()
 	defer m.RUnlock()
 

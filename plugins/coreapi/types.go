@@ -91,12 +91,12 @@ type blockMetadataResponse struct {
 	LedgerInclusionState string `json:"ledgerInclusionState,omitempty"`
 	// The reason why this block is marked as conflicting.
 	ConflictReason *storage.Conflict `json:"conflictReason,omitempty"`
-	// If this block is referenced by a milestone this returns the index of that block inside the milestone by whiteflag ordering.
-	WhiteFlagIndex *uint32 `json:"whiteFlagIndex,omitempty"`
 	// Whether the block should be promoted.
 	ShouldPromote *bool `json:"shouldPromote,omitempty"`
 	// Whether the block should be reattached.
 	ShouldReattach *bool `json:"shouldReattach,omitempty"`
+	// If this block is referenced by a milestone this returns the index of that block inside the milestone by whiteflag ordering.
+	WhiteFlagIndex *uint32 `json:"whiteFlagIndex,omitempty"`
 }
 
 // blockCreatedResponse defines the response of a POST blocks REST API call.

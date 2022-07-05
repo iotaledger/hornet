@@ -26,9 +26,10 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		Solid:   metadata.IsSolid(),
 	}
 
-	referenced, msIndex := metadata.ReferencedWithIndex()
+	referenced, msIndex, wfIndex := metadata.ReferencedWithIndexAndWhiteFlagIndex()
 	if referenced {
 		m.ReferencedByMilestoneIndex = msIndex
+		m.WhiteFlagIndex = wfIndex
 		inclusionState := inx.BlockMetadata_NO_TRANSACTION
 		conflict := metadata.Conflict()
 		if conflict != storage.ConflictNone {
