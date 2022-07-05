@@ -44,7 +44,17 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 	}
 
 	if metadata.IsMilestone() {
-		response.MilestoneIndex = referencedIndex
+		cachedBlock := deps.Storage.CachedBlockOrNil(blockID)
+		if cachedBlock == nil {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
+		}
+		defer cachedBlock.Release(true)
+
+		milestone := cachedBlock.Block().Milestone()
+		if milestone == nil {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "milestone for block not found: %s", blockID.ToHex())
+		}
+		response.MilestoneIndex = milestone.Index
 	}
 
 	if referenced {
