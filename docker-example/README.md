@@ -47,8 +47,11 @@ To get access to your node API, for some endpoints you need an authorization tok
 docker compose run hornet tool jwt-api --databasePath data/p2pstore
 ```
 
+*NOTE: Depending on your Docker installation you might need to run `docker-compose` instead.*
+
+
 ### Start your node
-Start your node as a deamon process:
+Start your node as a daemon process:
 
 ```
 docker compose up -d
@@ -64,5 +67,5 @@ Now that you have your node running, you can try any of the following:
 - Access your node endpoints, for example:
     - `/api/core/v2/info` to get information about your node.
     - `/dashboard` to view your dashboard.
-    - `/grafana` to view your Grafana dashboard, a poweruser alternative to the regular dashboard.
+    - `/grafana` to view your Grafana dashboard, a powerful dashboard to display metrics about HORNET and your system.
 - Run `docker compose run hornet tools` to find out about other available tools and run them with `docker compose run hornet tool [TOOL]`.
