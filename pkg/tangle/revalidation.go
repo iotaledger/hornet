@@ -8,7 +8,6 @@ import (
 
 	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/utils"
@@ -150,11 +149,11 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 
 	start := time.Now()
 
-	milestonesToDelete := make(map[milestone.Index]struct{})
+	milestonesToDelete := make(map[iotago.MilestoneIndex]struct{})
 
 	lastStatusTime := time.Now()
 	var milestonesCounter int64
-	t.storage.NonCachedStorage().ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
+	t.storage.NonCachedStorage().ForEachMilestoneIndex(func(msIndex iotago.MilestoneIndex) bool {
 		milestonesCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -432,11 +431,11 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 
 	start := time.Now()
 
-	unreferencedMilestoneIndexes := make(map[milestone.Index]struct{})
+	unreferencedMilestoneIndexes := make(map[iotago.MilestoneIndex]struct{})
 
 	lastStatusTime := time.Now()
 	var unreferencedBlocksCounter int64
-	t.storage.NonCachedStorage().ForEachUnreferencedBlock(func(msIndex milestone.Index, _ iotago.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachUnreferencedBlock(func(msIndex iotago.MilestoneIndex, _ iotago.BlockID) bool {
 		unreferencedBlocksCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {

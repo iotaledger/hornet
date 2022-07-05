@@ -4,18 +4,17 @@ import (
 	"context"
 	"os"
 
-	"github.com/iotaledger/hornet/pkg/protocol"
-
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
-	"github.com/iotaledger/hornet/pkg/model/storage"
+	storagepkg "github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/protocol"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -55,17 +54,17 @@ type Manager struct {
 	// the logger used to log events.
 	*logger.WrappedLogger
 
-	storage                              *storage.Storage
+	storage                              *storagepkg.Storage
 	syncManager                          *syncmanager.SyncManager
 	utxoManager                          *utxo.Manager
 	protocolManager                      *protocol.Manager
 	snapshotFullPath                     string
 	snapshotDeltaPath                    string
 	deltaSnapshotSizeThresholdPercentage float64
-	solidEntryPointCheckThresholdPast    milestone.Index
-	solidEntryPointCheckThresholdFuture  milestone.Index
-	snapshotDepth                        milestone.Index
-	snapshotInterval                     milestone.Index
+	solidEntryPointCheckThresholdPast    syncmanager.MilestoneIndexDelta
+	solidEntryPointCheckThresholdFuture  syncmanager.MilestoneIndexDelta
+	snapshotDepth                        syncmanager.MilestoneIndexDelta
+	snapshotInterval                     syncmanager.MilestoneIndexDelta
 
 	snapshotLock         syncutils.Mutex
 	statusLock           syncutils.RWMutex
@@ -77,18 +76,18 @@ type Manager struct {
 // NewSnapshotManager creates a new snapshot manager instance.
 func NewSnapshotManager(
 	log *logger.Logger,
-	storage *storage.Storage,
+	storage *storagepkg.Storage,
 	syncManager *syncmanager.SyncManager,
 	utxoManager *utxo.Manager,
 	protocolManager *protocol.Manager,
 	snapshotFullPath string,
 	snapshotDeltaPath string,
 	deltaSnapshotSizeThresholdPercentage float64,
-	solidEntryPointCheckThresholdPast milestone.Index,
-	solidEntryPointCheckThresholdFuture milestone.Index,
-	additionalPruningThreshold milestone.Index,
-	snapshotDepth milestone.Index,
-	snapshotInterval milestone.Index,
+	solidEntryPointCheckThresholdPast syncmanager.MilestoneIndexDelta,
+	solidEntryPointCheckThresholdFuture syncmanager.MilestoneIndexDelta,
+	additionalPruningThreshold iotago.MilestoneIndex,
+	snapshotDepth syncmanager.MilestoneIndexDelta,
+	snapshotInterval iotago.MilestoneIndex,
 ) *Manager {
 
 	return &Manager{
@@ -105,14 +104,14 @@ func NewSnapshotManager(
 		snapshotDepth:                        snapshotDepth,
 		snapshotInterval:                     snapshotInterval,
 		Events: &Events{
-			SnapshotMilestoneIndexChanged:         events.NewEvent(milestone.IndexCaller),
-			HandledConfirmedMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
+			SnapshotMilestoneIndexChanged:         events.NewEvent(storagepkg.MilestoneIndexCaller),
+			HandledConfirmedMilestoneIndexChanged: events.NewEvent(storagepkg.MilestoneIndexCaller),
 			SnapshotMetricsUpdated:                events.NewEvent(SnapshotMetricsCaller),
 		},
 	}
 }
 
-func (s *Manager) MinimumMilestoneIndex() milestone.Index {
+func (s *Manager) MinimumMilestoneIndex() iotago.MilestoneIndex {
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
@@ -133,7 +132,7 @@ func (s *Manager) IsSnapshotting() bool {
 	return s.statusIsSnapshotting
 }
 
-func (s *Manager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
+func (s *Manager) shouldTakeSnapshot(confirmedMilestoneIndex iotago.MilestoneIndex) bool {
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
@@ -150,11 +149,11 @@ func (s *Manager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bo
 }
 
 func checkSnapshotLimits(
-	snapshotInfo *storage.SnapshotInfo,
-	confirmedMilestoneIndex milestone.Index,
-	targetIndex milestone.Index,
-	solidEntryPointCheckThresholdPast milestone.Index,
-	solidEntryPointCheckThresholdFuture milestone.Index,
+	snapshotInfo *storagepkg.SnapshotInfo,
+	confirmedMilestoneIndex iotago.MilestoneIndex,
+	targetIndex iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdPast syncmanager.MilestoneIndexDelta,
+	solidEntryPointCheckThresholdFuture syncmanager.MilestoneIndexDelta,
 	checkIncreasingSnapshotIndex bool) error {
 
 	if confirmedMilestoneIndex < solidEntryPointCheckThresholdFuture {
@@ -192,14 +191,14 @@ func (s *Manager) setIsSnapshotting(value bool) {
 }
 
 // CreateFullSnapshot creates a full snapshot for the given target milestone index.
-func (s *Manager) CreateFullSnapshot(ctx context.Context, targetIndex milestone.Index, filePath string, writeToDatabase bool) error {
+func (s *Manager) CreateFullSnapshot(ctx context.Context, targetIndex iotago.MilestoneIndex, filePath string, writeToDatabase bool) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 	return s.createSnapshotWithoutLocking(ctx, Full, targetIndex, filePath, writeToDatabase)
 }
 
 // CreateDeltaSnapshot creates a delta snapshot for the given target milestone index.
-func (s *Manager) CreateDeltaSnapshot(ctx context.Context, targetIndex milestone.Index, filePath string, writeToDatabase bool, snapshotFullPath ...string) error {
+func (s *Manager) CreateDeltaSnapshot(ctx context.Context, targetIndex iotago.MilestoneIndex, filePath string, writeToDatabase bool, snapshotFullPath ...string) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 	return s.createSnapshotWithoutLocking(ctx, Delta, targetIndex, filePath, writeToDatabase, snapshotFullPath...)
@@ -262,7 +261,7 @@ func (s *Manager) snapshotTypeFilePath(snapshotType Type) string {
 }
 
 // HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a snapshot creation.
-func (s *Manager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirmedMilestoneIndex milestone.Index) {
+func (s *Manager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirmedMilestoneIndex iotago.MilestoneIndex) {
 	if !s.syncManager.IsNodeSynced() {
 		// do not prune or create snapshots while we are not synced
 		return

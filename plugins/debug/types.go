@@ -1,8 +1,8 @@
 package debug
 
 import (
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/plugins/coreapi"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // outputIDsResponse defines the response of a GET debug outputs REST API call.
@@ -24,7 +24,7 @@ type address struct {
 // outputIDsResponse defines the response of a GET debug milestone diff REST API call.
 type milestoneDiffResponse struct {
 	// The index of the milestone.
-	MilestoneIndex milestone.Index `json:"index"`
+	MilestoneIndex iotago.MilestoneIndex `json:"index"`
 	// The newly created outputs by this milestone diff.
 	Outputs []*coreapi.OutputResponse `json:"outputs"`
 	// The used outputs (spents) by this milestone diff.
@@ -42,7 +42,7 @@ type request struct {
 	// The time the request was enqueued.
 	EnqueueTimestamp string `json:"enqueueTimestamp"`
 	// The index of the milestone this request belongs to.
-	MilestoneIndex milestone.Index `json:"milestoneIndex"`
+	MilestoneIndex iotago.MilestoneIndex `json:"milestoneIndex"`
 }
 
 // requestsResponse defines the response of a GET debug requests REST API call.
@@ -54,8 +54,8 @@ type requestsResponse struct {
 // entryPoint defines an entryPoint with information about the milestone index of the cone it references.
 type entryPoint struct {
 	// The hex encoded block ID of the block.
-	BlockID               string          `json:"blockId"`
-	ReferencedByMilestone milestone.Index `json:"referencedByMilestone"`
+	BlockID               string                `json:"blockId"`
+	ReferencedByMilestone iotago.MilestoneIndex `json:"referencedByMilestone"`
 }
 
 // blockWithParents defines a block with information about it's parents.

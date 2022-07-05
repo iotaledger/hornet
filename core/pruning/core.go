@@ -10,11 +10,11 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hornet/pkg/daemon"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/pruning"
 	"github.com/iotaledger/hornet/pkg/snapshot"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -70,7 +70,7 @@ func provide(c *dig.Container) error {
 	return c.Provide(func(deps pruningManagerDeps) *pruning.Manager {
 
 		pruningMilestonesEnabled := ParamsPruning.Milestones.Enabled
-		pruningMilestonesMaxMilestonesToKeep := milestone.Index(ParamsPruning.Milestones.MaxMilestonesToKeep)
+		pruningMilestonesMaxMilestonesToKeep := syncmanager.MilestoneIndexDelta(ParamsPruning.Milestones.MaxMilestonesToKeep)
 
 		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
 			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.Enabled)))
@@ -106,7 +106,7 @@ func provide(c *dig.Container) error {
 
 func run() error {
 
-	onSnapshotHandledConfirmedMilestoneIndexChanged := events.NewClosure(func(confirmedMilestoneIndex milestone.Index) {
+	onSnapshotHandledConfirmedMilestoneIndexChanged := events.NewClosure(func(confirmedMilestoneIndex iotago.MilestoneIndex) {
 		deps.PruningManager.HandleNewConfirmedMilestoneEvent(CoreComponent.Daemon().ContextStopped(), confirmedMilestoneIndex)
 	})
 

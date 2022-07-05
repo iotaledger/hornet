@@ -8,14 +8,13 @@ import (
 
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type ConfirmedMilestoneStats struct {
-	Index                                     milestone.Index
+	Index                                     iotago.MilestoneIndex
 	ConfirmationTime                          int64
 	BlocksReferenced                          int
 	BlocksExcludedWithConflictingTransactions int
@@ -42,13 +41,13 @@ type ConfirmationMetrics struct {
 }
 
 type CheckBlockReferencedFunc func(meta *storage.BlockMetadata) bool
-type SetBlockReferencedFunc func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index)
+type SetBlockReferencedFunc func(meta *storage.BlockMetadata, referenced bool, msIndex iotago.MilestoneIndex)
 
 var (
 	DefaultCheckBlockReferencedFunc = func(meta *storage.BlockMetadata) bool {
 		return meta.IsReferenced()
 	}
-	DefaultSetBlockReferencedFunc = func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index) {
+	DefaultSetBlockReferencedFunc = func(meta *storage.BlockMetadata, referenced bool, msIndex iotago.MilestoneIndex) {
 		meta.SetReferenced(referenced, msIndex)
 	}
 )
@@ -69,9 +68,9 @@ func ConfirmMilestone(
 	serverMetrics *metrics.ServerMetrics,
 	onValidateReceipt func(r *utxo.ReceiptTuple) error,
 	onMilestoneConfirmed func(confirmation *Confirmation),
-	forEachReferencedBlock func(blockMetadata *storage.CachedMetadata, index milestone.Index, confTime uint32),
-	onLedgerUpdated func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents),
-	onTreasuryMutated func(index milestone.Index, tuple *utxo.TreasuryMutationTuple),
+	forEachReferencedBlock func(blockMetadata *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32),
+	onLedgerUpdated func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents),
+	onTreasuryMutated func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple),
 ) (*ConfirmedMilestoneStats, *ConfirmationMetrics, error) {
 
 	msID, err := milestonePayload.ID()
@@ -81,7 +80,7 @@ func ConfirmMilestone(
 
 	milestoneID := msID
 	previousMilestoneID := milestonePayload.PreviousMilestoneID
-	milestoneIndex := milestone.Index(milestonePayload.Index)
+	milestoneIndex := milestonePayload.Index
 	milestoneTimestamp := milestonePayload.Timestamp
 	milestoneParents := milestonePayload.Parents
 

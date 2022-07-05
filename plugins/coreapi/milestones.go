@@ -4,7 +4,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/restapi"
 
@@ -76,7 +75,7 @@ func milestoneBytesByID(c echo.Context) ([]byte, error) {
 	return ms.Data(), nil
 }
 
-func milestoneUTXOChanges(msIndex milestone.Index) (*milestoneUTXOChangesResponse, error) {
+func milestoneUTXOChanges(msIndex iotago.MilestoneIndex) (*milestoneUTXOChangesResponse, error) {
 	diff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -97,7 +96,7 @@ func milestoneUTXOChanges(msIndex milestone.Index) (*milestoneUTXOChangesRespons
 	}
 
 	return &milestoneUTXOChangesResponse{
-		Index:           uint32(msIndex),
+		Index:           msIndex,
 		CreatedOutputs:  createdOutputs,
 		ConsumedOutputs: consumedOutputs,
 	}, nil

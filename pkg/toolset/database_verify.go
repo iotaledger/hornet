@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
@@ -149,7 +148,7 @@ func verifyDatabase(
 		cachedBlockFunc storage.CachedBlockFunc,
 		milestoneManager *milestonemanager.MilestoneManager,
 		onNewMilestoneConeBlock func(*storage.CachedBlock),
-		msIndex milestone.Index) error {
+		msIndex iotago.MilestoneIndex) error {
 
 		// traversal stops if no more blocks pass the given condition
 		// Caution: condition func is not in DFS order
@@ -222,7 +221,7 @@ func verifyDatabase(
 		ctx context.Context,
 		storeSource *storage.Storage,
 		utxoManagerTemp *utxo.Manager,
-		msIndex milestone.Index) error {
+		msIndex iotago.MilestoneIndex) error {
 
 		milestonePayload, err := getMilestonePayloadFromStorage(storeSource, msIndex)
 		if err != nil {
@@ -258,7 +257,7 @@ func verifyDatabase(
 
 				return meta.IsReferenced()
 			},
-			func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index) {
+			func(meta *storage.BlockMetadata, referenced bool, msIndex iotago.MilestoneIndex) {
 				if _, exists := referencedBlocks[meta.BlockID()]; !exists {
 					referencedBlocks[meta.BlockID()] = struct{}{}
 					meta.SetReferenced(referenced, msIndex)
@@ -349,7 +348,7 @@ func compareSolidEntryPoints(tangleStoreSource *storage.Storage, tangleStoreTemp
 	return nil
 }
 
-func getMilestoneDiffSHA256Sum(utxoManager *utxo.Manager, msIndex milestone.Index) ([]byte, error) {
+func getMilestoneDiffSHA256Sum(utxoManager *utxo.Manager, msIndex iotago.MilestoneIndex) ([]byte, error) {
 
 	msDiff, err := utxoManager.MilestoneDiff(msIndex)
 	if err != nil {
@@ -359,7 +358,7 @@ func getMilestoneDiffSHA256Sum(utxoManager *utxo.Manager, msIndex milestone.Inde
 	return msDiff.SHA256Sum()
 }
 
-func compareMilestoneDiff(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.Manager, msIndex milestone.Index) error {
+func compareMilestoneDiff(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.Manager, msIndex iotago.MilestoneIndex) error {
 
 	msDiffSHA256Source, err := getMilestoneDiffSHA256Sum(utxoManagerSource, msIndex)
 	if err != nil {
@@ -393,7 +392,7 @@ func compareLedgerState(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.M
 	return nil
 }
 
-func cleanupMilestoneFromUTXOManager(utxoManager *utxo.Manager, milestonePayload *iotago.Milestone, msIndex milestone.Index) error {
+func cleanupMilestoneFromUTXOManager(utxoManager *utxo.Manager, milestonePayload *iotago.Milestone, msIndex iotago.MilestoneIndex) error {
 
 	var receiptMigratedAtIndex []uint32
 

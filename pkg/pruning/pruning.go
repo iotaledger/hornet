@@ -14,8 +14,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
-	"github.com/iotaledger/hornet/pkg/model/storage"
+	storagepkg "github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -35,22 +34,22 @@ var (
 	ErrExistingDeltaSnapshotWrongFullSnapshotTargetMilestoneID = errors.New("existing delta ledger snapshot has wrong full snapshot target milestone ID")
 )
 
-type getMinimumTangleHistoryFunc func() milestone.Index
+type getMinimumTangleHistoryFunc func() iotago.MilestoneIndex
 
 // Manager handles pruning of the database.
 type Manager struct {
 	// the logger used to log events.
 	*logger.WrappedLogger
 
-	storage                 *storage.Storage
+	storage                 *storagepkg.Storage
 	syncManager             *syncmanager.SyncManager
 	tangleDatabase          *database.Database
 	utxoDatabase            *database.Database
 	getMinimumTangleHistory getMinimumTangleHistoryFunc
 
-	additionalPruningThreshold           milestone.Index
+	additionalPruningThreshold           iotago.MilestoneIndex
 	pruningMilestonesEnabled             bool
-	pruningMilestonesMaxMilestonesToKeep milestone.Index
+	pruningMilestonesMaxMilestonesToKeep iotago.MilestoneIndex
 	pruningSizeEnabled                   bool
 	pruningSizeTargetSizeBytes           int64
 	pruningSizeThresholdPercentage       float64
@@ -68,13 +67,13 @@ type Manager struct {
 // NewPruningManager creates a new pruning manager instance.
 func NewPruningManager(
 	log *logger.Logger,
-	storage *storage.Storage,
+	storage *storagepkg.Storage,
 	syncManager *syncmanager.SyncManager,
 	tangleDatabase *database.Database,
 	utxoDatabase *database.Database,
 	getMinimumTangleHistory getMinimumTangleHistoryFunc,
 	pruningMilestonesEnabled bool,
-	pruningMilestonesMaxMilestonesToKeep milestone.Index,
+	pruningMilestonesMaxMilestonesToKeep syncmanager.MilestoneIndexDelta,
 	pruningSizeEnabled bool,
 	pruningSizeTargetSizeBytes int64,
 	pruningSizeThresholdPercentage float64,
@@ -97,7 +96,7 @@ func NewPruningManager(
 		pruningSizeCooldownTime:              pruningSizeCooldownTime,
 		pruneReceipts:                        pruneReceipts,
 		Events: &Events{
-			PruningMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
+			PruningMilestoneIndexChanged: events.NewEvent(storagepkg.MilestoneIndexCaller),
 			PruningMetricsUpdated:        events.NewEvent(PruningMetricsCaller),
 		},
 	}
@@ -116,7 +115,7 @@ func (p *Manager) IsPruning() bool {
 	return p.isPruning
 }
 
-func (p *Manager) calcTargetIndexBySize(targetSizeBytes ...int64) (milestone.Index, error) {
+func (p *Manager) calcTargetIndexBySize(targetSizeBytes ...int64) (iotago.MilestoneIndex, error) {
 
 	if !p.pruningSizeEnabled && len(targetSizeBytes) == 0 {
 		// pruning by size deactivated
@@ -160,13 +159,13 @@ func (p *Manager) calcTargetIndexBySize(targetSizeBytes ...int64) (milestone.Ind
 	milestoneRange := p.syncManager.ConfirmedMilestoneIndex() - p.storage.SnapshotInfo().PruningIndex
 	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - p.pruningSizeThresholdPercentage) / 100.0)
 	diffPercentage := prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes)
-	milestoneDiff := milestone.Index(math.Ceil(float64(milestoneRange) * diffPercentage))
+	milestoneDiff := syncmanager.MilestoneIndexDelta(math.Ceil(float64(milestoneRange) * diffPercentage))
 
 	return p.syncManager.ConfirmedMilestoneIndex() - milestoneDiff, nil
 }
 
 // pruneUnreferencedBlocks prunes all unreferenced blocks from the database for the given milestone
-func (p *Manager) pruneUnreferencedBlocks(targetIndex milestone.Index) (blocksCountDeleted int, blocksCountChecked int) {
+func (p *Manager) pruneUnreferencedBlocks(targetIndex iotago.MilestoneIndex) (blocksCountDeleted int, blocksCountChecked int) {
 
 	blockIDsToDeleteMap := make(map[iotago.BlockID]struct{})
 
@@ -199,7 +198,7 @@ func (p *Manager) pruneUnreferencedBlocks(targetIndex milestone.Index) (blocksCo
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
-func (p *Manager) pruneMilestone(milestoneIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
+func (p *Manager) pruneMilestone(milestoneIndex iotago.MilestoneIndex, receiptMigratedAtIndex ...uint32) error {
 
 	if err := p.storage.UTXOManager().PruneMilestoneIndexWithoutLocking(milestoneIndex, p.pruneReceipts, receiptMigratedAtIndex...); err != nil {
 		return err
@@ -220,7 +219,7 @@ func (p *Manager) pruneBlocks(blockIDsToDeleteMap map[iotago.BlockID]struct{}) i
 			continue
 		}
 
-		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
+		cachedBlockMeta.ConsumeMetadata(func(metadata *storagepkg.BlockMetadata) { // meta -1
 			// Delete the reference in the parents
 			for _, parent := range metadata.Parents() {
 				p.storage.DeleteChild(parent, blockID)
@@ -237,7 +236,7 @@ func (p *Manager) pruneBlocks(blockIDsToDeleteMap map[iotago.BlockID]struct{}) i
 	return len(blockIDsToDeleteMap)
 }
 
-func (p *Manager) pruneDatabase(ctx context.Context, targetIndex milestone.Index) (milestone.Index, error) {
+func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 
 	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		// do not prune the database if the node was shut down
@@ -283,7 +282,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex milestone.Index
 	defer p.setIsPruning(false)
 
 	// calculate solid entry points for the new end of the tangle history
-	var solidEntryPoints []*storage.SolidEntryPoint
+	var solidEntryPoints []*storagepkg.SolidEntryPoint
 	err := dag.ForEachSolidEntryPoint(
 		ctx,
 		p.storage,
@@ -291,7 +290,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex milestone.Index
 		// TODO
 		//p.solidEntryPointCheckThresholdPast,
 		15,
-		func(sep *storage.SolidEntryPoint) bool {
+		func(sep *storagepkg.SolidEntryPoint) bool {
 			solidEntryPoints = append(solidEntryPoints, sep)
 			return true
 		})
@@ -352,13 +351,13 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex milestone.Index
 			cachedMilestone.Milestone().Parents(),
 			// traversal stops if no more blocks pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			func(cachedBlockMeta *storagepkg.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 				// everything that was referenced by that milestone can be pruned (even blocks of older milestones)
 				return true, nil
 			},
 			// consumer
-			func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
+			func(cachedBlockMeta *storagepkg.CachedMetadata) error { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 				blockIDsToDeleteMap[cachedBlockMeta.Metadata().BlockID()] = struct{}{}
 				return nil
@@ -437,7 +436,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex milestone.Index
 	return targetIndex, nil
 }
 
-func (p *Manager) PruneDatabaseByDepth(ctx context.Context, depth milestone.Index) (milestone.Index, error) {
+func (p *Manager) PruneDatabaseByDepth(ctx context.Context, depth iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 	p.snapshotLock.Lock()
 	defer p.snapshotLock.Unlock()
 
@@ -451,14 +450,14 @@ func (p *Manager) PruneDatabaseByDepth(ctx context.Context, depth milestone.Inde
 	return p.pruneDatabase(ctx, confirmedMilestoneIndex-depth)
 }
 
-func (p *Manager) PruneDatabaseByTargetIndex(ctx context.Context, targetIndex milestone.Index) (milestone.Index, error) {
+func (p *Manager) PruneDatabaseByTargetIndex(ctx context.Context, targetIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 	p.snapshotLock.Lock()
 	defer p.snapshotLock.Unlock()
 
 	return p.pruneDatabase(ctx, targetIndex)
 }
 
-func (p *Manager) PruneDatabaseBySize(ctx context.Context, targetSizeBytes int64) (milestone.Index, error) {
+func (p *Manager) PruneDatabaseBySize(ctx context.Context, targetSizeBytes int64) (iotago.MilestoneIndex, error) {
 	p.snapshotLock.Lock()
 	defer p.snapshotLock.Unlock()
 
@@ -471,14 +470,14 @@ func (p *Manager) PruneDatabaseBySize(ctx context.Context, targetSizeBytes int64
 }
 
 // HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a snapshot creation.
-func (p *Manager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirmedMilestoneIndex milestone.Index) {
+func (p *Manager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirmedMilestoneIndex iotago.MilestoneIndex) {
 
 	if !p.syncManager.IsNodeSynced() {
 		// do not prune while we are not synced
 		return
 	}
 
-	var targetIndex milestone.Index = 0
+	var targetIndex iotago.MilestoneIndex = 0
 	if p.pruningMilestonesEnabled && confirmedMilestoneIndex > p.pruningMilestonesMaxMilestonesToKeep {
 		targetIndex = confirmedMilestoneIndex - p.pruningMilestonesMaxMilestonesToKeep
 	}

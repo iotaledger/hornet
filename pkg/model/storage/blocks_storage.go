@@ -6,7 +6,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/profile"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -24,11 +23,11 @@ func BlockIDCaller(handler interface{}, params ...interface{}) {
 }
 
 func NewBlockCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedBlock *CachedBlock, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index))(params[0].(*CachedBlock).Retain(), params[1].(milestone.Index), params[2].(milestone.Index)) // block pass +1
+	handler.(func(cachedBlock *CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex))(params[0].(*CachedBlock).Retain(), params[1].(iotago.MilestoneIndex), params[2].(iotago.MilestoneIndex)) // block pass +1
 }
 
 func BlockReferencedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedBlockMeta *CachedMetadata, msIndex milestone.Index, confTime uint32))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint32)) // block pass +1
+	handler.(func(cachedBlockMeta *CachedMetadata, msIndex iotago.MilestoneIndex, confTime uint32))(params[0].(*CachedMetadata).Retain(), params[1].(iotago.MilestoneIndex), params[2].(uint32)) // block pass +1
 }
 
 // CachedBlock contains two cached objects, one for block and one for metadata.

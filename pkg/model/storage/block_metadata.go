@@ -9,7 +9,6 @@ import (
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -125,18 +124,18 @@ type BlockMetadata struct {
 	metadata bitmask.BitMask
 
 	// The index of the milestone which referenced this block
-	referencedIndex milestone.Index
+	referencedIndex iotago.MilestoneIndex
 
 	conflict Conflict
 
 	// youngestConeRootIndex is the highest referenced index of the past cone of this block
-	youngestConeRootIndex milestone.Index
+	youngestConeRootIndex iotago.MilestoneIndex
 
 	// oldestConeRootIndex is the lowest referenced index of the past cone of this block
-	oldestConeRootIndex milestone.Index
+	oldestConeRootIndex iotago.MilestoneIndex
 
 	// coneRootCalculationIndex is the confirmed milestone index ycri and ocri were calculated at
-	coneRootCalculationIndex milestone.Index
+	coneRootCalculationIndex iotago.MilestoneIndex
 
 	// parents are the parents of the block
 	parents iotago.BlockIDs
@@ -188,14 +187,14 @@ func (m *BlockMetadata) IsReferenced() bool {
 	return m.metadata.HasBit(BlockMetadataReferenced)
 }
 
-func (m *BlockMetadata) ReferencedWithIndex() (bool, milestone.Index) {
+func (m *BlockMetadata) ReferencedWithIndex() (bool, iotago.MilestoneIndex) {
 	m.RLock()
 	defer m.RUnlock()
 
 	return m.metadata.HasBit(BlockMetadataReferenced), m.referencedIndex
 }
 
-func (m *BlockMetadata) SetReferenced(referenced bool, referencedIndex milestone.Index) {
+func (m *BlockMetadata) SetReferenced(referenced bool, referencedIndex iotago.MilestoneIndex) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -272,7 +271,7 @@ func (m *BlockMetadata) SetMilestone(milestone bool) {
 	}
 }
 
-func (m *BlockMetadata) SetConeRootIndexes(ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
+func (m *BlockMetadata) SetConeRootIndexes(ycri iotago.MilestoneIndex, ocri iotago.MilestoneIndex, ci iotago.MilestoneIndex) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -282,7 +281,7 @@ func (m *BlockMetadata) SetConeRootIndexes(ycri milestone.Index, ocri milestone.
 	m.SetModified(true)
 }
 
-func (m *BlockMetadata) ConeRootIndexes() (ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
+func (m *BlockMetadata) ConeRootIndexes() (ycri iotago.MilestoneIndex, ocri iotago.MilestoneIndex, ci iotago.MilestoneIndex) {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -324,11 +323,11 @@ func (m *BlockMetadata) ObjectStorageValue() (data []byte) {
 	marshalUtil := marshalutil.New(19 + len(m.parents)*iotago.BlockIDLength)
 
 	marshalUtil.WriteByte(byte(m.metadata))
-	marshalUtil.WriteUint32(uint32(m.referencedIndex))
+	marshalUtil.WriteUint32(m.referencedIndex)
 	marshalUtil.WriteByte(byte(m.conflict))
-	marshalUtil.WriteUint32(uint32(m.youngestConeRootIndex))
-	marshalUtil.WriteUint32(uint32(m.oldestConeRootIndex))
-	marshalUtil.WriteUint32(uint32(m.coneRootCalculationIndex))
+	marshalUtil.WriteUint32(m.youngestConeRootIndex)
+	marshalUtil.WriteUint32(m.oldestConeRootIndex)
+	marshalUtil.WriteUint32(m.coneRootCalculationIndex)
 	marshalUtil.WriteByte(byte(len(m.parents)))
 	for _, parent := range m.parents {
 		marshalUtil.WriteBytes(parent[:])
@@ -350,6 +349,9 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		parents count * 32 bytes parent id
 	*/
 
+	m := &BlockMetadata{}
+	copy(m.blockID[:], key[:iotago.BlockIDLength])
+
 	marshalUtil := marshalutil.New(data)
 
 	metadataByte, err := marshalUtil.ReadByte()
@@ -357,7 +359,7 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		return nil, err
 	}
 
-	referencedIndex, err := marshalUtil.ReadUint32()
+	m.referencedIndex, err = marshalUtil.ReadUint32()
 	if err != nil {
 		return nil, err
 	}
@@ -367,30 +369,23 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		return nil, err
 	}
 
-	youngestConeRootIndex, err := marshalUtil.ReadUint32()
+	m.youngestConeRootIndex, err = marshalUtil.ReadUint32()
 	if err != nil {
 		return nil, err
 	}
 
-	oldestConeRootIndex, err := marshalUtil.ReadUint32()
+	m.oldestConeRootIndex, err = marshalUtil.ReadUint32()
 	if err != nil {
 		return nil, err
 	}
 
-	coneRootCalculationIndex, err := marshalUtil.ReadUint32()
+	m.coneRootCalculationIndex, err = marshalUtil.ReadUint32()
 	if err != nil {
 		return nil, err
 	}
-
-	m := &BlockMetadata{}
-	copy(m.blockID[:], key[:iotago.BlockIDLength])
 
 	m.metadata = bitmask.BitMask(metadataByte)
-	m.referencedIndex = milestone.Index(referencedIndex)
 	m.conflict = Conflict(conflict)
-	m.youngestConeRootIndex = milestone.Index(youngestConeRootIndex)
-	m.oldestConeRootIndex = milestone.Index(oldestConeRootIndex)
-	m.coneRootCalculationIndex = milestone.Index(coneRootCalculationIndex)
 
 	parentsCount, err := marshalUtil.ReadByte()
 	if err != nil {

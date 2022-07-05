@@ -5,7 +5,6 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -18,18 +17,18 @@ func (s *Storage) StoreProtocolParameters(protoParsMsOpt *iotago.ProtocolParamsM
 		return errors.Wrap(NewDatabaseError(err), "failed to serialize protocol parameters")
 	}
 
-	if err := s.protocolStore.Set(databaseKeyForMilestoneIndex(milestone.Index(protoParsMsOpt.TargetMilestoneIndex)), data); err != nil {
+	if err := s.protocolStore.Set(databaseKeyForMilestoneIndex(protoParsMsOpt.TargetMilestoneIndex), data); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store protocol parameters")
 	}
 
 	return nil
 }
 
-func (s *Storage) ProtocolParameters(msIndex milestone.Index) (*iotago.ProtocolParamsMilestoneOpt, error) {
+func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParamsMilestoneOpt, error) {
 
 	// search the smallest activation index that is smaller than or equal to the given milestone index
 	// to get the valid protocol parameters for the given milestone index.
-	var smallestIndex milestone.Index
+	var smallestIndex iotago.MilestoneIndex
 	if err := s.protocolStore.IterateKeys(kvstore.EmptyPrefix, func(key kvstore.Key) bool {
 		activationIndex := milestoneIndexFromDatabaseKey(key)
 
@@ -76,11 +75,11 @@ func (s *Storage) ForEachProtocolParameters(consumer ProtocolParametersConsumer)
 	return innerErr
 }
 
-func (s *Storage) PruneProtocolParameters(pruningIndex milestone.Index) error {
+func (s *Storage) PruneProtocolParameters(pruningIndex iotago.MilestoneIndex) error {
 
 	// we will prune all protocol parameters that are smaller than the given pruning index,
 	// except the last one, which is still valid.
-	var biggestIndexBeforePruningIndex milestone.Index
+	var biggestIndexBeforePruningIndex iotago.MilestoneIndex
 	if err := s.protocolStore.IterateKeys(kvstore.EmptyPrefix, func(key kvstore.Key) bool {
 		activationIndex := milestoneIndexFromDatabaseKey(key)
 

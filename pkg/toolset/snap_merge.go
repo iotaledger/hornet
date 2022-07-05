@@ -8,7 +8,6 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -95,16 +94,16 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 		}
 
 		result := struct {
-			SnapshotName        string          `json:"snapshotName,omitempty"`
-			FilePath            string          `json:"filePath"`
-			SnapshotTime        time.Time       `json:"snapshotTime"`
-			NetworkID           uint64          `json:"networkID"`
-			Treasury            *treasuryStruct `json:"treasury"`
-			LedgerIndex         milestone.Index `json:"ledgerIndex"`
-			SnapshotIndex       milestone.Index `json:"snapshotIndex"`
-			UTXOsCount          uint64          `json:"UTXOsCount"`
-			SEPsCount           uint64          `json:"SEPsCount"`
-			MilestoneDiffsCount uint64          `json:"milestoneDiffsCount"`
+			SnapshotName        string                `json:"snapshotName,omitempty"`
+			FilePath            string                `json:"filePath"`
+			SnapshotTime        time.Time             `json:"snapshotTime"`
+			NetworkID           uint64                `json:"networkID"`
+			Treasury            *treasuryStruct       `json:"treasury"`
+			LedgerIndex         iotago.MilestoneIndex `json:"ledgerIndex"`
+			SnapshotIndex       iotago.MilestoneIndex `json:"snapshotIndex"`
+			UTXOsCount          uint64                `json:"UTXOsCount"`
+			SEPsCount           uint64                `json:"SEPsCount"`
+			MilestoneDiffsCount uint64                `json:"milestoneDiffsCount"`
 		}{
 			SnapshotName:        name,
 			FilePath:            path,

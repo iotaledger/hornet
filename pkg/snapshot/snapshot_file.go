@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -181,9 +180,9 @@ type FileHeader struct {
 	// The ID of the network for which this snapshot is compatible with.
 	NetworkID uint64
 	// The milestone index of the SEPs for which this snapshot was taken.
-	SEPMilestoneIndex milestone.Index
+	SEPMilestoneIndex iotago.MilestoneIndex
 	// The milestone index of the ledger data within the snapshot.
-	LedgerMilestoneIndex milestone.Index
+	LedgerMilestoneIndex iotago.MilestoneIndex
 	// The treasury output existing for the given ledger milestone index.
 	// This field must be populated if a Full snapshot is created/read.
 	TreasuryOutput *utxo.TreasuryOutput
@@ -203,7 +202,7 @@ type ReadFileHeader struct {
 }
 
 // getSnapshotFilesLedgerIndex returns the final ledger index if the given snapshot files would be applied.
-func getSnapshotFilesLedgerIndex(fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) milestone.Index {
+func getSnapshotFilesLedgerIndex(fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) iotago.MilestoneIndex {
 
 	if fullHeader == nil {
 		return 0
@@ -541,7 +540,7 @@ func readMilestoneDiff(reader io.ReadSeeker, protoParas *iotago.ProtocolParamete
 
 	msDiff.Consumed = make(utxo.Spents, consumedCount)
 	for i := uint64(0); i < consumedCount; i++ {
-		diffConsumedSpent, err := ReadSpent(reader, protoParas, milestone.Index(milestonePayload.Index), milestonePayload.Timestamp)
+		diffConsumedSpent, err := ReadSpent(reader, protoParas, milestonePayload.Index, milestonePayload.Timestamp)
 		if err != nil {
 			return nil, fmt.Errorf("(ms-diff consumed-output) at pos %d: %w", i, err)
 		}
@@ -556,7 +555,7 @@ func ReadOutput(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters) (*u
 	return utxo.OutputFromSnapshotReader(reader, protoParas)
 }
 
-func ReadSpent(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndexSpent milestone.Index, msTimestampSpent uint32) (*utxo.Spent, error) {
+func ReadSpent(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndexSpent iotago.MilestoneIndex, msTimestampSpent uint32) (*utxo.Spent, error) {
 	return utxo.SpentFromSnapshotReader(reader, protoParas, msIndexSpent, msTimestampSpent)
 }
 

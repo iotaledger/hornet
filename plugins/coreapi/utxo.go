@@ -7,13 +7,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/restapi"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func NewOutputMetadataResponse(output *utxo.Output, ledgerIndex milestone.Index) *OutputMetadataResponse {
+func NewOutputMetadataResponse(output *utxo.Output, ledgerIndex iotago.MilestoneIndex) *OutputMetadataResponse {
 	return &OutputMetadataResponse{
 		BlockID:                  output.BlockID().ToHex(),
 		TransactionID:            output.OutputID().TransactionID().ToHex(),
@@ -34,7 +33,7 @@ func rawMessageForOutput(output *utxo.Output) (*json.RawMessage, error) {
 	return &rawRawOutputJSON, nil
 }
 
-func NewSpentMetadataResponse(spent *utxo.Spent, ledgerIndex milestone.Index) *OutputMetadataResponse {
+func NewSpentMetadataResponse(spent *utxo.Spent, ledgerIndex iotago.MilestoneIndex) *OutputMetadataResponse {
 	metadata := NewOutputMetadataResponse(spent.Output(), ledgerIndex)
 	metadata.Spent = true
 	metadata.MilestoneTimestampSpent = spent.MilestoneTimestampSpent()
@@ -43,7 +42,7 @@ func NewSpentMetadataResponse(spent *utxo.Spent, ledgerIndex milestone.Index) *O
 	return metadata
 }
 
-func NewOutputResponse(output *utxo.Output, ledgerIndex milestone.Index) (*OutputResponse, error) {
+func NewOutputResponse(output *utxo.Output, ledgerIndex iotago.MilestoneIndex) (*OutputResponse, error) {
 	rawOutput, err := rawMessageForOutput(output)
 	if err != nil {
 		return nil, err
@@ -54,7 +53,7 @@ func NewOutputResponse(output *utxo.Output, ledgerIndex milestone.Index) (*Outpu
 	}, nil
 }
 
-func NewSpentResponse(spent *utxo.Spent, ledgerIndex milestone.Index) (*OutputResponse, error) {
+func NewSpentResponse(spent *utxo.Spent, ledgerIndex iotago.MilestoneIndex) (*OutputResponse, error) {
 	rawOutput, err := rawMessageForOutput(spent.Output())
 	if err != nil {
 		return nil, err

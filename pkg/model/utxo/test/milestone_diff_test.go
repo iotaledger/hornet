@@ -9,14 +9,13 @@ import (
 
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func TestSimpleMilestoneDiffSerialization(t *testing.T) {
-	msIndexBooked := milestone.Index(255975)
+	msIndexBooked := iotago.MilestoneIndex(255975)
 	msTimestampBooked := tpkg.RandMilestoneTimestamp()
 
 	outputID := tpkg.RandOutputID()
@@ -47,7 +46,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	}
 
 	milestoneIndexBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(milestoneIndexBytes, uint32(msIndexSpent))
+	binary.LittleEndian.PutUint32(milestoneIndexBytes, msIndexSpent)
 
 	require.Equal(t, byteutils.ConcatBytes([]byte{utxo.UTXOStoreKeyPrefixMilestoneDiffs}, milestoneIndexBytes), diff.KVStorableKey())
 
@@ -79,7 +78,7 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 
 	transactionIDSpent := tpkg.RandTransactionID()
 
-	msIndexSpent := milestone.Index(255975)
+	msIndexSpent := iotago.MilestoneIndex(255975)
 	msTimestampSpent := tpkg.RandMilestoneTimestamp()
 
 	spent := utxo.NewSpent(output, transactionIDSpent, msIndexSpent, msTimestampSpent)
@@ -107,7 +106,7 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	}
 
 	milestoneIndexBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(milestoneIndexBytes, uint32(msIndexSpent))
+	binary.LittleEndian.PutUint32(milestoneIndexBytes, msIndexSpent)
 
 	require.Equal(t, byteutils.ConcatBytes([]byte{utxo.UTXOStoreKeyPrefixMilestoneDiffs}, milestoneIndexBytes), diff.KVStorableKey())
 
@@ -134,7 +133,7 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 		tpkg.RandUTXOOutputWithType(iotago.OutputBasic),
 	}
 
-	msIndex := milestone.Index(756)
+	msIndex := iotago.MilestoneIndex(756)
 	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	spents := utxo.Spents{

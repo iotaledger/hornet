@@ -9,7 +9,6 @@ import (
 	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/protocol/tlv"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -102,7 +101,7 @@ func newBlockRequestMessage(requestedBlockID iotago.BlockID) ([]byte, error) {
 }
 
 // newHeartbeatMessage creates a new heartbeat message.
-func newHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneIndex milestone.Index, latestMilestoneIndex milestone.Index, connectedPeers uint8, syncedPeers uint8) ([]byte, error) {
+func newHeartbeatMessage(solidMilestoneIndex iotago.MilestoneIndex, prunedMilestoneIndex iotago.MilestoneIndex, latestMilestoneIndex iotago.MilestoneIndex, connectedPeers uint8, syncedPeers uint8) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+heartbeatMessageDefinition.MaxBytesLength))
 	if err := tlv.WriteHeader(buf, MessageTypeHeartbeat, heartbeatMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
@@ -132,7 +131,7 @@ func newHeartbeatMessage(solidMilestoneIndex milestone.Index, prunedMilestoneInd
 }
 
 // newMilestoneRequestMessage creates a new milestone request message.
-func newMilestoneRequestMessage(requestedMilestoneIndex milestone.Index) ([]byte, error) {
+func newMilestoneRequestMessage(requestedMilestoneIndex iotago.MilestoneIndex) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+milestoneRequestMessageDefinition.MaxBytesLength))
 	if err := tlv.WriteHeader(buf, MessageTypeMilestoneRequest, milestoneRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
@@ -146,31 +145,29 @@ func newMilestoneRequestMessage(requestedMilestoneIndex milestone.Index) ([]byte
 }
 
 // extractRequestedMilestoneIndex extracts the requested milestone index from the given source.
-func extractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
+func extractRequestedMilestoneIndex(source []byte) (iotago.MilestoneIndex, error) {
 	if len(source) != serializer.UInt32ByteSize {
 		return 0, ErrInvalidSourceLength
 	}
-
-	msIndex := binary.LittleEndian.Uint32(source)
-	return milestone.Index(msIndex), nil
+	return binary.LittleEndian.Uint32(source), nil
 }
 
 // Heartbeat contains information about a nodes current solid and pruned milestone index
 // and its connected and synced peers count.
 type Heartbeat struct {
-	SolidMilestoneIndex  milestone.Index `json:"solidMilestoneIndex"`
-	PrunedMilestoneIndex milestone.Index `json:"prunedMilestoneIndex"`
-	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
-	ConnectedPeers       int             `json:"connectedPeers"`
-	SyncedPeers          int             `json:"syncedPeers"`
+	SolidMilestoneIndex  iotago.MilestoneIndex `json:"solidMilestoneIndex"`
+	PrunedMilestoneIndex iotago.MilestoneIndex `json:"prunedMilestoneIndex"`
+	LatestMilestoneIndex iotago.MilestoneIndex `json:"latestMilestoneIndex"`
+	ConnectedPeers       int                   `json:"connectedPeers"`
+	SyncedPeers          int                   `json:"syncedPeers"`
 }
 
 // ParseHeartbeat parses the given message into a heartbeat.
 func ParseHeartbeat(data []byte) *Heartbeat {
 	return &Heartbeat{
-		SolidMilestoneIndex:  milestone.Index(binary.LittleEndian.Uint32(data[:4])),
-		PrunedMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(data[4:8])),
-		LatestMilestoneIndex: milestone.Index(binary.LittleEndian.Uint32(data[8:12])),
+		SolidMilestoneIndex:  binary.LittleEndian.Uint32(data[:4]),
+		PrunedMilestoneIndex: binary.LittleEndian.Uint32(data[4:8]),
+		LatestMilestoneIndex: binary.LittleEndian.Uint32(data[8:12]),
 		ConnectedPeers:       int(data[12]),
 		SyncedPeers:          int(data[13]),
 	}

@@ -2,7 +2,6 @@ package tangle
 
 import (
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -24,11 +23,11 @@ func BPSMetricsCaller(handler interface{}, params ...interface{}) {
 }
 
 func LedgerUpdatedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(milestone.Index, utxo.Outputs, utxo.Spents))(params[0].(milestone.Index), params[1].(utxo.Outputs), params[2].(utxo.Spents))
+	handler.(func(iotago.MilestoneIndex, utxo.Outputs, utxo.Spents))(params[0].(iotago.MilestoneIndex), params[1].(utxo.Outputs), params[2].(utxo.Spents))
 }
 
 func TreasuryMutationCaller(handler interface{}, params ...interface{}) {
-	handler.(func(milestone.Index, *utxo.TreasuryMutationTuple))(params[0].(milestone.Index), params[1].(*utxo.TreasuryMutationTuple))
+	handler.(func(iotago.MilestoneIndex, *utxo.TreasuryMutationTuple))(params[0].(iotago.MilestoneIndex), params[1].(*utxo.TreasuryMutationTuple))
 }
 
 func ReceiptCaller(handler interface{}, params ...interface{}) {
@@ -36,7 +35,7 @@ func ReceiptCaller(handler interface{}, params ...interface{}) {
 }
 
 func ReferencedBlocksCountUpdatedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(msIndex milestone.Index, referencedBlocksCount int))(params[0].(milestone.Index), params[1].(int))
+	handler.(func(msIndex iotago.MilestoneIndex, referencedBlocksCount int))(params[0].(iotago.MilestoneIndex), params[1].(int))
 }
 
 type Events struct {

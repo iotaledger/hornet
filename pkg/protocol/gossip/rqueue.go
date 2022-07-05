@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"container/heap"
+	"strconv"
 	"sync"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -30,8 +30,8 @@ func getRequestMapKey(data interface{}) string {
 	case iotago.BlockID:
 		return string(value[:])
 
-	case milestone.Index:
-		return value.String()
+	case iotago.MilestoneIndex:
+		return strconv.Itoa(int(value))
 
 	case *Request:
 		return value.MapKey()
@@ -107,7 +107,7 @@ type Request struct {
 	// The BlockID of the block to request.
 	BlockID iotago.BlockID
 	// The milestone index under which this request is linked.
-	MilestoneIndex milestone.Index
+	MilestoneIndex iotago.MilestoneIndex
 	// Tells the request queue to not remove this request if the enqueue time is
 	// over the given threshold.
 	PreventDiscard bool
@@ -117,12 +117,12 @@ type Request struct {
 }
 
 // NewBlockIDRequest creates a new block request for a specific blockID.
-func NewBlockIDRequest(blockID iotago.BlockID, msIndex milestone.Index) *Request {
+func NewBlockIDRequest(blockID iotago.BlockID, msIndex iotago.MilestoneIndex) *Request {
 	return &Request{RequestType: RequestTypeBlockID, BlockID: blockID, MilestoneIndex: msIndex}
 }
 
 // NewMilestoneIndexRequest creates a new block request for a specific milestone index
-func NewMilestoneIndexRequest(msIndex milestone.Index) *Request {
+func NewMilestoneIndexRequest(msIndex iotago.MilestoneIndex) *Request {
 	return &Request{RequestType: RequestTypeMilestoneIndex, MilestoneIndex: msIndex}
 }
 
@@ -131,7 +131,7 @@ func (r *Request) MapKey() string {
 	case RequestTypeBlockID:
 		return string(r.BlockID[:])
 	case RequestTypeMilestoneIndex:
-		return r.MilestoneIndex.String()
+		return strconv.Itoa(int(r.MilestoneIndex))
 	default:
 		panic(ErrUnknownRequestType)
 	}

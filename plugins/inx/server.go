@@ -2,14 +2,14 @@ package inx
 
 import (
 	"context"
-	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"net"
 
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 
+	"github.com/iotaledger/hive.go/workerpool"
 	inx "github.com/iotaledger/inx/go"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -73,7 +73,7 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 		//TODO: we should have the milestone here when we store it in the snapshot
 		lmi = &inx.Milestone{
 			MilestoneInfo: &inx.MilestoneInfo{
-				MilestoneIndex: uint32(latestMilestoneIndex),
+				MilestoneIndex: latestMilestoneIndex,
 			},
 			Milestone: nil,
 		}
@@ -90,7 +90,7 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 		//TODO: we should have the milestone here when we store it in the snapshot
 		cmi = &inx.Milestone{
 			MilestoneInfo: &inx.MilestoneInfo{
-				MilestoneIndex: uint32(confirmedMilestoneIndex),
+				MilestoneIndex: confirmedMilestoneIndex,
 			},
 			Milestone: nil,
 		}
@@ -100,10 +100,10 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 		IsHealthy:              deps.Tangle.IsNodeHealthy(),
 		LatestMilestone:        lmi,
 		ConfirmedMilestone:     cmi,
-		TanglePruningIndex:     uint32(pruningIndex),
-		MilestonesPruningIndex: uint32(pruningIndex),
-		LedgerPruningIndex:     uint32(pruningIndex),
-		LedgerIndex:            uint32(index),
+		TanglePruningIndex:     pruningIndex,
+		MilestonesPruningIndex: pruningIndex,
+		LedgerPruningIndex:     pruningIndex,
+		LedgerIndex:            index,
 	}, nil
 }
 
@@ -112,8 +112,8 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 	for _, r := range deps.KeyManager.KeyRanges() {
 		keyRanges = append(keyRanges, &inx.MilestoneKeyRange{
 			PublicKey:  r.PublicKey[:],
-			StartIndex: uint32(r.StartIndex),
-			EndIndex:   uint32(r.EndIndex),
+			StartIndex: r.StartIndex,
+			EndIndex:   r.EndIndex,
 		})
 	}
 
@@ -144,9 +144,9 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 }
 
 type streamRange struct {
-	start    milestone.Index
-	end      milestone.Index
-	lastSent milestone.Index
+	start    iotago.MilestoneIndex
+	end      iotago.MilestoneIndex
+	lastSent iotago.MilestoneIndex
 }
 
 // tells whether the stream range has a range requested.
@@ -165,9 +165,9 @@ func (stream *streamRange) isBounded() bool {
 //	 with the range from streamRange.lastSent + 1 up to index - 1.
 //	- it is the caller's job to call task.Return(...).
 //	- streamRange.lastSent is auto. updated
-func handleRangedSend(task *workerpool.Task, index milestone.Index, streamRange *streamRange,
-	catchUpFunc func(start milestone.Index, end milestone.Index) error,
-	sendFunc func(task *workerpool.Task, index milestone.Index) error,
+func handleRangedSend(task *workerpool.Task, index iotago.MilestoneIndex, streamRange *streamRange,
+	catchUpFunc func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error,
+	sendFunc func(task *workerpool.Task, index iotago.MilestoneIndex) error,
 ) (bool, error) {
 
 	// below requested range

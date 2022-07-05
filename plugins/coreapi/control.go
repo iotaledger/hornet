@@ -8,8 +8,8 @@ import (
 	"github.com/labstack/gommon/bytes"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/restapi"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
@@ -31,7 +31,7 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 	}
 
 	var err error
-	var targetIndex milestone.Index
+	var targetIndex iotago.MilestoneIndex
 
 	if request.Index != nil {
 		targetIndex, err = deps.PruningManager.PruneDatabaseByTargetIndex(Plugin.Daemon().ContextStopped(), *request.Index)
@@ -79,7 +79,7 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "at least fullIndex or deltaIndex has to be specified")
 	}
 
-	var fullIndex, deltaIndex milestone.Index
+	var fullIndex, deltaIndex iotago.MilestoneIndex
 	var fullSnapshotFilePath, deltaSnapshotFilePath string
 
 	if request.FullIndex != nil {

@@ -7,14 +7,13 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // updateOutdatedConeRootIndexes updates the cone root indexes of the given blocks.
 // the "outdatedBlockIDs" should be ordered from oldest to latest to avoid recursion.
-func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, outdatedBlockIDs iotago.BlockIDs, cmi milestone.Index) error {
+func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, outdatedBlockIDs iotago.BlockIDs, cmi iotago.MilestoneIndex) error {
 	for _, outdatedBlockID := range outdatedBlockIDs {
 		cachedBlockMeta, err := parentsTraverserStorage.CachedBlockMetadata(outdatedBlockID)
 		if err != nil {
@@ -33,7 +32,7 @@ func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage 
 
 // ConeRootIndexes searches the cone root indexes for a given block.
 // cachedBlockMeta has to be solid, otherwise youngestConeRootIndex and oldestConeRootIndex will be 0 if a block is missing in the cone.
-func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, cachedBlockMeta *storage.CachedMetadata, cmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index, err error) {
+func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, cachedBlockMeta *storage.CachedMetadata, cmi iotago.MilestoneIndex) (youngestConeRootIndex iotago.MilestoneIndex, oldestConeRootIndex iotago.MilestoneIndex, err error) {
 	defer cachedBlockMeta.Release(true) // meta -1
 
 	// if the block already contains recent (calculation index matches CMI)
@@ -46,7 +45,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 	youngestConeRootIndex = 0
 	oldestConeRootIndex = math.MaxUint32
 
-	updateIndexes := func(ycri milestone.Index, ocri milestone.Index) {
+	updateIndexes := func(ycri iotago.MilestoneIndex, ocri iotago.MilestoneIndex) {
 		if youngestConeRootIndex < ycri {
 			youngestConeRootIndex = ycri
 		}
@@ -153,7 +152,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 // we have to walk the future cone, and update the past cone of all blocks that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same blocks multiple times.
-func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorage, blockIDs iotago.BlockIDs, cmi milestone.Index) error {
+func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorage, blockIDs iotago.BlockIDs, cmi iotago.MilestoneIndex) error {
 	traversed := map[iotago.BlockID]struct{}{}
 
 	t := NewChildrenTraverser(traverserStorage)

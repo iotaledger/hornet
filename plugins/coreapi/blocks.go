@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/restapi"
 	"github.com/iotaledger/hornet/pkg/tangle"
@@ -35,7 +34,7 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 	metadata := cachedBlockMeta.Metadata()
 
-	var referencedByMilestone *milestone.Index = nil
+	var referencedByMilestone *iotago.MilestoneIndex = nil
 	referenced, referencedIndex := metadata.ReferencedWithIndex()
 	if referenced {
 		referencedByMilestone = &referencedIndex

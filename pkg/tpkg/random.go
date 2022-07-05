@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"math/rand"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -100,8 +99,8 @@ func RandAliasID() iotago.AliasID {
 	return alias
 }
 
-func RandMilestoneIndex() milestone.Index {
-	return milestone.Index(RandUint32(math.MaxUint32))
+func RandMilestoneIndex() iotago.MilestoneIndex {
+	return RandUint32(math.MaxUint32)
 }
 
 func RandMilestoneTimestamp() uint32 {
@@ -235,11 +234,11 @@ func RandUTXOOutputOnAddressWithAmount(outputType iotago.OutputType, address iot
 	return utxo.CreateOutput(RandOutputID(), RandBlockID(), RandMilestoneIndex(), RandMilestoneTimestamp(), RandOutputOnAddressWithAmount(outputType, address, amount))
 }
 
-func RandUTXOSpent(msIndexSpent milestone.Index, msTimestampSpent uint32) *utxo.Spent {
+func RandUTXOSpent(msIndexSpent iotago.MilestoneIndex, msTimestampSpent uint32) *utxo.Spent {
 	return utxo.NewSpent(RandUTXOOutput(), RandTransactionID(), msIndexSpent, msTimestampSpent)
 }
 
-func RandUTXOSpentWithOutput(output *utxo.Output, msIndexSpent milestone.Index, msTimestampSpent uint32) *utxo.Spent {
+func RandUTXOSpentWithOutput(output *utxo.Output, msIndexSpent iotago.MilestoneIndex, msTimestampSpent uint32) *utxo.Spent {
 	return utxo.NewSpent(output, RandTransactionID(), msIndexSpent, msTimestampSpent)
 }
 

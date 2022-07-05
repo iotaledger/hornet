@@ -1,7 +1,6 @@
 package dag
 
 import (
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -10,7 +9,7 @@ import (
 type ParentsTraverserStorage interface {
 	CachedBlockMetadata(blockID iotago.BlockID) (*storage.CachedMetadata, error)
 	SolidEntryPointsContain(blockID iotago.BlockID) (bool, error)
-	SolidEntryPointsIndex(blockID iotago.BlockID) (milestone.Index, bool, error)
+	SolidEntryPointsIndex(blockID iotago.BlockID) (iotago.MilestoneIndex, bool, error)
 }
 
 // ChildrenTraverserStorage provides the interface to the used storage in the ChildrenTraverser.

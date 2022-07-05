@@ -12,7 +12,6 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/protocol"
 	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -165,7 +164,7 @@ func (p *Protocol) SendBlock(blockData []byte) {
 }
 
 // SendHeartbeat sends a Heartbeat to the given peer.
-func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex milestone.Index, latestMsIndex milestone.Index, connectedPeers uint8, syncedPeers uint8) {
+func (p *Protocol) SendHeartbeat(solidMsIndex iotago.MilestoneIndex, pruningMsIndex iotago.MilestoneIndex, latestMsIndex iotago.MilestoneIndex, connectedPeers uint8, syncedPeers uint8) {
 	heartbeatData, err := newHeartbeatMessage(solidMsIndex, pruningMsIndex, latestMsIndex, connectedPeers, syncedPeers)
 	if err != nil {
 		return
@@ -183,7 +182,7 @@ func (p *Protocol) SendBlockRequest(requestedBlockID iotago.BlockID) {
 }
 
 // SendMilestoneRequest sends a milestone request to the given peer.
-func (p *Protocol) SendMilestoneRequest(index milestone.Index) {
+func (p *Protocol) SendMilestoneRequest(index iotago.MilestoneIndex) {
 	milestoneRequestMessage, err := newMilestoneRequestMessage(index)
 	if err != nil {
 		return
@@ -198,7 +197,7 @@ func (p *Protocol) SendLatestMilestoneRequest() {
 
 // HasDataForMilestone tells whether the underlying peer given the latest heartbeat message, has the cone data for the given milestone.
 // Returns false if no heartbeat message was received yet.
-func (p *Protocol) HasDataForMilestone(index milestone.Index) bool {
+func (p *Protocol) HasDataForMilestone(index iotago.MilestoneIndex) bool {
 	if p.LatestHeartbeat == nil {
 		return false
 	}
@@ -207,7 +206,7 @@ func (p *Protocol) HasDataForMilestone(index milestone.Index) bool {
 
 // CouldHaveDataForMilestone tells whether the underlying peer given the latest heartbeat message, could have parts of the cone data for the given milestone.
 // Returns false if no heartbeat message was received yet.
-func (p *Protocol) CouldHaveDataForMilestone(index milestone.Index) bool {
+func (p *Protocol) CouldHaveDataForMilestone(index iotago.MilestoneIndex) bool {
 	if p.LatestHeartbeat == nil {
 		return false
 	}
@@ -215,7 +214,7 @@ func (p *Protocol) CouldHaveDataForMilestone(index milestone.Index) bool {
 }
 
 // IsSynced tells whether the underlying peer is synced.
-func (p *Protocol) IsSynced(cmi milestone.Index) bool {
+func (p *Protocol) IsSynced(cmi iotago.MilestoneIndex) bool {
 	if p.LatestHeartbeat == nil {
 		return false
 	}

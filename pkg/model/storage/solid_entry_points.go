@@ -9,13 +9,12 @@ import (
 	"sort"
 
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type SolidEntryPoint struct {
 	BlockID iotago.BlockID
-	Index   milestone.Index
+	Index   iotago.MilestoneIndex
 }
 
 // LexicalOrderedSolidEntryPoints are solid entry points
@@ -35,7 +34,7 @@ func (l LexicalOrderedSolidEntryPoints) Swap(i, j int) {
 }
 
 type SolidEntryPoints struct {
-	entryPointsMap   map[iotago.BlockID]milestone.Index
+	entryPointsMap   map[iotago.BlockID]iotago.MilestoneIndex
 	entryPointsSlice iotago.BlockIDs
 
 	// Status
@@ -45,7 +44,7 @@ type SolidEntryPoints struct {
 
 func NewSolidEntryPoints() *SolidEntryPoints {
 	return &SolidEntryPoints{
-		entryPointsMap: make(map[iotago.BlockID]milestone.Index),
+		entryPointsMap: make(map[iotago.BlockID]iotago.MilestoneIndex),
 	}
 }
 
@@ -70,12 +69,12 @@ func (s *SolidEntryPoints) Contains(blockID iotago.BlockID) bool {
 	return exists
 }
 
-func (s *SolidEntryPoints) Index(blockID iotago.BlockID) (milestone.Index, bool) {
+func (s *SolidEntryPoints) Index(blockID iotago.BlockID) (iotago.MilestoneIndex, bool) {
 	index, exists := s.entryPointsMap[blockID]
 	return index, exists
 }
 
-func (s *SolidEntryPoints) Add(blockID iotago.BlockID, milestoneIndex milestone.Index) {
+func (s *SolidEntryPoints) Add(blockID iotago.BlockID, milestoneIndex iotago.MilestoneIndex) {
 	if _, exists := s.entryPointsMap[blockID]; !exists {
 		s.entryPointsMap[blockID] = milestoneIndex
 		s.entryPointsSlice = append(s.entryPointsSlice, blockID)
@@ -84,7 +83,7 @@ func (s *SolidEntryPoints) Add(blockID iotago.BlockID, milestoneIndex milestone.
 }
 
 func (s *SolidEntryPoints) Clear() {
-	s.entryPointsMap = make(map[iotago.BlockID]milestone.Index)
+	s.entryPointsMap = make(map[iotago.BlockID]iotago.MilestoneIndex)
 	s.entryPointsSlice = make(iotago.BlockIDs, 0)
 	s.SetModified(true)
 }
@@ -132,7 +131,7 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
-		s.Add(blockID, milestone.Index(msIndex))
+		s.Add(blockID, msIndex)
 	}
 
 	return s, nil

@@ -11,7 +11,6 @@ import (
 
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -171,7 +170,7 @@ func (rs *ReceiptService) validateCompleteReceiptBatch(finalReceipt *iotago.Rece
 
 	// collect migrated funds from previous receipt
 	receiptsWithSameIndex := make([]*iotago.ReceiptMilestoneOpt, 0)
-	if err := rs.utxoManager.ForEachReceiptTupleMigratedAt(milestone.Index(finalReceipt.MigratedAt), func(rt *utxo.ReceiptTuple) bool {
+	if err := rs.utxoManager.ForEachReceiptTupleMigratedAt(finalReceipt.MigratedAt, func(rt *utxo.ReceiptTuple) bool {
 		receiptsWithSameIndex = append(receiptsWithSameIndex, rt.Receipt)
 		return true
 	}, utxo.ReadLockLedger(false)); err != nil {

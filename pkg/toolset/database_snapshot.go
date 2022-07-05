@@ -8,15 +8,14 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
-
 	snapCore "github.com/iotaledger/hornet/core/snapshot"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/snapshot"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
-	belowMaxDepth milestone.Index = 15
+	belowMaxDepth iotago.MilestoneIndex = 15
 )
 
 func databaseSnapshot(args []string) error {
@@ -52,8 +51,8 @@ func databaseSnapshot(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolDatabasePathSource)
 	}
 
-	solidEntryPointCheckThresholdPast := milestone.Index(belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdPast)
-	solidEntryPointCheckThresholdFuture := milestone.Index(belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdFuture)
+	solidEntryPointCheckThresholdPast := belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdPast
+	solidEntryPointCheckThresholdFuture := belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdFuture
 
 	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, true, true, true)
 	if err != nil {
@@ -75,7 +74,7 @@ func databaseSnapshot(args []string) error {
 		tangleStoreSource,
 		tangleStoreSource.UTXOManager(),
 		*snapshotPathTargetFlag,
-		milestone.Index(*targetIndexFlag),
+		*targetIndexFlag,
 		solidEntryPointCheckThresholdPast,
 		solidEntryPointCheckThresholdFuture,
 	)
