@@ -34,24 +34,22 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 	metadata := cachedBlockMeta.Metadata()
 
-	var referencedByMilestone *iotago.MilestoneIndex = nil
-	referenced, referencedIndex := metadata.ReferencedWithIndex()
-	if referenced {
-		referencedByMilestone = &referencedIndex
-	}
+	referenced, referencedIndex, wfIndex := metadata.ReferencedWithIndexAndWhiteflagIndex()
 
 	response := &blockMetadataResponse{
 		BlockID:                    blockID.ToHex(),
 		Parents:                    metadata.Parents().ToHex(),
 		Solid:                      metadata.IsSolid(),
-		ReferencedByMilestoneIndex: referencedByMilestone,
+		ReferencedByMilestoneIndex: referencedIndex,
 	}
 
 	if metadata.IsMilestone() {
-		response.MilestoneIndex = referencedByMilestone
+		response.MilestoneIndex = referencedIndex
 	}
 
 	if referenced {
+		response.WhiteFlagIndex = &wfIndex
+
 		inclusionState := "noTransaction"
 
 		conflict := metadata.Conflict()

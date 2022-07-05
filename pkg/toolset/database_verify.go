@@ -257,10 +257,10 @@ func verifyDatabase(
 
 				return meta.IsReferenced()
 			},
-			func(meta *storage.BlockMetadata, referenced bool, msIndex iotago.MilestoneIndex) {
+			func(meta *storage.BlockMetadata, referenced bool, msIndex iotago.MilestoneIndex, wfIndex uint32) {
 				if _, exists := referencedBlocks[meta.BlockID()]; !exists {
 					referencedBlocks[meta.BlockID()] = struct{}{}
-					meta.SetReferenced(referenced, msIndex)
+					meta.SetReferenced(referenced, msIndex, wfIndex)
 				}
 			},
 			nil,

@@ -96,8 +96,8 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			return -1
 		}
 
-		for i := 0; i < len(conf.Mutations.BlocksReferenced)-1; i++ {
-			if conf.Mutations.BlocksReferenced[i] == blockID {
+		for i := 0; i < len(conf.Mutations.ReferencedBlocks)-1; i++ {
+			if conf.Mutations.ReferencedBlocks[i].BlockID == blockID {
 				return i
 			}
 		}

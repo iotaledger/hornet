@@ -24,31 +24,29 @@ type ConfirmedMilestoneStats struct {
 
 // ConfirmationMetrics holds metrics about a confirmation run.
 type ConfirmationMetrics struct {
-	DurationWhiteflag                                time.Duration
-	DurationReceipts                                 time.Duration
-	DurationConfirmation                             time.Duration
-	DurationLedgerUpdated                            time.Duration
-	DurationTreasuryMutated                          time.Duration
-	DurationApplyIncludedWithTransactions            time.Duration
-	DurationApplyExcludedWithoutTransactions         time.Duration
-	DurationApplyExcludedWithConflictingTransactions time.Duration
-	DurationOnMilestoneConfirmed                     time.Duration
-	DurationSetConfirmedMilestoneIndex               time.Duration
-	DurationUpdateConeRootIndexes                    time.Duration
-	DurationConfirmedMilestoneChanged                time.Duration
-	DurationConfirmedMilestoneIndexChanged           time.Duration
-	DurationTotal                                    time.Duration
+	DurationWhiteflag                      time.Duration
+	DurationReceipts                       time.Duration
+	DurationConfirmation                   time.Duration
+	DurationApplyConfirmation              time.Duration
+	DurationOnMilestoneConfirmed           time.Duration
+	DurationLedgerUpdated                  time.Duration
+	DurationTreasuryMutated                time.Duration
+	DurationSetConfirmedMilestoneIndex     time.Duration
+	DurationUpdateConeRootIndexes          time.Duration
+	DurationConfirmedMilestoneChanged      time.Duration
+	DurationConfirmedMilestoneIndexChanged time.Duration
+	DurationTotal                          time.Duration
 }
 
 type CheckBlockReferencedFunc func(meta *storage.BlockMetadata) bool
-type SetBlockReferencedFunc func(meta *storage.BlockMetadata, referenced bool, msIndex iotago.MilestoneIndex)
+type SetBlockReferencedFunc func(meta *storage.BlockMetadata, referenced bool, msIndex iotago.MilestoneIndex, wfIndex uint32)
 
 var (
 	DefaultCheckBlockReferencedFunc = func(meta *storage.BlockMetadata) bool {
 		return meta.IsReferenced()
 	}
-	DefaultSetBlockReferencedFunc = func(meta *storage.BlockMetadata, referenced bool, msIndex iotago.MilestoneIndex) {
-		meta.SetReferenced(referenced, msIndex)
+	DefaultSetBlockReferencedFunc = func(meta *storage.BlockMetadata, referenced bool, msIndex iotago.MilestoneIndex, wfIndex uint32) {
+		meta.SetReferenced(referenced, msIndex, wfIndex)
 	}
 )
 
@@ -85,18 +83,16 @@ func ConfirmMilestone(
 	milestoneParents := milestonePayload.Parents
 
 	var (
-		timeStart                                    time.Time
-		timeWhiteflag                                time.Time
-		timeReceipts                                 time.Time
-		timeConfirmation                             time.Time
-		timeApplyIncludedWithTransactions            time.Time
-		timeApplyExcludedWithoutTransactions         time.Time
-		timeApplyExcludedWithConflictingTransactions time.Time
-		timeOnMilestoneConfirmed                     time.Time
-		timeLedgerUpdatedStart                       time.Time
-		timeLedgerUpdatedEnd                         time.Time
-		timeTreasuryMutatedStart                     time.Time
-		timeTreasuryMutatedEnd                       time.Time
+		timeStart                time.Time
+		timeWhiteflag            time.Time
+		timeReceipts             time.Time
+		timeConfirmation         time.Time
+		timeApplyConfirmation    time.Time
+		timeOnMilestoneConfirmed time.Time
+		timeLedgerUpdatedStart   time.Time
+		timeLedgerUpdatedEnd     time.Time
+		timeTreasuryMutatedStart time.Time
+		timeTreasuryMutatedEnd   time.Time
 	)
 
 	parentsTraverser := dag.NewParentsTraverser(parentsTraverserStorage)
@@ -228,64 +224,52 @@ func ConfirmMilestone(
 		}
 		timeConfirmation = time.Now()
 
-		// confirm all included blocks
-		for _, blockID := range mutations.BlocksIncludedWithTransactions {
-			if err := forBlockMetadataWithBlockID(blockID, func(meta *storage.CachedMetadata) {
-				if !checkBlockReferencedFunc(meta.Metadata()) {
-					setBlockReferencedFunc(meta.Metadata(), true, milestoneIndex)
-					meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-					confirmedMilestoneStats.BlocksReferenced++
-					confirmedMilestoneStats.BlocksIncludedWithTransactions++
-					if serverMetrics != nil {
-						serverMetrics.IncludedTransactionBlocks.Inc()
-						serverMetrics.ReferencedBlocks.Inc()
-					}
-				}
-			}); err != nil {
-				return err
-			}
-		}
-		timeApplyIncludedWithTransactions = time.Now()
+		// mark all blocks as referenced
+		for wfIndex, referencedBlock := range mutations.ReferencedBlocks {
+			if err := forBlockMetadataWithBlockID(referencedBlock.BlockID, func(meta *storage.CachedMetadata) {
 
-		// confirm all excluded blocks not containing ledger transactions
-		for _, blockID := range mutations.BlocksExcludedWithoutTransactions {
-			if err := forBlockMetadataWithBlockID(blockID, func(meta *storage.CachedMetadata) {
-				meta.Metadata().SetIsNoTransaction(true)
-				if !checkBlockReferencedFunc(meta.Metadata()) {
-					setBlockReferencedFunc(meta.Metadata(), true, milestoneIndex)
-					meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-					confirmedMilestoneStats.BlocksReferenced++
-					confirmedMilestoneStats.BlocksExcludedWithoutTransactions++
-					if serverMetrics != nil {
-						serverMetrics.NoTransactionBlocks.Inc()
-						serverMetrics.ReferencedBlocks.Inc()
+				if referencedBlock.IsTransaction {
+					if referencedBlock.Conflict != storage.ConflictNone {
+						meta.Metadata().SetConflictingTx(referencedBlock.Conflict)
 					}
+				} else {
+					meta.Metadata().SetIsNoTransaction(true)
 				}
-			}); err != nil {
-				return err
-			}
-		}
-		timeApplyExcludedWithoutTransactions = time.Now()
 
-		// confirm all conflicting blocks
-		for _, conflictedBlock := range mutations.BlocksExcludedWithConflictingTransactions {
-			if err := forBlockMetadataWithBlockID(conflictedBlock.BlockID, func(meta *storage.CachedMetadata) {
-				meta.Metadata().SetConflictingTx(conflictedBlock.Conflict)
 				if !checkBlockReferencedFunc(meta.Metadata()) {
-					setBlockReferencedFunc(meta.Metadata(), true, milestoneIndex)
+					setBlockReferencedFunc(meta.Metadata(), true, milestoneIndex, uint32(wfIndex))
 					meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+
 					confirmedMilestoneStats.BlocksReferenced++
-					confirmedMilestoneStats.BlocksExcludedWithConflictingTransactions++
 					if serverMetrics != nil {
-						serverMetrics.ConflictingTransactionBlocks.Inc()
 						serverMetrics.ReferencedBlocks.Inc()
 					}
+
+					if referencedBlock.IsTransaction {
+						if referencedBlock.Conflict != storage.ConflictNone {
+							confirmedMilestoneStats.BlocksExcludedWithConflictingTransactions++
+							if serverMetrics != nil {
+								serverMetrics.ConflictingTransactionBlocks.Inc()
+							}
+						} else {
+							confirmedMilestoneStats.BlocksIncludedWithTransactions++
+							if serverMetrics != nil {
+								serverMetrics.IncludedTransactionBlocks.Inc()
+							}
+						}
+					} else {
+						confirmedMilestoneStats.BlocksExcludedWithoutTransactions++
+						if serverMetrics != nil {
+							serverMetrics.NoTransactionBlocks.Inc()
+						}
+					}
+
 				}
 			}); err != nil {
 				return err
 			}
 		}
-		timeApplyExcludedWithConflictingTransactions = time.Now()
+		timeApplyConfirmation = time.Now()
 
 		if onMilestoneConfirmed != nil {
 			onMilestoneConfirmed(confirmation)
@@ -302,8 +286,8 @@ func ConfirmMilestone(
 	}
 
 	// fire all events after the ledger got unlocked
-	for _, blockID := range confirmation.Mutations.BlocksReferenced {
-		if err := forBlockMetadataWithBlockID(blockID, func(meta *storage.CachedMetadata) {
+	for _, blockWithStatus := range confirmation.Mutations.ReferencedBlocks {
+		if err := forBlockMetadataWithBlockID(blockWithStatus.BlockID, func(meta *storage.CachedMetadata) {
 			if forEachReferencedBlock != nil {
 				forEachReferencedBlock(meta, milestoneIndex, milestonePayload.Timestamp)
 			}
@@ -325,14 +309,12 @@ func ConfirmMilestone(
 	}
 
 	return confirmedMilestoneStats, &ConfirmationMetrics{
-		DurationWhiteflag:                                timeWhiteflag.Sub(timeStart),
-		DurationReceipts:                                 timeReceipts.Sub(timeWhiteflag),
-		DurationConfirmation:                             timeConfirmation.Sub(timeReceipts),
-		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeConfirmation),
-		DurationApplyExcludedWithoutTransactions:         timeApplyExcludedWithoutTransactions.Sub(timeApplyIncludedWithTransactions),
-		DurationApplyExcludedWithConflictingTransactions: timeApplyExcludedWithConflictingTransactions.Sub(timeApplyExcludedWithoutTransactions),
-		DurationOnMilestoneConfirmed:                     timeOnMilestoneConfirmed.Sub(timeApplyExcludedWithConflictingTransactions),
-		DurationLedgerUpdated:                            timeLedgerUpdatedEnd.Sub(timeLedgerUpdatedStart),
-		DurationTreasuryMutated:                          timeTreasuryMutatedEnd.Sub(timeTreasuryMutatedStart),
+		DurationWhiteflag:            timeWhiteflag.Sub(timeStart),
+		DurationReceipts:             timeReceipts.Sub(timeWhiteflag),
+		DurationConfirmation:         timeConfirmation.Sub(timeReceipts),
+		DurationApplyConfirmation:    timeApplyConfirmation.Sub(timeConfirmation),
+		DurationOnMilestoneConfirmed: timeOnMilestoneConfirmed.Sub(timeApplyConfirmation),
+		DurationLedgerUpdated:        timeLedgerUpdatedEnd.Sub(timeLedgerUpdatedStart),
+		DurationTreasuryMutated:      timeTreasuryMutatedEnd.Sub(timeTreasuryMutatedStart),
 	}, nil
 }
