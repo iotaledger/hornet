@@ -93,10 +93,7 @@ func TestValue(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		if blockMeta.LedgerInclusionState == nil {
-			return false
-		}
-		return *blockMeta.LedgerInclusionState == "included"
+		return blockMeta.LedgerInclusionState == "included"
 	}, 30*time.Second, 100*time.Millisecond)
 
 	// check that indeed the balances are available
