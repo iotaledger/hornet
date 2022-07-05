@@ -8,7 +8,7 @@ keywords:
 - configuration
 - spammer
 - snapshots
-- reference
+- how to
 ---
 
 
@@ -76,7 +76,7 @@ Hornet can be extended by plugins. You can control plugins using the `node` sect
   },
 ```
 
-You can also control plugins using the [Dashboard/web interface](https://wiki.iota.org/hornet/post_installation#dashboard).
+You can also control plugins using the [Dashboard/web interface](post_installation.md#dashboard).
 
 
 ## Spammer

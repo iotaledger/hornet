@@ -9,12 +9,12 @@ keywords:
 - Discord
 - FAQ
 - Difficulties
-- Reference
+- reference
 ---
 
 # Troubleshooting
 
-Check out our [Frequently asked questions](faq.md).
+Check out our [Frequently asked questions](./references/faq.md).
 
 If you can not find your question in the FAQ, feel free to ask in the `#hornet` channel in the ([official iota discord server](https://discord.iota.org/)).
 

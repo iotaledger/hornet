@@ -38,7 +38,7 @@ Hornet developers maintain the Hornet `apt` repository. It installs Hornet as a 
    sudo systemctl enable hornet.service
    ```
 
-You can find the Hornet configuration files under the `/var/lib/hornet` directory. You can also find more details on how to configure Hornet in the [post installation](https://wiki.iota.org/hornet/post_installation) article.
+You can find the Hornet configuration files under the `/var/lib/hornet` directory. You can also find more details on how to configure Hornet in the [post installation](post_installation.md) article.
 
 Additionally, the Environment file for configuring multiple default parameters can be found under the 
 `/etc/default/hornet` directory.
@@ -83,7 +83,7 @@ Hornet uses an in-memory cache. To save all data to the underlying persistent st
 
 ::: 
 
-You can find more details on how to configure Hornet in the [post installation](https://wiki.iota.org/hornet/post_installation) article.
+You can find more details on how to configure Hornet in the [post installation](post_installation.md) article.
 
 
 # Pre-built Binaries
@@ -114,7 +114,7 @@ All installation methods mentioned in this article from this point should be con
    tar -xf HORNET-1.0.5_Linux_x86_64.tar.gz
    ```
 
-3. Once you have extracted the files, you get a main executable file. You can also find sample [configuration](../post_installation/post_installation.md) JSON files available in the archive (tar or zip).
+3. Once you have extracted the files, you get a main executable file. You can also find sample [configuration](post_installation.md) JSON files available in the archive (tar or zip).
 
 You can run Hornet using `--help` to get all executable-related arguments by running:
    

@@ -19,7 +19,7 @@ Make sure that you have read [Using Docker](using_docker.md) before you continue
 
 Docker Compose is a tool on top of the Docker engine that help you to define Docker parameters in a structured way using a `docker-compose.yaml` file. You can create and start the container with a single `docker-compose` command based on your configuration.
 
-To do so, you will need to create `docker-compose.yml` in the same directory as described in the [Using Docker](https://wiki.iota.org/hornet/getting_started/using_docker) article:
+To do so, you will need to create `docker-compose.yml` in the same directory as described in the [Using Docker](using_docker.md) article:
 
 ```plaintext{5}
 .
@@ -63,7 +63,7 @@ You can run the following command in the current directory to create and start a
 
 `docker-compose up -d`
 
-You can find more details on how to configure Hornet in the [post installation](https://wiki.iota.org/hornet/post_installation) section.
+You can find more details on how to configure Hornet in the [post installation](post_installation.md) section.
 
 ## Build Your Own Image Using Docker Compose
 
