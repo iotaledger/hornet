@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/serializer/v2"
+	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -176,7 +177,7 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 }
 
 // reads a MilestoneDiff from the given reader.
-func ReadMilestoneDiff(reader io.ReadSeeker, protocolManager *ProtocolManager, addProtocolParameterUpdates bool) (int64, *MilestoneDiff, error) {
+func ReadMilestoneDiff(reader io.ReadSeeker, protocolStorage *storage.ProtocolStorage, addProtocolParameterUpdates bool) (int64, *MilestoneDiff, error) {
 	msDiff := &MilestoneDiff{}
 
 	var msDiffLength uint32
@@ -195,14 +196,19 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolManager *ProtocolManager, a
 		return 0, nil, fmt.Errorf("unable to read LS ms-diff ms: %w", err)
 	}
 
-	if _, err := milestonePayload.Deserialize(msBytes, serializer.DeSeriModePerformValidation, protocolManager.Current()); err != nil {
+	if _, err := milestonePayload.Deserialize(msBytes, serializer.DeSeriModePerformValidation, nil); err != nil {
 		return 0, nil, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
 	}
 
 	msDiff.Milestone = milestonePayload
 
 	if milestonePayload.Opts.MustSet().ProtocolParams() != nil && addProtocolParameterUpdates {
-		protocolManager.AddProtocolParametersUpdate(milestonePayload.Opts.MustSet().ProtocolParams())
+		protocolStorage.StoreProtocolParametersMilestoneOption(milestonePayload.Opts.MustSet().ProtocolParams())
+	}
+
+	protoParams, err := protocolStorage.ProtocolParameters(msDiff.Milestone.Index)
+	if err != nil {
+		return 0, nil, fmt.Errorf("unable to load LS ms-diff protocol parameters: %w", err)
 	}
 
 	if milestonePayload.Opts.MustSet().Receipt() != nil {
@@ -225,7 +231,7 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolManager *ProtocolManager, a
 
 	msDiff.Created = make(utxo.Outputs, createdCount)
 	for i := uint64(0); i < createdCount; i++ {
-		diffCreatedOutput, err := ReadOutput(reader, protocolManager.Current())
+		diffCreatedOutput, err := ReadOutput(reader, protoParams)
 		if err != nil {
 			return 0, nil, fmt.Errorf("(ms-diff created-output) at pos %d: %w", i, err)
 		}
@@ -238,7 +244,7 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolManager *ProtocolManager, a
 
 	msDiff.Consumed = make(utxo.Spents, consumedCount)
 	for i := uint64(0); i < consumedCount; i++ {
-		diffConsumedSpent, err := readSpent(reader, protocolManager.Current(), milestonePayload.Index, milestonePayload.Timestamp)
+		diffConsumedSpent, err := readSpent(reader, protoParams, milestonePayload.Index, milestonePayload.Timestamp)
 		if err != nil {
 			return 0, nil, fmt.Errorf("(ms-diff consumed-output) at pos %d: %w", i, err)
 		}
@@ -250,7 +256,7 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolManager *ProtocolManager, a
 
 // reads protocol parameter updates from a MilestoneDiff from the given reader.
 // automatically seek to the end of the MilestoneDiff.
-func ReadMilestoneDiffProtocolParameters(reader io.ReadSeeker, protocolManager *ProtocolManager) (int64, error) {
+func ReadMilestoneDiffProtocolParameters(reader io.ReadSeeker, protocolStorage *storage.ProtocolStorage) (int64, error) {
 
 	var msDiffLength uint32
 	if err := binary.Read(reader, binary.LittleEndian, &msDiffLength); err != nil {
@@ -268,12 +274,12 @@ func ReadMilestoneDiffProtocolParameters(reader io.ReadSeeker, protocolManager *
 		return 0, fmt.Errorf("unable to read LS ms-diff ms: %w", err)
 	}
 
-	if _, err := milestonePayload.Deserialize(msBytes, serializer.DeSeriModePerformValidation, protocolManager.Current()); err != nil {
+	if _, err := milestonePayload.Deserialize(msBytes, serializer.DeSeriModePerformValidation, nil); err != nil {
 		return 0, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
 	}
 
 	if milestonePayload.Opts.MustSet().ProtocolParams() != nil {
-		protocolManager.AddProtocolParametersUpdate(milestonePayload.Opts.MustSet().ProtocolParams())
+		protocolStorage.StoreProtocolParametersMilestoneOption(milestonePayload.Opts.MustSet().ProtocolParams())
 	}
 
 	// seek to the end of the MilestoneDiff
@@ -1132,7 +1138,7 @@ func ReadSnapshotTypeFromFile(filePath string) (Type, error) {
 // StreamFullSnapshotDataFrom consumes a full snapshot from the given reader.
 func StreamFullSnapshotDataFrom(
 	reader io.ReadSeeker,
-	protocolManager *ProtocolManager,
+	protocolStorage *storage.ProtocolStorage,
 	headerConsumer FullHeaderConsumerFunc,
 	unspentTreasuryOutputConsumer UnspentTreasuryOutputConsumerFunc,
 	outputConsumer OutputConsumerFunc,
@@ -1158,8 +1164,7 @@ func StreamFullSnapshotDataFrom(
 	}
 
 	// the protocol parameters milestone option in the full snapshot is valid for the ledger milestone index.
-	protocolManager.AddProtocolParametersUpdate(fullHeader.ProtocolParamsMilestoneOpt)
-	protocolManager.SetCurrentMilestoneIndex(fullHeader.LedgerMilestoneIndex)
+	protocolStorage.StoreProtocolParametersMilestoneOption(fullHeader.ProtocolParamsMilestoneOpt)
 
 	for i := uint64(0); i < fullHeader.OutputCount; i++ {
 		output, err := ReadOutput(reader, fullHeaderProtoParams)
@@ -1179,7 +1184,7 @@ func StreamFullSnapshotDataFrom(
 	// we need to parse the milestone diffs twice.
 	// first round is to get the upcoming protocol parameter changes.
 	for i := uint32(0); i < fullHeader.MilestoneDiffCount; i++ {
-		msDiffLength, err := ReadMilestoneDiffProtocolParameters(reader, protocolManager)
+		msDiffLength, err := ReadMilestoneDiffProtocolParameters(reader, protocolStorage)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
 		}
@@ -1194,9 +1199,7 @@ func StreamFullSnapshotDataFrom(
 	// second round is to load the milestone diffs with correct protocol parameters.
 	for i := uint32(0); i < fullHeader.MilestoneDiffCount; i++ {
 		// the milestone diffs in the full snapshot file are in backwards order.
-		protocolManager.SetCurrentMilestoneIndex(fullHeader.LedgerMilestoneIndex - i)
-
-		msDiffLength, msDiff, err := ReadMilestoneDiff(reader, protocolManager, false)
+		msDiffLength, msDiff, err := ReadMilestoneDiff(reader, protocolStorage, false)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
 		}
@@ -1234,7 +1237,7 @@ func StreamFullSnapshotDataFrom(
 // target index of the full snapshot file before entering this function.
 func StreamDeltaSnapshotDataFrom(
 	reader io.ReadSeeker,
-	protocolManager *ProtocolManager,
+	protocolStorage *storage.ProtocolStorage,
 	headerConsumer DeltaHeaderConsumerFunc,
 	msDiffConsumer MilestoneDiffConsumerFunc,
 	sepConsumer SEPConsumerFunc) error {
@@ -1249,7 +1252,7 @@ func StreamDeltaSnapshotDataFrom(
 	}
 
 	for i := uint32(0); i < deltaHeader.MilestoneDiffCount; i++ {
-		_, msDiff, err := ReadMilestoneDiff(reader, protocolManager, true)
+		_, msDiff, err := ReadMilestoneDiff(reader, protocolStorage, true)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
 		}
@@ -1257,9 +1260,6 @@ func StreamDeltaSnapshotDataFrom(
 		if err := msDiffConsumer(msDiff); err != nil {
 			return fmt.Errorf("ms-diff consumer error at pos %d: %w", i, err)
 		}
-
-		// set the upcoming index before loading the next milestone diff.
-		protocolManager.SetCurrentMilestoneIndex(msDiff.Milestone.Index + 1)
 	}
 
 	for i := uint16(0); i < deltaHeader.SEPCount; i++ {

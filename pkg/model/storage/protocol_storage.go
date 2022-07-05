@@ -47,16 +47,23 @@ func (s *ProtocolStorage) ProtocolParametersMilestoneOption(msIndex iotago.Miles
 	// search the smallest activation index that is smaller than or equal to the given milestone index
 	// to get the valid protocol parameters milestone option for the given milestone index.
 	var smallestIndex iotago.MilestoneIndex
+	var smallestIndexFound bool
+
 	if err := s.protocolStore.IterateKeys(kvstore.EmptyPrefix, func(key kvstore.Key) bool {
 		activationIndex := milestoneIndexFromDatabaseKey(key)
 
 		if activationIndex >= smallestIndex && activationIndex <= msIndex {
 			smallestIndex = activationIndex
+			smallestIndexFound = true
 		}
 
 		return true
 	}); err != nil {
 		return nil, err
+	}
+
+	if !smallestIndexFound {
+		return nil, errors.New("no protocol parameters milestone option found for the given milestone index")
 	}
 
 	data, err := s.protocolStore.Get(databaseKeyForMilestoneIndex(smallestIndex))

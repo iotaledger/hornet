@@ -282,8 +282,13 @@ func RandProtocolParameters() *iotago.ProtocolParameters {
 }
 
 // RandProtocolParamsMilestoneOpt produces random protocol parameters milestone option.
-func RandProtocolParamsMilestoneOpt() *iotago.ProtocolParamsMilestoneOpt {
+func RandProtocolParamsMilestoneOpt(targetIndex ...iotago.MilestoneIndex) *iotago.ProtocolParamsMilestoneOpt {
 	protoParams := RandProtocolParameters()
+
+	msIndex := RandMilestoneIndex()
+	if len(targetIndex) > 0 {
+		msIndex = targetIndex[0]
+	}
 
 	protoParamsBytes, err := protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -291,7 +296,7 @@ func RandProtocolParamsMilestoneOpt() *iotago.ProtocolParamsMilestoneOpt {
 	}
 
 	return &iotago.ProtocolParamsMilestoneOpt{
-		TargetMilestoneIndex: RandMilestoneIndex(),
+		TargetMilestoneIndex: msIndex,
 		ProtocolVersion:      2,
 		Params:               protoParamsBytes,
 	}

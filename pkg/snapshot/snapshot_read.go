@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -137,7 +138,7 @@ func loadFullSnapshotFileToStorage(
 	dbStorage *storage.Storage,
 	filePath string,
 	targetNetworkID uint64,
-	protocolManager *ProtocolManager) (fullHeader *FullSnapshotHeader, err error) {
+	protocolStorage *storage.ProtocolStorage) (fullHeader *FullSnapshotHeader, err error) {
 
 	dbStorage.WriteLockSolidEntryPoints()
 	dbStorage.ResetSolidEntryPointsWithoutLocking()
@@ -162,7 +163,7 @@ func loadFullSnapshotFileToStorage(
 	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
 	sepConsumer := newSEPsConsumer(dbStorage)
 
-	if err = StreamFullSnapshotDataFrom(lsFile, protocolManager, fullHeaderConsumer, treasuryOutputConsumer, outputConsumer, msDiffConsumer, sepConsumer); err != nil {
+	if err = StreamFullSnapshotDataFrom(lsFile, protocolStorage, fullHeaderConsumer, treasuryOutputConsumer, outputConsumer, msDiffConsumer, sepConsumer); err != nil {
 		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[Full], err)
 	}
 
@@ -203,7 +204,7 @@ func loadDeltaSnapshotFileToStorage(
 	ctx context.Context,
 	dbStorage *storage.Storage,
 	filePath string,
-	protocolManager *ProtocolManager) (deltaHeader *DeltaSnapshotHeader, err error) {
+	protocolStorage *storage.ProtocolStorage) (deltaHeader *DeltaSnapshotHeader, err error) {
 
 	dbStorage.WriteLockSolidEntryPoints()
 	dbStorage.ResetSolidEntryPointsWithoutLocking()
@@ -226,7 +227,7 @@ func loadDeltaSnapshotFileToStorage(
 	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
 	sepConsumer := newSEPsConsumer(dbStorage)
 
-	if err = StreamDeltaSnapshotDataFrom(lsFile, protocolManager, deltaHeaderConsumer, msDiffConsumer, sepConsumer); err != nil {
+	if err = StreamDeltaSnapshotDataFrom(lsFile, protocolStorage, deltaHeaderConsumer, msDiffConsumer, sepConsumer); err != nil {
 		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[Delta], err)
 	}
 
@@ -273,8 +274,8 @@ func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage,
 		}
 	}
 
-	// TODO: update the real protocol manager with the results?
-	protocolManager := NewSnapshotProtocolManager()
+	// initialize a temporary protocol storage in memory
+	protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
 
 	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
 	if err != nil {
@@ -283,13 +284,13 @@ func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage,
 
 	var fullSnapshotHeader *FullSnapshotHeader
 	var deltaSnapshotHeader *DeltaSnapshotHeader
-	fullSnapshotHeader, err = loadFullSnapshotFileToStorage(ctx, dbStorage, fullPath, fullHeaderProtoParams.NetworkID(), protocolManager)
+	fullSnapshotHeader, err = loadFullSnapshotFileToStorage(ctx, dbStorage, fullPath, fullHeaderProtoParams.NetworkID(), protocolStorage)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if len(deltaPath) > 0 && deltaPath[0] != "" {
-		deltaSnapshotHeader, err = loadDeltaSnapshotFileToStorage(ctx, dbStorage, deltaPath[0], protocolManager)
+		deltaSnapshotHeader, err = loadDeltaSnapshotFileToStorage(ctx, dbStorage, deltaPath[0], protocolStorage)
 		if err != nil {
 			return nil, nil, err
 		}

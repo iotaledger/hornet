@@ -12,8 +12,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
@@ -93,8 +94,10 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 			milestoneDiffRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
+			protocolStorage := getProtocolStorage(protoParams)
+
 			for i := 0; i < msDiffCount; i++ {
-				_, msDiff, err := snapshot.ReadMilestoneDiff(milestoneDiffRead, getSnapshotProtocolManager(protoParams), false)
+				_, msDiff, err := snapshot.ReadMilestoneDiff(milestoneDiffRead, protocolStorage, false)
 				require.NoError(t, err)
 				writtenMsDiff := writtenMsDiffs[i]
 
@@ -169,18 +172,19 @@ func TestMilestoneDiffReadProtocolParameters(t *testing.T) {
 			milestoneDiffRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			readProtoParamsMsOptions := []*iotago.ProtocolParamsMilestoneOpt{}
-			onProtocolParametersUpdateAdded := events.NewClosure(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) {
-				readProtoParamsMsOptions = append(readProtoParamsMsOptions, protoParamsMsOption)
-			})
-
-			snapshotProtocolManager := getSnapshotProtocolManager(protoParams)
-			snapshotProtocolManager.Events.ProtocolParametersUpdateAdded.Attach(onProtocolParametersUpdateAdded)
+			protocolStorage := getProtocolStorage(nil)
 
 			for i := 0; i < msDiffCount; i++ {
-				_, err := snapshot.ReadMilestoneDiffProtocolParameters(milestoneDiffRead, snapshotProtocolManager)
+				_, err := snapshot.ReadMilestoneDiffProtocolParameters(milestoneDiffRead, protocolStorage)
 				require.NoError(t, err)
 			}
+
+			readProtoParamsMsOptions := []*iotago.ProtocolParamsMilestoneOpt{}
+			err = protocolStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+				readProtoParamsMsOptions = append(readProtoParamsMsOptions, protoParamsMsOption)
+				return true
+			})
+			require.NoError(t, err)
 
 			// verify that what has been written also has been read again
 			require.EqualValues(t, writtenProtoParamsMsOptions, readProtoParamsMsOptions)
@@ -270,7 +274,10 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamFullSnapshotDataFrom(snapshotFileRead, snapshot.NewSnapshotProtocolManager(), tt.fullHeaderConsumer, tt.unspentTreasuryOutputConsumer, tt.outputConsumer, tt.msDiffConsumer, tt.sepConsumer))
+			// initialize a temporary protocol storage in memory
+			protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
+
+			require.NoError(t, snapshot.StreamFullSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.fullHeaderConsumer, tt.unspentTreasuryOutputConsumer, tt.outputConsumer, tt.msDiffConsumer, tt.sepConsumer))
 
 			// verify that what has been written also has been read again
 			tpkg.EqualOutputs(t, tt.outputGenRetriever(), tt.outputConRetriever())
@@ -357,7 +364,9 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, getSnapshotProtocolManager(protoParams), tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
+			protocolStorage := getProtocolStorage(protoParams)
+
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGen := tt.msDiffGenRetriever()
@@ -464,7 +473,9 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, getSnapshotProtocolManager(protoParams), tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
+			protocolStorage := getProtocolStorage(protoParams)
+
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGenRetriever, sepGenRetriever := tt.snapshotExtensionGenRetriever()
@@ -735,7 +746,7 @@ func randFullSnapshotHeader(outputCount uint64, msDiffCount uint32, sepCount uin
 		TargetMilestoneID:          tpkg.RandMilestoneID(),
 		LedgerMilestoneIndex:       tpkg.RandMilestoneIndex(),
 		TreasuryOutput:             tpkg.RandTreasuryOutput(),
-		ProtocolParamsMilestoneOpt: tpkg.RandProtocolParamsMilestoneOpt(),
+		ProtocolParamsMilestoneOpt: tpkg.RandProtocolParamsMilestoneOpt(targetMilestoneIndex),
 		OutputCount:                outputCount,
 		MilestoneDiffCount:         msDiffCount,
 		SEPCount:                   sepCount,
@@ -755,17 +766,33 @@ func randDeltaSnapshotHeader(msDiffCount uint32, sepCount uint16) *snapshot.Delt
 	}
 }
 
-func getSnapshotProtocolManager(protoParams *iotago.ProtocolParameters) *snapshot.ProtocolManager {
-	protoParamsBytes, err := protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
-	if err != nil {
-		panic(err)
+func getProtocolStorage(protoParams *iotago.ProtocolParameters) *storage.ProtocolStorage {
+
+	// initialize a temporary protocol storage in memory
+	protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
+
+	if protoParams != nil {
+		// add initial protocol parameters to the protocol storage
+
+		protoParamsBytes, err := protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
+		if err != nil {
+			panic(err)
+		}
+
+		// write the protocol parameters to the storage
+		err = protocolStorage.StoreProtocolParametersMilestoneOption(
+			&iotago.ProtocolParamsMilestoneOpt{
+				TargetMilestoneIndex: 0,
+				ProtocolVersion:      protoParams.Version,
+				Params:               protoParamsBytes,
+			},
+		)
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	snapshotProtocolManager := snapshot.NewSnapshotProtocolManager()
-	snapshotProtocolManager.AddProtocolParametersUpdate(&iotago.ProtocolParamsMilestoneOpt{TargetMilestoneIndex: 0, ProtocolVersion: protoParams.Version, Params: protoParamsBytes})
-	snapshotProtocolManager.SetCurrentMilestoneIndex(1)
-
-	return snapshotProtocolManager
+	return protocolStorage
 }
 
 func equalMilestoneDiff(t *testing.T, expected *snapshot.MilestoneDiff, actual *snapshot.MilestoneDiff) {
