@@ -55,16 +55,17 @@ type Manager struct {
 	// the logger used to log events.
 	*logger.WrappedLogger
 
-	storage                              *storagepkg.Storage
-	syncManager                          *syncmanager.SyncManager
-	utxoManager                          *utxo.Manager
-	snapshotFullPath                     string
-	snapshotDeltaPath                    string
-	deltaSnapshotSizeThresholdPercentage float64
-	solidEntryPointCheckThresholdPast    syncmanager.MilestoneIndexDelta
-	solidEntryPointCheckThresholdFuture  syncmanager.MilestoneIndexDelta
-	snapshotDepth                        syncmanager.MilestoneIndexDelta
-	snapshotInterval                     syncmanager.MilestoneIndexDelta
+	storage                                *storagepkg.Storage
+	syncManager                            *syncmanager.SyncManager
+	utxoManager                            *utxo.Manager
+	snapshotFullPath                       string
+	snapshotDeltaPath                      string
+	deltaSnapshotSizeThresholdPercentage   float64
+	deltaSnapshotSizeThresholdMinSizeBytes int64
+	solidEntryPointCheckThresholdPast      syncmanager.MilestoneIndexDelta
+	solidEntryPointCheckThresholdFuture    syncmanager.MilestoneIndexDelta
+	snapshotDepth                          syncmanager.MilestoneIndexDelta
+	snapshotInterval                       syncmanager.MilestoneIndexDelta
 
 	snapshotLock         syncutils.Mutex
 	statusLock           syncutils.RWMutex
@@ -83,6 +84,7 @@ func NewSnapshotManager(
 	snapshotFullPath string,
 	snapshotDeltaPath string,
 	deltaSnapshotSizeThresholdPercentage float64,
+	deltaSnapshotSizeThresholdMinSizeBytes int64,
 	solidEntryPointCheckThresholdPast syncmanager.MilestoneIndexDelta,
 	solidEntryPointCheckThresholdFuture syncmanager.MilestoneIndexDelta,
 	additionalPruningThreshold iotago.MilestoneIndex,
@@ -91,17 +93,18 @@ func NewSnapshotManager(
 ) *Manager {
 
 	return &Manager{
-		WrappedLogger:                        logger.NewWrappedLogger(log),
-		storage:                              storage,
-		syncManager:                          syncManager,
-		utxoManager:                          utxoManager,
-		snapshotFullPath:                     snapshotFullPath,
-		snapshotDeltaPath:                    snapshotDeltaPath,
-		deltaSnapshotSizeThresholdPercentage: deltaSnapshotSizeThresholdPercentage,
-		solidEntryPointCheckThresholdPast:    solidEntryPointCheckThresholdPast,
-		solidEntryPointCheckThresholdFuture:  solidEntryPointCheckThresholdFuture,
-		snapshotDepth:                        snapshotDepth,
-		snapshotInterval:                     snapshotInterval,
+		WrappedLogger:                          logger.NewWrappedLogger(log),
+		storage:                                storage,
+		syncManager:                            syncManager,
+		utxoManager:                            utxoManager,
+		snapshotFullPath:                       snapshotFullPath,
+		snapshotDeltaPath:                      snapshotDeltaPath,
+		deltaSnapshotSizeThresholdPercentage:   deltaSnapshotSizeThresholdPercentage,
+		deltaSnapshotSizeThresholdMinSizeBytes: deltaSnapshotSizeThresholdMinSizeBytes,
+		solidEntryPointCheckThresholdPast:      solidEntryPointCheckThresholdPast,
+		solidEntryPointCheckThresholdFuture:    solidEntryPointCheckThresholdFuture,
+		snapshotDepth:                          snapshotDepth,
+		snapshotInterval:                       snapshotInterval,
 		Events: &Events{
 			SnapshotMilestoneIndexChanged:         events.NewEvent(storagepkg.MilestoneIndexCaller),
 			HandledConfirmedMilestoneIndexChanged: events.NewEvent(storagepkg.MilestoneIndexCaller),
@@ -211,7 +214,6 @@ func (s *Manager) optimalSnapshotType() (Type, error) {
 		// full snapshot doesn't exist => create a full snapshot
 		return Full, nil
 	}
-
 	if err != nil {
 		// there was another unknown error
 		return Full, err
@@ -224,10 +226,16 @@ func (s *Manager) optimalSnapshotType() (Type, error) {
 		// delta snapshot doesn't exist => create a delta snapshot
 		return Delta, nil
 	}
-
 	if err != nil {
 		// there was another unknown error
 		return Delta, err
+	}
+
+	// both files exist => check the size of the delta snapshot
+	// if the size of the delta snapshot is smaller than the minimum threshold,
+	// the existing delta snapshot file always gets updated.
+	if deltaSnapshotFileInfo.Size() <= s.deltaSnapshotSizeThresholdMinSizeBytes {
+		return Delta, nil
 	}
 
 	// if the file size of the last delta snapshot is bigger than a certain percentage

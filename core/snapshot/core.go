@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/labstack/gommon/bytes"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
@@ -155,6 +156,10 @@ func provide(c *dig.Container) error {
 	}
 
 	return c.Provide(func(deps snapshotDeps) *snapshot.Manager {
+		deltaSnapshotSizeThresholdMinSizeBytes, err := bytes.Parse(ParamsSnapshots.DeltaSizeThresholdMinSize)
+		if err != nil {
+			CoreComponent.LogPanicf("parameter %s invalid", CoreComponent.App.Config().GetParameterPath(&(ParamsSnapshots.DeltaSizeThresholdMinSize)))
+		}
 
 		solidEntryPointCheckThresholdPast := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
 		solidEntryPointCheckThresholdFuture := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
@@ -175,6 +180,7 @@ func provide(c *dig.Container) error {
 			deps.SnapshotsFullPath,
 			deps.SnapshotsDeltaPath,
 			ParamsSnapshots.DeltaSizeThresholdPercentage,
+			deltaSnapshotSizeThresholdMinSizeBytes,
 			solidEntryPointCheckThresholdPast,
 			solidEntryPointCheckThresholdFuture,
 			pruningThreshold,

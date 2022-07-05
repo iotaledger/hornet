@@ -320,6 +320,7 @@ Example:
 | fullPath                                | Path to the full snapshot file                                                                                                                                        | string | "snapshots/mainnet/full_snapshot.bin"  |
 | deltaPath                               | Path to the delta snapshot file                                                                                                                                       | string | "snapshots/mainnet/delta_snapshot.bin" |
 | deltaSizeThresholdPercentage            | Create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history) | float  | 50.0                                   |
+| deltaSizeThresholdMinSize               | The minimum size of the delta snapshot file before the threshold percentage condition is checked (below that size the delta snapshot is always created)               | string | "50M"                                  |
 | [downloadURLs](#snapshots_downloadurls) | Configuration for downloadURLs                                                                                                                                        | array  | see example below                      |
 
 ### <a id="snapshots_downloadurls"></a> DownloadURLs
@@ -339,6 +340,7 @@ Example:
       "fullPath": "snapshots/mainnet/full_snapshot.bin",
       "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
       "deltaSizeThresholdPercentage": 50,
+      "deltaSizeThresholdMinSize": "50M",
       "downloadURLs": [
         {
           "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",

@@ -106,6 +106,7 @@
     "fullPath": "alphanet/snapshots/full_snapshot.bin",
     "deltaPath": "alphanet/snapshots/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
+    "deltaSizeThresholdMinSize": "50M",
     "downloadURLs": [
       {
         "full": "https://files.alphanet.iotaledger.net/snapshots/latest-full_snapshot.bin",
