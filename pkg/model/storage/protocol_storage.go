@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"fmt"
+	"sync"
 
 	"github.com/pkg/errors"
 
@@ -13,7 +13,18 @@ import (
 // ProtocolParamsMilestoneOptConsumer consumes the given ProtocolParamsMilestoneOpt.
 type ProtocolParamsMilestoneOptConsumer func(*iotago.ProtocolParamsMilestoneOpt) bool
 
-func (s *Storage) StoreProtocolParametersMilestoneOption(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) error {
+type ProtocolStorage struct {
+	protocolStore     kvstore.KVStore
+	protocolStoreLock sync.RWMutex
+}
+
+func NewProtocolStorage(protocolStore kvstore.KVStore) *ProtocolStorage {
+	return &ProtocolStorage{
+		protocolStore: protocolStore,
+	}
+}
+
+func (s *ProtocolStorage) StoreProtocolParametersMilestoneOption(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) error {
 	s.protocolStoreLock.Lock()
 	defer s.protocolStoreLock.Unlock()
 
@@ -29,7 +40,7 @@ func (s *Storage) StoreProtocolParametersMilestoneOption(protoParamsMsOption *io
 	return nil
 }
 
-func (s *Storage) ProtocolParametersMilestoneOption(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParamsMilestoneOpt, error) {
+func (s *ProtocolStorage) ProtocolParametersMilestoneOption(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParamsMilestoneOpt, error) {
 	s.protocolStoreLock.RLock()
 	defer s.protocolStoreLock.RUnlock()
 
@@ -65,7 +76,7 @@ func (s *Storage) ProtocolParametersMilestoneOption(msIndex iotago.MilestoneInde
 
 }
 
-func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParameters, error) {
+func (s *ProtocolStorage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParameters, error) {
 
 	protoParamsMsOption, err := s.ProtocolParametersMilestoneOption(msIndex)
 	if err != nil {
@@ -80,7 +91,7 @@ func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.Pro
 	return protoParams, nil
 }
 
-func (s *Storage) ForEachProtocolParameterMilestoneOption(consumer ProtocolParamsMilestoneOptConsumer) error {
+func (s *ProtocolStorage) ForEachProtocolParameterMilestoneOption(consumer ProtocolParamsMilestoneOptConsumer) error {
 	s.protocolStoreLock.RLock()
 	defer s.protocolStoreLock.RUnlock()
 
@@ -100,7 +111,7 @@ func (s *Storage) ForEachProtocolParameterMilestoneOption(consumer ProtocolParam
 	return innerErr
 }
 
-func (s *Storage) PruneProtocolParameterMilestoneOptions(pruningIndex iotago.MilestoneIndex) error {
+func (s *ProtocolStorage) PruneProtocolParameterMilestoneOptions(pruningIndex iotago.MilestoneIndex) error {
 	s.protocolStoreLock.Lock()
 	defer s.protocolStoreLock.Unlock()
 
@@ -138,13 +149,4 @@ func (s *Storage) PruneProtocolParameterMilestoneOptions(pruningIndex iotago.Mil
 	}
 
 	return innerErr
-}
-
-func (s *Storage) CurrentProtocolParameters() (*iotago.ProtocolParameters, error) {
-	ledgerIndex, err := s.UTXOManager().ReadLedgerIndex()
-	if err != nil {
-		return nil, fmt.Errorf("loading current protocol parameters failed: %w", err)
-	}
-
-	return s.ProtocolParameters(ledgerIndex)
 }

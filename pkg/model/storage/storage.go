@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/iotaledger/hive.go/events"
@@ -9,6 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/profile"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -79,6 +81,7 @@ type NonCachedStorage struct {
 
 // Storage is the access layer to the node databases (partially cached).
 type Storage struct {
+	*ProtocolStorage
 
 	// databases
 	tangleStore kvstore.KVStore
@@ -107,8 +110,7 @@ type Storage struct {
 	snapshotMutex syncutils.RWMutex
 
 	// protocol
-	protocolStore     kvstore.KVStore
-	protocolStoreLock sync.RWMutex
+	protocolStore kvstore.KVStore
 
 	// utxo
 	utxoManager *utxo.Manager
@@ -130,8 +132,9 @@ func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile .
 	}
 
 	s := &Storage{
-		tangleStore: tangleStore,
-		utxoStore:   utxoStore,
+		ProtocolStorage: nil,
+		tangleStore:     tangleStore,
+		utxoStore:       utxoStore,
 		healthTrackers: []*StoreHealthTracker{
 			healthTrackerTangle,
 			healthTrackerUTXO,
@@ -145,6 +148,8 @@ func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile .
 	if err := s.configureStorages(tangleStore, cachesProfile...); err != nil {
 		return nil, err
 	}
+
+	s.ProtocolStorage = NewProtocolStorage(s.protocolStore)
 
 	if err := s.loadSnapshotInfo(); err != nil {
 		return nil, err
@@ -423,6 +428,15 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownBlocksStorage()
 	s.ShutdownChildrenStorage()
 	s.ShutdownUnreferencedBlocksStorage()
+}
+
+func (s *Storage) CurrentProtocolParameters() (*iotago.ProtocolParameters, error) {
+	ledgerIndex, err := s.UTXOManager().ReadLedgerIndex()
+	if err != nil {
+		return nil, fmt.Errorf("loading current protocol parameters failed: %w", err)
+	}
+
+	return s.ProtocolParameters(ledgerIndex)
 }
 
 // CheckLedgerState checks if the total balance of the ledger fits the token supply in the protocol parameters.
