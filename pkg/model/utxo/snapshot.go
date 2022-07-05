@@ -29,7 +29,7 @@ func (o *Output) SnapshotBytes() []byte {
 	return m.Bytes()
 }
 
-func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters) (*Output, error) {
+func OutputFromSnapshotReader(reader io.ReadSeeker, protoParams *iotago.ProtocolParameters) (*Output, error) {
 	outputID := iotago.OutputID{}
 	if _, err := io.ReadFull(reader, outputID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS output ID: %w", err)
@@ -65,7 +65,7 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("unable to determine output type of LS output: %w", err)
 	}
 
-	if _, err := output.Deserialize(outputBytes, serializer.DeSeriModePerformValidation, protoParas); err != nil {
+	if _, err := output.Deserialize(outputBytes, serializer.DeSeriModePerformValidation, protoParams); err != nil {
 		return nil, fmt.Errorf("invalid LS output address: %w", err)
 	}
 
@@ -80,8 +80,8 @@ func (s *Spent) SnapshotBytes() []byte {
 	return m.Bytes()
 }
 
-func SpentFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndexSpent iotago.MilestoneIndex, msTimestampSpent uint32) (*Spent, error) {
-	output, err := OutputFromSnapshotReader(reader, protoParas)
+func SpentFromSnapshotReader(reader io.ReadSeeker, protoParams *iotago.ProtocolParameters, msIndexSpent iotago.MilestoneIndex, msTimestampSpent uint32) (*Spent, error) {
+	output, err := OutputFromSnapshotReader(reader, protoParams)
 	if err != nil {
 		return nil, err
 	}

@@ -55,7 +55,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
 		blocksMemcache.CachedBlock,
-		te.protoParas,
+		te.protoParams,
 		te.coo.genesisMilestoneIndex,
 		te.LastMilestonePayload(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
@@ -117,7 +117,7 @@ func (te *TestEnvironment) ReattachBlock(blockID iotago.BlockID, parents ...iota
 	require.NoError(te.TestInterface, err)
 
 	// We brute-force a new nonce until it is different than the original one (this is important when reattaching valid milestones)
-	powMinScore := te.protoParas.MinPoWScore
+	powMinScore := te.protoParams.MinPoWScore
 	for newBlock.Nonce == iotaBlock.Nonce {
 		powMinScore += 10.0
 		// Use a higher PowScore on every iteration to force a different nonce
@@ -126,7 +126,7 @@ func (te *TestEnvironment) ReattachBlock(blockID iotago.BlockID, parents ...iota
 		require.NoError(te.TestInterface, err)
 	}
 
-	storedBlock, err := storage.NewBlock(newBlock, serializer.DeSeriModePerformValidation, te.protoParas)
+	storedBlock, err := storage.NewBlock(newBlock, serializer.DeSeriModePerformValidation, te.protoParams)
 	require.NoError(te.TestInterface, err)
 
 	cachedBlock := te.StoreBlock(storedBlock)
@@ -157,7 +157,7 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
 		blocksMemcache.CachedBlock,
-		te.protoParas,
+		te.protoParams,
 		te.coo.genesisMilestoneIndex,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,

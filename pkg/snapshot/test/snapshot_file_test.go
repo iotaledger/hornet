@@ -21,7 +21,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-var protoParas = &iotago.ProtocolParameters{
+var protoParams = &iotago.ProtocolParameters{
 	Version:       2,
 	NetworkName:   "testnet",
 	Bech32HRP:     iotago.PrefixTestnet,
@@ -94,7 +94,7 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 			require.NoError(t, err)
 
 			for i := 0; i < msDiffCount; i++ {
-				_, msDiff, err := snapshot.ReadMilestoneDiff(milestoneDiffRead, getSnapshotProtocolManager(protoParas), false)
+				_, msDiff, err := snapshot.ReadMilestoneDiff(milestoneDiffRead, getSnapshotProtocolManager(protoParams), false)
 				require.NoError(t, err)
 				writtenMsDiff := writtenMsDiffs[i]
 
@@ -137,7 +137,7 @@ func TestMilestoneDiffReadProtocolParameters(t *testing.T) {
 			milestoneDiffWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 			require.NoError(t, err)
 
-			writtenProtocolParametersUpdates := []*iotago.ProtocolParamsMilestoneOpt{}
+			writtenProtoParamsMsOptions := []*iotago.ProtocolParamsMilestoneOpt{}
 
 			msDiffCount := 0
 			for {
@@ -149,7 +149,7 @@ func TestMilestoneDiffReadProtocolParameters(t *testing.T) {
 				}
 
 				if msDiff.Milestone.Opts.MustSet().ProtocolParams() != nil {
-					writtenProtocolParametersUpdates = append(writtenProtocolParametersUpdates, msDiff.Milestone.Opts.MustSet().ProtocolParams())
+					writtenProtoParamsMsOptions = append(writtenProtoParamsMsOptions, msDiff.Milestone.Opts.MustSet().ProtocolParams())
 				}
 
 				msDiffBytes, err := msDiff.MarshalBinary()
@@ -169,12 +169,12 @@ func TestMilestoneDiffReadProtocolParameters(t *testing.T) {
 			milestoneDiffRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			readProtocolParametersUpdates := []*iotago.ProtocolParamsMilestoneOpt{}
-			onProtocolParametersUpdateAdded := events.NewClosure(func(protocolParamsMilestoneOpt *iotago.ProtocolParamsMilestoneOpt) {
-				readProtocolParametersUpdates = append(readProtocolParametersUpdates, protocolParamsMilestoneOpt)
+			readProtoParamsMsOptions := []*iotago.ProtocolParamsMilestoneOpt{}
+			onProtocolParametersUpdateAdded := events.NewClosure(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) {
+				readProtoParamsMsOptions = append(readProtoParamsMsOptions, protoParamsMsOption)
 			})
 
-			snapshotProtocolManager := getSnapshotProtocolManager(protoParas)
+			snapshotProtocolManager := getSnapshotProtocolManager(protoParams)
 			snapshotProtocolManager.Events.ProtocolParametersUpdateAdded.Attach(onProtocolParametersUpdateAdded)
 
 			for i := 0; i < msDiffCount; i++ {
@@ -183,10 +183,11 @@ func TestMilestoneDiffReadProtocolParameters(t *testing.T) {
 			}
 
 			// verify that what has been written also has been read again
-			require.EqualValues(t, writtenProtocolParametersUpdates, readProtocolParametersUpdates)
+			require.EqualValues(t, writtenProtoParamsMsOptions, readProtoParamsMsOptions)
 		})
 	}
 }
+
 func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
@@ -356,7 +357,7 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, getSnapshotProtocolManager(protoParas), tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, getSnapshotProtocolManager(protoParams), tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGen := tt.msDiffGenRetriever()
@@ -463,7 +464,7 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, getSnapshotProtocolManager(protoParas), tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, getSnapshotProtocolManager(protoParams), tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGenRetriever, sepGenRetriever := tt.snapshotExtensionGenRetriever()
@@ -568,25 +569,25 @@ func newMsDiffGenerator(startIndex iotago.MilestoneIndex, count syncmanager.Mile
 			}
 
 			parents := iotago.BlockIDs{tpkg.RandBlockID()}
-			milestonePayload := iotago.NewMilestone(milestoneIndex, tpkg.RandMilestoneTimestamp(), protoParas.Version, tpkg.RandMilestoneID(), parents, tpkg.Rand32ByteHash(), tpkg.Rand32ByteHash())
+			milestonePayload := iotago.NewMilestone(milestoneIndex, tpkg.RandMilestoneTimestamp(), protoParams.Version, tpkg.RandMilestoneID(), parents, tpkg.Rand32ByteHash(), tpkg.Rand32ByteHash())
 
-			receipt, err := tpkg.RandReceipt(milestonePayload.Index, protoParas)
+			receipt, err := tpkg.RandReceipt(milestonePayload.Index, protoParams)
 			if err != nil {
 				panic(err)
 			}
 
-			newProtocolParameterBytes, err := tpkg.RandProtocolParameters().Serialize(serializer.DeSeriModePerformValidation, nil)
+			newProtoParamsBytes, err := tpkg.RandProtocolParameters().Serialize(serializer.DeSeriModePerformValidation, nil)
 			if err != nil {
 				panic(err)
 			}
 
-			protocolParameterMilestoneOption := &iotago.ProtocolParamsMilestoneOpt{
+			protoParamsMsOption := &iotago.ProtocolParamsMilestoneOpt{
 				TargetMilestoneIndex: milestonePayload.Index + 15,
 				ProtocolVersion:      tpkg.RandByte(),
-				Params:               newProtocolParameterBytes,
+				Params:               newProtoParamsBytes,
 			}
 
-			milestonePayload.Opts = iotago.MilestoneOpts{receipt, protocolParameterMilestoneOption}
+			milestonePayload.Opts = iotago.MilestoneOpts{receipt, protoParamsMsOption}
 
 			if err := milestonePayload.Sign(pubKeys, iotago.InMemoryEd25519MilestoneSigner(keyMapping)); err != nil {
 				panic(err)
@@ -689,7 +690,7 @@ func fullHeaderEqualFunc(t *testing.T, expected *snapshot.FullSnapshotHeader) sn
 		require.EqualValues(t, expected.TargetMilestoneID, actual.TargetMilestoneID)
 		require.EqualValues(t, expected.LedgerMilestoneIndex, actual.LedgerMilestoneIndex)
 		require.EqualValues(t, expected.TreasuryOutput, actual.TreasuryOutput)
-		require.EqualValues(t, expected.ProtocolParameters, actual.ProtocolParameters)
+		require.EqualValues(t, expected.ProtocolParamsMilestoneOpt, actual.ProtocolParamsMilestoneOpt)
 		require.EqualValues(t, expected.OutputCount, actual.OutputCount)
 		require.EqualValues(t, expected.MilestoneDiffCount, actual.MilestoneDiffCount)
 		require.EqualValues(t, expected.SEPCount, actual.SEPCount)
@@ -726,18 +727,18 @@ func randFullSnapshotHeader(outputCount uint64, msDiffCount uint32, sepCount uin
 	}
 
 	return &snapshot.FullSnapshotHeader{
-		Type:                     snapshot.Full,
-		Version:                  snapshot.SupportedFormatVersion,
-		GenesisMilestoneIndex:    tpkg.RandMilestoneIndex(),
-		TargetMilestoneIndex:     targetMilestoneIndex,
-		TargetMilestoneTimestamp: tpkg.RandMilestoneTimestamp(),
-		TargetMilestoneID:        tpkg.RandMilestoneID(),
-		LedgerMilestoneIndex:     tpkg.RandMilestoneIndex(),
-		TreasuryOutput:           tpkg.RandTreasuryOutput(),
-		ProtocolParameters:       tpkg.RandProtocolParameters(),
-		OutputCount:              outputCount,
-		MilestoneDiffCount:       msDiffCount,
-		SEPCount:                 sepCount,
+		Type:                       snapshot.Full,
+		Version:                    snapshot.SupportedFormatVersion,
+		GenesisMilestoneIndex:      tpkg.RandMilestoneIndex(),
+		TargetMilestoneIndex:       targetMilestoneIndex,
+		TargetMilestoneTimestamp:   tpkg.RandMilestoneTimestamp(),
+		TargetMilestoneID:          tpkg.RandMilestoneID(),
+		LedgerMilestoneIndex:       tpkg.RandMilestoneIndex(),
+		TreasuryOutput:             tpkg.RandTreasuryOutput(),
+		ProtocolParamsMilestoneOpt: tpkg.RandProtocolParamsMilestoneOpt(),
+		OutputCount:                outputCount,
+		MilestoneDiffCount:         msDiffCount,
+		SEPCount:                   sepCount,
 	}
 }
 
@@ -754,14 +755,14 @@ func randDeltaSnapshotHeader(msDiffCount uint32, sepCount uint16) *snapshot.Delt
 	}
 }
 
-func getSnapshotProtocolManager(protoParas *iotago.ProtocolParameters) *snapshot.ProtocolManager {
-	protoParasBytes, err := protoParas.Serialize(serializer.DeSeriModeNoValidation, nil)
+func getSnapshotProtocolManager(protoParams *iotago.ProtocolParameters) *snapshot.ProtocolManager {
+	protoParamsBytes, err := protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		panic(err)
 	}
 
 	snapshotProtocolManager := snapshot.NewSnapshotProtocolManager()
-	snapshotProtocolManager.AddProtocolParametersUpdate(&iotago.ProtocolParamsMilestoneOpt{TargetMilestoneIndex: 1, ProtocolVersion: protoParas.Version, Params: protoParasBytes})
+	snapshotProtocolManager.AddProtocolParametersUpdate(&iotago.ProtocolParamsMilestoneOpt{TargetMilestoneIndex: 0, ProtocolVersion: protoParams.Version, Params: protoParamsBytes})
 	snapshotProtocolManager.SetCurrentMilestoneIndex(1)
 
 	return snapshotProtocolManager

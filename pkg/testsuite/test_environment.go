@@ -46,8 +46,8 @@ type TestEnvironment struct {
 	// PoWHandler holds the PoWHandler instance.
 	PoWHandler *pow.Handler
 
-	// protoParas are the protocol parameters of the network.
-	protoParas *iotago.ProtocolParameters
+	// protoParams are the protocol parameters of the network.
+	protoParams *iotago.ProtocolParameters
 
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given block in relation to the current CMI before it gets lazy.
@@ -100,7 +100,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		cachedBlocks:           make(storage.CachedBlocks, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(targetScore, 5*time.Second),
-		protoParas: &iotago.ProtocolParameters{
+		protoParams: &iotago.ProtocolParameters{
 			Version:       protocolVersion,
 			NetworkName:   "alphapnet1",
 			Bech32HRP:     iotago.PrefixTestnet,
@@ -154,13 +154,13 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	ledgerIndex, err := te.storage.UTXOManager().ReadLedgerIndex()
 	require.NoError(te.TestInterface, err)
 
-	protoParasBytes, err := te.protoParas.Serialize(serializer.DeSeriModeNoValidation, nil)
+	protoParamsBytes, err := te.protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
 	require.NoError(te.TestInterface, err)
 
-	err = te.Storage().StoreProtocolParameters(&iotago.ProtocolParamsMilestoneOpt{
+	err = te.Storage().StoreProtocolParametersMilestoneOption(&iotago.ProtocolParamsMilestoneOpt{
 		TargetMilestoneIndex: 0,
-		ProtocolVersion:      te.protoParas.Version,
-		Params:               protoParasBytes,
+		ProtocolVersion:      te.protoParams.Version,
+		Params:               protoParamsBytes,
 	})
 	require.NoError(te.TestInterface, err)
 
@@ -176,7 +176,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 
 	// Initialize UTXO
 	output := &iotago.BasicOutput{
-		Amount: te.protoParas.TokenSupply,
+		Amount: te.protoParams.TokenSupply,
 		Conditions: iotago.UnlockConditions{
 			&iotago.AddressUnlockCondition{
 				Address: genesisAddress,
@@ -214,7 +214,7 @@ func (te *TestEnvironment) ConfigureUTXOCallbacks(onLedgerUpdatedFunc OnLedgerUp
 }
 
 func (te *TestEnvironment) ProtocolParameters() *iotago.ProtocolParameters {
-	return te.protoParas
+	return te.protoParams
 }
 
 func (te *TestEnvironment) Storage() *storage.Storage {

@@ -85,7 +85,7 @@ func CreateOutputAndAssertSerialization(t *testing.T, blockID iotago.BlockID, ms
 
 	value := output.KVStorableValue()
 	require.Equal(t, blockID[:], value[:32])
-	require.Equal(t, uint32(msIndexBooked), binary.LittleEndian.Uint32(value[32:36]))
+	require.Equal(t, msIndexBooked, binary.LittleEndian.Uint32(value[32:36]))
 	require.Equal(t, msTimestampBooked, binary.LittleEndian.Uint32(value[36:40]))
 	require.Equal(t, outputBytes, value[40:])
 

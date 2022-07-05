@@ -337,7 +337,7 @@ type FullSnapshotHeader struct {
 	// This field must be populated if a Full snapshot is created/read.
 	TreasuryOutput *utxo.TreasuryOutput
 	// Active Protocol Parameter of the ledger milestone index.
-	ProtocolParameters *iotago.ProtocolParameters
+	ProtocolParamsMilestoneOpt *iotago.ProtocolParamsMilestoneOpt
 	// The amount of UTXOs contained within this snapshot.
 	OutputCount uint64
 	// The amount of milestone diffs contained within this snapshot.
@@ -346,12 +346,22 @@ type FullSnapshotHeader struct {
 	SEPCount uint16
 }
 
+func (h *FullSnapshotHeader) ProtocolParameters() (*iotago.ProtocolParameters, error) {
+
+	protoParams := &iotago.ProtocolParameters{}
+	if _, err := protoParams.Deserialize(h.ProtocolParamsMilestoneOpt.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
+		return nil, fmt.Errorf("failed to deserialize protocol parameters: %w", err)
+	}
+
+	return protoParams, nil
+}
+
 func writeFullSnapshotHeader(writeSeeker io.WriteSeeker, header *FullSnapshotHeader) (int64, error) {
 
 	if header.Type != Full {
 		return 0, ErrWrongSnapshotType
 	}
-	if header.ProtocolParameters == nil {
+	if header.ProtocolParamsMilestoneOpt == nil {
 		return 0, iotago.ErrMissingProtocolParas
 	}
 	if header.TreasuryOutput == nil {
@@ -423,23 +433,23 @@ func writeFullSnapshotHeader(writeSeeker io.WriteSeeker, header *FullSnapshotHea
 	}
 	increaseOffsets(serializer.UInt64ByteSize, &countersFileOffset)
 
-	// Protocol Parameter Length
-	// Denotes the length of the Protocol Parameter.
-	protoParasBytes, err := header.ProtocolParameters.Serialize(serializer.DeSeriModeNoValidation, nil)
+	// ProtocolParamsMilestoneOpt Length
+	// Denotes the length of the ProtocolParamsMilestoneOpt.
+	protoParamsMsOptionBytes, err := header.ProtocolParamsMilestoneOpt.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
-		return 0, fmt.Errorf("unable to serialize LS protocol parameters: %w", err)
+		return 0, fmt.Errorf("unable to serialize LS protocol parameters milestone option: %w", err)
 	}
-	if err := binary.Write(writeSeeker, binary.LittleEndian, uint16(len(protoParasBytes))); err != nil {
-		return 0, fmt.Errorf("unable to write LS protocol parameters length: %w", err)
+	if err := binary.Write(writeSeeker, binary.LittleEndian, uint16(len(protoParamsMsOptionBytes))); err != nil {
+		return 0, fmt.Errorf("unable to write LS protocol parameters milestone option length: %w", err)
 	}
 	increaseOffsets(serializer.UInt16ByteSize, &countersFileOffset)
 
-	// Protocol Parameter
-	// Active Protocol Parameter of the target milestone
-	if _, err := writeSeeker.Write(protoParasBytes); err != nil {
-		return 0, fmt.Errorf("unable to write LS protocol parameters: %w", err)
+	// ProtocolParamsMilestoneOpt
+	// Active ProtocolParamsMilestoneOpt of the ledger milestone
+	if _, err := writeSeeker.Write(protoParamsMsOptionBytes); err != nil {
+		return 0, fmt.Errorf("unable to write LS protocol parameters milestone option: %w", err)
 	}
-	increaseOffsets(int64(len(protoParasBytes)), &countersFileOffset)
+	increaseOffsets(int64(len(protoParamsMsOptionBytes)), &countersFileOffset)
 
 	var outputCount uint64
 	var msDiffCount uint32
@@ -515,19 +525,19 @@ func ReadFullSnapshotHeader(reader io.Reader) (*FullSnapshotHeader, error) {
 	}
 	readHeader.TreasuryOutput = to
 
-	var protoParasLength uint16 = 0
-	if err := binary.Read(reader, binary.LittleEndian, &protoParasLength); err != nil {
-		return nil, fmt.Errorf("unable to read LS protocol parameters length: %w", err)
+	var protoParamsMsOptionLength uint16 = 0
+	if err := binary.Read(reader, binary.LittleEndian, &protoParamsMsOptionLength); err != nil {
+		return nil, fmt.Errorf("unable to read LS protocol parameters milestone option length: %w", err)
 	}
 
-	protoParasBytes := make([]byte, protoParasLength)
-	if _, err := reader.Read(protoParasBytes); err != nil {
-		return nil, fmt.Errorf("unable to read LS protocol parameters: %w", err)
+	protoParamsMsOptionBytes := make([]byte, protoParamsMsOptionLength)
+	if _, err := reader.Read(protoParamsMsOptionBytes); err != nil {
+		return nil, fmt.Errorf("unable to read LS protocol parameters milestone option: %w", err)
 	}
 
-	readHeader.ProtocolParameters = &iotago.ProtocolParameters{}
-	if _, err := readHeader.ProtocolParameters.Deserialize(protoParasBytes, serializer.DeSeriModeNoValidation, nil); err != nil {
-		return nil, fmt.Errorf("unable to deserialize LS protocol parameters: %w", err)
+	readHeader.ProtocolParamsMilestoneOpt = &iotago.ProtocolParamsMilestoneOpt{}
+	if _, err := readHeader.ProtocolParamsMilestoneOpt.Deserialize(protoParamsMsOptionBytes, serializer.DeSeriModeNoValidation, nil); err != nil {
+		return nil, fmt.Errorf("unable to deserialize LS protocol parameters milestone option: %w", err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.OutputCount); err != nil {
@@ -1142,21 +1152,17 @@ func StreamFullSnapshotDataFrom(
 		return err
 	}
 
-	currentProtoParsBytes, err := fullHeader.ProtocolParameters.Serialize(serializer.DeSeriModeNoValidation, nil)
+	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
 	if err != nil {
 		return err
 	}
 
-	// the protocol parameters in the full snapshot are valid for the ledger milestone index.
-	protocolManager.AddProtocolParametersUpdate(&iotago.ProtocolParamsMilestoneOpt{
-		TargetMilestoneIndex: fullHeader.LedgerMilestoneIndex,
-		ProtocolVersion:      fullHeader.ProtocolParameters.Version,
-		Params:               currentProtoParsBytes,
-	})
+	// the protocol parameters milestone option in the full snapshot is valid for the ledger milestone index.
+	protocolManager.AddProtocolParametersUpdate(fullHeader.ProtocolParamsMilestoneOpt)
 	protocolManager.SetCurrentMilestoneIndex(fullHeader.LedgerMilestoneIndex)
 
 	for i := uint64(0); i < fullHeader.OutputCount; i++ {
-		output, err := ReadOutput(reader, fullHeader.ProtocolParameters)
+		output, err := ReadOutput(reader, fullHeaderProtoParams)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
 		}
@@ -1270,13 +1276,13 @@ func StreamDeltaSnapshotDataFrom(
 }
 
 // reads an Output from the given reader.
-func ReadOutput(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters) (*utxo.Output, error) {
-	return utxo.OutputFromSnapshotReader(reader, protoParas)
+func ReadOutput(reader io.ReadSeeker, protoParams *iotago.ProtocolParameters) (*utxo.Output, error) {
+	return utxo.OutputFromSnapshotReader(reader, protoParams)
 }
 
 // reads a spent from the given reader.
-func readSpent(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndexSpent iotago.MilestoneIndex, msTimestampSpent uint32) (*utxo.Spent, error) {
-	return utxo.SpentFromSnapshotReader(reader, protoParas, msIndexSpent, msTimestampSpent)
+func readSpent(reader io.ReadSeeker, protoParams *iotago.ProtocolParameters, msIndexSpent iotago.MilestoneIndex, msTimestampSpent uint32) (*utxo.Spent, error) {
+	return utxo.SpentFromSnapshotReader(reader, protoParams, msIndexSpent, msTimestampSpent)
 }
 
 // ReadSnapshotHeaderFromFile reads the header of the given snapshot file.

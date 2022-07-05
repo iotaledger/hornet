@@ -58,7 +58,7 @@ func ConfirmMilestone(
 	utxoManager *utxo.Manager,
 	parentsTraverserStorage dag.ParentsTraverserStorage,
 	cachedBlockFunc storage.CachedBlockFunc,
-	protoParas *iotago.ProtocolParameters,
+	protoParams *iotago.ProtocolParameters,
 	genesisMilestoneIndex iotago.MilestoneIndex,
 	milestonePayload *iotago.Milestone,
 	whiteFlagTraversalCondition dag.Predicate,
@@ -203,7 +203,7 @@ func ConfirmMilestone(
 				return fmt.Errorf("unable to fetch previous unspent treasury output: %w", err)
 			}
 
-			if err := iotago.ValidateReceipt(receipt, &iotago.TreasuryOutput{Amount: unspentTreasuryOutput.Amount}, protoParas.TokenSupply); err != nil {
+			if err := iotago.ValidateReceipt(receipt, &iotago.TreasuryOutput{Amount: unspentTreasuryOutput.Amount}, protoParams.TokenSupply); err != nil {
 				return fmt.Errorf("invalid receipt contained within milestone: %w", err)
 			}
 

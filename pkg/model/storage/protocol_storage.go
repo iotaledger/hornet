@@ -10,26 +10,31 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// ProtocolParametersConsumer consumes the given protocol parameter during looping through all protocol parameters.
-type ProtocolParametersConsumer func(*iotago.ProtocolParamsMilestoneOpt) bool
+// ProtocolParamsMilestoneOptConsumer consumes the given ProtocolParamsMilestoneOpt.
+type ProtocolParamsMilestoneOptConsumer func(*iotago.ProtocolParamsMilestoneOpt) bool
 
-func (s *Storage) StoreProtocolParameters(protoParsMsOpt *iotago.ProtocolParamsMilestoneOpt) error {
-	data, err := protoParsMsOpt.Serialize(serializer.DeSeriModeNoValidation, nil)
+func (s *Storage) StoreProtocolParametersMilestoneOption(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) error {
+	s.protocolStoreLock.Lock()
+	defer s.protocolStoreLock.Unlock()
+
+	data, err := protoParamsMsOption.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to serialize protocol parameters")
+		return errors.Wrap(NewDatabaseError(err), "failed to serialize protocol parameters milestone option")
 	}
 
-	if err := s.protocolStore.Set(databaseKeyForMilestoneIndex(protoParsMsOpt.TargetMilestoneIndex), data); err != nil {
-		return errors.Wrap(NewDatabaseError(err), "failed to store protocol parameters")
+	if err := s.protocolStore.Set(databaseKeyForMilestoneIndex(protoParamsMsOption.TargetMilestoneIndex), data); err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to store protocol parameters milestone option")
 	}
 
 	return nil
 }
 
-func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParameters, error) {
+func (s *Storage) ProtocolParametersMilestoneOption(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParamsMilestoneOpt, error) {
+	s.protocolStoreLock.RLock()
+	defer s.protocolStoreLock.RUnlock()
 
 	// search the smallest activation index that is smaller than or equal to the given milestone index
-	// to get the valid protocol parameters for the given milestone index.
+	// to get the valid protocol parameters milestone option for the given milestone index.
 	var smallestIndex iotago.MilestoneIndex
 	if err := s.protocolStore.IterateKeys(kvstore.EmptyPrefix, func(key kvstore.Key) bool {
 		activationIndex := milestoneIndexFromDatabaseKey(key)
@@ -46,35 +51,48 @@ func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.Pro
 	data, err := s.protocolStore.Get(databaseKeyForMilestoneIndex(smallestIndex))
 	if err != nil {
 		if !errors.Is(err, kvstore.ErrKeyNotFound) {
-			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve protocol parameters")
+			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve protocol parameters milestone option")
 		}
-		return nil, errors.Wrap(NewDatabaseError(err), "protocol parameters not found in database")
+		return nil, errors.Wrap(NewDatabaseError(err), "protocol parameters milestone option not found in database")
 	}
 
-	protoParsMsOpt := &iotago.ProtocolParamsMilestoneOpt{}
-	if _, err := protoParsMsOpt.Deserialize(data, serializer.DeSeriModeNoValidation, nil); err != nil {
-		return nil, errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters")
+	protoParamsMsOption := &iotago.ProtocolParamsMilestoneOpt{}
+	if _, err := protoParamsMsOption.Deserialize(data, serializer.DeSeriModeNoValidation, nil); err != nil {
+		return nil, errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters milestone option")
 	}
 
-	protoParas := &iotago.ProtocolParameters{}
-	if _, err := protoParas.Deserialize(protoParsMsOpt.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
-		return nil, errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters")
-	}
+	return protoParamsMsOption, nil
 
-	return protoParas, nil
 }
 
-func (s *Storage) ForEachProtocolParameters(consumer ProtocolParametersConsumer) error {
+func (s *Storage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*iotago.ProtocolParameters, error) {
+
+	protoParamsMsOption, err := s.ProtocolParametersMilestoneOption(msIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	protoParams := &iotago.ProtocolParameters{}
+	if _, err := protoParams.Deserialize(protoParamsMsOption.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
+		return nil, errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters")
+	}
+
+	return protoParams, nil
+}
+
+func (s *Storage) ForEachProtocolParameterMilestoneOption(consumer ProtocolParamsMilestoneOptConsumer) error {
+	s.protocolStoreLock.RLock()
+	defer s.protocolStoreLock.RUnlock()
 
 	var innerErr error
 	if err := s.protocolStore.Iterate(kvstore.EmptyPrefix, func(_ kvstore.Key, value kvstore.Value) bool {
-		protoParsMsOpt := &iotago.ProtocolParamsMilestoneOpt{}
-		if _, err := protoParsMsOpt.Deserialize(value, serializer.DeSeriModeNoValidation, nil); err != nil {
-			innerErr = errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters")
+		protoParamsMsOption := &iotago.ProtocolParamsMilestoneOpt{}
+		if _, err := protoParamsMsOption.Deserialize(value, serializer.DeSeriModeNoValidation, nil); err != nil {
+			innerErr = errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters milestone option")
 			return false
 		}
 
-		return consumer(protoParsMsOpt)
+		return consumer(protoParamsMsOption)
 	}); err != nil {
 		return err
 	}
@@ -82,9 +100,11 @@ func (s *Storage) ForEachProtocolParameters(consumer ProtocolParametersConsumer)
 	return innerErr
 }
 
-func (s *Storage) PruneProtocolParameters(pruningIndex iotago.MilestoneIndex) error {
+func (s *Storage) PruneProtocolParameterMilestoneOptions(pruningIndex iotago.MilestoneIndex) error {
+	s.protocolStoreLock.Lock()
+	defer s.protocolStoreLock.Unlock()
 
-	// we will prune all protocol parameters that are smaller than the given pruning index,
+	// we will prune all protocol parameters milestone options that are smaller than the given pruning index,
 	// except the last one, which is still valid.
 	var biggestIndexBeforePruningIndex iotago.MilestoneIndex
 	if err := s.protocolStore.IterateKeys(kvstore.EmptyPrefix, func(key kvstore.Key) bool {
@@ -101,7 +121,7 @@ func (s *Storage) PruneProtocolParameters(pruningIndex iotago.MilestoneIndex) er
 
 	var innerErr error
 
-	// we loop again to delete all protocol parameters that are smaller than the found index.
+	// we loop again to delete all protocol parameters milestone options that are smaller than the found index.
 	if err := s.protocolStore.IterateKeys(kvstore.EmptyPrefix, func(key kvstore.Key) bool {
 		activationIndex := milestoneIndexFromDatabaseKey(key)
 
@@ -121,7 +141,6 @@ func (s *Storage) PruneProtocolParameters(pruningIndex iotago.MilestoneIndex) er
 }
 
 func (s *Storage) CurrentProtocolParameters() (*iotago.ProtocolParameters, error) {
-
 	ledgerIndex, err := s.UTXOManager().ReadLedgerIndex()
 	if err != nil {
 		return nil, fmt.Errorf("loading current protocol parameters failed: %w", err)

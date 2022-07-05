@@ -115,9 +115,9 @@ type StoreBlockInterface interface {
 // including all additional information like
 // metadata, children, indexation and milestone entries.
 // block +1
-func storeBlock(protoParas *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, blk *iotago.Block) (*storage.CachedBlock, error) {
+func storeBlock(protoParams *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, blk *iotago.Block) (*storage.CachedBlock, error) {
 
-	block, err := storage.NewBlock(blk, serializer.DeSeriModePerformValidation, protoParas)
+	block, err := storage.NewBlock(blk, serializer.DeSeriModePerformValidation, protoParams)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 	}
@@ -228,8 +228,13 @@ func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath strin
 		return err
 	}
 
-	if checkSourceNetworkID && sourceNetworkID != fullHeader.ProtocolParameters.NetworkID() {
-		return fmt.Errorf("source storage networkID not equal to genesis snapshot networkID (%d != %d)", sourceNetworkID, fullHeader.ProtocolParameters.NetworkID())
+	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+	if err != nil {
+		return err
+	}
+
+	if checkSourceNetworkID && sourceNetworkID != fullHeaderProtoParams.NetworkID() {
+		return fmt.Errorf("source storage networkID not equal to genesis snapshot networkID (%d != %d)", sourceNetworkID, fullHeaderProtoParams.NetworkID())
 	}
 
 	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, genesisSnapshotFilePath); err != nil {

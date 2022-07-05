@@ -56,7 +56,7 @@ func databaseVerify(args []string) error {
 	}
 
 	// TODO: adapt to new protocol parameter logic
-	protoParas := &iotago.ProtocolParameters{}
+	protoParams := &iotago.ProtocolParameters{}
 
 	// we don't need to check the health of the source db.
 	// it is fine as long as all blocks in the cone are found.
@@ -81,7 +81,7 @@ func databaseVerify(args []string) error {
 
 	if err := verifyDatabase(
 		getGracefulStopContext(),
-		protoParas,
+		protoParams,
 		milestoneManager,
 		tangleStoreSource,
 		*genesisSnapshotFilePathFlag,
@@ -99,7 +99,7 @@ func databaseVerify(args []string) error {
 // verifyDatabase checks if all blocks in the cones of the existing milestones in the database are found.
 func verifyDatabase(
 	ctx context.Context,
-	protoParas *iotago.ProtocolParameters,
+	protoParams *iotago.ProtocolParameters,
 	milestoneManager *milestonemanager.MilestoneManager,
 	tangleStoreSource *storage.Storage,
 	genesisSnapshotFilePath string) error {
@@ -122,14 +122,14 @@ func verifyDatabase(
 		}
 	}()
 
-	protocolParametersSource, err := tangleStoreSource.CurrentProtocolParameters()
+	protoParamsSource, err := tangleStoreSource.CurrentProtocolParameters()
 	if err != nil {
 		return errors.Wrapf(ErrCritical, "loading source protocol parameters failed: %s", err.Error())
 	}
 
 	// load the genesis ledger state into the temporary storage (SEP and ledger state only)
 	println("loading genesis snapshot...")
-	if err := loadGenesisSnapshot(tangleStoreTemp, genesisSnapshotFilePath, true, protocolParametersSource.NetworkID()); err != nil {
+	if err := loadGenesisSnapshot(tangleStoreTemp, genesisSnapshotFilePath, true, protoParamsSource.NetworkID()); err != nil {
 		return fmt.Errorf("loading genesis snapshot failed: %w", err)
 	}
 
@@ -248,7 +248,7 @@ func verifyDatabase(
 			utxoManagerTemp,
 			storeSource,
 			storeSource.CachedBlock,
-			protoParas,
+			protoParams,
 			snapshotInfoTemp.GenesisMilestoneIndex(),
 			milestonePayload,
 			// traversal stops if no more blocks pass the given condition

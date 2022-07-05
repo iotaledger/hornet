@@ -79,6 +79,11 @@ func snapshotMerge(args []string) error {
 // prints information about the given full snapshot file header.
 func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.FullSnapshotHeader) error {
 
+	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+	if err != nil {
+		return err
+	}
+
 	result := struct {
 		SnapshotName             string                     `json:"snapshotName,omitempty"`
 		FilePath                 string                     `json:"filePath"`
@@ -105,7 +110,7 @@ func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.
 		TargetMilestoneID:        fullHeader.TargetMilestoneID.ToHex(),
 		LedgerMilestoneIndex:     fullHeader.LedgerMilestoneIndex,
 		TreasuryOutput:           fullHeader.TreasuryOutput,
-		ProtocolParameters:       fullHeader.ProtocolParameters,
+		ProtocolParameters:       fullHeaderProtoParams,
 		OutputCount:              fullHeader.OutputCount,
 		MilestoneDiffCount:       fullHeader.MilestoneDiffCount,
 		SEPCount:                 fullHeader.SEPCount,

@@ -432,7 +432,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 	}
 	p.storage.WriteUnlockSolidEntryPoints()
 
-	if err := p.storage.PruneProtocolParameters(targetIndex); err != nil {
+	if err := p.storage.PruneProtocolParameterMilestoneOptions(targetIndex); err != nil {
 		return 0, err
 	}
 

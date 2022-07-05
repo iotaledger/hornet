@@ -21,9 +21,9 @@ type Block struct {
 	block     *iotago.Block
 }
 
-func NewBlock(iotaBlock *iotago.Block, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Block, error) {
+func NewBlock(iotaBlock *iotago.Block, deSeriMode serializer.DeSerializationMode, protoParams *iotago.ProtocolParameters) (*Block, error) {
 
-	data, err := iotaBlock.Serialize(deSeriMode, protoParas)
+	data, err := iotaBlock.Serialize(deSeriMode, protoParams)
 	if err != nil {
 		return nil, err
 	}
@@ -42,10 +42,10 @@ func NewBlock(iotaBlock *iotago.Block, deSeriMode serializer.DeSerializationMode
 	return block, nil
 }
 
-func BlockFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Block, error) {
+func BlockFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, protoParams *iotago.ProtocolParameters) (*Block, error) {
 
 	iotaBlock := &iotago.Block{}
-	if _, err := iotaBlock.Deserialize(data, deSeriMode, protoParas); err != nil {
+	if _, err := iotaBlock.Deserialize(data, deSeriMode, protoParams); err != nil {
 		return nil, err
 	}
 

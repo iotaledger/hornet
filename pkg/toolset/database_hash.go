@@ -108,7 +108,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		return true
 	})
 
-	protocolParameters, err := dbStorage.ProtocolParameters(ledgerIndex)
+	protoParams, err := dbStorage.ProtocolParameters(ledgerIndex)
 	if err != nil {
 		return errors.Wrapf(ErrCritical, "loading protocol parameters failed: %s", err.Error())
 	}
@@ -153,7 +153,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			Healthy:                !corrupted,
 			Tainted:                tainted,
 			SnapshotTime:           snapshotInfo.SnapshotTimestamp(),
-			NetworkID:              protocolParameters.NetworkID(),
+			NetworkID:              protoParams.NetworkID(),
 			Treasury:               treasury,
 			LedgerIndex:            ledgerIndex,
 			SnapshotIndex:          snapshotInfo.SnapshotIndex(),
@@ -181,7 +181,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		yesOrNo(!corrupted),
 		yesOrNo(tainted),
 		snapshotInfo.SnapshotTimestamp(),
-		protocolParameters.NetworkID(),
+		protoParams.NetworkID(),
 		func() string {
 			if treasuryOutput == nil {
 				return "no treasury output found"

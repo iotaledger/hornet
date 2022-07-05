@@ -10,6 +10,7 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/ioutils"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -63,9 +64,14 @@ func snapshotGen(args []string) error {
 	}
 
 	println("loading protocol parameters...")
-	protocolParameters := &iotago.ProtocolParameters{}
-	if err := ioutils.ReadJSONFromFile(protocolParametersPath, protocolParameters); err != nil {
+	protoParams := &iotago.ProtocolParameters{}
+	if err := ioutils.ReadJSONFromFile(protocolParametersPath, protoParams); err != nil {
 		return fmt.Errorf("failed to load protocol parameters: %w", err)
+	}
+
+	protoParamsBytes, err := protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return fmt.Errorf("failed to serialize protocol parameters: %w", err)
 	}
 
 	// check mint address
@@ -106,7 +112,11 @@ func snapshotGen(args []string) error {
 			MilestoneID: iotago.MilestoneID{},
 			Amount:      treasury,
 		},
-		ProtocolParameters: protocolParameters,
+		ProtocolParamsMilestoneOpt: &iotago.ProtocolParamsMilestoneOpt{
+			TargetMilestoneIndex: targetIndex,
+			ProtocolVersion:      protoParams.Version,
+			Params:               protoParamsBytes,
+		},
 		OutputCount:        0,
 		MilestoneDiffCount: 0,
 		SEPCount:           0,
@@ -133,7 +143,7 @@ func snapshotGen(args []string) error {
 		outputAdded = true
 
 		return utxo.CreateOutput(iotago.OutputID{}, iotago.EmptyBlockID(), 0, 0, &iotago.BasicOutput{
-			Amount: protocolParameters.TokenSupply - treasury,
+			Amount: protoParams.TokenSupply - treasury,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: &address},
 			},

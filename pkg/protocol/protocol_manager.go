@@ -10,13 +10,13 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func protoParasMsOptCaller(handler interface{}, params ...interface{}) {
-	handler.(func(protoParas *iotago.ProtocolParamsMilestoneOpt))(params[0].(*iotago.ProtocolParamsMilestoneOpt))
+func protoParamsMsOptionCaller(handler interface{}, params ...interface{}) {
+	handler.(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt))(params[0].(*iotago.ProtocolParamsMilestoneOpt))
 }
 
 // Events are events happening around the Manager.
 type Events struct {
-	// Emits protocol parameters for the unsupported milestone one milestone before.
+	// Emits a protocol parameters milestone option for the unsupported milestone one milestone before.
 	NextMilestoneUnsupported *events.Event
 	// Emits critical errors.
 	CriticalErrors *events.Event
@@ -26,7 +26,7 @@ type Events struct {
 func NewManager(storage *storage.Storage, ledgerIndex iotago.MilestoneIndex) (*Manager, error) {
 	manager := &Manager{
 		Events: &Events{
-			NextMilestoneUnsupported: events.NewEvent(protoParasMsOptCaller),
+			NextMilestoneUnsupported: events.NewEvent(protoParamsMsOptionCaller),
 			CriticalErrors:           events.NewEvent(events.ErrorCaller),
 		},
 		storage: storage,
@@ -57,12 +57,12 @@ func (m *Manager) init(ledgerIndex iotago.MilestoneIndex) error {
 	m.currentLock.Lock()
 	defer m.currentLock.Unlock()
 
-	currentProtoParas, err := m.storage.ProtocolParameters(ledgerIndex)
+	currentProtoParams, err := m.storage.ProtocolParameters(ledgerIndex)
 	if err != nil {
 		return err
 	}
 
-	m.current = currentProtoParas
+	m.current = currentProtoParams
 	m.loadPending(ledgerIndex)
 
 	return nil
@@ -73,9 +73,9 @@ func (m *Manager) loadPending(ledgerIndex iotago.MilestoneIndex) {
 	m.pendingLock.Lock()
 	defer m.pendingLock.Unlock()
 
-	m.storage.ForEachProtocolParameters(func(protoParsMsOpt *iotago.ProtocolParamsMilestoneOpt) bool {
-		if protoParsMsOpt.TargetMilestoneIndex > ledgerIndex {
-			m.pending = append(m.pending, protoParsMsOpt)
+	m.storage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+		if protoParamsMsOption.TargetMilestoneIndex > ledgerIndex {
+			m.pending = append(m.pending, protoParamsMsOption)
 		}
 		return true
 	})
@@ -128,12 +128,12 @@ func (m *Manager) HandleConfirmedMilestone(cachedMilestone *storage.CachedMilest
 	defer cachedMilestone.Release(true) // milestone -1
 	ms := cachedMilestone.Milestone()
 
-	if msProtoParas := ms.Milestone().Opts.MustSet().ProtocolParams(); msProtoParas != nil {
+	if protoParamsMsOption := ms.Milestone().Opts.MustSet().ProtocolParams(); protoParamsMsOption != nil {
 		m.pendingLock.Lock()
-		m.pending = append(m.pending, msProtoParas)
+		m.pending = append(m.pending, protoParamsMsOption)
 		m.pendingLock.Unlock()
 
-		if err := m.storage.StoreProtocolParameters(msProtoParas); err != nil {
+		if err := m.storage.StoreProtocolParametersMilestoneOption(protoParamsMsOption); err != nil {
 			m.Events.CriticalErrors.Trigger(fmt.Errorf("unable to persist new protocol parameters: %w", err))
 			return
 		}
@@ -178,12 +178,11 @@ func (m *Manager) updateCurrent() error {
 	m.pendingLock.Lock()
 	defer m.pendingLock.Unlock()
 
-	nextMsProtoParamOpt := m.pending[0]
-	nextParams := nextMsProtoParamOpt.Params
+	nextProtoParamMsOption := m.pending[0]
 
 	// TODO: needs to be adapted for when protocol parameters struct changes
 	nextProtoParams := &iotago.ProtocolParameters{}
-	if _, err := nextProtoParams.Deserialize(nextParams, serializer.DeSeriModePerformValidation, nil); err != nil {
+	if _, err := nextProtoParams.Deserialize(nextProtoParamMsOption.Params, serializer.DeSeriModePerformValidation, nil); err != nil {
 		return fmt.Errorf("unable to deserialize new protocol parameters: %w", err)
 	}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	coreDatabase "github.com/iotaledger/hornet/core/database"
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
@@ -332,26 +333,31 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 		return fmt.Errorf("unable to get unspent treasury output: %w", err)
 	}
 
-	protocolParameters, err := s.storage.ProtocolParameters(ledgerIndex)
+	protoParamsMsOption, err := s.storage.ProtocolParametersMilestoneOption(ledgerIndex)
 	if err != nil {
-		return fmt.Errorf("loading protocol parameters failed: %w", err)
+		return fmt.Errorf("loading protocol parameters milestone option failed: %w", err)
+	}
+
+	protoParams := &iotago.ProtocolParameters{}
+	if _, err := protoParams.Deserialize(protoParamsMsOption.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
+		return fmt.Errorf("failed to deserialize protocol parameters: %w", err)
 	}
 
 	timeInit := time.Now()
 
 	fullHeader := &FullSnapshotHeader{
-		Version:                  SupportedFormatVersion,
-		Type:                     Full,
-		GenesisMilestoneIndex:    snapshotInfo.GenesisMilestoneIndex(),
-		TargetMilestoneIndex:     targetIndex,
-		TargetMilestoneTimestamp: targetMilestoneTimestamp,
-		TargetMilestoneID:        targetMilestoneID,
-		LedgerMilestoneIndex:     ledgerIndex,
-		TreasuryOutput:           unspentTreasuryOutput,
-		ProtocolParameters:       protocolParameters,
-		OutputCount:              0,
-		MilestoneDiffCount:       0,
-		SEPCount:                 0,
+		Version:                    SupportedFormatVersion,
+		Type:                       Full,
+		GenesisMilestoneIndex:      snapshotInfo.GenesisMilestoneIndex(),
+		TargetMilestoneIndex:       targetIndex,
+		TargetMilestoneTimestamp:   targetMilestoneTimestamp,
+		TargetMilestoneID:          targetMilestoneID,
+		LedgerMilestoneIndex:       ledgerIndex,
+		TreasuryOutput:             unspentTreasuryOutput,
+		ProtocolParamsMilestoneOpt: protoParamsMsOption,
+		OutputCount:                0,
+		MilestoneDiffCount:         0,
+		SEPCount:                   0,
 	}
 
 	snapshotFile, tempFilePath, err := ioutils.CreateTempFile(filePath)
@@ -363,7 +369,7 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 	// and the milestone diffs from the CMI back to target index - below max depth (excluding the below max depth index)
 	// the "below max depth" milestone diffs are needed to reconstruct pending protocol parameter updates
 	utxoProducer := NewCMIUTXOProducer(s.utxoManager)
-	milestoneDiffProducer := NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionBackwards, fullHeader.LedgerMilestoneIndex, targetIndex-syncmanager.MilestoneIndexDelta(protocolParameters.BelowMaxDepth))
+	milestoneDiffProducer := NewMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionBackwards, fullHeader.LedgerMilestoneIndex, targetIndex-syncmanager.MilestoneIndexDelta(protoParams.BelowMaxDepth))
 	sepProducer := NewSEPsProducer(ctx, s.storage, targetIndex, s.solidEntryPointCheckThresholdPast)
 
 	// stream data into snapshot file
@@ -581,12 +587,17 @@ func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, fileP
 		return nil, err
 	}
 
-	protocolParameters, err := dbStorage.ProtocolParameters(ledgerIndex)
+	protoParamsMsOption, err := dbStorage.ProtocolParametersMilestoneOption(ledgerIndex)
 	if err != nil {
-		return nil, fmt.Errorf("loading protocol parameters failed: %w", err)
+		return nil, fmt.Errorf("loading protocol parameters milestone option failed: %w", err)
 	}
 
-	targetIndex := ledgerIndex - syncmanager.MilestoneIndexDelta(protocolParameters.BelowMaxDepth)
+	protoParams := &iotago.ProtocolParameters{}
+	if _, err := protoParams.Deserialize(protoParamsMsOption.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
+		return nil, fmt.Errorf("failed to deserialize protocol parameters: %w", err)
+	}
+
+	targetIndex := ledgerIndex - syncmanager.MilestoneIndexDelta(protoParams.BelowMaxDepth)
 
 	cachedMilestoneTarget := dbStorage.CachedMilestoneByIndexOrNil(targetIndex) // milestone +1
 	if cachedMilestoneTarget == nil {
@@ -610,18 +621,18 @@ func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, fileP
 	}
 
 	fullHeader := &FullSnapshotHeader{
-		Version:                  SupportedFormatVersion,
-		Type:                     Full,
-		GenesisMilestoneIndex:    snapshotInfo.GenesisMilestoneIndex(),
-		TargetMilestoneIndex:     targetIndex,
-		TargetMilestoneTimestamp: targetMilestoneTimestamp,
-		TargetMilestoneID:        targetMilestoneID,
-		LedgerMilestoneIndex:     ledgerIndex,
-		TreasuryOutput:           unspentTreasuryOutput,
-		ProtocolParameters:       protocolParameters,
-		OutputCount:              0,
-		MilestoneDiffCount:       0,
-		SEPCount:                 0,
+		Version:                    SupportedFormatVersion,
+		Type:                       Full,
+		GenesisMilestoneIndex:      snapshotInfo.GenesisMilestoneIndex(),
+		TargetMilestoneIndex:       targetIndex,
+		TargetMilestoneTimestamp:   targetMilestoneTimestamp,
+		TargetMilestoneID:          targetMilestoneID,
+		LedgerMilestoneIndex:       ledgerIndex,
+		TreasuryOutput:             unspentTreasuryOutput,
+		ProtocolParamsMilestoneOpt: protoParamsMsOption,
+		OutputCount:                0,
+		MilestoneDiffCount:         0,
+		SEPCount:                   0,
 	}
 
 	// TODO: this is wrong? the SEP need to match the target milestone index
@@ -782,24 +793,24 @@ func CreateSnapshotFromStorage(
 	targetMilestoneTimestamp := cachedMilestoneTarget.Milestone().TimestampUnix()
 	targetMilestoneID := cachedMilestoneTarget.Milestone().MilestoneID()
 
-	protocolParameters, err := dbStorage.ProtocolParameters(ledgerIndex)
+	protoParamsMsOption, err := dbStorage.ProtocolParametersMilestoneOption(ledgerIndex)
 	if err != nil {
-		return nil, fmt.Errorf("loading protocol parameters failed: %w", err)
+		return nil, errors.Wrapf(common.ErrCritical, "loading protocol parameters milestone option failed: %s", err.Error())
 	}
 
 	fullHeader := &FullSnapshotHeader{
-		Version:                  SupportedFormatVersion,
-		Type:                     Full,
-		GenesisMilestoneIndex:    snapshotInfo.GenesisMilestoneIndex(),
-		TargetMilestoneIndex:     targetIndex,
-		TargetMilestoneTimestamp: targetMilestoneTimestamp,
-		TargetMilestoneID:        targetMilestoneID,
-		LedgerMilestoneIndex:     ledgerIndex,
-		TreasuryOutput:           unspentTreasuryOutput,
-		ProtocolParameters:       protocolParameters,
-		OutputCount:              0,
-		MilestoneDiffCount:       0,
-		SEPCount:                 0,
+		Version:                    SupportedFormatVersion,
+		Type:                       Full,
+		GenesisMilestoneIndex:      snapshotInfo.GenesisMilestoneIndex(),
+		TargetMilestoneIndex:       targetIndex,
+		TargetMilestoneTimestamp:   targetMilestoneTimestamp,
+		TargetMilestoneID:          targetMilestoneID,
+		LedgerMilestoneIndex:       ledgerIndex,
+		TreasuryOutput:             unspentTreasuryOutput,
+		ProtocolParamsMilestoneOpt: protoParamsMsOption,
+		OutputCount:                0,
+		MilestoneDiffCount:         0,
+		SEPCount:                   0,
 	}
 
 	// create a prepped solid entry point producer which counts how many went through

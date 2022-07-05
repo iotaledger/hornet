@@ -16,6 +16,10 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+const (
+	SolidifierTriggerSignal = iotago.MilestoneIndex(0)
+)
+
 func (t *Tangle) ConfigureTangleProcessor() {
 
 	t.receiveBlockWorkerPool = workerpool.New(func(task workerpool.Task) {
@@ -247,7 +251,7 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 	if requested && !t.syncManager.IsNodeSynced() && t.requestQueue.Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
-		t.milestoneSolidifierWorkerPool.TrySubmit(0, true)
+		t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
 	}
 }
 

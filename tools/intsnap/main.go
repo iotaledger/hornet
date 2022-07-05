@@ -4,13 +4,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-var protocolParameters = &iotago.ProtocolParameters{
+var protoParams = &iotago.ProtocolParameters{
 	Version:       2,
 	NetworkName:   "alphanet1",
 	Bech32HRP:     iotago.PrefixDevnet,
@@ -25,8 +26,8 @@ var protocolParameters = &iotago.ProtocolParameters{
 }
 
 func main() {
-	writeFullSnapshot()
-	writeDeltaSnapshot()
+	fullSnapshotHeader := writeFullSnapshot()
+	writeDeltaSnapshot(fullSnapshotHeader)
 }
 
 // for the testing purposes it doesn't actually matter
@@ -59,25 +60,7 @@ func blankMilestone(index iotago.MilestoneIndex) *iotago.Milestone {
 	}
 }
 
-var fullSnapshotHeader = &snapshot.FullSnapshotHeader{
-	Version:                  snapshot.SupportedFormatVersion,
-	Type:                     snapshot.Full,
-	GenesisMilestoneIndex:    0,
-	TargetMilestoneIndex:     1,
-	TargetMilestoneTimestamp: uint32(time.Now().Unix()),
-	TargetMilestoneID:        iotago.MilestoneID{},
-	LedgerMilestoneIndex:     3,
-	TreasuryOutput: &utxo.TreasuryOutput{
-		MilestoneID: iotago.MilestoneID{},
-		Amount:      originTreasurySupply,
-	},
-	ProtocolParameters: protocolParameters,
-	OutputCount:        0,
-	MilestoneDiffCount: 0,
-	SEPCount:           0,
-}
-
-var originTreasurySupply = protocolParameters.TokenSupply - fullSnapshotOutputs[0].Deposit() - fullSnapshotOutputs[1].Deposit()
+var originTreasurySupply = protoParams.TokenSupply - fullSnapshotOutputs[0].Deposit() - fullSnapshotOutputs[1].Deposit()
 
 var fullSnapshotOutputs = utxo.Outputs{
 	utxoOutput(6, 10_000_000, 3),
@@ -111,7 +94,37 @@ var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	},
 }
 
-func writeFullSnapshot() {
+func writeFullSnapshot() *snapshot.FullSnapshotHeader {
+
+	protoParamsBytes, err := protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	protoParamsMsOption := &iotago.ProtocolParamsMilestoneOpt{
+		TargetMilestoneIndex: 0,
+		ProtocolVersion:      2,
+		Params:               protoParamsBytes,
+	}
+
+	fullSnapshotHeader := &snapshot.FullSnapshotHeader{
+		Version:                  snapshot.SupportedFormatVersion,
+		Type:                     snapshot.Full,
+		GenesisMilestoneIndex:    0,
+		TargetMilestoneIndex:     1,
+		TargetMilestoneTimestamp: uint32(time.Now().Unix()),
+		TargetMilestoneID:        iotago.MilestoneID{},
+		LedgerMilestoneIndex:     3,
+		TreasuryOutput: &utxo.TreasuryOutput{
+			MilestoneID: iotago.MilestoneID{},
+			Amount:      originTreasurySupply,
+		},
+		ProtocolParamsMilestoneOpt: protoParamsMsOption,
+		OutputCount:                0,
+		MilestoneDiffCount:         0,
+		SEPCount:                   0,
+	}
+
 	fileHandle, err := os.Create("snapshot_full_snapshot.bin")
 	must(err)
 	defer func() { _ = fileHandle.Close() }()
@@ -156,17 +169,8 @@ func writeFullSnapshot() {
 		fullSnapSEPProd,
 	)
 	must(err)
-}
 
-var deltaSnapshotHeader = &snapshot.DeltaSnapshotHeader{
-	Version:                       snapshot.SupportedFormatVersion,
-	Type:                          snapshot.Delta,
-	TargetMilestoneIndex:          5,
-	TargetMilestoneTimestamp:      uint32(time.Now().Unix()),
-	FullSnapshotTargetMilestoneID: fullSnapshotHeader.TargetMilestoneID,
-	SEPFileOffset:                 0,
-	MilestoneDiffCount:            0,
-	SEPCount:                      0,
+	return fullSnapshotHeader
 }
 
 var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
@@ -201,7 +205,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 					Address:             &iotago.Ed25519Address{},
 					Deposit:             10_000_000,
 				}).
-				Build(protocolParameters)
+				Build(protoParams)
 			if err != nil {
 				panic(err)
 			}
@@ -223,7 +227,19 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	},
 }
 
-func writeDeltaSnapshot() {
+func writeDeltaSnapshot(fullSnapshotHeader *snapshot.FullSnapshotHeader) {
+
+	deltaSnapshotHeader := &snapshot.DeltaSnapshotHeader{
+		Version:                       snapshot.SupportedFormatVersion,
+		Type:                          snapshot.Delta,
+		TargetMilestoneIndex:          5,
+		TargetMilestoneTimestamp:      uint32(time.Now().Unix()),
+		FullSnapshotTargetMilestoneID: fullSnapshotHeader.TargetMilestoneID,
+		SEPFileOffset:                 0,
+		MilestoneDiffCount:            0,
+		SEPCount:                      0,
+	}
+
 	fileHandle, err := os.Create("snapshot_delta_snapshot.bin")
 	must(err)
 	defer func() { _ = fileHandle.Close() }()

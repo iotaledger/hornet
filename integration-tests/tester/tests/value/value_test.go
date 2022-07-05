@@ -29,7 +29,7 @@ func TestValue(t *testing.T) {
 
 	infoRes, err := n.Coordinator().DebugNodeAPIClient.Info(context.Background())
 	require.NoError(t, err)
-	protoParas := &infoRes.Protocol
+	protoParams := &infoRes.Protocol
 
 	// create two targets
 	target1 := ed25519.NewKeyFromSeed(tpkg.RandSeed())
@@ -38,18 +38,18 @@ func TestValue(t *testing.T) {
 	target2 := ed25519.NewKeyFromSeed(tpkg.RandSeed())
 	target2Addr := iotago.Ed25519AddressFromPubKey(target2.Public().(ed25519.PublicKey))
 
-	var target1Deposit, target2Deposit uint64 = 10_000_000, protoParas.TokenSupply - 10_000_000
+	var target1Deposit, target2Deposit uint64 = 10_000_000, protoParams.TokenSupply - 10_000_000
 
 	genesisAddrKey := iotago.AddressKeys{Address: &framework.GenesisAddress, Keys: framework.GenesisSeed}
 	genesisInputID := &iotago.UTXOInput{TransactionID: [32]byte{}, TransactionOutputIndex: 0}
 
 	// build and sign transaction spending the total supply and create block
-	block, err := builder.NewTransactionBuilder(protoParas.NetworkID()).
+	block, err := builder.NewTransactionBuilder(protoParams.NetworkID()).
 		AddInput(&builder.TxInput{
 			UnlockTarget: &framework.GenesisAddress,
 			InputID:      genesisInputID.ID(),
 			Input: &iotago.BasicOutput{
-				Amount: protoParas.TokenSupply,
+				Amount: protoParams.TokenSupply,
 				Conditions: iotago.UnlockConditions{
 					&iotago.AddressUnlockCondition{
 						Address: &framework.GenesisAddress,
@@ -73,14 +73,14 @@ func TestValue(t *testing.T) {
 				},
 			},
 		}).
-		BuildAndSwapToBlockBuilder(protoParas, iotago.NewInMemoryAddressSigner(genesisAddrKey), nil).
-		ProtocolVersion(protoParas.Version).
+		BuildAndSwapToBlockBuilder(protoParams, iotago.NewInMemoryAddressSigner(genesisAddrKey), nil).
+		ProtocolVersion(protoParams.Version).
 		Build()
 	require.NoError(t, err)
 
 	// broadcast to a node
 	log.Println("submitting transaction...")
-	submittedBlock, err := n.Nodes[2].DebugNodeAPIClient.SubmitBlock(context.Background(), block, protoParas)
+	submittedBlock, err := n.Nodes[2].DebugNodeAPIClient.SubmitBlock(context.Background(), block, protoParams)
 	require.NoError(t, err)
 
 	// eventually the block should be confirmed

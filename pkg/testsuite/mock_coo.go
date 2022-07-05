@@ -142,7 +142,7 @@ func (coo *MockCoo) milestonePayload(parents iotago.BlockIDs) (*iotago.Milestone
 		return nil, err
 	}
 
-	milestonePayload := iotago.NewMilestone(milestoneIndex, milestoneTimestamp, coo.te.protoParas.Version, coo.LastMilestoneID(), sortedParents, mutations.InclusionMerkleRoot, mutations.AppliedMerkleRoot)
+	milestonePayload := iotago.NewMilestone(milestoneIndex, milestoneTimestamp, coo.te.protoParams.Version, coo.LastMilestoneID(), sortedParents, mutations.InclusionMerkleRoot, mutations.AppliedMerkleRoot)
 
 	keymapping := coo.keyManager.MilestonePublicKeyMappingForMilestoneIndex(milestoneIndex, coo.cooPrivateKeys, len(coo.cooPrivateKeys))
 
@@ -185,10 +185,10 @@ func (coo *MockCoo) issueMilestoneOnTips(tips iotago.BlockIDs, addLastMilestoneA
 	}
 
 	iotaBlock, err := builder.NewBlockBuilder().
-		ProtocolVersion(coo.te.protoParas.Version).
+		ProtocolVersion(coo.te.protoParams.Version).
 		Parents(tips).
 		Payload(milestonePayload).
-		ProofOfWork(context.Background(), coo.te.protoParas, float64(coo.te.protoParas.MinPoWScore)).
+		ProofOfWork(context.Background(), coo.te.protoParams, float64(coo.te.protoParams.MinPoWScore)).
 		Build()
 	if err != nil {
 		return nil, iotago.EmptyBlockID(), err

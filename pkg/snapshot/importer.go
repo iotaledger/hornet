@@ -165,7 +165,7 @@ func (s *Importer) LoadFullSnapshotFromFile(ctx context.Context, filePath string
 		return err
 	}
 
-	protocolParameters, err := s.storage.ProtocolParameters(fullHeader.LedgerMilestoneIndex)
+	protoParams, err := s.storage.ProtocolParameters(fullHeader.LedgerMilestoneIndex)
 	if err != nil {
 		return fmt.Errorf("loading protocol parameters failed: %w", err)
 	}
@@ -179,7 +179,7 @@ SnapshotInfo:
 	SnapshotIndex: %d
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v`, snapshotName, protocolParameters.NetworkID(), fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, time.Unix(int64(fullHeader.TargetMilestoneTimestamp), 0))
+	Timestamp: %v`, snapshotName, protoParams.NetworkID(), fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, time.Unix(int64(fullHeader.TargetMilestoneTimestamp), 0))
 
 	return nil
 }
@@ -196,7 +196,7 @@ func (s *Importer) LoadDeltaSnapshotFromFile(ctx context.Context, filePath strin
 		return err
 	}
 
-	protocolParameters, err := s.storage.ProtocolParameters(header.TargetMilestoneIndex)
+	protoParams, err := s.storage.ProtocolParameters(header.TargetMilestoneIndex)
 	if err != nil {
 		return fmt.Errorf("loading protocol parameters failed: %w", err)
 	}
@@ -210,7 +210,7 @@ SnapshotInfo:
 	SnapshotIndex: %d
 	EntryPointIndex: %d
 	PruningIndex: %d
-	Timestamp: %v`, snapshotName, protocolParameters.NetworkID(), header.TargetMilestoneIndex, header.TargetMilestoneIndex, header.TargetMilestoneIndex, time.Unix(int64(header.TargetMilestoneTimestamp), 0))
+	Timestamp: %v`, snapshotName, protoParams.NetworkID(), header.TargetMilestoneIndex, header.TargetMilestoneIndex, header.TargetMilestoneIndex, time.Unix(int64(header.TargetMilestoneTimestamp), 0))
 
 	return nil
 }

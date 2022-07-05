@@ -89,8 +89,13 @@ func (s *Importer) filterTargets(targetNetworkID uint64, targets []*DownloadTarg
 			return errors.New("full snapshot header not found")
 		}
 
-		if fullHeader.ProtocolParameters.NetworkID() != targetNetworkID {
-			return fmt.Errorf("full snapshot networkID does not match (%d != %d): %w", fullHeader.ProtocolParameters.NetworkID(), targetNetworkID, ErrInvalidSnapshotAvailabilityState)
+		fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+		if err != nil {
+			return err
+		}
+
+		if fullHeaderProtoParams.NetworkID() != targetNetworkID {
+			return fmt.Errorf("full snapshot networkID does not match (%d != %d): %w", fullHeaderProtoParams.NetworkID(), targetNetworkID, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		if deltaHeader == nil {

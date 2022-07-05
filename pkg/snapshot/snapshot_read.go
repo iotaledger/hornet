@@ -26,13 +26,18 @@ func newFullHeaderConsumer(targetFullHeader *FullSnapshotHeader, dbStorage *stor
 		}
 
 		if len(targetNetworkID) > 0 {
-			if header.ProtocolParameters.NetworkID() != targetNetworkID[0] {
-				return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file network ID is %d but this HORNET is meant for %d", header.ProtocolParameters.NetworkID(), targetNetworkID[0])
+			fullHeaderProtoParams, err := header.ProtocolParameters()
+			if err != nil {
+				return err
+			}
+
+			if fullHeaderProtoParams.NetworkID() != targetNetworkID[0] {
+				return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file network ID is %d but this HORNET is meant for %d", fullHeaderProtoParams.NetworkID(), targetNetworkID[0])
 			}
 		}
 
-		// store initial protocol parameters
-		if err := dbStorage.StoreProtocolParameters(header.ProtocolParameters); err != nil {
+		// store initial protocol parameters milestone option
+		if err := dbStorage.StoreProtocolParametersMilestoneOption(header.ProtocolParamsMilestoneOpt); err != nil {
 			return err
 		}
 
@@ -161,8 +166,13 @@ func loadFullSnapshotFileToStorage(
 		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[Full], err)
 	}
 
-	if fullHeader.ProtocolParameters.NetworkID() != targetNetworkID {
-		return nil, fmt.Errorf("node is configured to operate for networkID %d but the stored snapshot data corresponds to %d", targetNetworkID, fullHeader.ProtocolParameters.NetworkID())
+	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+	if err != nil {
+		return nil, err
+	}
+
+	if fullHeaderProtoParams.NetworkID() != targetNetworkID {
+		return nil, fmt.Errorf("node is configured to operate for networkID %d but the stored snapshot data corresponds to %d", targetNetworkID, fullHeaderProtoParams.NetworkID())
 	}
 
 	if err := dbStorage.CheckLedgerState(); err != nil {
@@ -266,9 +276,14 @@ func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage,
 	// TODO: update the real protocol manager with the results?
 	protocolManager := NewSnapshotProtocolManager()
 
+	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var fullSnapshotHeader *FullSnapshotHeader
 	var deltaSnapshotHeader *DeltaSnapshotHeader
-	fullSnapshotHeader, err = loadFullSnapshotFileToStorage(ctx, dbStorage, fullPath, fullHeader.ProtocolParameters.NetworkID(), protocolManager)
+	fullSnapshotHeader, err = loadFullSnapshotFileToStorage(ctx, dbStorage, fullPath, fullHeaderProtoParams.NetworkID(), protocolManager)
 	if err != nil {
 		return nil, nil, err
 	}

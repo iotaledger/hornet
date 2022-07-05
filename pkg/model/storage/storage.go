@@ -107,7 +107,8 @@ type Storage struct {
 	snapshotMutex syncutils.RWMutex
 
 	// protocol
-	protocolStore kvstore.KVStore
+	protocolStore     kvstore.KVStore
+	protocolStoreLock sync.RWMutex
 
 	// utxo
 	utxoManager *utxo.Manager
@@ -427,12 +428,12 @@ func (s *Storage) ShutdownStorages() {
 // CheckLedgerState checks if the total balance of the ledger fits the token supply in the protocol parameters.
 func (s *Storage) CheckLedgerState() error {
 
-	protocolParameters, err := s.CurrentProtocolParameters()
+	protoParams, err := s.CurrentProtocolParameters()
 	if err != nil {
 		return err
 	}
 
-	if err = s.UTXOManager().CheckLedgerState(protocolParameters.TokenSupply); err != nil {
+	if err = s.UTXOManager().CheckLedgerState(protoParams.TokenSupply); err != nil {
 		return err
 	}
 

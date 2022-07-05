@@ -292,12 +292,12 @@ func createInitialMilestone(dbStorage *storage.Storage, signer signingprovider.M
 		return nil, err
 	}
 
-	protocolParameters, err := dbStorage.CurrentProtocolParameters()
+	protoParams, err := dbStorage.CurrentProtocolParameters()
 	if err != nil {
 		return nil, err
 	}
 
-	milestoneBlock, err := createMilestone(signer, protocolParameters.Version, index, uint32(timestamp.Unix()), parents, previousMilestoneID, mutations)
+	milestoneBlock, err := createMilestone(signer, protoParams.Version, index, uint32(timestamp.Unix()), parents, previousMilestoneID, mutations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create milestone: %w", err)
 	}
@@ -309,7 +309,7 @@ func createInitialMilestone(dbStorage *storage.Storage, signer signingprovider.M
 		return nil, fmt.Errorf("failed to compute milestone ID: %w", err)
 	}
 
-	block, err := storage.NewBlock(milestoneBlock, serializer.DeSeriModePerformValidation, protocolParameters)
+	block, err := storage.NewBlock(milestoneBlock, serializer.DeSeriModePerformValidation, protoParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create milestone block: %w", err)
 	}
