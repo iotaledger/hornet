@@ -14,12 +14,12 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/hornet/pkg/metrics"
 	"github.com/iotaledger/hornet/pkg/model/migrator"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type Tangle struct {
@@ -91,7 +91,7 @@ type Tangle struct {
 	milestoneSolidificationCtxLock    syncutils.Mutex
 	milestoneSolidificationCancelFunc context.CancelFunc
 
-	solidifierMilestoneIndex     milestone.Index
+	solidifierMilestoneIndex     iotago.MilestoneIndex
 	solidifierMilestoneIndexLock syncutils.RWMutex
 
 	solidifierLock syncutils.RWMutex
@@ -100,7 +100,7 @@ type Tangle struct {
 	oldReferencedBlocksCount uint32
 
 	// Index of the first milestone that was sync after node start
-	firstSyncedMilestone milestone.Index
+	firstSyncedMilestone iotago.MilestoneIndex
 
 	lastConfirmedMilestoneMetricLock syncutils.RWMutex
 	lastConfirmedMilestoneMetric     *ConfirmedMilestoneMetric
@@ -163,12 +163,12 @@ func New(
 			BlockReferenced:                events.NewEvent(storage.BlockReferencedCaller),
 			ReceivedNewMilestoneBlock:      events.NewEvent(storage.BlockIDCaller),
 			LatestMilestoneChanged:         events.NewEvent(storage.MilestoneCaller),
-			LatestMilestoneIndexChanged:    events.NewEvent(milestone.IndexCaller),
+			LatestMilestoneIndexChanged:    events.NewEvent(storage.MilestoneIndexCaller),
 			ConfirmedMilestoneChanged:      events.NewEvent(storage.MilestoneCaller),
-			ConfirmedMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
+			ConfirmedMilestoneIndexChanged: events.NewEvent(storage.MilestoneIndexCaller),
 			ConfirmationMetricsUpdated:     events.NewEvent(ConfirmationMetricsCaller),
 			ReferencedBlocksCountUpdated:   events.NewEvent(ReferencedBlocksCountUpdatedCaller),
-			MilestoneSolidificationFailed:  events.NewEvent(milestone.IndexCaller),
+			MilestoneSolidificationFailed:  events.NewEvent(storage.MilestoneIndexCaller),
 			MilestoneTimeout:               events.NewEvent(events.VoidCaller),
 			LedgerUpdated:                  events.NewEvent(LedgerUpdatedCaller),
 			TreasuryMutated:                events.NewEvent(TreasuryMutationCaller),

@@ -13,11 +13,11 @@ import (
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/daemon"
 	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/tipselect"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -125,7 +125,7 @@ func configureEvents() {
 		})
 	})
 
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
 		// do not update tip scores during syncing, because it is not needed at all
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return

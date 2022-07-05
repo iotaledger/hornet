@@ -15,7 +15,6 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	coreDatabase "github.com/iotaledger/hornet/core/database"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -134,17 +133,17 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		}
 
 		result := struct {
-			Healthy                bool            `json:"healthy"`
-			Tainted                bool            `json:"tainted"`
-			SnapshotTime           time.Time       `json:"snapshotTime"`
-			NetworkID              uint64          `json:"networkID"`
-			Treasury               *treasuryStruct `json:"treasury"`
-			LedgerIndex            milestone.Index `json:"ledgerIndex"`
-			SnapshotIndex          milestone.Index `json:"snapshotIndex"`
-			UTXOsCount             int             `json:"UTXOsCount"`
-			SEPsCount              int             `json:"SEPsCount"`
-			LedgerStateHash        string          `json:"ledgerStateHash"`
-			LedgerStateHashWithSEP string          `json:"ledgerStateHashWithSEP"`
+			Healthy                bool                  `json:"healthy"`
+			Tainted                bool                  `json:"tainted"`
+			SnapshotTime           time.Time             `json:"snapshotTime"`
+			NetworkID              uint64                `json:"networkID"`
+			Treasury               *treasuryStruct       `json:"treasury"`
+			LedgerIndex            iotago.MilestoneIndex `json:"ledgerIndex"`
+			SnapshotIndex          iotago.MilestoneIndex `json:"snapshotIndex"`
+			UTXOsCount             int                   `json:"UTXOsCount"`
+			SEPsCount              int                   `json:"SEPsCount"`
+			LedgerStateHash        string                `json:"ledgerStateHash"`
+			LedgerStateHashWithSEP string                `json:"ledgerStateHashWithSEP"`
 		}{
 			Healthy:                !corrupted,
 			Tainted:                tainted,

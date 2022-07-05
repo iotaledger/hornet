@@ -9,11 +9,11 @@ import (
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hornet/pkg/daemon"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hornet/pkg/tangle"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -89,43 +89,43 @@ func configureEvents() {
 		p.Events.HeartbeatUpdated.Detach(onHeartbeatUpdated)
 	})
 
-	onReferencedBlocksCountUpdated = events.NewClosure(func(msIndex milestone.Index, referencedBlocksCount int) {
+	onReferencedBlocksCountUpdated = events.NewClosure(func(msIndex iotago.MilestoneIndex, referencedBlocksCount int) {
 		warpSync.AddReferencedBlocksCount(referencedBlocksCount)
 		warpSync.UpdateCurrentConfirmedMilestone(msIndex)
 	})
 
-	onMilestoneSolidificationFailed = events.NewClosure(func(msIndex milestone.Index) {
+	onMilestoneSolidificationFailed = events.NewClosure(func(msIndex iotago.MilestoneIndex) {
 		if warpSync.CurrentCheckpoint != 0 && warpSync.CurrentCheckpoint < msIndex {
 			// rerequest since milestone requests could have been lost
-			Plugin.LogInfof("Requesting missing milestones %d - %d", msIndex, msIndex+milestone.Index(warpSync.AdvancementRange))
+			Plugin.LogInfof("Requesting missing milestones %d - %d", msIndex, msIndex+warpSync.AdvancementRange)
 			warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), warpSync.AdvancementRange, nil)
 		}
 	})
 
-	onWarpSyncCheckpointUpdated = events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32, target milestone.Index) {
+	onWarpSyncCheckpointUpdated = events.NewClosure(func(nextCheckpoint iotago.MilestoneIndex, oldCheckpoint iotago.MilestoneIndex, advRange uint32, target iotago.MilestoneIndex) {
 		Plugin.LogInfof("Checkpoint updated to milestone %d (target %d)", nextCheckpoint, target)
 		// prevent any requests in the queue above our next checkpoint
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents, oldCheckpoint)
+		warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), advRange, warpSyncMilestoneRequester.RequestMissingMilestoneParents, oldCheckpoint)
 	})
 
-	onWarpSyncTargetUpdated = events.NewClosure(func(checkpoint milestone.Index, newTarget milestone.Index) {
+	onWarpSyncTargetUpdated = events.NewClosure(func(checkpoint iotago.MilestoneIndex, newTarget iotago.MilestoneIndex) {
 		Plugin.LogInfof("Target updated to milestone %d (checkpoint %d)", newTarget, checkpoint)
 	})
 
-	onWarpSyncStart = events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
+	onWarpSyncStart = events.NewClosure(func(targetMsIndex iotago.MilestoneIndex, nextCheckpoint iotago.MilestoneIndex, advRange uint32) {
 		Plugin.LogInfof("Synchronizing to milestone %d", targetMsIndex)
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
 
-		msRequested := warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents)
+		msRequested := warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), advRange, warpSyncMilestoneRequester.RequestMissingMilestoneParents)
 		// if the amount of requested milestones doesn't correspond to the range,
 		// it means we already had the milestones in the database, which suggests
 		// that we should manually kick start the milestone solidifier.
-		if msRequested != int(advRange) {
+		if msRequested != advRange {
 			Plugin.LogInfo("Manually starting solidifier, as some milestones are already in the database")
 			deps.Tangle.TriggerSolidifier()
 		}

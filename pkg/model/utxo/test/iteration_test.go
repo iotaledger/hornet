@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -23,7 +22,7 @@ func TestUTXOComputeBalance(t *testing.T) {
 	require.NoError(t, manager.AddUnspentOutput(tpkg.RandUTXOOutputOnAddressWithAmount(iotago.OutputNFT, tpkg.RandAddress(iotago.AddressEd25519), 545_699_656)))
 	require.NoError(t, manager.AddUnspentOutput(tpkg.RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, tpkg.RandAddress(iotago.AddressAlias), 626_659_696)))
 
-	msIndex := milestone.Index(756)
+	msIndex := iotago.MilestoneIndex(756)
 	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	outputs := utxo.Outputs{
@@ -72,7 +71,7 @@ func TestUTXOIteration(t *testing.T) {
 		tpkg.RandUTXOOutputOnAddress(iotago.OutputFoundry, tpkg.RandAddress(iotago.AddressAlias)),
 	}
 
-	msIndex := milestone.Index(756)
+	msIndex := iotago.MilestoneIndex(756)
 	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	spents := utxo.Spents{

@@ -17,7 +17,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -34,7 +33,7 @@ const (
 )
 
 // MilestoneRetrieverFunc is a function which returns the milestone for the given index.
-type MilestoneRetrieverFunc func(index milestone.Index) (*iotago.Milestone, error)
+type MilestoneRetrieverFunc func(index iotago.MilestoneIndex) (*iotago.Milestone, error)
 
 // MergeInfo holds information about a merge of a full and delta snapshot.
 type MergeInfo struct {
@@ -68,8 +67,8 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 func NewSEPsProducer(
 	ctx context.Context,
 	dbStorage *storage.Storage,
-	targetIndex milestone.Index,
-	solidEntryPointCheckThresholdPast milestone.Index) SEPProducerFunc {
+	targetIndex iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdPast iotago.MilestoneIndex) SEPProducerFunc {
 
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
@@ -133,13 +132,13 @@ func NewCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 }
 
 // returns an iterator producing milestone indices with the given direction from/to the milestone range.
-func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, targetIndex milestone.Index) func() (msIndex milestone.Index, done bool) {
+func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex iotago.MilestoneIndex, targetIndex iotago.MilestoneIndex) func() (msIndex iotago.MilestoneIndex, done bool) {
 	var firstPassDone bool
 	switch direction {
 	case MsDiffDirectionOnwards:
 		// we skip the diff of the ledger milestone
 		msIndex := ledgerIndex + 1
-		return func() (milestone.Index, bool) {
+		return func() (iotago.MilestoneIndex, bool) {
 			if firstPassDone {
 				msIndex++
 			}
@@ -154,7 +153,7 @@ func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, 
 		// targetIndex is not included, since we only need the diff of targetIndex+1 to
 		// calculate the ledger index of targetIndex
 		msIndex := ledgerIndex
-		return func() (milestone.Index, bool) {
+		return func() (iotago.MilestoneIndex, bool) {
 			if firstPassDone {
 				msIndex--
 			}
@@ -172,7 +171,7 @@ func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, 
 
 // returns a milestone diff producer which first reads out milestone diffs from an existing delta
 // snapshot file and then the remaining diffs from the database up to the target index.
-func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
+func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex iotago.MilestoneIndex, targetIndex iotago.MilestoneIndex, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
 	prevDeltaFileMsDiffsProducer, err := newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath, ledgerIndex, protoParas)
 	if err != nil {
 		return nil, err
@@ -194,7 +193,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage 
 		}
 
 		if msDiff != nil {
-			prevDeltaUpToIndex = milestone.Index(msDiff.Milestone.Index)
+			prevDeltaUpToIndex = msDiff.Milestone.Index
 			return msDiff, nil
 		}
 
@@ -208,7 +207,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage 
 
 // returns a milestone diff producer which reads out the milestone diffs from an existing delta snapshot file.
 // the existing delta snapshot file is closed as soon as its milestone diffs are read.
-func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerIndex milestone.Index, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
+func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerIndex iotago.MilestoneIndex, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
 	existingDeltaFile, err := os.OpenFile(snapshotDeltaPath, os.O_RDONLY, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read previous delta snapshot file for milestone diffs: %w", err)
@@ -258,7 +257,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 // MilestoneRetrieverFromStorage creates a MilestoneRetrieverFunc which access the storage.
 // If it can not retrieve a wanted milestone it panics.
 func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieverFunc {
-	return func(index milestone.Index) (*iotago.Milestone, error) {
+	return func(index iotago.MilestoneIndex) (*iotago.Milestone, error) {
 		cachedMilestone := dbStorage.CachedMilestoneByIndexOrNil(index) // milestone +1
 		if cachedMilestone == nil {
 			return nil, fmt.Errorf("block for milestone with index %d is not stored in the database", index)
@@ -269,7 +268,7 @@ func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieve
 }
 
 // returns a producer which produces milestone diffs from/to with the given direction.
-func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex milestone.Index, targetIndex milestone.Index) MilestoneDiffProducerFunc {
+func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex iotago.MilestoneIndex, targetIndex iotago.MilestoneIndex) MilestoneDiffProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
@@ -277,7 +276,7 @@ func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 		msIndexIterator := NewMsIndexIterator(direction, ledgerMilestoneIndex, targetIndex)
 
 		var done bool
-		var msIndex milestone.Index
+		var msIndex iotago.MilestoneIndex
 
 		for msIndex, done = msIndexIterator(); !done; msIndex, done = msIndexIterator() {
 			diff, err := utxoManager.MilestoneDiffWithoutLocking(msIndex)
@@ -325,7 +324,7 @@ func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 }
 
 // reads out the index of the milestone which currently represents the ledger state.
-func (s *Manager) readLedgerIndex() (milestone.Index, error) {
+func (s *Manager) readLedgerIndex() (iotago.MilestoneIndex, error) {
 	ledgerMilestoneIndex, err := s.utxoManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
@@ -339,7 +338,7 @@ func (s *Manager) readLedgerIndex() (milestone.Index, error) {
 }
 
 // reads out the snapshot milestone index from the full snapshot file.
-func (s *Manager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...string) (milestone.Index, error) {
+func (s *Manager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...string) (iotago.MilestoneIndex, error) {
 	filePath := s.snapshotFullPath
 	if len(snapshotFullPath) > 0 && snapshotFullPath[0] != "" {
 		filePath = snapshotFullPath[0]
@@ -360,7 +359,7 @@ func (s *Manager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...stri
 func (s *Manager) createSnapshotWithoutLocking(
 	ctx context.Context,
 	snapshotType Type,
-	targetIndex milestone.Index,
+	targetIndex iotago.MilestoneIndex,
 	filePath string,
 	writeToDatabase bool,
 	snapshotFullPath ...string) error {
@@ -642,9 +641,9 @@ func CreateSnapshotFromStorage(
 	dbStorage *storage.Storage,
 	utxoManager *utxo.Manager,
 	filePath string,
-	targetIndex milestone.Index,
-	solidEntryPointCheckThresholdPast milestone.Index,
-	solidEntryPointCheckThresholdFuture milestone.Index,
+	targetIndex iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdPast iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdFuture iotago.MilestoneIndex,
 ) (*ReadFileHeader, error) {
 
 	snapshotInfo := dbStorage.SnapshotInfo()

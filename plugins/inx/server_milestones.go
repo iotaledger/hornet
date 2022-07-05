@@ -3,6 +3,7 @@ package inx
 import (
 	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
 
 	"google.golang.org/grpc/codes"
@@ -12,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	inx "github.com/iotaledger/inx/go"
@@ -21,7 +21,7 @@ import (
 
 // milestone +1
 func cachedMilestoneFromRequestOrNil(req *inx.MilestoneRequest) *storage.CachedMilestone {
-	msIndex := milestone.Index(req.GetMilestoneIndex())
+	msIndex := req.GetMilestoneIndex()
 	if msIndex == 0 {
 		return deps.Storage.CachedMilestoneOrNil(req.GetMilestoneId().Unwrap())
 	}
@@ -34,7 +34,7 @@ func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, e
 	return &inx.Milestone{
 		MilestoneInfo: inx.NewMilestoneInfo(
 			ms.Milestone().MilestoneID(),
-			uint32(ms.Milestone().Index()),
+			ms.Milestone().Index(),
 			ms.Milestone().TimestampUnix()),
 		Milestone: &inx.RawMilestone{
 			Data: ms.Milestone().Data(),
@@ -42,7 +42,7 @@ func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, e
 	}, nil
 }
 
-func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
+func milestoneForIndex(msIndex iotago.MilestoneIndex) (*inx.Milestone, error) {
 	cachedMilestone := deps.Storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, status.Errorf(codes.NotFound, "milestone index %d not found", msIndex)
@@ -92,7 +92,7 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 
 func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
 
-	createMilestonePayloadForIndexAndSend := func(msIndex milestone.Index) error {
+	createMilestonePayloadForIndexAndSend := func(msIndex iotago.MilestoneIndex) error {
 		payload, err := milestoneForIndex(msIndex)
 		if err != nil {
 			return err
@@ -114,7 +114,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		return nil
 	}
 
-	sendMilestonesRange := func(startIndex milestone.Index, endIndex milestone.Index) error {
+	sendMilestonesRange := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
 		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
 			if err := createMilestonePayloadForIndexAndSend(currentIndex); err != nil {
 				return err
@@ -126,7 +126,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 	// if a startIndex is given, we send all available milestones including the start index.
 	// if an endIndex is given, we send all available milestones up to and including min(ledgerIndex, endIndex).
 	// if no startIndex is given, but an endIndex, we do not send previous milestones.
-	sendPreviousMilestones := func(startIndex milestone.Index, endIndex milestone.Index) (milestone.Index, error) {
+	sendPreviousMilestones := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 		if startIndex == 0 {
 			// no need to send previous milestones
 			return 0, nil
@@ -157,8 +157,8 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 	}
 
 	stream := &streamRange{
-		start: milestone.Index(req.GetStartMilestoneIndex()),
-		end:   milestone.Index(req.GetEndMilestoneIndex()),
+		start: req.GetStartMilestoneIndex(),
+		end:   req.GetEndMilestoneIndex(),
 	}
 
 	var err error
@@ -172,7 +172,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		return nil
 	}
 
-	catchUpFunc := func(start milestone.Index, end milestone.Index) error {
+	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
 		err := sendMilestonesRange(start, end)
 		if err != nil {
 			Plugin.LogInfof("sendMilestonesRange error: %v", err)
@@ -180,7 +180,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		return err
 	}
 
-	sendFunc := func(task *workerpool.Task, index milestone.Index) error {
+	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
 		// no release needed
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
 		if err := createMilestonePayloadForCachedMilestoneAndSend(cachedMilestone.Retain()); err != nil { // milestone +1
@@ -224,7 +224,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 
 func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequest) (*inx.WhiteFlagResponse, error) {
 
-	requestedIndex := milestone.Index(req.GetMilestoneIndex())
+	requestedIndex := req.GetMilestoneIndex()
 	requestedTimestamp := req.GetMilestoneTimestamp()
 	requestedParents := req.UnwrapParents()
 	requestedPreviousMilestoneID := req.GetPreviousMilestoneId().Unwrap()
@@ -298,7 +298,7 @@ func (s *INXServer) ReadMilestoneConeMetadata(req *inx.MilestoneRequest, srv inx
 	})
 }
 
-func milestoneCone(index milestone.Index, parents iotago.BlockIDs, consumer func(metadata *storage.BlockMetadata) error) error {
+func milestoneCone(index iotago.MilestoneIndex, parents iotago.BlockIDs, consumer func(metadata *storage.BlockMetadata) error) error {
 
 	if index > deps.SyncManager.ConfirmedMilestoneIndex() {
 		return status.Errorf(codes.InvalidArgument, "milestone %d not confirmed yet", index)

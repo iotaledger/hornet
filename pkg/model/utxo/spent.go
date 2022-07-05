@@ -5,7 +5,6 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -34,7 +33,7 @@ type Spent struct {
 	// the ID of the transaction that spent the output
 	transactionIDSpent iotago.TransactionID
 	// the index of the milestone that spent the output
-	msIndexSpent milestone.Index
+	msIndexSpent iotago.MilestoneIndex
 	// the timestamp of the milestone that spent the output
 	msTimestampSpent uint32
 
@@ -71,7 +70,7 @@ func (s *Spent) TransactionIDSpent() iotago.TransactionID {
 }
 
 // MilestoneIndexSpent returns the index of the milestone that spent the output
-func (s *Spent) MilestoneIndexSpent() milestone.Index {
+func (s *Spent) MilestoneIndexSpent() iotago.MilestoneIndex {
 	return s.msIndexSpent
 }
 
@@ -82,7 +81,7 @@ func (s *Spent) MilestoneTimestampSpent() uint32 {
 
 type Spents []*Spent
 
-func NewSpent(output *Output, transactionIDSpent iotago.TransactionID, msIndexSpent milestone.Index, msTimestampSpent uint32) *Spent {
+func NewSpent(output *Output, transactionIDSpent iotago.TransactionID, msIndexSpent iotago.MilestoneIndex, msTimestampSpent uint32) *Spent {
 	return &Spent{
 		outputID:           output.outputID,
 		output:             output,
@@ -106,7 +105,7 @@ func (s *Spent) KVStorableKey() (key []byte) {
 func (s *Spent) KVStorableValue() (value []byte) {
 	ms := marshalutil.New(40)
 	ms.WriteBytes(s.transactionIDSpent[:]) // 32 bytes
-	ms.WriteUint32(uint32(s.msIndexSpent)) // 4 bytes
+	ms.WriteUint32(s.msIndexSpent)         // 4 bytes
 	ms.WriteUint32(s.msTimestampSpent)     // 4 bytes
 	return ms.Bytes()
 }
@@ -136,11 +135,10 @@ func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	}
 
 	// Read milestone index
-	index, err := valueUtil.ReadUint32()
+	s.msIndexSpent, err = valueUtil.ReadUint32()
 	if err != nil {
 		return err
 	}
-	s.msIndexSpent = milestone.Index(index)
 
 	// Read milestone timestamp
 	if s.msTimestampSpent, err = valueUtil.ReadUint32(); err != nil {

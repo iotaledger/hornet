@@ -4,8 +4,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/iotaledger/hornet/pkg/protocol"
-
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
@@ -14,12 +12,13 @@ import (
 	"github.com/iotaledger/hornet/pkg/daemon"
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/protocol"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -163,11 +162,11 @@ func provide(c *dig.Container) error {
 
 	return c.Provide(func(deps snapshotDeps) *snapshot.Manager {
 
-		solidEntryPointCheckThresholdPast := milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
-		solidEntryPointCheckThresholdFuture := milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
-		pruningThreshold := milestone.Index(deps.ProtocolManager.Current().BelowMaxDepth + AdditionalPruningThreshold)
+		solidEntryPointCheckThresholdPast := iotago.MilestoneIndex(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
+		solidEntryPointCheckThresholdFuture := iotago.MilestoneIndex(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
+		pruningThreshold := iotago.MilestoneIndex(deps.ProtocolManager.Current().BelowMaxDepth + AdditionalPruningThreshold)
 
-		snapshotDepth := milestone.Index(ParamsSnapshots.Depth)
+		snapshotDepth := iotago.MilestoneIndex(ParamsSnapshots.Depth)
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {
 			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CoreComponent.App.Config().GetParameterPath(&(ParamsSnapshots.Depth)), snapshotDepth, solidEntryPointCheckThresholdFuture)
 			snapshotDepth = solidEntryPointCheckThresholdFuture
@@ -186,15 +185,15 @@ func provide(c *dig.Container) error {
 			solidEntryPointCheckThresholdFuture,
 			pruningThreshold,
 			snapshotDepth,
-			milestone.Index(ParamsSnapshots.Interval),
+			iotago.MilestoneIndex(ParamsSnapshots.Interval),
 		)
 	})
 }
 
 func run() error {
 
-	newConfirmedMilestoneSignal := make(chan milestone.Index)
-	onConfirmedMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	newConfirmedMilestoneSignal := make(chan iotago.MilestoneIndex)
+	onConfirmedMilestoneIndexChanged := events.NewClosure(func(msIndex iotago.MilestoneIndex) {
 		select {
 		case newConfirmedMilestoneSignal <- msIndex:
 		default:

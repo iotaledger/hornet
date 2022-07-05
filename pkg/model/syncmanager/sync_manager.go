@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -18,12 +18,12 @@ type SyncManager struct {
 	utxoManager *utxo.Manager
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given block in relation to the current CMI before it gets lazy.
-	belowMaxDepth milestone.Index
+	belowMaxDepth iotago.MilestoneIndex
 
 	// milestones
-	confirmedMilestoneIndex milestone.Index
+	confirmedMilestoneIndex iotago.MilestoneIndex
 	confirmedMilestoneLock  syncutils.RWMutex
-	latestMilestoneIndex    milestone.Index
+	latestMilestoneIndex    iotago.MilestoneIndex
 	latestMilestoneLock     syncutils.RWMutex
 
 	// node synced
@@ -34,7 +34,7 @@ type SyncManager struct {
 	waitForNodeSyncedChannels       []chan struct{}
 }
 
-func New(utxoManager *utxo.Manager, belowMaxDepth milestone.Index) (*SyncManager, error) {
+func New(utxoManager *utxo.Manager, belowMaxDepth iotago.MilestoneIndex) (*SyncManager, error) {
 	s := &SyncManager{
 		utxoManager:   utxoManager,
 		belowMaxDepth: belowMaxDepth,
@@ -84,7 +84,7 @@ func (s *SyncManager) IsNodeSyncedWithinBelowMaxDepth() bool {
 }
 
 // IsNodeSyncedWithThreshold returns whether the node is synced within a given threshold.
-func (s *SyncManager) IsNodeSyncedWithThreshold(threshold milestone.Index) bool {
+func (s *SyncManager) IsNodeSyncedWithThreshold(threshold iotago.MilestoneIndex) bool {
 
 	// catch overflow
 	if s.latestMilestoneIndex < threshold {
@@ -135,7 +135,7 @@ func (s *SyncManager) WaitForNodeSynced(timeout time.Duration) bool {
 }
 
 // The node is synced if LMI != 0 and CMI == LMI.
-func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) {
+func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex iotago.MilestoneIndex) {
 	if latestIndex == 0 {
 		s.isNodeSynced = false
 		s.isNodeAlmostSynced = false
@@ -177,7 +177,7 @@ func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex milestone.Ind
 }
 
 // SetConfirmedMilestoneIndex sets the confirmed milestone index.
-func (s *SyncManager) SetConfirmedMilestoneIndex(index milestone.Index, updateSynced ...bool) error {
+func (s *SyncManager) SetConfirmedMilestoneIndex(index iotago.MilestoneIndex, updateSynced ...bool) error {
 	s.confirmedMilestoneLock.Lock()
 	if s.confirmedMilestoneIndex > index {
 		return fmt.Errorf("current confirmed milestone (%d) is newer than (%d)", s.confirmedMilestoneIndex, index)
@@ -195,7 +195,7 @@ func (s *SyncManager) SetConfirmedMilestoneIndex(index milestone.Index, updateSy
 }
 
 // OverwriteConfirmedMilestoneIndex is used to set older confirmed milestones (revalidation).
-func (s *SyncManager) OverwriteConfirmedMilestoneIndex(index milestone.Index) {
+func (s *SyncManager) OverwriteConfirmedMilestoneIndex(index iotago.MilestoneIndex) {
 	s.confirmedMilestoneLock.Lock()
 	s.confirmedMilestoneIndex = index
 	s.confirmedMilestoneLock.Unlock()
@@ -206,7 +206,7 @@ func (s *SyncManager) OverwriteConfirmedMilestoneIndex(index milestone.Index) {
 }
 
 // ConfirmedMilestoneIndex returns the confirmed milestone index.
-func (s *SyncManager) ConfirmedMilestoneIndex() milestone.Index {
+func (s *SyncManager) ConfirmedMilestoneIndex() iotago.MilestoneIndex {
 	s.confirmedMilestoneLock.RLock()
 	defer s.confirmedMilestoneLock.RUnlock()
 
@@ -214,7 +214,7 @@ func (s *SyncManager) ConfirmedMilestoneIndex() milestone.Index {
 }
 
 // SetLatestMilestoneIndex sets the latest milestone index.
-func (s *SyncManager) SetLatestMilestoneIndex(index milestone.Index, updateSynced ...bool) bool {
+func (s *SyncManager) SetLatestMilestoneIndex(index iotago.MilestoneIndex, updateSynced ...bool) bool {
 
 	s.latestMilestoneLock.Lock()
 
@@ -238,7 +238,7 @@ func (s *SyncManager) SetLatestMilestoneIndex(index milestone.Index, updateSynce
 }
 
 // LatestMilestoneIndex returns the latest milestone index.
-func (s *SyncManager) LatestMilestoneIndex() milestone.Index {
+func (s *SyncManager) LatestMilestoneIndex() iotago.MilestoneIndex {
 	s.latestMilestoneLock.RLock()
 	defer s.latestMilestoneLock.RUnlock()
 

@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/contextutils"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -115,7 +115,7 @@ func (s *SnapshotImporter) filterTargets(wantedNetworkID uint64, targets []*Down
 
 	type downloadTargetWithIndex struct {
 		target *DownloadTarget
-		index  milestone.Index
+		index  iotago.MilestoneIndex
 	}
 
 	filteredTargets := []*downloadTargetWithIndex{}

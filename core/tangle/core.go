@@ -17,7 +17,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/daemon"
 	"github.com/iotaledger/hornet/pkg/metrics"
 	"github.com/iotaledger/hornet/pkg/model/migrator"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
@@ -26,6 +25,7 @@ import (
 	"github.com/iotaledger/hornet/pkg/pruning"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tangle"
+	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
@@ -259,18 +259,18 @@ func run() error {
 }
 
 func configureEvents() {
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
 		// notify peers about our new solid milestone index
 		// bee differentiates between solid and confirmed milestone, for hornet it is the same.
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
-	onPruningMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
+	onPruningMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
 		// notify peers about our new pruning milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
-	onLatestMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
+	onLatestMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
 		// notify peers about our new latest milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})

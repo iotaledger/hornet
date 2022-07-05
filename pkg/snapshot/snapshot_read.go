@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -76,7 +75,7 @@ func NewUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasury
 // the caller needs to make sure to set the ledger index accordingly beforehand.
 func NewMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 	return func(msDiff *MilestoneDiff) error {
-		msIndex := milestone.Index(msDiff.Milestone.Index)
+		msIndex := msDiff.Milestone.Index
 		ledgerIndex, err := utxoManager.ReadLedgerIndex()
 		if err != nil {
 			return err
@@ -150,7 +149,7 @@ func loadSnapshotFileToStorage(
 		return nil, err
 	}
 
-	var ledgerIndex milestone.Index
+	var ledgerIndex iotago.MilestoneIndex
 	ledgerIndex, err = dbStorage.UTXOManager().ReadLedgerIndex()
 	if err != nil {
 		return nil, err

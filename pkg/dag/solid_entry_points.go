@@ -7,7 +7,6 @@ import (
 
 	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -16,11 +15,11 @@ import (
 func ForEachSolidEntryPoint(
 	ctx context.Context,
 	dbStorage *storage.Storage,
-	targetIndex milestone.Index,
-	solidEntryPointCheckThresholdPast milestone.Index,
+	targetIndex iotago.MilestoneIndex,
+	solidEntryPointCheckThresholdPast iotago.MilestoneIndex,
 	solidEntryPointConsumer func(sep *storage.SolidEntryPoint) bool) error {
 
-	solidEntryPoints := make(map[iotago.BlockID]milestone.Index)
+	solidEntryPoints := make(map[iotago.BlockID]iotago.MilestoneIndex)
 
 	metadataMemcache := storage.NewMetadataMemcache(dbStorage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := NewMemcachedParentsTraverserStorage(dbStorage, metadataMemcache)
@@ -39,7 +38,7 @@ func ForEachSolidEntryPoint(
 	parentsTraverser := NewParentsTraverser(memcachedParentsTraverserStorage)
 
 	// isSolidEntryPoint checks whether any direct child of the given block was referenced by a milestone which is above the target milestone.
-	isSolidEntryPoint := func(blockID iotago.BlockID, targetIndex milestone.Index) (bool, error) {
+	isSolidEntryPoint := func(blockID iotago.BlockID, targetIndex iotago.MilestoneIndex) (bool, error) {
 		childBlockIDs, err := memcachedChildrenTraverserStorage.ChildrenBlockIDs(blockID)
 		if err != nil {
 			return false, err

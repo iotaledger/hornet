@@ -11,11 +11,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/protocol"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type SnapshotImporter struct {
@@ -185,7 +185,7 @@ SnapshotInfo:
 }
 
 // SnapshotsFilesLedgerIndex returns the final ledger index if the snapshots from the configured file paths would be applied.
-func (s *SnapshotImporter) SnapshotsFilesLedgerIndex() (milestone.Index, error) {
+func (s *SnapshotImporter) SnapshotsFilesLedgerIndex() (iotago.MilestoneIndex, error) {
 
 	snapAvail, err := s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
 	if err != nil {

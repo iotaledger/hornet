@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type SnapshotInfo struct {
 	NetworkID       uint64
-	SnapshotIndex   milestone.Index
-	EntryPointIndex milestone.Index
-	PruningIndex    milestone.Index
+	SnapshotIndex   iotago.MilestoneIndex
+	EntryPointIndex iotago.MilestoneIndex
+	PruningIndex    iotago.MilestoneIndex
 	Timestamp       time.Time
 }
 
@@ -67,9 +67,9 @@ func (i *SnapshotInfo) Deserialize(data []byte, _ serializer.DeSerializationMode
 		return offset, err
 	}
 
-	i.SnapshotIndex = milestone.Index(snapshotIndex)
-	i.EntryPointIndex = milestone.Index(entryPointIndex)
-	i.PruningIndex = milestone.Index(pruningIndex)
+	i.SnapshotIndex = snapshotIndex
+	i.EntryPointIndex = entryPointIndex
+	i.PruningIndex = pruningIndex
 	i.Timestamp = time.Unix(int64(timestamp), 0)
 
 	return offset, nil
@@ -95,7 +95,7 @@ func (i *SnapshotInfo) Serialize(_ serializer.DeSerializationMode, _ interface{}
 		Serialize()
 }
 
-func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) error {
+func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex iotago.MilestoneIndex, entryPointIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex, timestamp time.Time) error {
 
 	sn := &SnapshotInfo{
 		NetworkID:       networkID,

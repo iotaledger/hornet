@@ -8,7 +8,6 @@ import (
 
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tpkg"
@@ -128,12 +127,12 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 
 func TestMsIndexIteratorOnwards(t *testing.T) {
 
-	var startIndex milestone.Index = 1000
-	var targetIndex milestone.Index = 1050
+	var startIndex iotago.MilestoneIndex = 1000
+	var targetIndex iotago.MilestoneIndex = 1050
 	msIterator := snapshot.NewMsIndexIterator(snapshot.MsDiffDirectionOnwards, startIndex, targetIndex)
 
 	var done bool
-	var msIndex milestone.Index
+	var msIndex iotago.MilestoneIndex
 
 	currentIndex := startIndex + 1
 	for msIndex, done = msIterator(); !done; msIndex, done = msIterator() {
@@ -146,12 +145,12 @@ func TestMsIndexIteratorOnwards(t *testing.T) {
 
 func TestMsIndexIteratorBackwards(t *testing.T) {
 
-	var startIndex milestone.Index = 1050
-	var targetIndex milestone.Index = 1000
+	var startIndex iotago.MilestoneIndex = 1050
+	var targetIndex iotago.MilestoneIndex = 1000
 	msIterator := snapshot.NewMsIndexIterator(snapshot.MsDiffDirectionBackwards, startIndex, targetIndex)
 
 	var done bool
-	var msIndex milestone.Index
+	var msIndex iotago.MilestoneIndex
 
 	currentIndex := startIndex
 	for msIndex, done = msIterator(); !done; msIndex, done = msIterator() {
@@ -170,12 +169,12 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 	u2 := utxo.New(map2)
 
 	// fill the first UTXO manager with some data
-	var startIndex milestone.Index = 1000
-	var targetIndex milestone.Index = 1050
+	var startIndex iotago.MilestoneIndex = 1000
+	var targetIndex iotago.MilestoneIndex = 1050
 	msIterator := snapshot.NewMsIndexIterator(snapshot.MsDiffDirectionOnwards, startIndex, targetIndex)
 
 	var done bool
-	var msIndex milestone.Index
+	var msIndex iotago.MilestoneIndex
 
 	for msIndex, done = msIterator(); !done; msIndex, done = msIterator() {
 
@@ -195,8 +194,8 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 		require.NoError(t, u1.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 	}
 
-	producerU1 := snapshot.NewMsDiffsProducer(func(index milestone.Index) (*iotago.Milestone, error) {
-		return &iotago.Milestone{Index: uint32(index)}, nil
+	producerU1 := snapshot.NewMsDiffsProducer(func(index iotago.MilestoneIndex) (*iotago.Milestone, error) {
+		return &iotago.Milestone{Index: index}, nil
 	}, u1, snapshot.MsDiffDirectionOnwards, startIndex, targetIndex)
 	consumerU2 := snapshot.NewMsDiffConsumer(u2)
 

@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -77,7 +76,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *utxo.Output, s
 	require.True(t, has)
 }
 
-func CreateOutputAndAssertSerialization(t *testing.T, blockID iotago.BlockID, msIndexBooked milestone.Index, msTimestampBooked uint32, outputID iotago.OutputID, iotaOutput iotago.Output) *utxo.Output {
+func CreateOutputAndAssertSerialization(t *testing.T, blockID iotago.BlockID, msIndexBooked iotago.MilestoneIndex, msTimestampBooked uint32, outputID iotago.OutputID, iotaOutput iotago.Output) *utxo.Output {
 	output := utxo.CreateOutput(outputID, blockID, msIndexBooked, msTimestampBooked, iotaOutput)
 	outputBytes, err := output.Output().Serialize(serializer.DeSeriModeNoValidation, nil)
 	require.NoError(t, err)
@@ -96,7 +95,7 @@ func CreateOutputAndAssertSerialization(t *testing.T, blockID iotago.BlockID, ms
 func CreateSpentAndAssertSerialization(t *testing.T, output *utxo.Output) *utxo.Spent {
 	transactionID := tpkg.RandTransactionID()
 
-	msIndexSpent := milestone.Index(6788362)
+	msIndexSpent := iotago.MilestoneIndex(6788362)
 	msTimestampSpent := tpkg.RandMilestoneTimestamp()
 
 	spent := utxo.NewSpent(output, transactionID, msIndexSpent, msTimestampSpent)
@@ -108,7 +107,7 @@ func CreateSpentAndAssertSerialization(t *testing.T, output *utxo.Output) *utxo.
 
 	value := spent.KVStorableValue()
 	require.Equal(t, transactionID[:], value[:32])
-	require.Equal(t, msIndexSpent, milestone.Index(binary.LittleEndian.Uint32(value[32:36])))
+	require.Equal(t, msIndexSpent, binary.LittleEndian.Uint32(value[32:36]))
 	require.Equal(t, msTimestampSpent, binary.LittleEndian.Uint32(value[36:40]))
 
 	return spent

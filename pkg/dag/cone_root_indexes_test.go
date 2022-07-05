@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/testsuite"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -35,7 +34,7 @@ func TestConeRootIndexes(t *testing.T) {
 		func(blockIDs iotago.BlockIDs, blockIDsPerMilestones []iotago.BlockIDs) iotago.BlockIDs {
 			return iotago.BlockIDs{blockIDs[len(blockIDs)-1]}
 		},
-		func(msIndex milestone.Index, blockIDs iotago.BlockIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
+		func(msIndex iotago.MilestoneIndex, blockIDs iotago.BlockIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
 			cmi := latestMilestone.Milestone().Index()
 
@@ -43,16 +42,16 @@ func TestConeRootIndexes(t *testing.T) {
 			ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 			require.NoError(te.TestInterface, err)
 
-			minOldestConeRootIndex := milestone.Index(1)
-			if cmi > milestone.Index(BelowMaxDepth) {
-				minOldestConeRootIndex = cmi - milestone.Index(BelowMaxDepth)
+			minOldestConeRootIndex := iotago.MilestoneIndex(1)
+			if cmi > iotago.MilestoneIndex(BelowMaxDepth) {
+				minOldestConeRootIndex = cmi - iotago.MilestoneIndex(BelowMaxDepth)
 			}
 
-			require.GreaterOrEqual(te.TestInterface, uint32(ocri), uint32(minOldestConeRootIndex))
-			require.LessOrEqual(te.TestInterface, uint32(ocri), uint32(msIndex))
+			require.GreaterOrEqual(te.TestInterface, ocri, minOldestConeRootIndex)
+			require.LessOrEqual(te.TestInterface, ocri, msIndex)
 
-			require.GreaterOrEqual(te.TestInterface, uint32(ycri), uint32(minOldestConeRootIndex))
-			require.LessOrEqual(te.TestInterface, uint32(ycri), uint32(msIndex))
+			require.GreaterOrEqual(te.TestInterface, ycri, minOldestConeRootIndex)
+			require.LessOrEqual(te.TestInterface, ycri, msIndex)
 		},
 	)
 
@@ -68,6 +67,6 @@ func TestConeRootIndexes(t *testing.T) {
 	require.NoError(te.TestInterface, err)
 
 	// NullHash is SEP for index 0
-	require.Equal(te.TestInterface, uint32(0), uint32(ocri))
-	require.LessOrEqual(te.TestInterface, uint32(ycri), uint32(cmi))
+	require.Equal(te.TestInterface, uint32(0), ocri)
+	require.LessOrEqual(te.TestInterface, ycri, cmi)
 }

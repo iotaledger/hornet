@@ -10,7 +10,6 @@ import (
 
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/pow"
@@ -74,14 +73,14 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	require.Equal(te.TestInterface, 0, confirmedMilestoneStats.BlocksReferenced)
 }
 
-func (te *TestEnvironment) milestoneIDForIndex(msIndex milestone.Index) iotago.MilestoneID {
+func (te *TestEnvironment) milestoneIDForIndex(msIndex iotago.MilestoneIndex) iotago.MilestoneID {
 	cachedMilestone := te.storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	require.NotNil(te.TestInterface, cachedMilestone)
 	defer cachedMilestone.Release(true) // milestone -1
 	return cachedMilestone.Milestone().MilestoneID()
 }
 
-func (te *TestEnvironment) milestoneForIndex(msIndex milestone.Index) *storage.Milestone {
+func (te *TestEnvironment) milestoneForIndex(msIndex iotago.MilestoneIndex) *storage.Milestone {
 	ms := te.storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	require.NotNil(te.TestInterface, ms)
 	defer ms.Release(true) // milestone -1
@@ -164,7 +163,7 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 			require.NoError(te.TestInterface, err)
 		},
 		nil,
-		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+		func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 			if te.OnLedgerUpdatedFunc != nil {
 				te.OnLedgerUpdatedFunc(index, newOutputs, newSpents)
 			}

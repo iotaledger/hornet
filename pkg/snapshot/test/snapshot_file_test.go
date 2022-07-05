@@ -12,7 +12,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tpkg"
@@ -257,7 +256,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			count--
 
 			parents := iotago.BlockIDs{tpkg.RandBlockID()}
-			milestonePayload := iotago.NewMilestone(uint32(tpkg.RandMilestoneIndex()), tpkg.RandMilestoneTimestamp(), protoParas.Version, tpkg.RandMilestoneID(), parents, tpkg.Rand32ByteHash(), tpkg.Rand32ByteHash())
+			milestonePayload := iotago.NewMilestone(tpkg.RandMilestoneIndex(), tpkg.RandMilestoneTimestamp(), protoParas.Version, tpkg.RandMilestoneID(), parents, tpkg.Rand32ByteHash(), tpkg.Rand32ByteHash())
 
 			receipt, err := tpkg.RandReceipt(milestonePayload.Index, protoParas)
 			if err != nil {
@@ -281,7 +280,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 
 			consumedCount := rand.Intn(500) + 1
 			for i := 0; i < consumedCount; i++ {
-				msDiff.Consumed = append(msDiff.Consumed, tpkg.RandUTXOSpent(milestone.Index(milestonePayload.Index), milestonePayload.Timestamp))
+				msDiff.Consumed = append(msDiff.Consumed, tpkg.RandUTXOSpent(milestonePayload.Index, milestonePayload.Timestamp))
 			}
 
 			msDiff.SpentTreasuryOutput = &utxo.TreasuryOutput{

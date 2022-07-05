@@ -10,7 +10,6 @@ import (
 
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/testsuite"
@@ -74,10 +73,10 @@ func TestTipSelect(t *testing.T) {
 
 		for _, tip := range tips {
 			// we walk the cone of every tip to check the youngest and oldest milestone index it references
-			var youngestConeRootIndex milestone.Index = 0
-			var oldestConeRootIndex milestone.Index = math.MaxUint32
+			var youngestConeRootIndex iotago.MilestoneIndex = 0
+			var oldestConeRootIndex iotago.MilestoneIndex = math.MaxUint32
 
-			updateIndexes := func(ycri milestone.Index, ocri milestone.Index) {
+			updateIndexes := func(ycri iotago.MilestoneIndex, ocri iotago.MilestoneIndex) {
 				if youngestConeRootIndex < ycri {
 					youngestConeRootIndex = ycri
 				}
@@ -120,21 +119,21 @@ func TestTipSelect(t *testing.T) {
 				}, false)
 			require.NoError(te.TestInterface, err)
 
-			minOldestConeRootIndex := milestone.Index(0)
-			if cmi > milestone.Index(MaxDeltaBlockOldestConeRootIndexToCMI) {
-				minOldestConeRootIndex = cmi - milestone.Index(MaxDeltaBlockOldestConeRootIndexToCMI)
+			minOldestConeRootIndex := iotago.MilestoneIndex(0)
+			if cmi > iotago.MilestoneIndex(MaxDeltaBlockOldestConeRootIndexToCMI) {
+				minOldestConeRootIndex = cmi - iotago.MilestoneIndex(MaxDeltaBlockOldestConeRootIndexToCMI)
 			}
 
-			minYoungestConeRootIndex := milestone.Index(0)
-			if cmi > milestone.Index(MaxDeltaBlockYoungestConeRootIndexToCMI) {
-				minYoungestConeRootIndex = cmi - milestone.Index(MaxDeltaBlockYoungestConeRootIndexToCMI)
+			minYoungestConeRootIndex := iotago.MilestoneIndex(0)
+			if cmi > iotago.MilestoneIndex(MaxDeltaBlockYoungestConeRootIndexToCMI) {
+				minYoungestConeRootIndex = cmi - iotago.MilestoneIndex(MaxDeltaBlockYoungestConeRootIndexToCMI)
 			}
 
-			require.GreaterOrEqual(te.TestInterface, uint32(oldestConeRootIndex), uint32(minOldestConeRootIndex))
-			require.LessOrEqual(te.TestInterface, uint32(oldestConeRootIndex), uint32(cmi))
+			require.GreaterOrEqual(te.TestInterface, oldestConeRootIndex, minOldestConeRootIndex)
+			require.LessOrEqual(te.TestInterface, oldestConeRootIndex, cmi)
 
-			require.GreaterOrEqual(te.TestInterface, uint32(youngestConeRootIndex), uint32(minYoungestConeRootIndex))
-			require.LessOrEqual(te.TestInterface, uint32(youngestConeRootIndex), uint32(cmi))
+			require.GreaterOrEqual(te.TestInterface, youngestConeRootIndex, minYoungestConeRootIndex)
+			require.LessOrEqual(te.TestInterface, youngestConeRootIndex, cmi)
 		}
 
 		blockMeta := te.NewTestBlock(blockCount, tips)

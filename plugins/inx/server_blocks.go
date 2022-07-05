@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/tipselect"
@@ -30,7 +29,7 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 
 	referenced, msIndex := metadata.ReferencedWithIndex()
 	if referenced {
-		m.ReferencedByMilestoneIndex = uint32(msIndex)
+		m.ReferencedByMilestoneIndex = msIndex
 		inclusionState := inx.BlockMetadata_NO_TRANSACTION
 		conflict := metadata.Conflict()
 		if conflict != storage.ConflictNone {
@@ -42,7 +41,7 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		m.LedgerInclusionState = inclusionState
 
 		if metadata.IsMilestone() {
-			m.MilestoneIndex = uint32(msIndex)
+			m.MilestoneIndex = msIndex
 		}
 
 		return m, nil
@@ -134,7 +133,7 @@ func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksSe
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
+	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex) {
 		wp.Submit(cachedBlock)
 	})
 	wp.Start()
@@ -192,7 +191,7 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
+	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32) {
 		wp.Submit(blockMeta)
 	})
 	wp.Start()

@@ -1,20 +1,20 @@
 package tangle
 
 import (
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // AddBlockToStorage adds a new block to the cache/persistence layer,
 // including all additional information like metadata, children,
 // unreferenced blocks and milestone entries.
 // block +1
-func AddBlockToStorage(dbStorage *storage.Storage, milestoneManager *milestonemanager.MilestoneManager, block *storage.Block, latestMilestoneIndex milestone.Index, requested bool, forceRelease bool) (cachedBlock *storage.CachedBlock, alreadyAdded bool) {
+func AddBlockToStorage(dbStorage *storage.Storage, milestoneManager *milestonemanager.MilestoneManager, block *storage.Block, latestMilestoneIndex iotago.MilestoneIndex, requested bool, forceRelease bool) (cachedBlock *storage.CachedBlock, alreadyAdded bool) {
 
 	cachedBlock, isNew := dbStorage.StoreBlockIfAbsent(block) // block +1
 	if !isNew {
-		if requested && cachedBlock.Block().IsMilestone() && !dbStorage.ContainsMilestoneIndex(milestone.Index(cachedBlock.Block().Milestone().Index)) {
+		if requested && cachedBlock.Block().IsMilestone() && !dbStorage.ContainsMilestoneIndex(cachedBlock.Block().Milestone().Index) {
 			// if the block was requested, was already known, but contains an unknown milestone payload, we need to re-verfiy the milestone payload.
 			// (maybe caused by formerly invalid milestones e.g. because of missing COO public keys in the node config).
 			if milestonePayload := milestoneManager.VerifyMilestoneBlock(block.Block()); milestonePayload != nil {

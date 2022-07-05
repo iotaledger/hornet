@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -40,7 +39,7 @@ var (
 // Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
 type Confirmation struct {
 	// The index of the milestone that got confirmed.
-	MilestoneIndex milestone.Index
+	MilestoneIndex iotago.MilestoneIndex
 	// The milestone ID of the milestone that got confirmed.
 	MilestoneID iotago.MilestoneID
 	// The parents of the milestone that got confirmed.
@@ -85,7 +84,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	utxoManager *utxo.Manager,
 	parentsTraverser *dag.ParentsTraverser,
 	cachedBlockFunc storage.CachedBlockFunc,
-	msIndex milestone.Index,
+	msIndex iotago.MilestoneIndex,
 	msTimestamp uint32,
 	parents iotago.BlockIDs,
 	previousMilestoneID iotago.MilestoneID,
@@ -146,7 +145,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				if milestonePayload.Timestamp >= msTimestamp {
 					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone timestamp is smaller or equal to previous milestone timestamp (old: %d, new: %d): %v", milestonePayload.Timestamp, msTimestamp, blockID.ToHex())
 				}
-				if (milestonePayload.Index + 1) != uint32(msIndex) {
+				if (milestonePayload.Index + 1) != msIndex {
 					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone index did not increase by one compared to previous milestone index (old: %d, new: %d): %v", milestonePayload.Index, msIndex, blockID.ToHex())
 				}
 			}

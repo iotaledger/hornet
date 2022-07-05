@@ -12,7 +12,6 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/pkg/tangle"
@@ -509,7 +508,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 }
 
 // calculateScore calculates the tip selection score of this block
-func (ts *TipSelector) calculateScore(blockID iotago.BlockID, cmi milestone.Index) (Score, error) {
+func (ts *TipSelector) calculateScore(blockID iotago.BlockID, cmi iotago.MilestoneIndex) (Score, error) {
 
 	tipScore, err := ts.tipScoreCalculator.TipScore(ts.shutdownCtx, blockID, cmi)
 	if err != nil {

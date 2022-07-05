@@ -9,7 +9,6 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -99,13 +98,13 @@ func snapshotGen(args []string) error {
 	}
 
 	// create snapshot file
-	targetIndex := 0
+	targetIndex := iotago.MilestoneIndex(0)
 	header := &snapshot.FileHeader{
 		Version:              snapshot.SupportedFormatVersion,
 		Type:                 snapshot.Full,
 		NetworkID:            protoParas.NetworkID(),
-		SEPMilestoneIndex:    milestone.Index(targetIndex),
-		LedgerMilestoneIndex: milestone.Index(targetIndex),
+		SEPMilestoneIndex:    targetIndex,
+		LedgerMilestoneIndex: targetIndex,
 		TreasuryOutput: &utxo.TreasuryOutput{
 			MilestoneID: iotago.MilestoneID{},
 			Amount:      treasury,

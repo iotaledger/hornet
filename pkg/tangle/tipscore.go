@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -23,25 +22,25 @@ type TipScoreCalculator struct {
 	storage *storage.Storage
 	// maxDeltaBlockYoungestConeRootIndexToCMI is the maximum allowed delta
 	// value for the YCRI of a given block in relation to the current CMI before it gets lazy.
-	maxDeltaBlockYoungestConeRootIndexToCMI milestone.Index
+	maxDeltaBlockYoungestConeRootIndexToCMI iotago.MilestoneIndex
 	// maxDeltaBlockOldestConeRootIndexToCMI is the maximum allowed delta
 	// value between OCRI of a given block in relation to the current CMI before it gets semi-lazy.
-	maxDeltaBlockOldestConeRootIndexToCMI milestone.Index
+	maxDeltaBlockOldestConeRootIndexToCMI iotago.MilestoneIndex
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given block in relation to the current CMI before it gets lazy.
-	belowMaxDepth milestone.Index
+	belowMaxDepth iotago.MilestoneIndex
 }
 
 func NewTipScoreCalculator(storage *storage.Storage, maxDeltaBlockYoungestConeRootIndexToCMI int, maxDeltaBlockOldestConeRootIndexToCMI int, belowMaxDepth int) *TipScoreCalculator {
 	return &TipScoreCalculator{
 		storage:                                 storage,
-		maxDeltaBlockYoungestConeRootIndexToCMI: milestone.Index(maxDeltaBlockYoungestConeRootIndexToCMI),
-		maxDeltaBlockOldestConeRootIndexToCMI:   milestone.Index(maxDeltaBlockOldestConeRootIndexToCMI),
-		belowMaxDepth:                           milestone.Index(belowMaxDepth),
+		maxDeltaBlockYoungestConeRootIndexToCMI: iotago.MilestoneIndex(maxDeltaBlockYoungestConeRootIndexToCMI),
+		maxDeltaBlockOldestConeRootIndexToCMI:   iotago.MilestoneIndex(maxDeltaBlockOldestConeRootIndexToCMI),
+		belowMaxDepth:                           iotago.MilestoneIndex(belowMaxDepth),
 	}
 }
 
-func (t *TipScoreCalculator) TipScore(ctx context.Context, blockID iotago.BlockID, cmi milestone.Index) (TipScore, error) {
+func (t *TipScoreCalculator) TipScore(ctx context.Context, blockID iotago.BlockID, cmi iotago.MilestoneIndex) (TipScore, error) {
 	cachedBlockMeta := t.storage.CachedBlockMetadataOrNil(blockID) // meta +1
 	if cachedBlockMeta == nil {
 		return TipScoreNotFound, nil

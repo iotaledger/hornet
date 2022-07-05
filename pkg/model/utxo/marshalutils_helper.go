@@ -2,7 +2,6 @@ package utxo
 
 import (
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -34,12 +33,4 @@ func ParseBlockID(ms *marshalutil.MarshalUtil) (iotago.BlockID, error) {
 	blockID := iotago.BlockID{}
 	copy(blockID[:], bytes)
 	return blockID, nil
-}
-
-func parseMilestoneIndex(ms *marshalutil.MarshalUtil) (milestone.Index, error) {
-	index, err := ms.ReadUint32()
-	if err != nil {
-		return 0, err
-	}
-	return milestone.Index(index), nil
 }

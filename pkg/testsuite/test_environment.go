@@ -18,7 +18,6 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/syncmanager"
@@ -52,7 +51,7 @@ type TestEnvironment struct {
 
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given block in relation to the current CMI before it gets lazy.
-	belowMaxDepth milestone.Index
+	belowMaxDepth iotago.MilestoneIndex
 
 	// coo holds the coordinator instance.
 	coo *MockCoo
@@ -89,7 +88,7 @@ type TestEnvironment struct {
 }
 
 type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)
-type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents)
+type OnLedgerUpdatedFunc func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents)
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
@@ -114,7 +113,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 			},
 			TokenSupply: 2_779_530_283_277_761,
 		},
-		belowMaxDepth: milestone.Index(belowMaxDepth),
+		belowMaxDepth: iotago.MilestoneIndex(belowMaxDepth),
 		serverMetrics: &metrics.ServerMetrics{},
 	}
 
@@ -169,7 +168,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SyncManager
-	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), milestone.Index(belowMaxDepth))
+	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), iotago.MilestoneIndex(belowMaxDepth))
 	require.NoError(te.TestInterface, err)
 
 	// Initialize MilestoneManager
@@ -234,7 +233,7 @@ func (te *TestEnvironment) ProtocolManager() *protocol.Manager {
 	return te.protocolManager
 }
 
-func (te *TestEnvironment) BelowMaxDepth() milestone.Index {
+func (te *TestEnvironment) BelowMaxDepth() iotago.MilestoneIndex {
 	return te.belowMaxDepth
 }
 
@@ -242,7 +241,7 @@ func (te *TestEnvironment) LastMilestonePayload() *iotago.Milestone {
 	return te.coo.LastMilestonePayload()
 }
 
-func (te *TestEnvironment) LastMilestoneIndex() milestone.Index {
+func (te *TestEnvironment) LastMilestoneIndex() iotago.MilestoneIndex {
 	return te.coo.LastMilestoneIndex()
 }
 
@@ -298,9 +297,9 @@ func (te *TestEnvironment) BuildTangle(initBlocksCount int,
 	milestonesCount int,
 	minBlocksPerMilestone int,
 	maxBlocksPerMilestone int,
-	onNewBlock func(cmi milestone.Index, blockMetadata *storage.BlockMetadata),
+	onNewBlock func(cmi iotago.MilestoneIndex, blockMetadata *storage.BlockMetadata),
 	milestoneTipSelectFunc func(blocksIDs iotago.BlockIDs, blockIDsPerMilestones []iotago.BlockIDs) iotago.BlockIDs,
-	onNewMilestone func(msIndex milestone.Index, blockIDs iotago.BlockIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats)) (blockIDs iotago.BlockIDs, blockIDsPerMilestones []iotago.BlockIDs) {
+	onNewMilestone func(msIndex iotago.MilestoneIndex, blockIDs iotago.BlockIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats)) (blockIDs iotago.BlockIDs, blockIDsPerMilestones []iotago.BlockIDs) {
 
 	blockTotalCount := 0
 	blockIDs = iotago.BlockIDs{}

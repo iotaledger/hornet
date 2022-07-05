@@ -8,7 +8,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -32,7 +31,7 @@ type Output struct {
 
 	outputID          iotago.OutputID
 	blockID           iotago.BlockID
-	msIndexBooked     milestone.Index
+	msIndexBooked     iotago.MilestoneIndex
 	msTimestampBooked uint32
 
 	output iotago.Output
@@ -50,7 +49,7 @@ func (o *Output) BlockID() iotago.BlockID {
 	return o.blockID
 }
 
-func (o *Output) MilestoneIndexBooked() milestone.Index {
+func (o *Output) MilestoneIndexBooked() iotago.MilestoneIndex {
 	return o.msIndexBooked
 }
 
@@ -80,7 +79,7 @@ func (o Outputs) ToOutputSet() iotago.OutputSet {
 	return outputSet
 }
 
-func CreateOutput(outputID iotago.OutputID, blockID iotago.BlockID, msIndexBooked milestone.Index, msTimestampBooked uint32, output iotago.Output) *Output {
+func CreateOutput(outputID iotago.OutputID, blockID iotago.BlockID, msIndexBooked iotago.MilestoneIndex, msTimestampBooked uint32, output iotago.Output) *Output {
 	return &Output{
 		outputID:          outputID,
 		blockID:           blockID,
@@ -90,7 +89,7 @@ func CreateOutput(outputID iotago.OutputID, blockID iotago.BlockID, msIndexBooke
 	}
 }
 
-func NewOutput(blockID iotago.BlockID, msIndexBooked milestone.Index, msTimestampBooked uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(blockID iotago.BlockID, msIndexBooked iotago.MilestoneIndex, msTimestampBooked uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	txID, err := transaction.ID()
 	if err != nil {
@@ -122,9 +121,9 @@ func (o *Output) KVStorableKey() (key []byte) {
 
 func (o *Output) KVStorableValue() (value []byte) {
 	ms := marshalutil.New(40)
-	ms.WriteBytes(o.blockID[:])             // 32 bytes
-	ms.WriteUint32(uint32(o.msIndexBooked)) // 4 bytes
-	ms.WriteUint32(o.msTimestampBooked)     // 4 bytes
+	ms.WriteBytes(o.blockID[:])         // 32 bytes
+	ms.WriteUint32(o.msIndexBooked)     // 4 bytes
+	ms.WriteUint32(o.msTimestampBooked) // 4 bytes
 
 	outputBytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -160,7 +159,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	}
 
 	// Read Milestone
-	if o.msIndexBooked, err = parseMilestoneIndex(valueUtil); err != nil {
+	if o.msIndexBooked, err = valueUtil.ReadUint32(); err != nil {
 		return err
 	}
 

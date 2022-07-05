@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -26,7 +25,7 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 		tpkg.RandUTXOOutputWithType(iotago.OutputFoundry),
 	}
 
-	msIndex := milestone.Index(756)
+	msIndex := iotago.MilestoneIndex(756)
 	msTimestamp := tpkg.RandMilestoneTimestamp()
 
 	spents := utxo.Spents{
@@ -85,7 +84,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		tpkg.RandUTXOOutputWithType(iotago.OutputNFT),   // spent on 2nd confirmation
 	}
 
-	previousMsIndex := milestone.Index(48)
+	previousMsIndex := iotago.MilestoneIndex(48)
 	previousMsTimestamp := tpkg.RandMilestoneTimestamp()
 	previousSpents := utxo.Spents{
 		tpkg.RandUTXOSpentWithOutput(previousOutputs[1], previousMsIndex, previousMsTimestamp),
@@ -102,7 +101,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		tpkg.RandUTXOOutputWithType(iotago.OutputBasic), // spent
 		tpkg.RandUTXOOutputWithType(iotago.OutputAlias),
 	}
-	msIndex := milestone.Index(49)
+	msIndex := iotago.MilestoneIndex(49)
 	msTimestamp := tpkg.RandMilestoneTimestamp()
 	spents := utxo.Spents{
 		tpkg.RandUTXOSpentWithOutput(previousOutputs[2], msIndex, msTimestamp),

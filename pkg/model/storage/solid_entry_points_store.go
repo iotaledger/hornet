@@ -3,7 +3,6 @@ package storage
 import (
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -65,7 +64,7 @@ func (s *Storage) SolidEntryPointsContain(blockID iotago.BlockID) (bool, error) 
 }
 
 // SolidEntryPointsIndex returns the index of a solid entry point and whether the block is a solid entry point or not.
-func (s *Storage) SolidEntryPointsIndex(blockID iotago.BlockID) (milestone.Index, bool, error) {
+func (s *Storage) SolidEntryPointsIndex(blockID iotago.BlockID) (iotago.MilestoneIndex, bool, error) {
 	s.ReadLockSolidEntryPoints()
 	defer s.ReadUnlockSolidEntryPoints()
 
@@ -80,7 +79,7 @@ func (s *Storage) SolidEntryPointsIndex(blockID iotago.BlockID) (milestone.Index
 
 // SolidEntryPointsAddWithoutLocking adds a block to the solid entry points.
 // WriteLockSolidEntryPoints must be held while entering this function.
-func (s *Storage) SolidEntryPointsAddWithoutLocking(blockID iotago.BlockID, milestoneIndex milestone.Index) {
+func (s *Storage) SolidEntryPointsAddWithoutLocking(blockID iotago.BlockID, milestoneIndex iotago.MilestoneIndex) {
 	if s.solidEntryPoints == nil {
 		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)

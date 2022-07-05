@@ -20,7 +20,6 @@ import (
 	"github.com/iotaledger/hornet/core/protocfg"
 	"github.com/iotaledger/hornet/pkg/dag"
 	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
@@ -245,13 +244,13 @@ func initSigningProvider(keyManager *keymanager.KeyManager, milestonePublicKeyCo
 func createMilestone(
 	signer signingprovider.MilestoneSignerProvider,
 	protocolVersion byte,
-	index milestone.Index,
+	index iotago.MilestoneIndex,
 	timestamp uint32,
 	parents iotago.BlockIDs,
 	previousMilestoneID iotago.MilestoneID,
 	mutations *whiteflag.WhiteFlagMutations) (*iotago.Block, error) {
 
-	msPayload := iotago.NewMilestone(uint32(index), timestamp, protocolVersion, previousMilestoneID, parents, mutations.InclusionMerkleRoot, mutations.AppliedMerkleRoot)
+	msPayload := iotago.NewMilestone(index, timestamp, protocolVersion, previousMilestoneID, parents, mutations.InclusionMerkleRoot, mutations.AppliedMerkleRoot)
 
 	iotaBlock, err := builder.
 		NewBlockBuilder().
@@ -263,7 +262,7 @@ func createMilestone(
 		return nil, err
 	}
 
-	milestoneIndexSigner := signer.MilestoneIndexSigner(uint32(index))
+	milestoneIndexSigner := signer.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
 	if err := msPayload.Sign(pubKeys, milestoneIndexSigner.SigningFunc()); err != nil {
@@ -287,7 +286,7 @@ func createInitialMilestone(
 	signer signingprovider.MilestoneSignerProvider,
 	protocolParameters *iotago.ProtocolParameters) (*CoordinatorState, error) {
 
-	var index milestone.Index = 1
+	var index iotago.MilestoneIndex = 1
 	parents := iotago.BlockIDs{iotago.EmptyBlockID()}
 	timestamp := time.Now()
 	previousMilestoneID := iotago.MilestoneID{}
@@ -347,7 +346,7 @@ func createInitialMilestone(
 	}
 
 	return &CoordinatorState{
-		LatestMilestoneIndex:   uint32(index),
+		LatestMilestoneIndex:   index,
 		LatestMilestoneBlockID: latestMilestoneBlockID.ToHex(),
 		LatestMilestoneID:      milestoneID.ToHex(),
 		LatestMilestoneTime:    timestamp.UnixNano(),

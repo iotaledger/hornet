@@ -4,7 +4,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tpkg"
@@ -274,7 +273,7 @@ func staticEd25519Address(fill byte) iotago.Address {
 	return &addr
 }
 
-func utxoOutput(fill byte, amount uint64, msIndex milestone.Index) *utxo.Output {
+func utxoOutput(fill byte, amount uint64, msIndex iotago.MilestoneIndex) *utxo.Output {
 	return utxo.CreateOutput(
 		staticOutputID(fill),
 		staticBlockID(fill),
@@ -291,7 +290,7 @@ func utxoOutput(fill byte, amount uint64, msIndex milestone.Index) *utxo.Output 
 	)
 }
 
-func utxoSpent(fill byte, amount uint64, msIndexCreated milestone.Index, msIndexSpent milestone.Index) *utxo.Spent {
+func utxoSpent(fill byte, amount uint64, msIndexCreated iotago.MilestoneIndex, msIndexSpent iotago.MilestoneIndex) *utxo.Spent {
 	r := static32ByteID(fill)
 	txID := iotago.TransactionID{}
 	copy(txID[:], r[:])

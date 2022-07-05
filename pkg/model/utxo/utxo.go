@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -89,7 +88,7 @@ func (u *Manager) WriteUnlockLedger() {
 	u.utxoLock.Unlock()
 }
 
-func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex milestone.Index, pruneReceipts bool, receiptMigratedAtIndex ...uint32) error {
+func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex iotago.MilestoneIndex, pruneReceipts bool, receiptMigratedAtIndex ...uint32) error {
 
 	diff, err := u.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
@@ -137,25 +136,25 @@ func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex milestone.Index, pru
 	return mutations.Commit()
 }
 
-func storeLedgerIndex(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+func storeLedgerIndex(msIndex iotago.MilestoneIndex, mutations kvstore.BatchedMutations) error {
 
 	value := make([]byte, 4)
-	binary.LittleEndian.PutUint32(value, uint32(msIndex))
+	binary.LittleEndian.PutUint32(value, msIndex)
 
 	return mutations.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
 }
 
-func (u *Manager) StoreLedgerIndex(msIndex milestone.Index) error {
+func (u *Manager) StoreLedgerIndex(msIndex iotago.MilestoneIndex) error {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
 	value := make([]byte, 4)
-	binary.LittleEndian.PutUint32(value, uint32(msIndex))
+	binary.LittleEndian.PutUint32(value, msIndex)
 
 	return u.utxoStorage.Set([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}, value)
 }
 
-func (u *Manager) ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
+func (u *Manager) ReadLedgerIndexWithoutLocking() (iotago.MilestoneIndex, error) {
 	value, err := u.utxoStorage.Get([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex})
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -165,10 +164,10 @@ func (u *Manager) ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
 		return 0, fmt.Errorf("failed to load ledger milestone index: %w", err)
 	}
 
-	return milestone.Index(binary.LittleEndian.Uint32(value)), nil
+	return binary.LittleEndian.Uint32(value), nil
 }
 
-func (u *Manager) ReadLedgerIndex() (milestone.Index, error) {
+func (u *Manager) ReadLedgerIndex() (iotago.MilestoneIndex, error) {
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()
 
@@ -183,7 +182,7 @@ type TreasuryMutationTuple struct {
 	SpentOutput *TreasuryOutput
 }
 
-func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
+func (u *Manager) ApplyConfirmationWithoutLocking(msIndex iotago.MilestoneIndex, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 
 	mutations, err := u.utxoStorage.Batched()
 	if err != nil {
@@ -250,14 +249,14 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 	return mutations.Commit()
 }
 
-func (u *Manager) ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
+func (u *Manager) ApplyConfirmation(msIndex iotago.MilestoneIndex, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
 	return u.ApplyConfirmationWithoutLocking(msIndex, newOutputs, newSpents, tm, rt)
 }
 
-func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
+func (u *Manager) RollbackConfirmationWithoutLocking(msIndex iotago.MilestoneIndex, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 
 	mutations, err := u.utxoStorage.Batched()
 	if err != nil {
@@ -321,7 +320,7 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 	return mutations.Commit()
 }
 
-func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
+func (u *Manager) RollbackConfirmation(msIndex iotago.MilestoneIndex, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 

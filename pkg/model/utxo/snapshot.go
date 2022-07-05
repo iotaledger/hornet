@@ -7,7 +7,6 @@ import (
 
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -17,7 +16,7 @@ func (o *Output) SnapshotBytes() []byte {
 	m := marshalutil.New()
 	m.WriteBytes(o.outputID[:])
 	m.WriteBytes(o.blockID[:])
-	m.WriteUint32(uint32(o.msIndexBooked))
+	m.WriteUint32(o.msIndexBooked)
 	m.WriteUint32(o.msTimestampBooked)
 
 	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
@@ -76,7 +75,7 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("invalid LS output length: %w", err)
 	}
 
-	return CreateOutput(outputID, blockID, milestone.Index(msIndexBooked), msTimestampBooked, output), nil
+	return CreateOutput(outputID, blockID, msIndexBooked, msTimestampBooked, output), nil
 }
 
 func (s *Spent) SnapshotBytes() []byte {
@@ -87,7 +86,7 @@ func (s *Spent) SnapshotBytes() []byte {
 	return m.Bytes()
 }
 
-func SpentFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndexSpent milestone.Index, msTimestampSpent uint32) (*Spent, error) {
+func SpentFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolParameters, msIndexSpent iotago.MilestoneIndex, msTimestampSpent uint32) (*Spent, error) {
 	output, err := OutputFromSnapshotReader(reader, protoParas)
 	if err != nil {
 		return nil, err

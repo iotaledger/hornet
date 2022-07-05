@@ -6,7 +6,6 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -24,7 +23,7 @@ type Events struct {
 }
 
 // NewManager creates a new Manager.
-func NewManager(storage *storage.Storage, ledgerIndex milestone.Index) (*Manager, error) {
+func NewManager(storage *storage.Storage, ledgerIndex iotago.MilestoneIndex) (*Manager, error) {
 	manager := &Manager{
 		Events: &Events{
 			NextMilestoneUnsupported: events.NewEvent(protoParasMsOptCaller),
@@ -54,7 +53,7 @@ type Manager struct {
 }
 
 // init initialises the Manager by loading the last stored parameters and pending parameters.
-func (m *Manager) init(ledgerIndex milestone.Index) error {
+func (m *Manager) init(ledgerIndex iotago.MilestoneIndex) error {
 	m.currentLock.Lock()
 	defer m.currentLock.Unlock()
 
@@ -75,19 +74,19 @@ func (m *Manager) init(ledgerIndex milestone.Index) error {
 }
 
 // loadPending initializes the pending protocol parameter changes from database.
-func (m *Manager) loadPending(ledgerIndex milestone.Index) {
+func (m *Manager) loadPending(ledgerIndex iotago.MilestoneIndex) {
 	m.pendingLock.Lock()
 	defer m.pendingLock.Unlock()
 
 	m.storage.ForEachProtocolParameters(func(protoParsMsOpt *iotago.ProtocolParamsMilestoneOpt) bool {
-		if milestone.Index(protoParsMsOpt.TargetMilestoneIndex) > ledgerIndex {
+		if protoParsMsOpt.TargetMilestoneIndex > ledgerIndex {
 			m.pending = append(m.pending, protoParsMsOpt)
 		}
 		return true
 	})
 }
 
-func (m *Manager) readProtocolParasFromMilestone(index milestone.Index) *iotago.ProtocolParamsMilestoneOpt {
+func (m *Manager) readProtocolParasFromMilestone(index iotago.MilestoneIndex) *iotago.ProtocolParamsMilestoneOpt {
 	cachedMs := m.storage.CachedMilestoneByIndexOrNil(index)
 	if cachedMs == nil {
 		return nil

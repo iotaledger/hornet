@@ -10,7 +10,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -146,7 +145,7 @@ func ParseOutputIDParam(c echo.Context) (iotago.OutputID, error) {
 	return outputID, nil
 }
 
-func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index, error) {
+func ParseMilestoneIndexParam(c echo.Context, paramName string) (iotago.MilestoneIndex, error) {
 	milestoneIndex := strings.ToLower(c.Param(paramName))
 	if milestoneIndex == "" {
 		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
@@ -157,7 +156,7 @@ func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index
 		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
 	}
 
-	return milestone.Index(msIndex), nil
+	return iotago.MilestoneIndex(msIndex), nil
 }
 
 func ParseMilestoneIDParam(c echo.Context) (*iotago.MilestoneID, error) {
