@@ -2,46 +2,15 @@ package main
 
 import (
 	"os"
-	"time"
 
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/hornet/pkg/tpkg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func main() {
-	writeFullSnapshot()
-	writeDeltaSnapshot()
-}
-
-// for the testing purposes it doesn't actually matter
-// whether the milestones are correct. therefore the milestone is just
-// filled with enough data that it still passes deserialization with validation.
-func blankMilestone(index uint32) *iotago.Milestone {
-	return &iotago.Milestone{
-		Index:     index,
-		Timestamp: 0,
-		Parents: iotago.BlockIDs{
-			static32ByteID(0),
-			static32ByteID(1),
-		},
-		InclusionMerkleRoot: static32ByteID(2),
-		AppliedMerkleRoot:   static32ByteID(2),
-		Signatures: []iotago.Signature{
-			&iotago.Ed25519Signature{
-				PublicKey: static32ByteID(0),
-				Signature: static64ByteID(0),
-			},
-			&iotago.Ed25519Signature{
-				PublicKey: static32ByteID(1),
-				Signature: static64ByteID(1),
-			},
-		},
-	}
-}
-
-var protoParas = &iotago.ProtocolParameters{
+var protoParams = &iotago.ProtocolParameters{
 	Version:       2,
 	NetworkName:   "alphanet1",
 	Bech32HRP:     iotago.PrefixDevnet,
@@ -55,19 +24,42 @@ var protoParas = &iotago.ProtocolParameters{
 	TokenSupply: 2_779_530_283_277_761,
 }
 
-var fullSnapshotHeader = &snapshot.FileHeader{
-	Version:              snapshot.SupportedFormatVersion,
-	Type:                 snapshot.Full,
-	NetworkID:            protoParas.NetworkID(),
-	SEPMilestoneIndex:    1,
-	LedgerMilestoneIndex: 3,
-	TreasuryOutput: &utxo.TreasuryOutput{
-		MilestoneID: iotago.MilestoneID{},
-		Amount:      originTreasurySupply,
-	},
+func main() {
+	fullSnapshotHeader := writeFullSnapshot()
+	writeDeltaSnapshot(fullSnapshotHeader)
 }
 
-var originTreasurySupply = protoParas.TokenSupply - fullSnapshotOutputs[0].Deposit() - fullSnapshotOutputs[1].Deposit()
+// for the testing purposes it doesn't actually matter
+// whether the milestones are correct. therefore the milestone is just
+// filled with enough data that it still passes deserialization with validation.
+func blankMilestone(index iotago.MilestoneIndex) *iotago.Milestone {
+	return &iotago.Milestone{
+		Index:               index,
+		Timestamp:           0,
+		ProtocolVersion:     2,
+		PreviousMilestoneID: iotago.MilestoneID{},
+		Parents: iotago.BlockIDs{
+			static32ByteID(0),
+			static32ByteID(1),
+		},
+		InclusionMerkleRoot: static32ByteID(2),
+		AppliedMerkleRoot:   static32ByteID(2),
+		Metadata:            nil,
+		Opts:                nil,
+		Signatures: []iotago.Signature{
+			&iotago.Ed25519Signature{
+				PublicKey: static32ByteID(0),
+				Signature: static64ByteID(0),
+			},
+			&iotago.Ed25519Signature{
+				PublicKey: static32ByteID(1),
+				Signature: static64ByteID(1),
+			},
+		},
+	}
+}
+
+var originTreasurySupply = protoParams.TokenSupply - fullSnapshotOutputs[0].Deposit() - fullSnapshotOutputs[1].Deposit()
 
 var fullSnapshotOutputs = utxo.Outputs{
 	utxoOutput(6, 10_000_000, 3),
@@ -85,6 +77,7 @@ var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 			utxoSpent(4, fullSnapshotOutputs[0].Deposit(), 2, 3),
 			utxoSpent(3, fullSnapshotOutputs[1].Deposit(), 2, 3),
 		},
+		SpentTreasuryOutput: nil,
 	},
 	{
 		Milestone: blankMilestone(2),
@@ -96,25 +89,44 @@ var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 			utxoSpent(2, fullSnapshotOutputs[0].Deposit(), 1, 2),
 			utxoSpent(1, fullSnapshotOutputs[1].Deposit(), 1, 2),
 		},
+		SpentTreasuryOutput: nil,
 	},
 }
 
-func writeFullSnapshot() {
-	full, err := os.Create("test_full_snapshot.bin")
-	must(err)
-	defer func() { _ = full.Close() }()
+func writeFullSnapshot() *snapshot.FullSnapshotHeader {
 
-	var seps, sepsMax = 0, 10
-	fullSnapSEPProd := func() (iotago.BlockID, error) {
-		seps++
-		if seps == 1 {
-			return iotago.EmptyBlockID(), nil
-		}
-		if seps > sepsMax {
-			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
-		}
-		return tpkg.RandBlockID(), nil
+	protoParamsBytes, err := protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		panic(err)
 	}
+
+	protoParamsMsOption := &iotago.ProtocolParamsMilestoneOpt{
+		TargetMilestoneIndex: 0,
+		ProtocolVersion:      2,
+		Params:               protoParamsBytes,
+	}
+
+	fullSnapshotHeader := &snapshot.FullSnapshotHeader{
+		Version:                  snapshot.SupportedFormatVersion,
+		Type:                     snapshot.Full,
+		GenesisMilestoneIndex:    0,
+		TargetMilestoneIndex:     1,
+		TargetMilestoneTimestamp: 0,
+		TargetMilestoneID:        iotago.MilestoneID{},
+		LedgerMilestoneIndex:     3,
+		TreasuryOutput: &utxo.TreasuryOutput{
+			MilestoneID: iotago.MilestoneID{},
+			Amount:      originTreasurySupply,
+		},
+		ProtocolParamsMilestoneOpt: protoParamsMsOption,
+		OutputCount:                0,
+		MilestoneDiffCount:         0,
+		SEPCount:                   0,
+	}
+
+	fileHandle, err := os.Create("snapshot_full_snapshot.bin")
+	must(err)
+	defer func() { _ = fileHandle.Close() }()
 
 	var currentOutput int
 	fullSnapOutputProd := func() (*utxo.Output, error) {
@@ -136,16 +148,28 @@ func writeFullSnapshot() {
 		return msDiff, nil
 	}
 
-	_, err = snapshot.StreamSnapshotDataTo(full, uint32(time.Now().Unix()), fullSnapshotHeader, fullSnapSEPProd, fullSnapOutputProd, fullSnapMsDiffProd)
-	must(err)
-}
+	var seps, sepsMax = 0, 10
+	fullSnapSEPProd := func() (iotago.BlockID, error) {
+		seps++
+		if seps == 1 {
+			return iotago.EmptyBlockID(), nil
+		}
+		if seps > sepsMax {
+			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
+		}
+		return tpkg.RandBlockID(), nil
+	}
 
-var deltaSnapshotHeader = &snapshot.FileHeader{
-	Version:              snapshot.SupportedFormatVersion,
-	Type:                 snapshot.Delta,
-	NetworkID:            iotago.NetworkIDFromString("alphanet1"),
-	SEPMilestoneIndex:    5,
-	LedgerMilestoneIndex: 1,
+	_, err = snapshot.StreamFullSnapshotDataTo(
+		fileHandle,
+		fullSnapshotHeader,
+		fullSnapOutputProd,
+		fullSnapMsDiffProd,
+		fullSnapSEPProd,
+	)
+	must(err)
+
+	return fullSnapshotHeader
 }
 
 var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
@@ -161,6 +185,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 			utxoSpent(6, fullSnapshotOutputs[0].Deposit(), 3, 4),
 			utxoSpent(5, fullSnapshotOutputs[1].Deposit(), 3, 4),
 		},
+		SpentTreasuryOutput: nil,
 	},
 	{
 		// milestone 5 has a receipt
@@ -179,18 +204,13 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 					Address:             &iotago.Ed25519Address{},
 					Deposit:             10_000_000,
 				}).
-				Build(protoParas)
+				Build(protoParams)
 			if err != nil {
 				panic(err)
 			}
 			ms.Opts = iotago.MilestoneOpts{receipt}
 			return ms
 		}(),
-		SpentTreasuryOutput: &utxo.TreasuryOutput{
-			MilestoneID: iotago.MilestoneID{},
-			Amount:      originTreasurySupply,
-			Spent:       true,
-		},
 		Created: utxo.Outputs{
 			utxoOutput(9, fullSnapshotOutputs[0].Deposit()+fullSnapshotOutputs[1].Deposit()+10_000_000, 5),
 		},
@@ -198,22 +218,30 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 			utxoSpent(8, fullSnapshotOutputs[0].Deposit(), 4, 5),
 			utxoSpent(7, fullSnapshotOutputs[1].Deposit(), 4, 5),
 		},
+		SpentTreasuryOutput: &utxo.TreasuryOutput{
+			MilestoneID: iotago.MilestoneID{},
+			Amount:      originTreasurySupply,
+			Spent:       true,
+		},
 	},
 }
 
-func writeDeltaSnapshot() {
-	delta, err := os.Create("test_delta_snapshot.bin")
-	must(err)
-	defer func() { _ = delta.Close() }()
+func writeDeltaSnapshot(fullSnapshotHeader *snapshot.FullSnapshotHeader) {
 
-	var seps, sepsMax = 0, 10
-	deltaSnapSEPProd := func() (iotago.BlockID, error) {
-		seps++
-		if seps > sepsMax {
-			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
-		}
-		return tpkg.RandBlockID(), nil
+	deltaSnapshotHeader := &snapshot.DeltaSnapshotHeader{
+		Version:                       snapshot.SupportedFormatVersion,
+		Type:                          snapshot.Delta,
+		TargetMilestoneIndex:          5,
+		TargetMilestoneTimestamp:      0,
+		FullSnapshotTargetMilestoneID: fullSnapshotHeader.TargetMilestoneID,
+		SEPFileOffset:                 0,
+		MilestoneDiffCount:            0,
+		SEPCount:                      0,
 	}
+
+	fileHandle, err := os.Create("snapshot_delta_snapshot.bin")
+	must(err)
+	defer func() { _ = fileHandle.Close() }()
 
 	var currentMsDiff int
 	deltaSnapMsDiffProd := func() (*snapshot.MilestoneDiff, error) {
@@ -225,7 +253,21 @@ func writeDeltaSnapshot() {
 		return msDiff, nil
 	}
 
-	_, err = snapshot.StreamSnapshotDataTo(delta, uint32(time.Now().Unix()), deltaSnapshotHeader, deltaSnapSEPProd, nil, deltaSnapMsDiffProd)
+	var seps, sepsMax = 0, 10
+	deltaSnapSEPProd := func() (iotago.BlockID, error) {
+		seps++
+		if seps > sepsMax {
+			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
+		}
+		return tpkg.RandBlockID(), nil
+	}
+
+	_, err = snapshot.StreamDeltaSnapshotDataTo(
+		fileHandle,
+		deltaSnapshotHeader,
+		deltaSnapMsDiffProd,
+		deltaSnapSEPProd,
+	)
 	must(err)
 }
 
@@ -273,11 +315,11 @@ func staticEd25519Address(fill byte) iotago.Address {
 	return &addr
 }
 
-func utxoOutput(fill byte, amount uint64, msIndex iotago.MilestoneIndex) *utxo.Output {
+func utxoOutput(fill byte, amount uint64, msIndexBooked iotago.MilestoneIndex) *utxo.Output {
 	return utxo.CreateOutput(
 		staticOutputID(fill),
 		staticBlockID(fill),
-		msIndex,
+		msIndexBooked,
 		0,
 		&iotago.BasicOutput{
 			Amount: amount,
@@ -290,9 +332,9 @@ func utxoOutput(fill byte, amount uint64, msIndex iotago.MilestoneIndex) *utxo.O
 	)
 }
 
-func utxoSpent(fill byte, amount uint64, msIndexCreated iotago.MilestoneIndex, msIndexSpent iotago.MilestoneIndex) *utxo.Spent {
+func utxoSpent(fill byte, amount uint64, msIndexBooked iotago.MilestoneIndex, msIndexSpent iotago.MilestoneIndex) *utxo.Spent {
 	r := static32ByteID(fill)
-	txID := iotago.TransactionID{}
-	copy(txID[:], r[:])
-	return utxo.NewSpent(utxoOutput(fill, amount, msIndexCreated), txID, msIndexSpent, 0)
+	txIDSpent := iotago.TransactionID{}
+	copy(txIDSpent[:], r[:])
+	return utxo.NewSpent(utxoOutput(fill, amount, msIndexBooked), txIDSpent, msIndexSpent, 0)
 }

@@ -15,7 +15,6 @@ func snapshotInfo(args []string) error {
 
 	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	snapshotPathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the snapshot file")
-	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapInfo)
@@ -35,10 +34,28 @@ func snapshotInfo(args []string) error {
 	}
 
 	filePath := *snapshotPathFlag
-	readFileHeader, err := snapshot.ReadSnapshotHeaderFromFile(filePath)
+
+	snapshotType, err := snapshot.ReadSnapshotTypeFromFile(filePath)
 	if err != nil {
 		return err
 	}
 
-	return printSnapshotHeaderInfo("", filePath, readFileHeader, *outputJSONFlag)
+	switch snapshotType {
+	case snapshot.Full:
+		fullHeader, err := snapshot.ReadFullSnapshotHeaderFromFile(filePath)
+		if err != nil {
+			return err
+		}
+		return printFullSnapshotHeaderInfo("", filePath, fullHeader)
+
+	case snapshot.Delta:
+		deltaHeader, err := snapshot.ReadDeltaSnapshotHeaderFromFile(filePath)
+		if err != nil {
+			return err
+		}
+		return printDeltaSnapshotHeaderInfo("", filePath, deltaHeader)
+
+	default:
+		return fmt.Errorf("unknown snapshot type: %d", snapshotType)
+	}
 }

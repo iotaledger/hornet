@@ -74,8 +74,8 @@ func deleteReceipt(rt *ReceiptTuple, mutations kvstore.BatchedMutations) error {
 }
 
 // SearchHighestReceiptMigratedAtIndex searches the highest migratedAt of all stored receipts.
-func (u *Manager) SearchHighestReceiptMigratedAtIndex(options ...UTXOIterateOption) (uint32, error) {
-	var highestMigratedAtIndex uint32
+func (u *Manager) SearchHighestReceiptMigratedAtIndex(options ...UTXOIterateOption) (iotago.MilestoneIndex, error) {
+	var highestMigratedAtIndex iotago.MilestoneIndex
 	if err := u.ForEachReceiptTuple(func(rt *ReceiptTuple) bool {
 		if rt.Receipt.MigratedAt > highestMigratedAtIndex {
 			highestMigratedAtIndex = rt.Receipt.MigratedAt
@@ -88,6 +88,7 @@ func (u *Manager) SearchHighestReceiptMigratedAtIndex(options ...UTXOIterateOpti
 }
 
 // ReceiptTupleConsumer is a function that consumes a receipt tuple.
+// Returning false from this function indicates to abort the iteration.
 type ReceiptTupleConsumer func(rt *ReceiptTuple) bool
 
 // ForEachReceiptTuple iterates over all stored receipt tuples.

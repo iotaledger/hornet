@@ -3,6 +3,7 @@ package snapshot
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -22,23 +23,24 @@ var (
 	ErrUnsupportedSnapshot = errors.New("unsupported snapshot data")
 	// ErrWrongMilestoneDiffIndex is returned when the milestone diff that should be applied is not the current or next milestone.
 	ErrWrongMilestoneDiffIndex = errors.New("wrong milestone diff index")
-	// ErrFinalLedgerIndexDoesNotMatchSEPIndex is returned when the final milestone after loading the snapshot is not equal to the solid entry point index.
-	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
+	// ErrFinalLedgerIndexDoesNotMatchTargetIndex is returned when the final milestone after loading the snapshot is not equal to the target index.
+	ErrFinalLedgerIndexDoesNotMatchTargetIndex = errors.New("final ledger index does not match target index")
 	// ErrInvalidSnapshotAvailabilityState is returned when a delta snapshot is available, but no full snapshot is found.
 	ErrInvalidSnapshotAvailabilityState = errors.New("invalid snapshot files availability")
+	// ErrDeltaSnapshotIncompatible is returned when a delta snapshot file does not match full snapshot file.
+	ErrDeltaSnapshotIncompatible = errors.New("delta snapshot file does not match full snapshot file")
 	// ErrNoMoreSEPToProduce is returned when there are no more solid entry points to produce.
 	ErrNoMoreSEPToProduce = errors.New("no more SEP to produce")
 
-	ErrNoSnapshotSpecified                   = errors.New("no snapshot file was specified in the config")
-	ErrNoSnapshotDownloadURL                 = errors.New("no download URL specified for snapshot files in config")
-	ErrSnapshotDownloadWasAborted            = errors.New("snapshot download was aborted")
-	ErrSnapshotDownloadNoValidSource         = errors.New("no valid source found, snapshot download not possible")
-	ErrSnapshotCreationWasAborted            = errors.New("operation was aborted")
-	ErrSnapshotCreationFailed                = errors.New("creating snapshot failed")
-	ErrTargetIndexTooNew                     = errors.New("snapshot target is too new")
-	ErrTargetIndexTooOld                     = errors.New("snapshot target is too old")
-	ErrNotEnoughHistory                      = errors.New("not enough history")
-	ErrExistingDeltaSnapshotWrongLedgerIndex = errors.New("existing delta ledger snapshot has wrong ledger index")
+	ErrNoSnapshotSpecified           = errors.New("no snapshot file was specified in the config")
+	ErrNoSnapshotDownloadURL         = errors.New("no download URL specified for snapshot files in config")
+	ErrSnapshotDownloadWasAborted    = errors.New("snapshot download was aborted")
+	ErrSnapshotDownloadNoValidSource = errors.New("no valid source found, snapshot download not possible")
+	ErrSnapshotCreationWasAborted    = errors.New("operation was aborted")
+	ErrSnapshotCreationFailed        = errors.New("creating snapshot failed")
+	ErrTargetIndexTooNew             = errors.New("snapshot target is too new")
+	ErrTargetIndexTooOld             = errors.New("snapshot target is too old")
+	ErrNotEnoughHistory              = errors.New("not enough history")
 )
 
 type snapshotAvailability byte
@@ -54,17 +56,17 @@ type Manager struct {
 	// the logger used to log events.
 	*logger.WrappedLogger
 
-	storage                              *storagepkg.Storage
-	syncManager                          *syncmanager.SyncManager
-	utxoManager                          *utxo.Manager
-	protocolManager                      *protocol.Manager
-	snapshotFullPath                     string
-	snapshotDeltaPath                    string
-	deltaSnapshotSizeThresholdPercentage float64
-	solidEntryPointCheckThresholdPast    syncmanager.MilestoneIndexDelta
-	solidEntryPointCheckThresholdFuture  syncmanager.MilestoneIndexDelta
-	snapshotDepth                        syncmanager.MilestoneIndexDelta
-	snapshotInterval                     syncmanager.MilestoneIndexDelta
+	storage                                *storagepkg.Storage
+	syncManager                            *syncmanager.SyncManager
+	utxoManager                            *utxo.Manager
+	snapshotFullPath                       string
+	snapshotDeltaPath                      string
+	deltaSnapshotSizeThresholdPercentage   float64
+	deltaSnapshotSizeThresholdMinSizeBytes int64
+	solidEntryPointCheckThresholdPast      syncmanager.MilestoneIndexDelta
+	solidEntryPointCheckThresholdFuture    syncmanager.MilestoneIndexDelta
+	snapshotDepth                          syncmanager.MilestoneIndexDelta
+	snapshotInterval                       syncmanager.MilestoneIndexDelta
 
 	snapshotLock         syncutils.Mutex
 	statusLock           syncutils.RWMutex
@@ -83,6 +85,7 @@ func NewSnapshotManager(
 	snapshotFullPath string,
 	snapshotDeltaPath string,
 	deltaSnapshotSizeThresholdPercentage float64,
+	deltaSnapshotSizeThresholdMinSizeBytes int64,
 	solidEntryPointCheckThresholdPast syncmanager.MilestoneIndexDelta,
 	solidEntryPointCheckThresholdFuture syncmanager.MilestoneIndexDelta,
 	additionalPruningThreshold iotago.MilestoneIndex,
@@ -91,18 +94,18 @@ func NewSnapshotManager(
 ) *Manager {
 
 	return &Manager{
-		WrappedLogger:                        logger.NewWrappedLogger(log),
-		storage:                              storage,
-		syncManager:                          syncManager,
-		utxoManager:                          utxoManager,
-		protocolManager:                      protocolManager,
-		snapshotFullPath:                     snapshotFullPath,
-		snapshotDeltaPath:                    snapshotDeltaPath,
-		deltaSnapshotSizeThresholdPercentage: deltaSnapshotSizeThresholdPercentage,
-		solidEntryPointCheckThresholdPast:    solidEntryPointCheckThresholdPast,
-		solidEntryPointCheckThresholdFuture:  solidEntryPointCheckThresholdFuture,
-		snapshotDepth:                        snapshotDepth,
-		snapshotInterval:                     snapshotInterval,
+		WrappedLogger:                          logger.NewWrappedLogger(log),
+		storage:                                storage,
+		syncManager:                            syncManager,
+		utxoManager:                            utxoManager,
+		snapshotFullPath:                       snapshotFullPath,
+		snapshotDeltaPath:                      snapshotDeltaPath,
+		deltaSnapshotSizeThresholdPercentage:   deltaSnapshotSizeThresholdPercentage,
+		deltaSnapshotSizeThresholdMinSizeBytes: deltaSnapshotSizeThresholdMinSizeBytes,
+		solidEntryPointCheckThresholdPast:      solidEntryPointCheckThresholdPast,
+		solidEntryPointCheckThresholdFuture:    solidEntryPointCheckThresholdFuture,
+		snapshotDepth:                          snapshotDepth,
+		snapshotInterval:                       snapshotInterval,
 		Events: &Events{
 			SnapshotMilestoneIndexChanged:         events.NewEvent(storagepkg.MilestoneIndexCaller),
 			HandledConfirmedMilestoneIndexChanged: events.NewEvent(storagepkg.MilestoneIndexCaller),
@@ -115,11 +118,11 @@ func (s *Manager) MinimumMilestoneIndex() iotago.MilestoneIndex {
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		s.LogPanic("No snapshotInfo found!")
+		s.LogPanic(common.ErrSnapshotInfoNotFound)
 		return 0
 	}
 
-	minimumIndex := snapshotInfo.SnapshotIndex
+	minimumIndex := snapshotInfo.SnapshotIndex()
 	minimumIndex -= s.snapshotDepth
 	minimumIndex -= s.solidEntryPointCheckThresholdPast
 
@@ -136,16 +139,16 @@ func (s *Manager) shouldTakeSnapshot(confirmedMilestoneIndex iotago.MilestoneInd
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		s.LogPanic("No snapshotInfo found!")
+		s.LogPanic(common.ErrSnapshotInfoNotFound)
 		return false
 	}
 
-	if (confirmedMilestoneIndex < s.snapshotDepth+s.snapshotInterval) || (confirmedMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
+	if (confirmedMilestoneIndex < s.snapshotDepth+s.snapshotInterval) || (confirmedMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex()+1+s.solidEntryPointCheckThresholdPast {
 		// Not enough history to calculate solid entry points
 		return false
 	}
 
-	return confirmedMilestoneIndex-(s.snapshotDepth+s.snapshotInterval) >= snapshotInfo.SnapshotIndex
+	return confirmedMilestoneIndex-(s.snapshotDepth+s.snapshotInterval) >= snapshotInfo.SnapshotIndex()
 }
 
 func checkSnapshotLimits(
@@ -163,13 +166,13 @@ func checkSnapshotLimits(
 	minimumIndex := solidEntryPointCheckThresholdPast + 1
 	maximumIndex := confirmedMilestoneIndex - solidEntryPointCheckThresholdFuture
 
-	if checkIncreasingSnapshotIndex && minimumIndex < snapshotInfo.SnapshotIndex+1 {
-		minimumIndex = snapshotInfo.SnapshotIndex + 1
+	if checkIncreasingSnapshotIndex && minimumIndex < snapshotInfo.SnapshotIndex()+1 {
+		minimumIndex = snapshotInfo.SnapshotIndex() + 1
 	}
 
-	if minimumIndex < snapshotInfo.PruningIndex+1+solidEntryPointCheckThresholdPast {
+	if minimumIndex < snapshotInfo.PruningIndex()+1+solidEntryPointCheckThresholdPast {
 		// since we always generate new solid entry points, we need enough history
-		minimumIndex = snapshotInfo.PruningIndex + 1 + solidEntryPointCheckThresholdPast
+		minimumIndex = snapshotInfo.PruningIndex() + 1 + solidEntryPointCheckThresholdPast
 	}
 
 	switch {
@@ -194,14 +197,7 @@ func (s *Manager) setIsSnapshotting(value bool) {
 func (s *Manager) CreateFullSnapshot(ctx context.Context, targetIndex iotago.MilestoneIndex, filePath string, writeToDatabase bool) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
-	return s.createSnapshotWithoutLocking(ctx, Full, targetIndex, filePath, writeToDatabase)
-}
-
-// CreateDeltaSnapshot creates a delta snapshot for the given target milestone index.
-func (s *Manager) CreateDeltaSnapshot(ctx context.Context, targetIndex iotago.MilestoneIndex, filePath string, writeToDatabase bool, snapshotFullPath ...string) error {
-	s.snapshotLock.Lock()
-	defer s.snapshotLock.Unlock()
-	return s.createSnapshotWithoutLocking(ctx, Delta, targetIndex, filePath, writeToDatabase, snapshotFullPath...)
+	return s.createFullSnapshotWithoutLocking(ctx, targetIndex, filePath, writeToDatabase)
 }
 
 // optimalSnapshotType returns the optimal snapshot type
@@ -219,7 +215,6 @@ func (s *Manager) optimalSnapshotType() (Type, error) {
 		// full snapshot doesn't exist => create a full snapshot
 		return Full, nil
 	}
-
 	if err != nil {
 		// there was another unknown error
 		return Full, err
@@ -232,10 +227,16 @@ func (s *Manager) optimalSnapshotType() (Type, error) {
 		// delta snapshot doesn't exist => create a delta snapshot
 		return Delta, nil
 	}
-
 	if err != nil {
 		// there was another unknown error
 		return Delta, err
+	}
+
+	// both files exist => check the size of the delta snapshot
+	// if the size of the delta snapshot is smaller than the minimum threshold,
+	// the existing delta snapshot file always gets updated.
+	if deltaSnapshotFileInfo.Size() <= s.deltaSnapshotSizeThresholdMinSizeBytes {
+		return Delta, nil
 	}
 
 	// if the file size of the last delta snapshot is bigger than a certain percentage
@@ -277,7 +278,14 @@ func (s *Manager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirme
 			return
 		}
 
-		if err := s.createSnapshotWithoutLocking(ctx, snapshotType, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true); err != nil {
+		switch snapshotType {
+		case Full:
+			err = s.createFullSnapshotWithoutLocking(ctx, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true)
+		case Delta:
+			err = s.createDeltaSnapshotWithoutLocking(ctx, confirmedMilestoneIndex-s.snapshotDepth)
+		}
+
+		if err != nil {
 			if errors.Is(err, common.ErrCritical) {
 				s.LogPanicf("%s: %s", ErrSnapshotCreationFailed, err)
 			}
@@ -286,4 +294,12 @@ func (s *Manager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirme
 	}
 
 	s.Events.HandledConfirmedMilestoneIndexChanged.Trigger(confirmedMilestoneIndex)
+}
+
+func FormatSnapshotTimestamp(timestamp uint32) string {
+	result := "unknown"
+	if timestamp != 0 {
+		result = time.Unix(int64(timestamp), 0).Truncate(time.Second).String()
+	}
+	return result
 }

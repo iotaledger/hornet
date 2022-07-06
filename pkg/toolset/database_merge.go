@@ -93,8 +93,8 @@ func databaseMerge(args []string) error {
 		}
 	}
 
-	// TODO: adapt to new protocol parameter logic
-	protoParas := &iotago.ProtocolParameters{}
+	// TODO: needs to be adapted for when protocol parameters struct changes
+	protoParams := &iotago.ProtocolParameters{}
 
 	var tangleStoreSource *storage.Storage = nil
 	if len(*databasePathSourceFlag) > 0 {
@@ -151,7 +151,7 @@ func databaseMerge(args []string) error {
 
 	errMerge := mergeDatabase(
 		getGracefulStopContext(),
-		protoParas,
+		protoParams,
 		milestoneManager,
 		tangleStoreSource,
 		tangleStoreTarget,
@@ -185,7 +185,7 @@ func databaseMerge(args []string) error {
 // copyMilestoneCone copies all blocks of a milestone cone to the target storage.
 func copyMilestoneCone(
 	ctx context.Context,
-	protoParas *iotago.ProtocolParameters,
+	protoParams *iotago.ProtocolParameters,
 	msIndex iotago.MilestoneIndex,
 	milestonePayload *iotago.Milestone,
 	parentsTraverserInterface dag.ParentsTraverserInterface,
@@ -222,7 +222,7 @@ func copyMilestoneCone(
 		defer cachedBlock.Release(true) // block -1
 
 		// store the block in the target storage
-		cachedBlockNew, err := storeBlock(protoParas, storeBlockTarget, milestoneManager, cachedBlock.Block().Block()) // block +1
+		cachedBlockNew, err := storeBlock(protoParams, storeBlockTarget, milestoneManager, cachedBlock.Block().Block()) // block +1
 		if err != nil {
 			return false, err
 		}
@@ -277,7 +277,8 @@ type confStats struct {
 // target storage, confirms the milestone and applies the ledger changes.
 func copyAndVerifyMilestoneCone(
 	ctx context.Context,
-	protoParas *iotago.ProtocolParameters,
+	protoParams *iotago.ProtocolParameters,
+	genesisMilestoneIndex iotago.MilestoneIndex,
 	msIndex iotago.MilestoneIndex,
 	getMilestonePayload func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error),
 	parentsTraverserInterfaceSource dag.ParentsTraverserInterface,
@@ -306,7 +307,7 @@ func copyAndVerifyMilestoneCone(
 
 	if err := copyMilestoneCone(
 		context.Background(), // we do not want abort the copying of the blocks itself
-		protoParas,
+		protoParams,
 		msIndex,
 		milestonePayload,
 		parentsTraverserInterfaceSource,
@@ -322,16 +323,22 @@ func copyAndVerifyMilestoneCone(
 		utxoManagerTarget,
 		parentsTraverserStorageTarget,
 		cachedBlockFuncTarget,
-		protoParas,
+		protoParams,
+		genesisMilestoneIndex,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
 		whiteflag.DefaultSetBlockReferencedFunc,
 		nil,
+		// Hint: Ledger is write locked
 		nil,
+		// Hint: Ledger is write locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
 	)
 	if err != nil {
@@ -351,7 +358,7 @@ func copyAndVerifyMilestoneCone(
 // mergeViaAPI copies a milestone from a remote node to the target database via API.
 func mergeViaAPI(
 	ctx context.Context,
-	protoParas *iotago.ProtocolParameters,
+	protoParams *iotago.ProtocolParameters,
 	msIndex iotago.MilestoneIndex,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
@@ -363,7 +370,7 @@ func mergeViaAPI(
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		block, err := client.BlockByBlockID(ctx, blockID, protoParas)
+		block, err := client.BlockByBlockID(ctx, blockID, protoParams)
 		if err != nil {
 			return nil, err
 		}
@@ -383,7 +390,12 @@ func mergeViaAPI(
 		return ms, nil
 	}
 
-	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getBlockViaAPI)
+	if err := checkSnapshotInfo(storeTarget); err != nil {
+		return err
+	}
+	snapshotInfoTarget := storeTarget.SnapshotInfo()
+
+	proxyStorage, err := NewProxyStorage(protoParams, storeTarget, milestoneManager, getBlockViaAPI)
 	if err != nil {
 		return err
 	}
@@ -393,7 +405,8 @@ func mergeViaAPI(
 
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
-		protoParas,
+		protoParams,
+		snapshotInfoTarget.GenesisMilestoneIndex(),
 		msIndex,
 		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 			return getMilestonePayloadViaAPI(client, msIndex)
@@ -431,13 +444,18 @@ func mergeViaAPI(
 // mergeViaSourceDatabase copies a milestone from the source database to the target database.
 func mergeViaSourceDatabase(
 	ctx context.Context,
-	protoParas *iotago.ProtocolParameters,
+	protoParams *iotago.ProtocolParameters,
 	msIndex iotago.MilestoneIndex,
 	storeSource *storage.Storage,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
-	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, storeSource.Block)
+	if err := checkSnapshotInfo(storeTarget); err != nil {
+		return err
+	}
+	snapshotInfoTarget := storeTarget.SnapshotInfo()
+
+	proxyStorage, err := NewProxyStorage(protoParams, storeTarget, milestoneManager, storeSource.Block)
 	if err != nil {
 		return err
 	}
@@ -447,7 +465,8 @@ func mergeViaSourceDatabase(
 
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
-		protoParas,
+		protoParams,
+		snapshotInfoTarget.GenesisMilestoneIndex(),
 		msIndex,
 		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
 			return getMilestonePayloadFromStorage(storeSource, msIndex)
@@ -487,7 +506,7 @@ func mergeViaSourceDatabase(
 // if the target database has no history at all, a genesis snapshot is loaded.
 func mergeDatabase(
 	ctx context.Context,
-	protoParas *iotago.ProtocolParameters,
+	protoParams *iotago.ProtocolParameters,
 	milestoneManager *milestonemanager.MilestoneManager,
 	tangleStoreSource *storage.Storage,
 	tangleStoreTarget *storage.Storage,
@@ -499,35 +518,49 @@ func mergeDatabase(
 
 	tangleStoreSourceAvailable := tangleStoreSource != nil
 
+	if err := checkSnapshotInfo(tangleStoreTarget); err != nil {
+		return err
+	}
+	snapshotInfoTarget := tangleStoreTarget.SnapshotInfo()
+
 	var sourceNetworkID uint64
 	var msIndexStartSource, msIndexEndSource iotago.MilestoneIndex = 0, 0
 	msIndexStartTarget, msIndexEndTarget := getStorageMilestoneRange(tangleStoreTarget)
 	if tangleStoreSourceAvailable {
-		sourceNetworkID = tangleStoreSource.SnapshotInfo().NetworkID
+		protoParamsSource, err := tangleStoreSource.CurrentProtocolParameters()
+		if err != nil {
+			return errors.Wrapf(ErrCritical, "loading source protocol parameters failed: %s", err.Error())
+		}
+		sourceNetworkID = protoParamsSource.NetworkID()
 		msIndexStartSource, msIndexEndSource = getStorageMilestoneRange(tangleStoreSource)
 	}
 
 	if msIndexEndTarget == 0 {
 		// no ledger state in database available => load the genesis snapshot
 		println("loading genesis snapshot...")
-		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, protoParas, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
+		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
 			return errors.Wrapf(ErrCritical, "loading genesis snapshot failed: %s", err.Error())
 		}
 
 		// set the new start and end indexes after applying the genesis snapshot
-		msIndexStartTarget, msIndexEndTarget = tangleStoreTarget.SnapshotInfo().EntryPointIndex, tangleStoreTarget.SnapshotInfo().EntryPointIndex
+		msIndexStartTarget, msIndexEndTarget = snapshotInfoTarget.EntryPointIndex(), snapshotInfoTarget.EntryPointIndex()
 	}
 
 	if tangleStoreSourceAvailable {
 		println(fmt.Sprintf("milestone range in database: %d-%d (source)", msIndexStartSource, msIndexEndSource))
+
+		// check network ID
+		protoParamsTarget, err := tangleStoreTarget.CurrentProtocolParameters()
+		if err != nil {
+			return errors.Wrapf(ErrCritical, "loading target protocol parameters failed: %s", err.Error())
+		}
+
+		targetNetworkID := protoParamsTarget.NetworkID()
+		if sourceNetworkID != targetNetworkID {
+			return fmt.Errorf("source storage networkID not equal to target storage networkID (%d != %d)", sourceNetworkID, targetNetworkID)
+		}
 	}
 	println(fmt.Sprintf("milestone range in database: %d-%d (target)", msIndexStartTarget, msIndexEndTarget))
-
-	// check network ID
-	targetNetworkID := tangleStoreTarget.SnapshotInfo().NetworkID
-	if tangleStoreSourceAvailable && sourceNetworkID != targetNetworkID {
-		return fmt.Errorf("source storage networkID not equal to target storage networkID (%d != %d)", sourceNetworkID, targetNetworkID)
-	}
 
 	msIndexStart := msIndexEndTarget + 1
 	msIndexEnd := msIndexEndSource
@@ -553,7 +586,7 @@ func mergeDatabase(
 			print(fmt.Sprintf("get milestone %d via API... ", msIndex))
 			if err := mergeViaAPI(
 				ctx,
-				protoParas,
+				protoParams,
 				msIndex,
 				tangleStoreTarget,
 				milestoneManager,
@@ -570,7 +603,7 @@ func mergeDatabase(
 		print(fmt.Sprintf("get milestone %d via source database (source range: %d-%d)... ", msIndex, msIndexStartSource, msIndexEndSource))
 		if err := mergeViaSourceDatabase(
 			ctx,
-			protoParas,
+			protoParams,
 			msIndex,
 			tangleStoreSource,
 			tangleStoreTarget,
@@ -608,7 +641,7 @@ type GetBlockFunc func(blockID iotago.BlockID) (*iotago.Block, error)
 // ProxyStorage is used to temporarily store changes to an intermediate storage,
 // which then can be merged with the target store in a single commit.
 type ProxyStorage struct {
-	protoParas       *iotago.ProtocolParameters
+	protoParams      *iotago.ProtocolParameters
 	storeTarget      *storage.Storage
 	storeProxy       *storage.Storage
 	milestoneManager *milestonemanager.MilestoneManager
@@ -616,7 +649,7 @@ type ProxyStorage struct {
 }
 
 func NewProxyStorage(
-	protoParas *iotago.ProtocolParameters,
+	protoParams *iotago.ProtocolParameters,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
 	getBlockFunc GetBlockFunc) (*ProxyStorage, error) {
@@ -627,7 +660,7 @@ func NewProxyStorage(
 	}
 
 	return &ProxyStorage{
-		protoParas:       protoParas,
+		protoParams:      protoParams,
 		storeTarget:      storeTarget,
 		storeProxy:       storeProxy,
 		milestoneManager: milestoneManager,
@@ -644,7 +677,7 @@ func (s *ProxyStorage) CachedBlock(blockID iotago.BlockID) (*storage.CachedBlock
 				return nil, err
 			}
 
-			cachedBlock, err := storeBlock(s.protoParas, s.storeProxy, s.milestoneManager, block) // block +1
+			cachedBlock, err := storeBlock(s.protoParams, s.storeProxy, s.milestoneManager, block) // block +1
 			if err != nil {
 				return nil, err
 			}

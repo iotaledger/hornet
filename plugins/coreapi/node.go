@@ -48,7 +48,7 @@ func info() (*infoResponse, error) {
 	var pruningIndex iotago.MilestoneIndex
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo != nil {
-		pruningIndex = snapshotInfo.PruningIndex
+		pruningIndex = snapshotInfo.PruningIndex()
 	}
 
 	return &infoResponse{

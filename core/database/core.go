@@ -25,6 +25,7 @@ const (
 	CfgTangleDeleteDatabase = "deleteDatabase"
 	// CfgTangleDeleteAll defines whether to delete the database and snapshots at startup
 	CfgTangleDeleteAll = "deleteAll"
+
 	// TangleDatabaseDirectoryName defines the subfolder for the tangle database
 	TangleDatabaseDirectoryName = "tangle"
 	// UTXODatabaseDirectoryName defines the subfolder for the UTXO database
@@ -226,7 +227,12 @@ func provide(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func(deps syncManagerDeps) *syncmanager.SyncManager {
-		sync, err := syncmanager.New(deps.UTXOManager, syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth))
+		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
+		if err != nil {
+			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
+		}
+
+		sync, err := syncmanager.New(ledgerIndex, deps.ProtocolManager)
 		if err != nil {
 			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
 		}

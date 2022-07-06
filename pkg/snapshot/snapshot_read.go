@@ -8,30 +8,61 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+// returns an in-memory copy of the ProtocolStorage of the dbStorage.
+func newProtocolStorageGetterFunc(dbStorage *storage.Storage) ProtocolStorageGetterFunc {
+	return func() (*storage.ProtocolStorage, error) {
+		// initialize a temporary protocol storage in memory
+		protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
+
+		// copy all existing protocol parameters milestone options to the new storage.
+		var innerErr error
+		if err := dbStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+			if err := protocolStorage.StoreProtocolParametersMilestoneOption(protoParamsMsOption); err != nil {
+				innerErr = err
+				return false
+			}
+			return true
+		}); err != nil {
+			return nil, fmt.Errorf("failed to iterate over protocol parameters milestone options: %w", err)
+		}
+		if innerErr != nil {
+			return nil, innerErr
+		}
+
+		return protocolStorage, nil
+	}
+}
+
 // returns a file header consumer, which stores the ledger milestone index up on execution in the database.
 // the given targetHeader is populated with the value of the read file header.
-func newFileHeaderConsumer(targetHeader *ReadFileHeader, utxoManager *utxo.Manager, wantedType Type, wantedNetworkID ...uint64) HeaderConsumerFunc {
-	return func(header *ReadFileHeader) error {
+func newFullHeaderConsumer(targetFullHeader *FullSnapshotHeader, dbStorage *storage.Storage, utxoManager *utxo.Manager, targetNetworkID ...uint64) FullHeaderConsumerFunc {
+	return func(header *FullSnapshotHeader) error {
 		if header.Version != SupportedFormatVersion {
 			return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file version is %d but this HORNET version only supports %v", header.Version, SupportedFormatVersion)
 		}
 
-		if header.Type != wantedType {
-			return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file is of type %s but expected was %s", snapshotNames[header.Type], snapshotNames[wantedType])
+		if header.Type != Full {
+			return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file is of type %s but expected was %s", snapshotNames[header.Type], snapshotNames[Full])
 		}
 
-		if len(wantedNetworkID) > 0 {
-			if header.NetworkID != wantedNetworkID[0] {
-				return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file network ID is %d but this HORNET is meant for %d", header.NetworkID, wantedNetworkID[0])
+		if len(targetNetworkID) > 0 {
+			fullHeaderProtoParams, err := header.ProtocolParameters()
+			if err != nil {
+				return err
+			}
+
+			if fullHeaderProtoParams.NetworkID() != targetNetworkID[0] {
+				return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file network ID is %d but this HORNET is meant for %d", fullHeaderProtoParams.NetworkID(), targetNetworkID[0])
 			}
 		}
 
-		*targetHeader = *header
+		*targetFullHeader = *header
 
 		if err := utxoManager.StoreLedgerIndex(header.LedgerMilestoneIndex); err != nil {
 			return err
@@ -41,25 +72,48 @@ func newFileHeaderConsumer(targetHeader *ReadFileHeader, utxoManager *utxo.Manag
 	}
 }
 
+// returns a file header consumer, which stores the ledger milestone index up on execution in the database.
+// the given targetHeader is populated with the value of the read file header.
+func newDeltaHeaderConsumer(targetHeader *DeltaSnapshotHeader, utxoManager *utxo.Manager) DeltaHeaderConsumerFunc {
+	return func(header *DeltaSnapshotHeader) error {
+		if header.Version != SupportedFormatVersion {
+			return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file version is %d but this HORNET version only supports %v", header.Version, SupportedFormatVersion)
+		}
+
+		if header.Type != Delta {
+			return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file is of type %s but expected was %s", snapshotNames[header.Type], snapshotNames[Delta])
+		}
+
+		*targetHeader = *header
+
+		return nil
+	}
+}
+
 // returns a solid entry point consumer which stores them into the database.
-// the SEPs are stored with the corresponding SEP milestone index from the snapshot.
-func newSEPsConsumer(dbStorage *storage.Storage, header *ReadFileHeader) SEPConsumerFunc {
+// the SEPs are stored with the corresponding target milestone index from the snapshot.
+func newSEPsConsumer(dbStorage *storage.Storage) SEPConsumerFunc {
 	// note that we only get the hash of the SEP block instead
 	// of also its associated oldest cone root index, since the index
 	// of the snapshot milestone will be below max depth anyway.
 	// this information was included in pre Chrysalis Phase 2 snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
-	return func(solidEntryPointBlockID iotago.BlockID) error {
-		dbStorage.SolidEntryPointsAddWithoutLocking(solidEntryPointBlockID, header.SEPMilestoneIndex)
+	return func(solidEntryPointBlockID iotago.BlockID, targetMilestoneIndex iotago.MilestoneIndex) error {
+		dbStorage.SolidEntryPointsAddWithoutLocking(solidEntryPointBlockID, targetMilestoneIndex)
 		return nil
+	}
+}
+
+// returns a ProtocolParamsMilestoneOpt consumer storing them into the database.
+func newProtocolParamsMilestoneOptConsumerFunc(dbStorage *storage.Storage) ProtocolParamsMilestoneOptConsumerFunc {
+	return func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) error {
+		return dbStorage.StoreProtocolParametersMilestoneOption(protoParamsMsOption)
 	}
 }
 
 // returns an output consumer storing them into the database.
 func NewOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
-	return func(output *utxo.Output) error {
-		return utxoManager.AddUnspentOutput(output)
-	}
+	return utxoManager.AddUnspentOutput
 }
 
 // returns a treasury output consumer which overrides an existing unspent treasury output with the new one.
@@ -100,18 +154,17 @@ func NewMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 		case ledgerIndex+1 == msIndex:
 			return utxoManager.ApplyConfirmation(msIndex, msDiff.Created, msDiff.Consumed, treasuryMut, rt)
 		default:
-			return ErrWrongMilestoneDiffIndex
+			return errors.Wrapf(ErrWrongMilestoneDiffIndex, "ledgerIndex: %d, msDiffIndex: %d", ledgerIndex, msIndex)
 		}
 	}
 }
 
-// loadSnapshotFileToStorage loads a snapshot file from the given file path into the storage.
-func loadSnapshotFileToStorage(
-	shutdownCtx context.Context,
+// loadFullSnapshotFileToStorage loads a snapshot file from the given file path into the storage.
+func loadFullSnapshotFileToStorage(
+	ctx context.Context,
 	dbStorage *storage.Storage,
-	snapshotType Type,
 	filePath string,
-	protoParas *iotago.ProtocolParameters) (header *ReadFileHeader, err error) {
+	targetNetworkID uint64) (fullHeader *FullSnapshotHeader, err error) {
 
 	dbStorage.WriteLockSolidEntryPoints()
 	dbStorage.ResetSolidEntryPointsWithoutLocking()
@@ -125,27 +178,39 @@ func loadSnapshotFileToStorage(
 	var lsFile *os.File
 	lsFile, err = os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("unable to open %s snapshot file for import: %w", snapshotNames[snapshotType], err)
+		return nil, fmt.Errorf("unable to open %s snapshot file for import: %w", snapshotNames[Full], err)
 	}
 	defer func() { _ = lsFile.Close() }()
 
-	header = &ReadFileHeader{}
-	headerConsumer := newFileHeaderConsumer(header, dbStorage.UTXOManager(), snapshotType, protoParas.NetworkID())
-	sepConsumer := newSEPsConsumer(dbStorage, header)
-	var outputConsumer OutputConsumerFunc
-	var treasuryOutputConsumer UnspentTreasuryOutputConsumerFunc
-	if snapshotType == Full {
-		// not needed if Delta snapshot is applied
-		outputConsumer = NewOutputConsumer(dbStorage.UTXOManager())
-		treasuryOutputConsumer = NewUnspentTreasuryOutputConsumer(dbStorage.UTXOManager())
-	}
+	fullHeader = &FullSnapshotHeader{}
+	fullHeaderConsumer := newFullHeaderConsumer(fullHeader, dbStorage, dbStorage.UTXOManager(), targetNetworkID)
+	treasuryOutputConsumer := NewUnspentTreasuryOutputConsumer(dbStorage.UTXOManager())
+	outputConsumer := NewOutputConsumer(dbStorage.UTXOManager())
 	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
+	sepConsumer := newSEPsConsumer(dbStorage)
+	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
 
-	if err = StreamSnapshotDataFrom(lsFile, protoParas, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
-		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)
+	if err = StreamFullSnapshotDataFrom(
+		lsFile,
+		fullHeaderConsumer,
+		treasuryOutputConsumer,
+		outputConsumer,
+		msDiffConsumer,
+		sepConsumer,
+		protocolParamsMilestoneOptConsumer); err != nil {
+		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[Full], err)
 	}
 
-	if err = dbStorage.UTXOManager().CheckLedgerState(protoParas); err != nil {
+	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+	if err != nil {
+		return nil, err
+	}
+
+	if fullHeaderProtoParams.NetworkID() != targetNetworkID {
+		return nil, fmt.Errorf("node is configured to operate for networkID %d but the stored snapshot data corresponds to %d", targetNetworkID, fullHeaderProtoParams.NetworkID())
+	}
+
+	if err := dbStorage.CheckLedgerState(); err != nil {
 		return nil, err
 	}
 
@@ -155,47 +220,115 @@ func loadSnapshotFileToStorage(
 		return nil, err
 	}
 
-	if ledgerIndex != header.SEPMilestoneIndex {
-		return nil, errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchSEPIndex, "%d != %d", ledgerIndex, header.SEPMilestoneIndex)
+	if ledgerIndex != fullHeader.TargetMilestoneIndex {
+		return nil, errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchTargetIndex, "%d != %d", ledgerIndex, fullHeader.TargetMilestoneIndex)
 	}
 
-	if err = dbStorage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, time.Unix(int64(header.Timestamp), 0)); err != nil {
+	if err = dbStorage.SetInitialSnapshotInfo(fullHeader.GenesisMilestoneIndex, fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, time.Unix(int64(fullHeader.TargetMilestoneTimestamp), 0)); err != nil {
 		return nil, fmt.Errorf("SetSnapshotMilestone failed: %w", err)
 	}
 
-	return header, nil
+	return fullHeader, nil
+}
+
+// loadSnapshotFileToStorage loads a snapshot file from the given file path into the storage.
+// The current milestone index of the protocol manager must be set to the
+// target index of the full snapshot file before entering this function.
+func loadDeltaSnapshotFileToStorage(
+	ctx context.Context,
+	dbStorage *storage.Storage,
+	filePath string) (deltaHeader *DeltaSnapshotHeader, err error) {
+
+	dbStorage.WriteLockSolidEntryPoints()
+	dbStorage.ResetSolidEntryPointsWithoutLocking()
+	defer func() {
+		if errStore := dbStorage.StoreSolidEntryPointsWithoutLocking(); err == nil && errStore != nil {
+			err = errStore
+		}
+		dbStorage.WriteUnlockSolidEntryPoints()
+	}()
+
+	var lsFile *os.File
+	lsFile, err = os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open %s snapshot file for import: %w", snapshotNames[Delta], err)
+	}
+	defer func() { _ = lsFile.Close() }()
+
+	deltaHeader = &DeltaSnapshotHeader{}
+	protocolStorageGetter := newProtocolStorageGetterFunc(dbStorage)
+	deltaHeaderConsumer := newDeltaHeaderConsumer(deltaHeader, dbStorage.UTXOManager())
+	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
+	sepConsumer := newSEPsConsumer(dbStorage)
+	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
+
+	if err = StreamDeltaSnapshotDataFrom(
+		lsFile,
+		protocolStorageGetter,
+		deltaHeaderConsumer,
+		msDiffConsumer,
+		sepConsumer,
+		protocolParamsMilestoneOptConsumer); err != nil {
+		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[Delta], err)
+	}
+
+	if err := dbStorage.CheckLedgerState(); err != nil {
+		return nil, err
+	}
+
+	var ledgerIndex iotago.MilestoneIndex
+	ledgerIndex, err = dbStorage.UTXOManager().ReadLedgerIndex()
+	if err != nil {
+		return nil, err
+	}
+
+	if ledgerIndex != deltaHeader.TargetMilestoneIndex {
+		return nil, errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchTargetIndex, "%d != %d", ledgerIndex, deltaHeader.TargetMilestoneIndex)
+	}
+
+	if err = dbStorage.UpdateSnapshotInfo(deltaHeader.TargetMilestoneIndex, deltaHeader.TargetMilestoneIndex, deltaHeader.TargetMilestoneIndex, time.Unix(int64(deltaHeader.TargetMilestoneTimestamp), 0)); err != nil {
+		return nil, fmt.Errorf("SetSnapshotMilestone failed: %w", err)
+	}
+
+	return deltaHeader, nil
 }
 
 // LoadSnapshotFilesToStorage loads the snapshot files from the given file paths into the storage.
-func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, protoParas *iotago.ProtocolParameters, fullPath string, deltaPath ...string) (*ReadFileHeader, *ReadFileHeader, error) {
+func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, fullPath string, deltaPath ...string) (*FullSnapshotHeader, *DeltaSnapshotHeader, error) {
 
-	if len(deltaPath) > 0 && deltaPath[0] != "" {
-
-		// check that the delta snapshot file's ledger index equals the snapshot index of the full one
-		fullHeader, err := ReadSnapshotHeaderFromFile(fullPath)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		deltaHeader, err := ReadSnapshotHeaderFromFile(deltaPath[0])
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if deltaHeader.LedgerMilestoneIndex != fullHeader.SEPMilestoneIndex {
-			return nil, nil, fmt.Errorf("%w: delta snapshot's ledger index %d does not correspond to full snapshot's SEPs index %d",
-				ErrSnapshotsNotMergeable, deltaHeader.LedgerMilestoneIndex, fullHeader.SEPMilestoneIndex)
-		}
-	}
-
-	var fullSnapshotHeader, deltaSnapshotHeader *ReadFileHeader
-	fullSnapshotHeader, err := loadSnapshotFileToStorage(ctx, dbStorage, Full, fullPath, protoParas)
+	fullHeader, err := ReadFullSnapshotHeaderFromFile(fullPath)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if len(deltaPath) > 0 && deltaPath[0] != "" {
-		deltaSnapshotHeader, err = loadSnapshotFileToStorage(ctx, dbStorage, Delta, deltaPath[0], protoParas)
+		// check that the delta snapshot file's ledger index equals the snapshot index of the full one
+
+		deltaHeader, err := ReadDeltaSnapshotHeaderFromFile(deltaPath[0])
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if deltaHeader.FullSnapshotTargetMilestoneID != fullHeader.TargetMilestoneID {
+			// delta snapshot file doesn't fit the full snapshot file
+			return nil, nil, fmt.Errorf("%w: full snapshot target milestone ID of the delta snapshot does not fit the actual full snapshot target milestone ID (%s != %s)", ErrSnapshotsNotMergeable, deltaHeader.FullSnapshotTargetMilestoneID.ToHex(), fullHeader.TargetMilestoneID.ToHex())
+		}
+	}
+
+	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var fullSnapshotHeader *FullSnapshotHeader
+	var deltaSnapshotHeader *DeltaSnapshotHeader
+	fullSnapshotHeader, err = loadFullSnapshotFileToStorage(ctx, dbStorage, fullPath, fullHeaderProtoParams.NetworkID())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(deltaPath) > 0 && deltaPath[0] != "" {
+		deltaSnapshotHeader, err = loadDeltaSnapshotFileToStorage(ctx, dbStorage, deltaPath[0])
 		if err != nil {
 			return nil, nil, err
 		}

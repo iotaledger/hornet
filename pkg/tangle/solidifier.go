@@ -32,7 +32,7 @@ type ConfirmedMilestoneMetric struct {
 
 // TriggerSolidifier can be used to manually trigger the solidifier from other plugins.
 func (t *Tangle) TriggerSolidifier() {
-	t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), true)
+	t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
 }
 
 func (t *Tangle) markBlockAsSolid(cachedBlockMeta *storage.CachedMetadata) {
@@ -314,7 +314,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		// rerun to solidify the older one
 		t.setSolidifierMilestoneIndex(0)
 
-		t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), true)
+		t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
 		return
 	}
 
@@ -331,12 +331,19 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 	var newReceipt *iotago.ReceiptMilestoneOpt
 	var newConfirmation *whiteflag.Confirmation
 
+	snapshotInfo := t.storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		t.LogPanic(common.ErrSnapshotInfoNotFound)
+		return
+	}
+
 	timeStart = time.Now()
 	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(
 		t.storage.UTXOManager(),
 		memcachedTraverserStorage,
 		blocksMemcache.CachedBlock,
 		t.protocolManager.Current(),
+		snapshotInfo.GenesisMilestoneIndex(),
 		milestonePayloadToSolidify,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
@@ -465,7 +472,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		return
 	}
 
-	t.milestoneSolidifierWorkerPool.TrySubmit(iotago.MilestoneIndex(0), false)
+	t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, false)
 }
 
 func (t *Tangle) calcConfirmedMilestoneMetric(milestonePayloadToSolidify *iotago.Milestone) (*ConfirmedMilestoneMetric, error) {

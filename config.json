@@ -15,17 +15,7 @@
     "alias": "HORNET node"
   },
   "protocol": {
-    "parameters": {
-      "version": 2,
-      "networkName": "alphanet-7",
-      "bech32HRP": "rms",
-      "minPoWScore": 1000.0,
-      "belowMaxDepth": 15,
-      "vByteCost": 500,
-      "vByteFactorData": 1,
-      "vByteFactorKey": 10,
-      "tokenSupply": 2779530283277761
-    },
+    "targetNetworkName": "alphanet-7",
     "milestonePublicKeyCount": 3,
     "baseToken": {
       "name": "Shimmer",
@@ -116,6 +106,7 @@
     "fullPath": "alphanet/snapshots/full_snapshot.bin",
     "deltaPath": "alphanet/snapshots/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
+    "deltaSizeThresholdMinSize": "50M",
     "downloadURLs": [
       {
         "full": "https://files.alphanet.iotaledger.net/snapshots/latest-full_snapshot.bin",

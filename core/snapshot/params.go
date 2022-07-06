@@ -18,6 +18,9 @@ type ParametersSnapshots struct {
 	// DeltaSizeThresholdPercentage defines whether to create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot
 	// (0.0 = always create delta snapshot to keep ms diff history)
 	DeltaSizeThresholdPercentage float64 `default:"50.0" usage:"create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history)"`
+	// DeltaSizeThresholdMinSize defines the minimum size of the delta snapshot file before the threshold percentage condition is checked
+	// (below that size the delta snapshot is always created)
+	DeltaSizeThresholdMinSize string `default:"50M" usage:"the minimum size of the delta snapshot file before the threshold percentage condition is checked (below that size the delta snapshot is always created)"`
 	// DownloadURLs defines the URLs to load the snapshot files from.
 	DownloadURLs []*snapshot.DownloadTarget `noflag:"true" usage:"URLs to load the snapshot files from"`
 }

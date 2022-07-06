@@ -13,6 +13,8 @@ var (
 	ErrBlockNotFound = errors.New("block not found")
 	// ErrNodeNotSynced is returned when the node is not synchronized.
 	ErrNodeNotSynced = errors.New("node is not synchronized")
+	// ErrSnapshotInfoNotFound is returned when the snapshot info is not found in the database.
+	ErrSnapshotInfoNotFound = errors.New("snapshot info not found")
 )
 
 // CriticalError wraps the given error as a critical error.

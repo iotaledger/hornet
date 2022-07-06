@@ -75,36 +75,17 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if request.FullIndex == nil && request.DeltaIndex == nil {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "at least fullIndex or deltaIndex has to be specified")
+	if request.Index == 0 {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "index needs to be specified")
 	}
 
-	var fullIndex, deltaIndex iotago.MilestoneIndex
-	var fullSnapshotFilePath, deltaSnapshotFilePath string
-
-	if request.FullIndex != nil {
-		fullIndex = *request.FullIndex
-		fullSnapshotFilePath = filepath.Join(filepath.Dir(deps.SnapshotsFullPath), fmt.Sprintf("full_snapshot_%d.bin", fullIndex))
-
-		if err := deps.SnapshotManager.CreateFullSnapshot(Plugin.Daemon().ContextStopped(), fullIndex, fullSnapshotFilePath, false); err != nil {
-			return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating full snapshot failed: %s", err)
-		}
-	}
-
-	if request.DeltaIndex != nil {
-		deltaIndex = *request.DeltaIndex
-		deltaSnapshotFilePath = filepath.Join(filepath.Dir(deps.SnapshotsDeltaPath), fmt.Sprintf("delta_snapshot_%d.bin", deltaIndex))
-
-		// if no full snapshot was created, the last existing full snapshot will be used
-		if err := deps.SnapshotManager.CreateDeltaSnapshot(Plugin.Daemon().ContextStopped(), deltaIndex, deltaSnapshotFilePath, false, fullSnapshotFilePath); err != nil {
-			return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating delta snapshot failed: %s", err)
-		}
+	filePath := filepath.Join(filepath.Dir(deps.SnapshotsFullPath), fmt.Sprintf("full_snapshot_%d.bin", request.Index))
+	if err := deps.SnapshotManager.CreateFullSnapshot(Plugin.Daemon().ContextStopped(), request.Index, filePath, false); err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating snapshot failed: %s", err)
 	}
 
 	return &createSnapshotsResponse{
-		FullIndex:     fullIndex,
-		FullFilePath:  fullSnapshotFilePath,
-		DeltaIndex:    deltaIndex,
-		DeltaFilePath: deltaSnapshotFilePath,
+		Index:    request.Index,
+		FilePath: filePath,
 	}, nil
 }

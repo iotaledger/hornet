@@ -81,33 +81,30 @@ type DownloadTarget struct {
 	Delta string `usage:"URL of the delta snapshot file" json:"delta"`
 }
 
-func (s *SnapshotImporter) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
+func (s *Importer) filterTargets(targetNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
 
 	// check if the remote snapshot files fit the network ID and if delta fits the full snapshot.
-	checkTargetConsistency := func(wantedNetworkID uint64, fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) error {
+	checkTargetConsistency := func(targetNetworkID uint64, fullHeader *FullSnapshotHeader, deltaHeader *DeltaSnapshotHeader) error {
 		if fullHeader == nil {
 			return errors.New("full snapshot header not found")
 		}
 
-		if fullHeader.NetworkID != wantedNetworkID {
-			return fmt.Errorf("full snapshot networkID does not match (%d != %d): %w", fullHeader.NetworkID, wantedNetworkID, ErrInvalidSnapshotAvailabilityState)
+		fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+		if err != nil {
+			return err
+		}
+
+		if fullHeaderProtoParams.NetworkID() != targetNetworkID {
+			return fmt.Errorf("full snapshot networkID does not match (%d != %d): %w", fullHeaderProtoParams.NetworkID(), targetNetworkID, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		if deltaHeader == nil {
 			return nil
 		}
 
-		if deltaHeader.NetworkID != wantedNetworkID {
-			return fmt.Errorf("delta snapshot networkID does not match (%d != %d): %w", deltaHeader.NetworkID, wantedNetworkID, ErrInvalidSnapshotAvailabilityState)
-		}
-
-		if fullHeader.SEPMilestoneIndex > deltaHeader.SEPMilestoneIndex {
-			return fmt.Errorf("full snapshot SEP index is bigger than delta snapshot SEP index (%d > %d): %w", fullHeader.SEPMilestoneIndex, deltaHeader.SEPMilestoneIndex, ErrInvalidSnapshotAvailabilityState)
-		}
-
-		if fullHeader.SEPMilestoneIndex != deltaHeader.LedgerMilestoneIndex {
+		if deltaHeader.FullSnapshotTargetMilestoneID != fullHeader.TargetMilestoneID {
 			// delta snapshot file doesn't fit the full snapshot file
-			return fmt.Errorf("full snapshot SEP index does not match the delta snapshot ledger index (%d != %d): %w", fullHeader.SEPMilestoneIndex, deltaHeader.LedgerMilestoneIndex, ErrInvalidSnapshotAvailabilityState)
+			return fmt.Errorf("full snapshot target milestone ID of the delta snapshot does not fit the actual full snapshot target milestone ID (%s != %s): %w", deltaHeader.FullSnapshotTargetMilestoneID.ToHex(), fullHeader.TargetMilestoneID.ToHex(), ErrDeltaSnapshotIncompatible)
 		}
 
 		return nil
@@ -124,27 +121,49 @@ func (s *SnapshotImporter) filterTargets(wantedNetworkID uint64, targets []*Down
 	for _, target := range targets {
 		s.LogDebugf("downloading full snapshot header from %s", target.Full)
 
-		fullHeader, err := s.downloadHeader(target.Full)
-		if err != nil {
+		var fullHeader *FullSnapshotHeader
+		if err := s.downloadHeader(target.Full, func(readCloser io.ReadCloser) error {
+			fullSnapshotHeader, err := ReadFullSnapshotHeader(readCloser)
+			if err != nil {
+				return err
+			}
+
+			fullHeader = fullSnapshotHeader
+			return nil
+		}); err != nil {
 			// as the full snapshot URL failed to download, we commence further with our targets
 			s.LogDebugf("downloading full snapshot header from %s failed: %s", target.Full, err)
 			continue
 		}
 
-		var deltaHeader *ReadFileHeader
+		var deltaHeader *DeltaSnapshotHeader
 		if len(target.Delta) > 0 {
 			s.LogDebugf("downloading delta snapshot header from %s", target.Delta)
-			deltaHeader, err = s.downloadHeader(target.Delta)
-			if err != nil {
+			if err := s.downloadHeader(target.Delta, func(readCloser io.ReadCloser) error {
+				deltaSnapshotHeader, err := ReadDeltaSnapshotHeader(readCloser)
+				if err != nil {
+					return err
+				}
+
+				deltaHeader = deltaSnapshotHeader
+				return nil
+			}); err != nil {
 				// it is valid that no delta snapshot file is available on the target.
 				s.LogDebugf("downloading delta snapshot header from %s failed: %s", target.Delta, err)
 			}
 		}
 
-		if err = checkTargetConsistency(wantedNetworkID, fullHeader, deltaHeader); err != nil {
+		if err := checkTargetConsistency(targetNetworkID, fullHeader, deltaHeader); err != nil {
 			// the snapshots on the target do not seem to be consistent
-			s.LogInfof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
-			continue
+			if !errors.Is(err, ErrDeltaSnapshotIncompatible) {
+				s.LogInfof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
+				continue
+			}
+
+			// the delta snapshot file does not fit the full snapshot file
+			// we will not use the delta snapshot file
+			deltaHeader = nil
+			target.Delta = ""
 		}
 
 		filteredTargets = append(filteredTargets, &downloadTargetWithIndex{
@@ -167,9 +186,9 @@ func (s *SnapshotImporter) filterTargets(wantedNetworkID uint64, targets []*Down
 }
 
 // DownloadSnapshotFiles tries to download snapshots files from the given targets.
-func (s *SnapshotImporter) DownloadSnapshotFiles(ctx context.Context, wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
+func (s *Importer) DownloadSnapshotFiles(ctx context.Context, targetNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
 
-	for _, target := range s.filterTargets(wantedNetworkID, targets) {
+	for _, target := range s.filterTargets(targetNetworkID, targets) {
 
 		s.LogInfof("downloading full snapshot file from %s", target.Full)
 		if err := s.downloadFile(ctx, fullPath, target.Full); err != nil {
@@ -192,30 +211,30 @@ func (s *SnapshotImporter) DownloadSnapshotFiles(ctx context.Context, wantedNetw
 }
 
 // downloads a snapshot header from the given url.
-func (s *SnapshotImporter) downloadHeader(url string) (*ReadFileHeader, error) {
+func (s *Importer) downloadHeader(url string, headerConsumer func(readCloser io.ReadCloser) error) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotHeader)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("download failed: %w", err)
+		return fmt.Errorf("download failed: %w", err)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("download failed: %w", err)
+		return fmt.Errorf("download failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)
+		return fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)
 	}
 
-	return ReadSnapshotHeader(resp.Body)
+	return headerConsumer(resp.Body)
 }
 
 // downloads a snapshot file from the given url to the specified path.
-func (s *SnapshotImporter) downloadFile(ctx context.Context, path string, url string) error {
+func (s *Importer) downloadFile(ctx context.Context, path string, url string) error {
 	downloadCtx, downloadCtxCancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
 	defer downloadCtxCancel()
 

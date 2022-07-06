@@ -3,10 +3,12 @@ package tpkg
 import (
 	"crypto/ed25519"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
 
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -242,7 +244,7 @@ func RandUTXOSpentWithOutput(output *utxo.Output, msIndexSpent iotago.MilestoneI
 	return utxo.NewSpent(output, RandTransactionID(), msIndexSpent, msTimestampSpent)
 }
 
-func RandReceipt(msIndex uint32, protoParas *iotago.ProtocolParameters) (*iotago.ReceiptMilestoneOpt, error) {
+func RandReceipt(msIndex iotago.MilestoneIndex, protoParams *iotago.ProtocolParameters) (*iotago.ReceiptMilestoneOpt, error) {
 	treasuryInput := &iotago.TreasuryInput{}
 	copy(treasuryInput[:], RandBytes(32))
 	ed25519Addr := RandAddress(iotago.AddressEd25519)
@@ -254,7 +256,7 @@ func RandReceipt(msIndex uint32, protoParas *iotago.ProtocolParameters) (*iotago
 			Output: &iotago.TreasuryOutput{Amount: RandAmount()},
 		}).
 		AddEntry(migratedFundsEntry).
-		Build(protoParas)
+		Build(protoParams)
 }
 
 // RandRentStructure produces random rent structure.
@@ -276,6 +278,27 @@ func RandProtocolParameters() *iotago.ProtocolParameters {
 		BelowMaxDepth: RandUint8(math.MaxUint8),
 		RentStructure: *RandRentStructure(),
 		TokenSupply:   RandAmount(),
+	}
+}
+
+// RandProtocolParamsMilestoneOpt produces random protocol parameters milestone option.
+func RandProtocolParamsMilestoneOpt(targetIndex ...iotago.MilestoneIndex) *iotago.ProtocolParamsMilestoneOpt {
+	protoParams := RandProtocolParameters()
+
+	msIndex := RandMilestoneIndex()
+	if len(targetIndex) > 0 {
+		msIndex = targetIndex[0]
+	}
+
+	protoParamsBytes, err := protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		panic(fmt.Errorf("failed to serialize protocol parameters: %w", err))
+	}
+
+	return &iotago.ProtocolParamsMilestoneOpt{
+		TargetMilestoneIndex: msIndex,
+		ProtocolVersion:      2,
+		Params:               protoParamsBytes,
 	}
 }
 

@@ -26,8 +26,8 @@ func TestSnapshot(t *testing.T) {
 			cfg.INXCoo.RunAsCoo = false
 		}
 		// modify to use different snapshot files
-		cfg.Snapshot.FullSnapshotFilePath = "/assets/test_full_snapshot.bin"
-		cfg.Snapshot.DeltaSnapshotFilePath = "/assets/test_delta_snapshot.bin"
+		cfg.Snapshot.FullSnapshotFilePath = "/assets/snapshot_full_snapshot.bin"
+		cfg.Snapshot.DeltaSnapshotFilePath = "/assets/snapshot_delta_snapshot.bin"
 	})
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)

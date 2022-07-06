@@ -1,0 +1,13 @@
+{
+    "version": 2,
+    "networkName": "alphanet1",
+    "bech32HRP": "rms",
+    "minPoWScore": 100,
+    "belowMaxDepth": 15,
+    "rentStructure": {
+        "vByteCost": 500,
+        "vByteFactorData": 1,
+        "vByteFactorKey": 10
+    },
+    "tokenSupply": "2779530283277761"
+}

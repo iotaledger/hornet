@@ -332,14 +332,13 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	p.Enqueue(msg)
 }
 
-// TODO: this is a workaround, we need to create a different channel for milestone payloads in STING instead.
-func constructMilestoneBlock(protoParas *iotago.ProtocolParameters, cachedMilestone *storage.CachedMilestone) (*iotago.Block, error) {
+func constructMilestoneBlock(protoParams *iotago.ProtocolParameters, cachedMilestone *storage.CachedMilestone) (*iotago.Block, error) {
 	defer cachedMilestone.Release(true) // milestone -1
 
 	// we don't need to do proof of work for milestone blocks because milestones have Nonce = 0.
 	// TODO: this is enforced by TIP-???
 	return builder.NewBlockBuilder().
-		ProtocolVersion(protoParas.Version).
+		ProtocolVersion(protoParams.Version).
 		Payload(cachedMilestone.Milestone().Milestone()).
 		Parents(cachedMilestone.Milestone().Milestone().Parents).
 		Build()

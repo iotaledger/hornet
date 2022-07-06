@@ -92,6 +92,11 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 
 func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
 
+	snapshotInfo := deps.Storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		return common.ErrSnapshotInfoNotFound
+	}
+
 	createMilestonePayloadForIndexAndSend := func(msIndex iotago.MilestoneIndex) error {
 		payload, err := milestoneForIndex(msIndex)
 		if err != nil {
@@ -140,7 +145,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		}
 
 		// Stream all available milestones first
-		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+		pruningIndex := snapshotInfo.PruningIndex()
 		if startIndex <= pruningIndex {
 			return 0, status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
 		}

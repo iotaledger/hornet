@@ -24,13 +24,14 @@ import (
 func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager) {
 
 	te.coo = &MockCoo{
-		te:             te,
-		cooPrivateKeys: cooPrivateKeys,
-		keyManager:     keyManager,
+		te:                    te,
+		cooPrivateKeys:        cooPrivateKeys,
+		genesisMilestoneIndex: 0,
+		keyManager:            keyManager,
 	}
 
 	// save snapshot info
-	err := te.storage.SetSnapshotMilestone(te.protoParas.NetworkID(), 0, 0, 0, time.Now())
+	err := te.storage.SetInitialSnapshotInfo(0, 0, 0, 0, time.Now())
 	require.NoError(te.TestInterface, err)
 
 	te.coo.bootstrap()
@@ -54,19 +55,25 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
 		blocksMemcache.CachedBlock,
-		te.protoParas,
+		te.protoParams,
+		te.coo.genesisMilestoneIndex,
 		te.LastMilestonePayload(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
 		whiteflag.DefaultSetBlockReferencedFunc,
 		te.serverMetrics,
+		// Hint: Ledger is write locked
 		nil,
+		// Hint: Ledger is write locked
 		func(confirmation *whiteflag.Confirmation) {
 			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
 		},
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		nil,
 	)
 	require.NoError(te.TestInterface, err)
@@ -110,7 +117,7 @@ func (te *TestEnvironment) ReattachBlock(blockID iotago.BlockID, parents ...iota
 	require.NoError(te.TestInterface, err)
 
 	// We brute-force a new nonce until it is different than the original one (this is important when reattaching valid milestones)
-	powMinScore := te.protoParas.MinPoWScore
+	powMinScore := te.protoParams.MinPoWScore
 	for newBlock.Nonce == iotaBlock.Nonce {
 		powMinScore += 10.0
 		// Use a higher PowScore on every iteration to force a different nonce
@@ -119,7 +126,7 @@ func (te *TestEnvironment) ReattachBlock(blockID iotago.BlockID, parents ...iota
 		require.NoError(te.TestInterface, err)
 	}
 
-	storedBlock, err := storage.NewBlock(newBlock, serializer.DeSeriModePerformValidation, te.protoParas)
+	storedBlock, err := storage.NewBlock(newBlock, serializer.DeSeriModePerformValidation, te.protoParams)
 	require.NoError(te.TestInterface, err)
 
 	cachedBlock := te.StoreBlock(storedBlock)
@@ -150,24 +157,30 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
 		blocksMemcache.CachedBlock,
-		te.protoParas,
+		te.protoParams,
+		te.coo.genesisMilestoneIndex,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckBlockReferencedFunc,
 		whiteflag.DefaultSetBlockReferencedFunc,
 		te.serverMetrics,
+		// Hint: Ledger is write locked
 		nil,
+		// Hint: Ledger is write locked
 		func(confirmation *whiteflag.Confirmation) {
 			wfConf = confirmation
 			err := te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
 		},
+		// Hint: Ledger is not locked
 		nil,
+		// Hint: Ledger is not locked
 		func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 			if te.OnLedgerUpdatedFunc != nil {
 				te.OnLedgerUpdatedFunc(index, newOutputs, newSpents)
 			}
 		},
+		// Hint: Ledger is not locked
 		nil,
 	)
 	return wfConf, confirmedMilestoneStats, err

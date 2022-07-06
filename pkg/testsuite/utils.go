@@ -135,7 +135,7 @@ func (b *BlockBuilder) fromWalletOutputs() ([]*utxo.Output, uint64) {
 func (b *BlockBuilder) txBuilderFromWalletSendingOutputs(outputs ...iotago.Output) (txBuilder *builder.TransactionBuilder, consumedInputs []*utxo.Output) {
 	require.Greater(b.te.TestInterface, len(outputs), 0)
 
-	txBuilder = builder.NewTransactionBuilder(b.te.protoParas.NetworkID())
+	txBuilder = builder.NewTransactionBuilder(b.te.protoParams.NetworkID())
 
 	fromAddr := b.fromWallet.Address()
 
@@ -171,7 +171,7 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 	require.NotEmpty(b.te.TestInterface, b.tag)
 
 	iotaBlock, err := builder.NewBlockBuilder().
-		ProtocolVersion(b.te.protoParas.Version).
+		ProtocolVersion(b.te.protoParams.Version).
 		Parents(b.parents).
 		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
@@ -180,7 +180,7 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 	_, err = b.te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, b.te.protoParas)
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, b.te.protoParams)
 	require.NoError(b.te.TestInterface, err)
 
 	return &Block{
@@ -198,13 +198,13 @@ func (b *BlockBuilder) BuildTransactionUsingOutputs(outputs ...iotago.Output) *B
 
 	require.NotNil(b.te.TestInterface, b.parents)
 
-	iotaBlock, err := txBuilder.BuildAndSwapToBlockBuilder(b.te.protoParas, b.fromWalletSigner(), nil).
+	iotaBlock, err := txBuilder.BuildAndSwapToBlockBuilder(b.te.protoParams, b.fromWalletSigner(), nil).
 		Parents(b.parents).
-		ProofOfWork(context.Background(), b.te.protoParas, float64(b.te.protoParas.MinPoWScore)).
+		ProofOfWork(context.Background(), b.te.protoParams, float64(b.te.protoParams.MinPoWScore)).
 		Build()
 	require.NoError(b.te.TestInterface, err)
 
-	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, b.te.protoParas)
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, b.te.protoParams)
 	require.NoError(b.te.TestInterface, err)
 
 	var sentUTXO []*utxo.Output
@@ -248,7 +248,7 @@ func (b *BlockBuilder) BuildAlias() *Block {
 	}
 
 	if b.amount == 0 {
-		b.amount = b.te.protoParas.RentStructure.MinRent(aliasOutput)
+		b.amount = b.te.protoParams.RentStructure.MinRent(aliasOutput)
 		aliasOutput.Amount = b.amount
 	}
 	require.Greater(b.te.TestInterface, b.amount, uint64(0), "trying to send a transaction with no value")

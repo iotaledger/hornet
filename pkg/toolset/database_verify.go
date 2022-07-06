@@ -55,8 +55,8 @@ func databaseVerify(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPath)
 	}
 
-	// TODO: adapt to new protocol parameter logic
-	protoParas := &iotago.ProtocolParameters{}
+	// TODO: needs to be adapted for when protocol parameters struct changes
+	protoParams := &iotago.ProtocolParameters{}
 
 	// we don't need to check the health of the source db.
 	// it is fine as long as all blocks in the cone are found.
@@ -81,7 +81,7 @@ func databaseVerify(args []string) error {
 
 	if err := verifyDatabase(
 		getGracefulStopContext(),
-		protoParas,
+		protoParams,
 		milestoneManager,
 		tangleStoreSource,
 		*genesisSnapshotFilePathFlag,
@@ -99,7 +99,7 @@ func databaseVerify(args []string) error {
 // verifyDatabase checks if all blocks in the cones of the existing milestones in the database are found.
 func verifyDatabase(
 	ctx context.Context,
-	protoParas *iotago.ProtocolParameters,
+	protoParams *iotago.ProtocolParameters,
 	milestoneManager *milestonemanager.MilestoneManager,
 	tangleStoreSource *storage.Storage,
 	genesisSnapshotFilePath string) error {
@@ -122,19 +122,30 @@ func verifyDatabase(
 		}
 	}()
 
+	protoParamsSource, err := tangleStoreSource.CurrentProtocolParameters()
+	if err != nil {
+		return errors.Wrapf(ErrCritical, "loading source protocol parameters failed: %s", err.Error())
+	}
+
 	// load the genesis ledger state into the temporary storage (SEP and ledger state only)
 	println("loading genesis snapshot...")
-	if err := loadGenesisSnapshot(tangleStoreTemp, genesisSnapshotFilePath, protoParas, true, tangleStoreSource.SnapshotInfo().NetworkID); err != nil {
+	if err := loadGenesisSnapshot(tangleStoreTemp, genesisSnapshotFilePath, true, protoParamsSource.NetworkID()); err != nil {
 		return fmt.Errorf("loading genesis snapshot failed: %w", err)
 	}
+
+	if err := checkSnapshotInfo(tangleStoreSource); err != nil {
+		return err
+	}
+	snapshotInfoSource := tangleStoreSource.SnapshotInfo()
 
 	if err := checkSnapshotInfo(tangleStoreTemp); err != nil {
 		return err
 	}
+	snapshotInfoTemp := tangleStoreTemp.SnapshotInfo()
 
 	// compare source database index and genesis snapshot index
-	if tangleStoreSource.SnapshotInfo().EntryPointIndex != tangleStoreTemp.SnapshotInfo().EntryPointIndex {
-		return fmt.Errorf("entry point index does not match genesis snapshot index: (%d != %d)", tangleStoreSource.SnapshotInfo().EntryPointIndex, tangleStoreTemp.SnapshotInfo().EntryPointIndex)
+	if snapshotInfoSource.EntryPointIndex() != snapshotInfoTemp.EntryPointIndex() {
+		return fmt.Errorf("entry point index does not match genesis snapshot index: (%d != %d)", snapshotInfoSource.EntryPointIndex(), snapshotInfoTemp.EntryPointIndex())
 	}
 
 	// compare solid entry points in source database and genesis snapshot
@@ -237,7 +248,8 @@ func verifyDatabase(
 			utxoManagerTemp,
 			storeSource,
 			storeSource.CachedBlock,
-			protoParas,
+			protoParams,
+			snapshotInfoTemp.GenesisMilestoneIndex(),
 			milestonePayload,
 			// traversal stops if no more blocks pass the given condition
 			// Caution: condition func is not in DFS order
@@ -264,10 +276,15 @@ func verifyDatabase(
 				}
 			},
 			nil,
+			// Hint: Ledger is write locked
 			nil,
+			// Hint: Ledger is write locked
 			nil,
+			// Hint: Ledger is not locked
 			nil,
+			// Hint: Ledger is not locked
 			nil,
+			// Hint: Ledger is not locked
 			nil,
 		)
 		if err != nil {
@@ -394,7 +411,7 @@ func compareLedgerState(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.M
 
 func cleanupMilestoneFromUTXOManager(utxoManager *utxo.Manager, milestonePayload *iotago.Milestone, msIndex iotago.MilestoneIndex) error {
 
-	var receiptMigratedAtIndex []uint32
+	var receiptMigratedAtIndex []iotago.MilestoneIndex
 
 	opts, err := milestonePayload.Opts.Set()
 	if err == nil && opts != nil {

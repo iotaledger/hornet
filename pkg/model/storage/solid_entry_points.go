@@ -119,7 +119,7 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 
 	solidEntryPointsCount := len(solidEntryPointsBytes) / (32 + 4)
 	for i := 0; i < solidEntryPointsCount; i++ {
-		var msIndex uint32
+		var msIndex iotago.MilestoneIndex
 
 		blockID := iotago.BlockID{}
 		_, err = io.ReadFull(bytesReader, blockID[:])

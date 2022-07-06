@@ -69,7 +69,7 @@ func databaseSnapshot(args []string) error {
 
 	ts := time.Now()
 
-	readFileHeader, err := snapshot.CreateSnapshotFromStorage(
+	fullHeader, err := snapshot.CreateSnapshotFromStorage(
 		getGracefulStopContext(),
 		tangleStoreSource,
 		tangleStoreSource.UTXOManager(),
@@ -86,7 +86,7 @@ func databaseSnapshot(args []string) error {
 		fmt.Printf("metadata:\n")
 	}
 
-	if err := printSnapshotHeaderInfo("", *snapshotPathTargetFlag, readFileHeader, *outputJSONFlag); err != nil {
+	if err := printFullSnapshotHeaderInfo("", *snapshotPathTargetFlag, fullHeader); err != nil {
 		return err
 	}
 

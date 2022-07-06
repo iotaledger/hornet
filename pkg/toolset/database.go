@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	databasecore "github.com/iotaledger/hornet/core/database"
 	"github.com/iotaledger/hornet/core/protocfg"
+	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/database"
 	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/pkg/model/storage"
@@ -114,9 +115,9 @@ type StoreBlockInterface interface {
 // including all additional information like
 // metadata, children, indexation and milestone entries.
 // block +1
-func storeBlock(protoParas *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, blk *iotago.Block) (*storage.CachedBlock, error) {
+func storeBlock(protoParams *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, blk *iotago.Block) (*storage.CachedBlock, error) {
 
-	block, err := storage.NewBlock(blk, serializer.DeSeriModePerformValidation, protoParas)
+	block, err := storage.NewBlock(blk, serializer.DeSeriModePerformValidation, protoParams)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 	}
@@ -194,7 +195,7 @@ func getTangleStorage(path string,
 
 func checkSnapshotInfo(dbStorage *storage.Storage) error {
 	if dbStorage.SnapshotInfo() == nil {
-		return errors.New("snapshot info not found")
+		return common.ErrSnapshotInfoNotFound
 	}
 	return nil
 }
@@ -220,18 +221,23 @@ func createTangleStorage(name string, tangleDatabasePath string, utxoDatabasePat
 }
 
 // loadGenesisSnapshot loads the genesis snapshot to the storage and checks if the networkID fits.
-func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath string, protoParas *iotago.ProtocolParameters, checkSourceNetworkID bool, sourceNetworkID uint64) error {
+func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath string, checkSourceNetworkID bool, sourceNetworkID uint64) error {
 
-	fullHeader, err := snapshot.ReadSnapshotHeaderFromFile(genesisSnapshotFilePath)
+	fullHeader, err := snapshot.ReadFullSnapshotHeaderFromFile(genesisSnapshotFilePath)
 	if err != nil {
 		return err
 	}
 
-	if checkSourceNetworkID && sourceNetworkID != fullHeader.NetworkID {
-		return fmt.Errorf("source storage networkID not equal to genesis snapshot networkID (%d != %d)", sourceNetworkID, fullHeader.NetworkID)
+	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+	if err != nil {
+		return err
 	}
 
-	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, protoParas, genesisSnapshotFilePath); err != nil {
+	if checkSourceNetworkID && sourceNetworkID != fullHeaderProtoParams.NetworkID() {
+		return fmt.Errorf("source storage networkID not equal to genesis snapshot networkID (%d != %d)", sourceNetworkID, fullHeaderProtoParams.NetworkID())
+	}
+
+	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, genesisSnapshotFilePath); err != nil {
 		return err
 	}
 

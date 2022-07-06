@@ -33,7 +33,7 @@ var hasher = merklehasher.NewHasher(crypto.BLAKE2b_512)
 // LegacyAPI defines the calls of the legacy API that are used.
 type LegacyAPI interface {
 	GetNodeInfo() (*api.GetNodeInfoResponse, error)
-	GetWhiteFlagConfirmation(milestoneIndex uint32) (*api.WhiteFlagConfirmation, error)
+	GetWhiteFlagConfirmation(msIndex iotago.MilestoneIndex) (*api.WhiteFlagConfirmation, error)
 }
 
 // Validator takes care of fetching and validating white-flag confirmation data from legacy nodes
@@ -56,13 +56,13 @@ func NewValidator(api LegacyAPI, coordinatorAddress trinary.Hash, coordinatorMer
 
 // QueryMigratedFunds queries the legacy network for the white-flag confirmation data for the given milestone
 // index, verifies the signatures of the milestone and included bundles and then compiles a slice of migrated fund entries.
-func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iotago.MigratedFundsEntry, error) {
-	confirmation, err := m.api.GetWhiteFlagConfirmation(milestoneIndex)
+func (m *Validator) QueryMigratedFunds(msIndex iotago.MilestoneIndex) ([]*iotago.MigratedFundsEntry, error) {
+	confirmation, err := m.api.GetWhiteFlagConfirmation(msIndex)
 	if err != nil {
 		return nil, common.SoftError(fmt.Errorf("API call failed: %w", err))
 	}
 
-	included, err := m.validateConfirmation(confirmation, milestoneIndex)
+	included, err := m.validateConfirmation(confirmation, msIndex)
 	if err != nil {
 		return nil, common.CriticalError(fmt.Errorf("invalid confirmation data: %w", err))
 	}
@@ -88,7 +88,7 @@ func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iotago.Migrate
 // QueryNextMigratedFunds queries the next existing migrations starting from milestone index startIndex.
 // It returns the migrations as well as milestone index that confirmed those migrations.
 // If there are currently no more migrations, it returns the latest milestone index that was checked.
-func (m *Validator) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
+func (m *Validator) QueryNextMigratedFunds(startIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error) {
 	latestIndex, err := m.queryLatestMilestoneIndex()
 	if err != nil {
 		return 0, nil, common.SoftError(fmt.Errorf("failed to get node info: %w", err))
@@ -107,7 +107,7 @@ func (m *Validator) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iotago
 }
 
 // queryLatestMilestoneIndex uses getNodeInfo API call to query the index of the latest milestone.
-func (m *Validator) queryLatestMilestoneIndex() (uint32, error) {
+func (m *Validator) queryLatestMilestoneIndex() (iotago.MilestoneIndex, error) {
 	info, err := m.api.GetNodeInfo()
 	if err != nil {
 		return 0, err
@@ -117,11 +117,11 @@ func (m *Validator) queryLatestMilestoneIndex() (uint32, error) {
 	if index < 0 || index >= math.MaxUint32 {
 		return 0, fmt.Errorf("invalid milestone index in response: %d", index)
 	}
-	return uint32(index), nil
+	return iotago.MilestoneIndex(index), nil
 }
 
 // validateMilestoneBundle performs syntactic validation of the milestone and checks whether it has the correct index.
-func (m *Validator) validateMilestoneBundle(ms bundle.Bundle, msIndex uint32) error {
+func (m *Validator) validateMilestoneBundle(ms bundle.Bundle, msIndex iotago.MilestoneIndex) error {
 	// since in a milestone bundle only the (complete) head is signed, there is no need to validate other transactions
 	head := ms[len(ms)-1]
 	tag := trinary.IntToTrytes(int64(msIndex), legacy.TagTrinarySize/legacy.TritsPerTryte)
@@ -150,7 +150,7 @@ func (m *Validator) validateMilestoneBundle(ms bundle.Bundle, msIndex uint32) er
 func (m *Validator) validateMilestoneSignature(ms bundle.Bundle) error {
 	head := ms[len(ms)-1]
 	msData := head.SignatureMessageFragment
-	msIndex := uint32(trinary.TrytesToInt(head.Tag))
+	msIndex := iotago.MilestoneIndex(trinary.TrytesToInt(head.Tag))
 
 	var auditPath []trinary.Trytes
 	for i := 0; i < m.coordinatorMerkleTreeDepth; i++ {
@@ -205,7 +205,7 @@ func asBundle(rawTrytes []trinary.Trytes) (bundle.Bundle, error) {
 	return txs, nil
 }
 
-func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation, msIndex uint32) ([]bundle.Bundle, error) {
+func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation, msIndex iotago.MilestoneIndex) ([]bundle.Bundle, error) {
 	ms, err := asBundle(confirmation.MilestoneBundle)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse milestone bundle: %w", err)

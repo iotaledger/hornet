@@ -17,9 +17,13 @@ type milestoneInfoResponse struct {
 	// The index of the milestone.
 	Index iotago.MilestoneIndex `json:"index"`
 	// The unix time of the milestone payload.
-	Timestamp uint32 `json:"timestamp"`
+	// The timestamp can be omitted if the milestone is not available
+	// (no milestone received yet after starting from snapshot).
+	Timestamp uint32 `json:"timestamp,omitempty"`
 	// The ID of the milestone.
-	MilestoneID string `json:"milestoneId"`
+	// The ID can be omitted if the milestone is not available.
+	// (no milestone received yet after starting from snapshot).
+	MilestoneID string `json:"milestoneId,omitempty"`
 }
 
 type nodeStatus struct {
@@ -108,7 +112,7 @@ type blockCreatedResponse struct {
 // milestoneUTXOChangesResponse defines the response of a GET milestone UTXO changes REST API call.
 type milestoneUTXOChangesResponse struct {
 	// The index of the milestone.
-	Index uint32 `json:"index"`
+	Index iotago.MilestoneIndex `json:"index"`
 	// The output IDs (transaction hash + output index) of the newly created outputs.
 	CreatedOutputs []string `json:"createdOutputs"`
 	// The output IDs (transaction hash + output index) of the consumed (spent) outputs.
@@ -144,12 +148,6 @@ type OutputResponse struct {
 	Metadata *OutputMetadataResponse `json:"metadata"`
 	// The output in its serialized form.
 	RawOutput *json.RawMessage `json:"output"`
-}
-
-// treasuryResponse defines the response of a GET treasury REST API call.
-type treasuryResponse struct {
-	MilestoneID string `json:"milestoneId"`
-	Amount      string `json:"amount"`
 }
 
 // addPeerRequest defines the request for a POST peer REST API call.
@@ -194,22 +192,16 @@ type pruneDatabaseResponse struct {
 
 // createSnapshotsRequest defines the request of a create snapshots REST API call.
 type createSnapshotsRequest struct {
-	// The index of the full snapshot.
-	FullIndex *iotago.MilestoneIndex `json:"fullIndex,omitempty"`
-	// The index of the delta snapshot.
-	DeltaIndex *iotago.MilestoneIndex `json:"deltaIndex,omitempty"`
+	// The index of the snapshot.
+	Index iotago.MilestoneIndex `json:"index"`
 }
 
 // createSnapshotsResponse defines the response of a create snapshots REST API call.
 type createSnapshotsResponse struct {
-	// The index of the full snapshot.
-	FullIndex iotago.MilestoneIndex `json:"fullIndex,omitempty"`
-	// The index of the delta snapshot.
-	DeltaIndex iotago.MilestoneIndex `json:"deltaIndex,omitempty"`
-	// The file path of the full snapshot file.
-	FullFilePath string `json:"fullFilePath,omitempty"`
-	// The file path of the delta snapshot file.
-	DeltaFilePath string `json:"deltaFilePath,omitempty"`
+	// The index of the snapshot.
+	Index iotago.MilestoneIndex `json:"index"`
+	// The file path of the snapshot file.
+	FilePath string `json:"filePath"`
 }
 
 // ComputeWhiteFlagMutationsRequest defines the request for a POST debugComputeWhiteFlagMutations REST API call.

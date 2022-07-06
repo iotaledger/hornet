@@ -16,17 +16,7 @@
     "alias": "HORNET private-tangle node"
   },
   "protocol": {
-    "parameters": {
-      "version": 2,
-      "networkName": "private_tangle1",
-      "bech32HRP": "tst",
-      "minPoWScore": 1.0,
-      "belowMaxDepth": 15,
-      "vByteCost": 500,
-      "vByteFactorData": 1,
-      "vByteFactorKey": 10,
-      "tokenSupply": 2779530283277761
-    },
+    "targetNetworkName": "private_tangle1",
     "milestonePublicKeyCount": 2,
     "baseToken" : {
       "name": "TestCoin",
@@ -99,6 +89,7 @@
     "fullPath": "snapshots/full_snapshot.bin",
     "deltaPath": "snapshots/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
+    "deltaSizeThresholdMinSize": "50M",
     "downloadURLs": []
   },
   "pruning": {

@@ -346,6 +346,7 @@ func (s *Storage) StoreBlockIfAbsent(block *Block) (cachedBlock *CachedBlock, ne
 }
 
 // BlockIDConsumer consumes the given block ID during looping through all blocks.
+// Returning false from this function indicates to abort the iteration.
 type BlockIDConsumer func(blockID iotago.BlockID) bool
 
 // ForEachBlockID loops over all block IDs.

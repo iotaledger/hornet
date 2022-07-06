@@ -8,6 +8,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -55,7 +56,7 @@ func snapshotMerge(args []string) error {
 
 	ts := time.Now()
 
-	mergeInfo, err := snapshot.MergeSnapshotsFiles(fullPath, deltaPath, targetPath, nil)
+	mergeInfo, err := snapshot.MergeSnapshotsFiles(fullPath, deltaPath, targetPath)
 	if err != nil {
 		return err
 	}
@@ -64,9 +65,9 @@ func snapshotMerge(args []string) error {
 		fmt.Printf("metadata:\n")
 	}
 
-	_ = printSnapshotHeaderInfo("full", fullPath, mergeInfo.FullSnapshotHeader, *outputJSONFlag)
-	_ = printSnapshotHeaderInfo("delta", deltaPath, mergeInfo.DeltaSnapshotHeader, *outputJSONFlag)
-	_ = printSnapshotHeaderInfo("merged", targetPath, mergeInfo.MergedSnapshotHeader, *outputJSONFlag)
+	_ = printFullSnapshotHeaderInfo("full", fullPath, mergeInfo.FullSnapshotHeader)
+	_ = printDeltaSnapshotHeaderInfo("delta", deltaPath, mergeInfo.DeltaSnapshotHeader)
+	_ = printFullSnapshotHeaderInfo("merged", targetPath, mergeInfo.MergedSnapshotHeader)
 
 	if !*outputJSONFlag {
 		fmt.Printf("successfully created merged full snapshot '%s', took %v\n", targetPath, time.Since(ts).Truncate(time.Millisecond))
@@ -75,83 +76,75 @@ func snapshotMerge(args []string) error {
 	return nil
 }
 
-// prints information about the given snapshot file header.
-func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFileHeader, outputJSON bool) error {
+// prints information about the given full snapshot file header.
+func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.FullSnapshotHeader) error {
 
-	if outputJSON {
-
-		type treasuryStruct struct {
-			MilestoneID string `json:"milestoneID"`
-			Tokens      uint64 `json:"tokens"`
-		}
-
-		var treasury *treasuryStruct
-		if header.TreasuryOutput != nil {
-			treasury = &treasuryStruct{
-				MilestoneID: iotago.EncodeHex(header.TreasuryOutput.MilestoneID[:]),
-				Tokens:      header.TreasuryOutput.Amount,
-			}
-		}
-
-		result := struct {
-			SnapshotName        string                `json:"snapshotName,omitempty"`
-			FilePath            string                `json:"filePath"`
-			SnapshotTime        time.Time             `json:"snapshotTime"`
-			NetworkID           uint64                `json:"networkID"`
-			Treasury            *treasuryStruct       `json:"treasury"`
-			LedgerIndex         iotago.MilestoneIndex `json:"ledgerIndex"`
-			SnapshotIndex       iotago.MilestoneIndex `json:"snapshotIndex"`
-			UTXOsCount          uint64                `json:"UTXOsCount"`
-			SEPsCount           uint64                `json:"SEPsCount"`
-			MilestoneDiffsCount uint64                `json:"milestoneDiffsCount"`
-		}{
-			SnapshotName:        name,
-			FilePath:            path,
-			SnapshotTime:        time.Unix(int64(header.Timestamp), 0),
-			NetworkID:           header.NetworkID,
-			Treasury:            treasury,
-			LedgerIndex:         header.LedgerMilestoneIndex,
-			SnapshotIndex:       header.SEPMilestoneIndex,
-			UTXOsCount:          header.OutputCount,
-			SEPsCount:           header.SEPCount,
-			MilestoneDiffsCount: header.MilestoneDiffCount,
-		}
-
-		return printJSON(result)
+	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
+	if err != nil {
+		return err
 	}
 
-	snapshotNameString := ""
-	if name != "" {
-		snapshotNameString = fmt.Sprintf(`
-         - Snapshot name:  %s\n`, name)
+	result := struct {
+		SnapshotName             string                     `json:"snapshotName,omitempty"`
+		FilePath                 string                     `json:"filePath"`
+		Version                  byte                       `json:"version"`
+		Type                     string                     `json:"type"`
+		GenesisMilestoneIndex    iotago.MilestoneIndex      `json:"genesisMilestoneIndex"`
+		TargetMilestoneIndex     iotago.MilestoneIndex      `json:"targetMilestoneIndex"`
+		TargetMilestoneTimestamp time.Time                  `json:"targetMilestoneTimestamp"`
+		TargetMilestoneID        string                     `json:"targetMilestoneID"`
+		LedgerMilestoneIndex     iotago.MilestoneIndex      `json:"ledgerMilestoneIndex"`
+		TreasuryOutput           *utxo.TreasuryOutput       `json:"treasuryOutput"`
+		ProtocolParameters       *iotago.ProtocolParameters `json:"protocolParameters"`
+		OutputCount              uint64                     `json:"outputCount"`
+		MilestoneDiffCount       uint32                     `json:"milestoneDiffCount"`
+		SEPCount                 uint16                     `json:"sepCount"`
+	}{
+		SnapshotName:             name,
+		FilePath:                 path,
+		Version:                  fullHeader.Version,
+		Type:                     "full",
+		GenesisMilestoneIndex:    fullHeader.GenesisMilestoneIndex,
+		TargetMilestoneIndex:     fullHeader.TargetMilestoneIndex,
+		TargetMilestoneTimestamp: time.Unix(int64(fullHeader.TargetMilestoneTimestamp), 0),
+		TargetMilestoneID:        fullHeader.TargetMilestoneID.ToHex(),
+		LedgerMilestoneIndex:     fullHeader.LedgerMilestoneIndex,
+		TreasuryOutput:           fullHeader.TreasuryOutput,
+		ProtocolParameters:       fullHeaderProtoParams,
+		OutputCount:              fullHeader.OutputCount,
+		MilestoneDiffCount:       fullHeader.MilestoneDiffCount,
+		SEPCount:                 fullHeader.SEPCount,
 	}
 
-	fmt.Printf(`    >%s
-        - File path:      %s
-        - Snapshot time:  %v
-        - Network ID:     %d
-        - Treasury:       %s
-        - Ledger index:   %d
-        - Snapshot index: %d
-        - UTXOs count:    %d
-        - SEPs count:     %d
-        - Milestone diffs count: %d`+"\n",
-		snapshotNameString,
-		path,
-		time.Unix(int64(header.Timestamp), 0),
-		header.NetworkID,
-		func() string {
-			if header.TreasuryOutput == nil {
-				return "no treasury output in header"
-			}
-			return fmt.Sprintf("milestone ID %s, tokens %d", iotago.EncodeHex(header.TreasuryOutput.MilestoneID[:]), header.TreasuryOutput.Amount)
-		}(),
-		header.LedgerMilestoneIndex,
-		header.SEPMilestoneIndex,
-		header.OutputCount,
-		header.SEPCount,
-		header.MilestoneDiffCount,
-	)
+	return printJSON(result)
+}
 
-	return nil
+// prints information about the given delta snapshot file header.
+func printDeltaSnapshotHeaderInfo(name string, path string, deltaHeader *snapshot.DeltaSnapshotHeader) error {
+
+	result := struct {
+		SnapshotName                  string                `json:"snapshotName,omitempty"`
+		FilePath                      string                `json:"filePath"`
+		Version                       byte                  `json:"version"`
+		Type                          string                `json:"type"`
+		TargetMilestoneIndex          iotago.MilestoneIndex `json:"targetMilestoneIndex"`
+		TargetMilestoneTimestamp      time.Time             `json:"targetMilestoneTimestamp"`
+		FullSnapshotTargetMilestoneID string                `json:"fullSnapshotTargetMilestoneID"`
+		SEPFileOffset                 int64                 `json:"sepFileOffset"`
+		MilestoneDiffCount            uint32                `json:"milestoneDiffCount"`
+		SEPCount                      uint16                `json:"sepCount"`
+	}{
+		SnapshotName:                  name,
+		FilePath:                      path,
+		Version:                       deltaHeader.Version,
+		Type:                          "delta",
+		TargetMilestoneIndex:          deltaHeader.TargetMilestoneIndex,
+		TargetMilestoneTimestamp:      time.Unix(int64(deltaHeader.TargetMilestoneTimestamp), 0),
+		FullSnapshotTargetMilestoneID: deltaHeader.FullSnapshotTargetMilestoneID.ToHex(),
+		SEPFileOffset:                 deltaHeader.SEPFileOffset,
+		MilestoneDiffCount:            deltaHeader.MilestoneDiffCount,
+		SEPCount:                      deltaHeader.SEPCount,
+	}
+
+	return printJSON(result)
 }

@@ -68,6 +68,6 @@ func TestConeRootIndexes(t *testing.T) {
 	require.NoError(te.TestInterface, err)
 
 	// NullHash is SEP for index 0
-	require.Equal(te.TestInterface, uint32(0), ocri)
+	require.Equal(te.TestInterface, iotago.MilestoneIndex(0), ocri)
 	require.LessOrEqual(te.TestInterface, ycri, cmi)
 }

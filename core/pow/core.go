@@ -2,13 +2,13 @@ package pow
 
 import (
 	"context"
-	"github.com/iotaledger/hornet/pkg/protocol"
 
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hornet/pkg/daemon"
 	"github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/protocol"
 )
 
 func init() {

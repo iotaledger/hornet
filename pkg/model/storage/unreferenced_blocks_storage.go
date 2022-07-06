@@ -96,6 +96,7 @@ func (s *Storage) UnreferencedBlockIDs(msIndex iotago.MilestoneIndex, iteratorOp
 }
 
 // UnreferencedBlockConsumer consumes the given unreferenced block during looping through all unreferenced blocks.
+// Returning false from this function indicates to abort the iteration.
 type UnreferencedBlockConsumer func(msIndex iotago.MilestoneIndex, blockID iotago.BlockID) bool
 
 // ForEachUnreferencedBlock loops over all unreferenced blocks.

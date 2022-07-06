@@ -1,6 +1,7 @@
 package utxo
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -32,6 +33,45 @@ type TreasuryOutput struct {
 	Amount uint64
 	// Whether this output was already spent
 	Spent bool
+}
+
+type jsonTreasuryOutput struct {
+	MilestoneID string `json:"milestoneId"`
+	Amount      string `json:"amount"`
+}
+
+func (t *TreasuryOutput) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&jsonTreasuryOutput{
+		MilestoneID: t.MilestoneID.ToHex(),
+		Amount:      iotago.EncodeUint64(t.Amount),
+	})
+}
+
+func (t *TreasuryOutput) UnmarshalJSON(bytes []byte) error {
+	j := &jsonTreasuryOutput{}
+	if err := json.Unmarshal(bytes, j); err != nil {
+		return err
+	}
+
+	if len(j.MilestoneID) == 0 {
+		return errors.New("missing milestone ID")
+	}
+	milestoneID, err := iotago.DecodeHex(j.MilestoneID)
+	if err != nil {
+		return err
+	}
+	if len(milestoneID) != iotago.MilestoneIDLength {
+		return fmt.Errorf("invalid milestone ID length: %d", len(milestoneID))
+	}
+
+	copy(t.MilestoneID[:], milestoneID)
+
+	t.Amount, err = iotago.DecodeUint64(j.Amount)
+	if err != nil {
+		return fmt.Errorf("invalid amount: %w", err)
+	}
+
+	return nil
 }
 
 func (t *TreasuryOutput) kvStorableKey() (key []byte) {
@@ -195,6 +235,7 @@ func (u *Manager) UnspentTreasuryOutputWithoutLocking() (*TreasuryOutput, error)
 }
 
 // TreasuryOutputConsumer is a function that consumes an output.
+// Returning false from this function indicates to abort the iteration.
 type TreasuryOutputConsumer func(output *TreasuryOutput) bool
 
 // ForEachTreasuryOutput iterates over all stored treasury outputs.
