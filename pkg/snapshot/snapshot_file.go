@@ -397,6 +397,7 @@ func writeFullSnapshotHeader(writeSeeker io.WriteSeeker, header *FullSnapshotHea
 		return writeFunc(writeSeeker, name, value, offsetsToIncrease...)
 	}
 
+	// this is the offset of the OutputCount field in the header
 	var countersPosition int64
 
 	// Version

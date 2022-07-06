@@ -164,10 +164,5 @@ func rawOutputByID(c echo.Context) ([]byte, error) {
 }
 
 func treasury(_ echo.Context) (*utxo.TreasuryOutput, error) {
-	treasuryOutput, err := deps.UTXOManager.UnspentTreasuryOutputWithoutLocking()
-	if err != nil {
-		return nil, err
-	}
-
-	return treasuryOutput, nil
+	return deps.UTXOManager.UnspentTreasuryOutputWithoutLocking()
 }
