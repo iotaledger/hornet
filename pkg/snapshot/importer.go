@@ -171,12 +171,19 @@ func (s *Importer) LoadFullSnapshotFromFile(ctx context.Context, filePath string
 	s.LogInfof("solid entry points: %d, outputs: %d, ms diffs: %d", fullHeader.SEPCount, fullHeader.OutputCount, fullHeader.MilestoneDiffCount)
 	s.LogInfof(`
 SnapshotInfo:
-	Type: %s
-	NetworkID: %d
-	SnapshotIndex: %d
-	EntryPointIndex: %d
-	PruningIndex: %d
-	Timestamp: %v`, snapshotName, protoParams.NetworkID(), fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, fullHeader.TargetMilestoneIndex, time.Unix(int64(fullHeader.TargetMilestoneTimestamp), 0))
+    Type:            %s
+    NetworkID:       %d
+    SnapshotIndex:   %d
+    EntryPointIndex: %d
+    PruningIndex:    %d
+    Timestamp:       %s`,
+
+		snapshotName,
+		protoParams.NetworkID(),
+		fullHeader.TargetMilestoneIndex,
+		fullHeader.TargetMilestoneIndex,
+		fullHeader.TargetMilestoneIndex,
+		FormatSnapshotTimestamp(fullHeader.TargetMilestoneTimestamp))
 
 	return nil
 }
@@ -202,12 +209,20 @@ func (s *Importer) LoadDeltaSnapshotFromFile(ctx context.Context, filePath strin
 	s.LogInfof("solid entry points: %d, ms diffs: %d", header.SEPCount, header.MilestoneDiffCount)
 	s.LogInfof(`
 SnapshotInfo:
-	Type: %s
-	NetworkID: %d
-	SnapshotIndex: %d
-	EntryPointIndex: %d
-	PruningIndex: %d
-	Timestamp: %v`, snapshotName, protoParams.NetworkID(), header.TargetMilestoneIndex, header.TargetMilestoneIndex, header.TargetMilestoneIndex, time.Unix(int64(header.TargetMilestoneTimestamp), 0))
+    Type:            %s
+    NetworkID:       %d
+    SnapshotIndex:   %d
+    EntryPointIndex: %d
+    PruningIndex:    %d
+    Timestamp:       %s`,
+
+		snapshotName,
+		protoParams.NetworkID(),
+		header.TargetMilestoneIndex,
+		header.TargetMilestoneIndex,
+		header.TargetMilestoneIndex,
+		FormatSnapshotTimestamp(header.TargetMilestoneTimestamp),
+	)
 
 	return nil
 }

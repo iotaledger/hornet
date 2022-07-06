@@ -3,6 +3,7 @@ package snapshot
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -293,4 +294,12 @@ func (s *Manager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirme
 	}
 
 	s.Events.HandledConfirmedMilestoneIndexChanged.Trigger(confirmedMilestoneIndex)
+}
+
+func FormatSnapshotTimestamp(timestamp uint32) string {
+	result := "unknown"
+	if timestamp != 0 {
+		result = time.Unix(int64(timestamp), 0).Truncate(time.Second).String()
+	}
+	return result
 }

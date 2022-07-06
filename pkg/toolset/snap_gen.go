@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"time"
 
 	flag "github.com/spf13/pflag"
 
@@ -106,7 +105,7 @@ func snapshotGen(args []string) error {
 		Type:                     snapshot.Full,
 		GenesisMilestoneIndex:    0,
 		TargetMilestoneIndex:     targetIndex,
-		TargetMilestoneTimestamp: uint32(time.Now().Unix()),
+		TargetMilestoneTimestamp: 0,
 		TargetMilestoneID:        iotago.MilestoneID{},
 		LedgerMilestoneIndex:     targetIndex,
 		TreasuryOutput: &utxo.TreasuryOutput{

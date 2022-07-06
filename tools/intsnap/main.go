@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"time"
 
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
@@ -112,7 +111,7 @@ func writeFullSnapshot() *snapshot.FullSnapshotHeader {
 		Type:                     snapshot.Full,
 		GenesisMilestoneIndex:    0,
 		TargetMilestoneIndex:     1,
-		TargetMilestoneTimestamp: uint32(time.Now().Unix()),
+		TargetMilestoneTimestamp: 0,
 		TargetMilestoneID:        iotago.MilestoneID{},
 		LedgerMilestoneIndex:     3,
 		TreasuryOutput: &utxo.TreasuryOutput{
@@ -233,7 +232,7 @@ func writeDeltaSnapshot(fullSnapshotHeader *snapshot.FullSnapshotHeader) {
 		Version:                       snapshot.SupportedFormatVersion,
 		Type:                          snapshot.Delta,
 		TargetMilestoneIndex:          5,
-		TargetMilestoneTimestamp:      uint32(time.Now().Unix()),
+		TargetMilestoneTimestamp:      0,
 		FullSnapshotTargetMilestoneID: fullSnapshotHeader.TargetMilestoneID,
 		SEPFileOffset:                 0,
 		MilestoneDiffCount:            0,
