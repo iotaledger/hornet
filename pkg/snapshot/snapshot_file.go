@@ -74,6 +74,21 @@ func increaseOffsets(amount int64, offsets ...*int64) {
 	}
 }
 
+func writeFunc(writeSeeker io.WriteSeeker, variableName string, value any, offsetsToIncrease ...*int64) error {
+	length := binary.Size(value)
+	if length == -1 {
+		return fmt.Errorf("unable to determine length of %s", variableName)
+	}
+
+	if err := binary.Write(writeSeeker, binary.LittleEndian, value); err != nil {
+		return fmt.Errorf("unable to write LS %s: %w", variableName, err)
+	}
+
+	increaseOffsets(int64(length), offsetsToIncrease...)
+
+	return nil
+}
+
 // MilestoneDiff represents the outputs which were created and consumed for the given milestone
 // and the block itself which contains the milestone.
 type MilestoneDiff struct {
@@ -157,7 +172,8 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 		}
 	}
 
-	msDiffLength := uint32(b.Len())
+	// length of the msDiff itself plus the length for the size field.
+	msDiffLength := uint32(b.Len() + serializer.UInt32ByteSize)
 
 	var bufMilestoneDiffLength bytes.Buffer
 	if err := binary.Write(&bufMilestoneDiffLength, binary.LittleEndian, msDiffLength); err != nil {
@@ -377,70 +393,65 @@ func writeFullSnapshotHeader(writeSeeker io.WriteSeeker, header *FullSnapshotHea
 		return 0, ErrTreasuryOutputNotProvided
 	}
 
-	var countersFileOffset int64
+	writeFunc := func(name string, value any, offsetsToIncrease ...*int64) error {
+		return writeFunc(writeSeeker, name, value, offsetsToIncrease...)
+	}
+
+	var countersPosition int64
 
 	// Version
 	// Denotes the version of this file format.
-	if _, err := writeSeeker.Write([]byte{header.Version}); err != nil {
-		return 0, fmt.Errorf("unable to write LS version: %w", err)
+	if err := writeFunc("version", header.Version, &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(serializer.OneByte, &countersFileOffset)
 
 	// Type
 	// Denotes the type of this file format. Value 0 denotes a full snapshot.
-	if _, err := writeSeeker.Write([]byte{byte(Full)}); err != nil {
-		return 0, fmt.Errorf("unable to write LS type: %w", err)
+	if err := writeFunc("type", Full, &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(serializer.OneByte, &countersFileOffset)
 
 	// Genesis Milestone Index
 	// The index of the genesis milestone of the network.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.GenesisMilestoneIndex); err != nil {
-		return 0, fmt.Errorf("unable to write LS genesis milestone index: %w", err)
+	if err := writeFunc("genesis milestone index", header.GenesisMilestoneIndex, &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset)
 
 	// Target Milestone Index
 	// The index of the milestone of which the SEPs within the snapshot are from.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.TargetMilestoneIndex); err != nil {
-		return 0, fmt.Errorf("unable to write LS target milestone index: %w", err)
+	if err := writeFunc("target milestone index", header.TargetMilestoneIndex, &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset)
 
 	// Target Milestone Timestamp
 	// The timestamp of the milestone of which the SEPs within the snapshot are from.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.TargetMilestoneTimestamp); err != nil {
-		return 0, fmt.Errorf("unable to write LS target milestone timestamp: %w", err)
+	if err := writeFunc("target milestone timestamp", header.TargetMilestoneTimestamp, &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset)
 
 	// Target Milestone ID
 	// The ID of the milestone of which the SEPs within the snapshot are from.
-	if _, err := writeSeeker.Write(header.TargetMilestoneID[:]); err != nil {
-		return 0, fmt.Errorf("unable to write LS target milestone ID: %w", err)
+	if err := writeFunc("target milestone ID", header.TargetMilestoneID[:], &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(iotago.MilestoneIDLength, &countersFileOffset)
 
 	// Ledger Milestone Index
 	// The index of the milestone of which the UTXOs within the snapshot are from.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.LedgerMilestoneIndex); err != nil {
-		return 0, fmt.Errorf("unable to write LS ledger milestone index: %w", err)
+	if err := writeFunc("ledger milestone index", header.LedgerMilestoneIndex, &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset)
 
 	// Treasury Output Milestone ID
 	// The milestone ID of the milestone which generated the treasury output.
-	if _, err := writeSeeker.Write(header.TreasuryOutput.MilestoneID[:]); err != nil {
-		return 0, fmt.Errorf("unable to write LS treasury output milestone ID: %w", err)
+	if err := writeFunc("treasury output milestone ID", header.TreasuryOutput.MilestoneID[:], &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(iotago.MilestoneIDLength, &countersFileOffset)
 
 	// Treasury Output Amount
 	// The amount of funds residing on the treasury output.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.TreasuryOutput.Amount); err != nil {
-		return 0, fmt.Errorf("unable to write LS treasury output amount: %w", err)
+	if err := writeFunc("treasury output amount", header.TreasuryOutput.Amount, &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(serializer.UInt64ByteSize, &countersFileOffset)
 
 	// ProtocolParamsMilestoneOpt Length
 	// Denotes the length of the ProtocolParamsMilestoneOpt.
@@ -448,17 +459,15 @@ func writeFullSnapshotHeader(writeSeeker io.WriteSeeker, header *FullSnapshotHea
 	if err != nil {
 		return 0, fmt.Errorf("unable to serialize LS protocol parameters milestone option: %w", err)
 	}
-	if err := binary.Write(writeSeeker, binary.LittleEndian, uint16(len(protoParamsMsOptionBytes))); err != nil {
-		return 0, fmt.Errorf("unable to write LS protocol parameters milestone option length: %w", err)
+	if err := writeFunc("protocol parameters milestone option length", uint16(len(protoParamsMsOptionBytes)), &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(serializer.UInt16ByteSize, &countersFileOffset)
 
 	// ProtocolParamsMilestoneOpt
 	// Active ProtocolParamsMilestoneOpt of the ledger milestone
-	if _, err := writeSeeker.Write(protoParamsMsOptionBytes); err != nil {
-		return 0, fmt.Errorf("unable to write LS protocol parameters milestone option: %w", err)
+	if err := writeFunc("protocol parameters milestone option", protoParamsMsOptionBytes, &countersPosition); err != nil {
+		return 0, err
 	}
-	increaseOffsets(int64(len(protoParamsMsOptionBytes)), &countersFileOffset)
 
 	var outputCount uint64
 	var msDiffCount uint32
@@ -466,23 +475,23 @@ func writeFullSnapshotHeader(writeSeeker io.WriteSeeker, header *FullSnapshotHea
 
 	// Outputs Count
 	// The amount of UTXOs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, outputCount); err != nil {
-		return 0, fmt.Errorf("unable to write LS outputs count: %w", err)
+	if err := writeFunc("outputs count", outputCount); err != nil {
+		return 0, err
 	}
 
 	// Milestone Diffs Count
 	// The amount of milestone diffs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, msDiffCount); err != nil {
-		return 0, fmt.Errorf("unable to write LS milestone diffs count: %w", err)
+	if err := writeFunc("milestone diffs count", msDiffCount); err != nil {
+		return 0, err
 	}
 
 	// SEPs Count
 	// The amount of SEPs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, sepsCount); err != nil {
-		return 0, fmt.Errorf("unable to write LS solid entry points count: %w", err)
+	if err := writeFunc("solid entry points count", sepsCount); err != nil {
+		return 0, err
 	}
 
-	return countersFileOffset, nil
+	return countersPosition, nil
 }
 
 // ReadFullSnapshotHeader reads the full snapshot header from the given reader.
@@ -588,69 +597,67 @@ func writeDeltaSnapshotHeader(writeSeeker io.WriteSeeker, header *DeltaSnapshotH
 		return 0, 0, ErrWrongSnapshotType
 	}
 
-	var sepFileOffset int64
-	var countersFileOffset int64
+	writeFunc := func(name string, value any, offsetsToIncrease ...*int64) error {
+		return writeFunc(writeSeeker, name, value, offsetsToIncrease...)
+	}
+
+	// this is the offset of the SEPFileOffset field in the header
+	var sepFileOffsetPosition int64
+	// this is the offset of the first SEP in the snapshot file
+	var sepPosition int64
 
 	// Version
 	// Denotes the version of this file format.
-	if _, err := writeSeeker.Write([]byte{header.Version}); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS version: %w", err)
+	if err := writeFunc("version", header.Version, &sepFileOffsetPosition, &sepPosition); err != nil {
+		return 0, 0, err
 	}
-	increaseOffsets(serializer.OneByte, &countersFileOffset, &sepFileOffset)
 
 	// Type
 	// Denotes the type of this file format. Value 1 denotes a delta snapshot.
-	if _, err := writeSeeker.Write([]byte{byte(Delta)}); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS type: %w", err)
+	if err := writeFunc("type", Delta, &sepFileOffsetPosition, &sepPosition); err != nil {
+		return 0, 0, err
 	}
-	increaseOffsets(serializer.OneByte, &countersFileOffset, &sepFileOffset)
 
 	// Target Milestone Index
 	// The index of the milestone of which the SEPs within the snapshot are from.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.TargetMilestoneIndex); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS target milestone index: %w", err)
+	if err := writeFunc("target milestone index", header.TargetMilestoneIndex, &sepFileOffsetPosition, &sepPosition); err != nil {
+		return 0, 0, err
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset, &sepFileOffset)
 
 	// Target Milestone Timestamp
 	// The timestamp of the milestone of which the SEPs within the snapshot are from.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, header.TargetMilestoneTimestamp); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS target milestone timestamp: %w", err)
+	if err := writeFunc("target milestone timestamp", header.TargetMilestoneTimestamp, &sepFileOffsetPosition, &sepPosition); err != nil {
+		return 0, 0, err
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &countersFileOffset, &sepFileOffset)
 
 	// Full Snapshot Target Milestone ID
 	// The ID of the target milestone of the full snapshot this delta snapshot builts up from.
-	if _, err := writeSeeker.Write(header.FullSnapshotTargetMilestoneID[:]); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS full snapshot target milestone ID: %w", err)
+	if err := writeFunc("full snapshot target milestone ID", header.FullSnapshotTargetMilestoneID[:], &sepFileOffsetPosition, &sepPosition); err != nil {
+		return 0, 0, err
 	}
-	increaseOffsets(iotago.MilestoneIDLength, &countersFileOffset, &sepFileOffset)
 
 	// SEP File Offset
 	// The file offset of the SEPs field. This is used to easily update an existing delta snapshot without parsing its content.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, sepFileOffset); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS SEP file offset: %w", err)
+	if err := writeFunc("solid entry points file offset", sepPosition, &sepPosition); err != nil {
+		return 0, 0, err
 	}
-	increaseOffsets(serializer.Int64ByteSize, &sepFileOffset)
 
 	var msDiffCount uint32
 	var sepsCount uint16
 
 	// Milestone Diffs Count
 	// The amount of milestone diffs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, msDiffCount); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS milestone diffs count: %w", err)
+	if err := writeFunc("milestone diffs count", msDiffCount, &sepPosition); err != nil {
+		return 0, 0, err
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &sepFileOffset)
 
 	// SEPs Count
 	// The amount of SEPs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, sepsCount); err != nil {
-		return 0, 0, fmt.Errorf("unable to write LS solid entry points count: %w", err)
+	if err := writeFunc("solid entry points count", sepsCount, &sepPosition); err != nil {
+		return 0, 0, err
 	}
-	increaseOffsets(serializer.UInt16ByteSize, &sepFileOffset)
 
-	return countersFileOffset, sepFileOffset, nil
+	return sepFileOffsetPosition, sepPosition, nil
 }
 
 // ReadDeltaSnapshotHeader reads the delta snapshot header from the given reader.
@@ -735,9 +742,13 @@ func StreamFullSnapshotDataTo(
 
 	timeStart := time.Now()
 
-	countersFileOffset, err := writeFullSnapshotHeader(writeSeeker, header)
+	countersPosition, err := writeFullSnapshotHeader(writeSeeker, header)
 	if err != nil {
 		return nil, err
+	}
+
+	writeFunc := func(name string, value any, offsetsToIncrease ...*int64) error {
+		return writeFunc(writeSeeker, name, value, offsetsToIncrease...)
 	}
 
 	var outputCount uint64
@@ -758,9 +769,8 @@ func StreamFullSnapshotDataTo(
 		}
 
 		outputCount++
-		outputBytes := output.SnapshotBytes()
-		if _, err := writeSeeker.Write(outputBytes); err != nil {
-			return nil, fmt.Errorf("unable to write LS output #%d: %w", outputCount, err)
+		if err := writeFunc(fmt.Sprintf("output #%d", outputCount), output.SnapshotBytes()); err != nil {
+			return nil, err
 		}
 	}
 	timeOutputs := time.Now()
@@ -781,8 +791,8 @@ func StreamFullSnapshotDataTo(
 		if err != nil {
 			return nil, fmt.Errorf("unable to serialize LS milestone diff #%d: %w", msDiffCount, err)
 		}
-		if _, err := writeSeeker.Write(msDiffBytes); err != nil {
-			return nil, fmt.Errorf("unable to write LS milestone diff #%d: %w", msDiffCount, err)
+		if err := writeFunc(fmt.Sprintf("milestone diff #%d", msDiffCount), msDiffBytes); err != nil {
+			return nil, err
 		}
 	}
 	timeMilestoneDiffs := time.Now()
@@ -798,33 +808,33 @@ func StreamFullSnapshotDataTo(
 		}
 
 		sepsCount++
-		if _, err := writeSeeker.Write(sep[:]); err != nil {
-			return nil, fmt.Errorf("unable to write LS SEP #%d: %w", sepsCount, err)
+		if err := writeFunc(fmt.Sprintf("SEP #%d", sepsCount), sep[:]); err != nil {
+			return nil, err
 		}
 	}
 	timeSolidEntryPoints := time.Now()
 
 	// seek back to the file position of the counters
-	if _, err := writeSeeker.Seek(countersFileOffset, io.SeekStart); err != nil {
+	if _, err := writeSeeker.Seek(countersPosition, io.SeekStart); err != nil {
 		return nil, fmt.Errorf("unable to seek to LS counter placeholders: %w", err)
 	}
 
 	// Outputs Count
 	// The amount of UTXOs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, outputCount); err != nil {
-		return nil, fmt.Errorf("unable to write LS outputs count: %w", err)
+	if err := writeFunc("outputs count", outputCount); err != nil {
+		return nil, err
 	}
 
 	// Milestone Diffs Count
 	// The amount of milestone diffs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, msDiffCount); err != nil {
-		return nil, fmt.Errorf("unable to write LS milestone diffs count: %w", err)
+	if err := writeFunc("milestone diffs count", msDiffCount); err != nil {
+		return nil, err
 	}
 
 	// SEPs Count
 	// The amount of SEPs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, sepsCount); err != nil {
-		return nil, fmt.Errorf("unable to write LS solid entry points count: %w", err)
+	if err := writeFunc("solid entry points count", sepsCount); err != nil {
+		return nil, err
 	}
 
 	// update the values in the header
@@ -856,9 +866,13 @@ func StreamDeltaSnapshotDataTo(
 
 	timeStart := time.Now()
 
-	countersFileOffset, sepFileOffset, err := writeDeltaSnapshotHeader(writeSeeker, header)
+	sepFileOffsetPosition, sepPosition, err := writeDeltaSnapshotHeader(writeSeeker, header)
 	if err != nil {
 		return nil, err
+	}
+
+	writeFunc := func(name string, value any, offsetsToIncrease ...*int64) error {
+		return writeFunc(writeSeeker, name, value, offsetsToIncrease...)
 	}
 
 	timeHeader := time.Now()
@@ -882,10 +896,9 @@ func StreamDeltaSnapshotDataTo(
 		if err != nil {
 			return nil, fmt.Errorf("unable to serialize LS milestone diff #%d: %w", msDiffCount, err)
 		}
-		if _, err := writeSeeker.Write(msDiffBytes); err != nil {
-			return nil, fmt.Errorf("unable to write LS milestone diff #%d: %w", msDiffCount, err)
+		if err := writeFunc(fmt.Sprintf("milestone diff #%d", msDiffCount), msDiffBytes, &sepPosition); err != nil {
+			return nil, err
 		}
-		increaseOffsets(int64(len(msDiffBytes)), &sepFileOffset)
 	}
 	timeMilestoneDiffs := time.Now()
 
@@ -900,37 +913,37 @@ func StreamDeltaSnapshotDataTo(
 		}
 
 		sepsCount++
-		if _, err := writeSeeker.Write(sep[:]); err != nil {
-			return nil, fmt.Errorf("unable to write LS SEP #%d: %w", sepsCount, err)
+		if err := writeFunc(fmt.Sprintf("SEP #%d", sepsCount), sep[:]); err != nil {
+			return nil, err
 		}
 	}
 	timeSolidEntryPoints := time.Now()
 
-	// seek back to the file position of the counters
-	if _, err := writeSeeker.Seek(countersFileOffset, io.SeekStart); err != nil {
+	// seek back to the file position of the SEPFileOffset
+	if _, err := writeSeeker.Seek(sepFileOffsetPosition, io.SeekStart); err != nil {
 		return nil, fmt.Errorf("unable to seek to LS counter placeholders: %w", err)
 	}
 
 	// SEP File Offset
 	// The file offset of the SEPs field. This is used to easily update an existing delta snapshot without parsing its content.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, sepFileOffset); err != nil {
-		return nil, fmt.Errorf("unable to write LS solid entry points file offset: %w", err)
+	if err := writeFunc("solid entry points file offset", sepPosition); err != nil {
+		return nil, err
 	}
 
 	// Milestone Diffs Count
 	// The amount of milestone diffs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, msDiffCount); err != nil {
-		return nil, fmt.Errorf("unable to write LS milestone diffs count: %w", err)
+	if err := writeFunc("milestone diffs count", msDiffCount); err != nil {
+		return nil, err
 	}
 
 	// SEPs Count
 	// The amount of SEPs contained within this snapshot.
-	if err := binary.Write(writeSeeker, binary.LittleEndian, sepsCount); err != nil {
-		return nil, fmt.Errorf("unable to write LS solid entry points count: %w", err)
+	if err := writeFunc("solid entry points count", sepsCount); err != nil {
+		return nil, err
 	}
 
 	// update the values in the header
-	header.SEPFileOffset = sepFileOffset
+	header.SEPFileOffset = sepPosition
 	header.MilestoneDiffCount = msDiffCount
 	header.SEPCount = sepsCount
 
@@ -975,41 +988,48 @@ func StreamDeltaSnapshotDataToExisting(
 	}
 
 	timeStart := time.Now()
-	var fileOffset int64
-	var countersFileOffset int64
+
+	writeFunc := func(name string, value any, offsetsToIncrease ...*int64) error {
+		return writeFunc(fileHandle, name, value, offsetsToIncrease...)
+	}
+
+	// this is the current position of the cursor in the file
+	var cursorPosition int64
+	// this is the offset of the SEPFileOffset field in the header
+	var sepFileOffsetPosition int64
 
 	// Version
 	// Denotes the version of this file format.
-	increaseOffsets(serializer.OneByte, &fileOffset, &countersFileOffset)
+	increaseOffsets(serializer.OneByte, &cursorPosition, &sepFileOffsetPosition)
 
 	// Type
 	// Denotes the type of this file format. Value 1 denotes a delta snapshot.
-	increaseOffsets(serializer.OneByte, &fileOffset, &countersFileOffset)
+	increaseOffsets(serializer.OneByte, &cursorPosition, &sepFileOffsetPosition)
 
 	// Seek to the position of Target Milestone Index
-	fileHandle.Seek(fileOffset, io.SeekStart)
+	fileHandle.Seek(cursorPosition, io.SeekStart)
 
 	// Target Milestone Index
 	// The index of the milestone of which the SEPs within the snapshot are from.
-	if err := binary.Write(fileHandle, binary.LittleEndian, header.TargetMilestoneIndex); err != nil {
-		return nil, fmt.Errorf("unable to write LS target milestone index: %w", err)
+	if err := writeFunc("target milestone index", header.TargetMilestoneIndex, &cursorPosition, &sepFileOffsetPosition); err != nil {
+		return nil, err
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &fileOffset, &countersFileOffset)
 
 	// Target Milestone Timestamp
 	// The timestamp of the milestone of which the SEPs within the snapshot are from.
-	if err := binary.Write(fileHandle, binary.LittleEndian, header.TargetMilestoneTimestamp); err != nil {
-		return nil, fmt.Errorf("unable to write LS target milestone timestamp: %w", err)
+	if err := writeFunc("target milestone timestamp", header.TargetMilestoneTimestamp, &cursorPosition, &sepFileOffsetPosition); err != nil {
+		return nil, err
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &fileOffset, &countersFileOffset)
 
 	// Full Snapshot Target Milestone ID
 	// The ID of the target milestone of the full snapshot this delta snapshot builts up from.
-	increaseOffsets(iotago.MilestoneIDLength, &fileOffset, &countersFileOffset)
+	increaseOffsets(iotago.MilestoneIDLength, &cursorPosition, &sepFileOffsetPosition)
 
 	timeHeader := time.Now()
 
-	sepFileOffset := oldDeltaHeader.SEPFileOffset
+	// this is the offset of the first SEP in the snapshot file
+	sepPosition := oldDeltaHeader.SEPFileOffset
+
 	msDiffCount := oldDeltaHeader.MilestoneDiffCount
 	var sepsCount uint16
 
@@ -1039,10 +1059,9 @@ func StreamDeltaSnapshotDataToExisting(
 		if err != nil {
 			return nil, fmt.Errorf("unable to serialize LS milestone diff #%d: %w", msDiffCount, err)
 		}
-		if _, err := fileHandle.Write(msDiffBytes); err != nil {
-			return nil, fmt.Errorf("unable to write LS milestone diff #%d: %w", msDiffCount, err)
+		if err := writeFunc(fmt.Sprintf("milestone diff #%d", msDiffCount), msDiffBytes, &sepPosition); err != nil {
+			return nil, err
 		}
-		increaseOffsets(int64(len(msDiffBytes)), &sepFileOffset)
 	}
 	timeMilestoneDiffs := time.Now()
 
@@ -1057,37 +1076,37 @@ func StreamDeltaSnapshotDataToExisting(
 		}
 
 		sepsCount++
-		if _, err := fileHandle.Write(sep[:]); err != nil {
-			return nil, fmt.Errorf("unable to write LS SEP #%d: %w", sepsCount, err)
+		if err := writeFunc(fmt.Sprintf("SEP #%d", sepsCount), sep[:]); err != nil {
+			return nil, err
 		}
 	}
 	timeSolidEntryPoints := time.Now()
 
 	// seek back to the file position of the counters
-	if _, err := fileHandle.Seek(countersFileOffset, io.SeekStart); err != nil {
+	if _, err := fileHandle.Seek(sepFileOffsetPosition, io.SeekStart); err != nil {
 		return nil, fmt.Errorf("unable to seek to LS counter placeholders: %w", err)
 	}
 
 	// SEP File Offset
 	// The file offset of the SEPs field. This is used to easily update an existing delta snapshot without parsing its content.
-	if err := binary.Write(fileHandle, binary.LittleEndian, sepFileOffset); err != nil {
-		return nil, fmt.Errorf("unable to write LS solid entry points file offset: %w", err)
+	if err := writeFunc("solid entry points file offset", sepPosition); err != nil {
+		return nil, err
 	}
 
 	// Milestone Diffs Count
 	// The amount of milestone diffs contained within this snapshot.
-	if err := binary.Write(fileHandle, binary.LittleEndian, msDiffCount); err != nil {
-		return nil, fmt.Errorf("unable to write LS milestone diffs count: %w", err)
+	if err := writeFunc("milestone diffs count", msDiffCount); err != nil {
+		return nil, err
 	}
 
 	// SEPs Count
 	// The amount of SEPs contained within this snapshot.
-	if err := binary.Write(fileHandle, binary.LittleEndian, sepsCount); err != nil {
-		return nil, fmt.Errorf("unable to write LS solid entry points count: %w", err)
+	if err := writeFunc("solid entry points count", sepsCount); err != nil {
+		return nil, err
 	}
 
 	// update the values in the header
-	header.SEPFileOffset = sepFileOffset
+	header.SEPFileOffset = sepPosition
 	header.MilestoneDiffCount = msDiffCount
 	header.SEPCount = sepsCount
 
