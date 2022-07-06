@@ -150,12 +150,6 @@ type OutputResponse struct {
 	RawOutput *json.RawMessage `json:"output"`
 }
 
-// treasuryResponse defines the response of a GET treasury REST API call.
-type treasuryResponse struct {
-	MilestoneID string `json:"milestoneId"`
-	Amount      string `json:"amount"`
-}
-
 // addPeerRequest defines the request for a POST peer REST API call.
 type addPeerRequest struct {
 	// The libp2p multi address of the peer.

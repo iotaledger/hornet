@@ -163,14 +163,11 @@ func rawOutputByID(c echo.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-func treasury(_ echo.Context) (*treasuryResponse, error) {
+func treasury(_ echo.Context) (*utxo.TreasuryOutput, error) {
 	treasuryOutput, err := deps.UTXOManager.UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
 		return nil, err
 	}
 
-	return &treasuryResponse{
-		MilestoneID: iotago.EncodeHex(treasuryOutput.MilestoneID[:]),
-		Amount:      iotago.EncodeUint64(treasuryOutput.Amount),
-	}, nil
+	return treasuryOutput, nil
 }

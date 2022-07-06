@@ -36,14 +36,14 @@ type TreasuryOutput struct {
 }
 
 type jsonTreasuryOutput struct {
-	MilestoneID string `json:"milestoneID"`
-	Amount      uint64 `json:"amount"`
+	MilestoneID string `json:"milestoneId"`
+	Amount      string `json:"amount"`
 }
 
 func (t *TreasuryOutput) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&jsonTreasuryOutput{
 		MilestoneID: t.MilestoneID.ToHex(),
-		Amount:      t.Amount,
+		Amount:      iotago.EncodeUint64(t.Amount),
 	})
 }
 
@@ -65,7 +65,11 @@ func (t *TreasuryOutput) UnmarshalJSON(bytes []byte) error {
 	}
 
 	copy(t.MilestoneID[:], milestoneID)
-	t.Amount = j.Amount
+
+	t.Amount, err = iotago.DecodeUint64(j.Amount)
+	if err != nil {
+		return fmt.Errorf("invalid amount: %w", err)
+	}
 
 	return nil
 }
