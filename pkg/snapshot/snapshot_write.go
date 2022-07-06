@@ -596,6 +596,7 @@ func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, fileP
 		return nil, fmt.Errorf("loading protocol parameters milestone option failed: %w", err)
 	}
 
+	// TODO: needs to be adapted for when protocol parameters struct changes
 	protoParams := &iotago.ProtocolParameters{}
 	if _, err := protoParams.Deserialize(protoParamsMsOption.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
 		return nil, fmt.Errorf("failed to deserialize protocol parameters: %w", err)

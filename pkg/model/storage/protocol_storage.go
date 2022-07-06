@@ -15,6 +15,7 @@ var (
 )
 
 // ProtocolParamsMilestoneOptConsumer consumes the given ProtocolParamsMilestoneOpt.
+// Returning false from this function indicates to abort the iteration.
 type ProtocolParamsMilestoneOptConsumer func(*iotago.ProtocolParamsMilestoneOpt) bool
 
 type ProtocolStorage struct {
@@ -104,6 +105,7 @@ func (s *ProtocolStorage) ProtocolParameters(msIndex iotago.MilestoneIndex) (*io
 		return nil, err
 	}
 
+	// TODO: needs to be adapted for when protocol parameters struct changes
 	protoParams := &iotago.ProtocolParameters{}
 	if _, err := protoParams.Deserialize(protoParamsMsOption.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters")

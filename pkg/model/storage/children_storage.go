@@ -127,6 +127,7 @@ func (s *Storage) CachedChildrenOfBlockID(blockID iotago.BlockID, iteratorOption
 }
 
 // ChildConsumer consumes the given child during looping through all children.
+// Returning false from this function indicates to abort the iteration.
 type ChildConsumer func(blockID iotago.BlockID, childBlockID iotago.BlockID) bool
 
 // ForEachChild loops over all children.

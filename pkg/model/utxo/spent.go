@@ -8,6 +8,8 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+// SpentConsumer is a function that consumes a spent output.
+// Returning false from this function indicates to abort the iteration.
 type SpentConsumer func(spent *Spent) bool
 
 // LexicalOrderedSpents are spents ordered in lexical order by their outputID.

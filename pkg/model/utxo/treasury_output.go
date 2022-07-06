@@ -231,6 +231,7 @@ func (u *Manager) UnspentTreasuryOutputWithoutLocking() (*TreasuryOutput, error)
 }
 
 // TreasuryOutputConsumer is a function that consumes an output.
+// Returning false from this function indicates to abort the iteration.
 type TreasuryOutputConsumer func(output *TreasuryOutput) bool
 
 // ForEachTreasuryOutput iterates over all stored treasury outputs.

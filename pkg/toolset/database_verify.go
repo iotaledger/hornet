@@ -55,7 +55,7 @@ func databaseVerify(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPath)
 	}
 
-	// TODO: adapt to new protocol parameter logic
+	// TODO: needs to be adapted for when protocol parameters struct changes
 	protoParams := &iotago.ProtocolParameters{}
 
 	// we don't need to check the health of the source db.

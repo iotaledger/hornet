@@ -64,6 +64,7 @@ func snapshotGen(args []string) error {
 	}
 
 	println("loading protocol parameters...")
+	// TODO: needs to be adapted for when protocol parameters struct changes
 	protoParams := &iotago.ProtocolParameters{}
 	if err := ioutils.ReadJSONFromFile(protocolParametersPath, protoParams); err != nil {
 		return fmt.Errorf("failed to load protocol parameters: %w", err)

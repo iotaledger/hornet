@@ -88,6 +88,7 @@ func (u *Manager) SearchHighestReceiptMigratedAtIndex(options ...UTXOIterateOpti
 }
 
 // ReceiptTupleConsumer is a function that consumes a receipt tuple.
+// Returning false from this function indicates to abort the iteration.
 type ReceiptTupleConsumer func(rt *ReceiptTuple) bool
 
 // ForEachReceiptTuple iterates over all stored receipt tuples.

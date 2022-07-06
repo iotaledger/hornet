@@ -219,6 +219,7 @@ func (s *Storage) ContainsMilestoneIndex(milestoneIndex iotago.MilestoneIndex, r
 }
 
 // MilestoneIndexConsumer consumes the given index during looping through all milestones.
+// Returning false from this function indicates to abort the iteration.
 type MilestoneIndexConsumer func(index iotago.MilestoneIndex) bool
 
 // ForEachMilestoneIndex loops through all milestones.

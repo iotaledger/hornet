@@ -6,7 +6,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+// OutputIDConsumer is a function that consumes an output ID.
+// Returning false from this function indicates to abort the iteration.
 type OutputIDConsumer func(outputID iotago.OutputID) bool
+
+// OutputConsumer is a function that consumes an output.
+// Returning false from this function indicates to abort the iteration.
 type OutputConsumer func(output *Output) bool
 
 type lookupKey []byte

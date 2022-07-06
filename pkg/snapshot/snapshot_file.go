@@ -51,7 +51,7 @@ const (
 	// Delta is a snapshot which contains solely diffs of milestones newer than a certain ledger milestone
 	// instead of the complete ledger state of a given milestone.
 	// the delta snapshot contains no additional milestone diffs to calculate the correct protocol parameters,
-	// because they are they are already included in the full snapshot.
+	// because they are already included in the full snapshot.
 	Delta
 )
 
@@ -362,6 +362,7 @@ type FullSnapshotHeader struct {
 
 func (h *FullSnapshotHeader) ProtocolParameters() (*iotago.ProtocolParameters, error) {
 
+	// TODO: needs to be adapted for when protocol parameters struct changes
 	protoParams := &iotago.ProtocolParameters{}
 	if _, err := protoParams.Deserialize(h.ProtocolParamsMilestoneOpt.Params, serializer.DeSeriModeNoValidation, nil); err != nil {
 		return nil, fmt.Errorf("failed to deserialize protocol parameters: %w", err)

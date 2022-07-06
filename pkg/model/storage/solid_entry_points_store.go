@@ -12,6 +12,7 @@ var (
 )
 
 // SolidEntryPointConsumer consumes the solid entry point during looping through all solid entry points.
+// Returning false from this function indicates to abort the iteration.
 type SolidEntryPointConsumer func(solidEntryPoint *SolidEntryPoint) bool
 
 func (s *Storage) ReadLockSolidEntryPoints() {

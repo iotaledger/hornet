@@ -93,7 +93,7 @@ func databaseMerge(args []string) error {
 		}
 	}
 
-	// TODO: adapt to new protocol parameter logic
+	// TODO: needs to be adapted for when protocol parameters struct changes
 	protoParams := &iotago.ProtocolParameters{}
 
 	var tangleStoreSource *storage.Storage = nil
@@ -643,7 +643,7 @@ type GetBlockFunc func(blockID iotago.BlockID) (*iotago.Block, error)
 // ProxyStorage is used to temporarily store changes to an intermediate storage,
 // which then can be merged with the target store in a single commit.
 type ProxyStorage struct {
-	protoParams       *iotago.ProtocolParameters
+	protoParams      *iotago.ProtocolParameters
 	storeTarget      *storage.Storage
 	storeProxy       *storage.Storage
 	milestoneManager *milestonemanager.MilestoneManager
@@ -662,7 +662,7 @@ func NewProxyStorage(
 	}
 
 	return &ProxyStorage{
-		protoParams:       protoParams,
+		protoParams:      protoParams,
 		storeTarget:      storeTarget,
 		storeProxy:       storeProxy,
 		milestoneManager: milestoneManager,

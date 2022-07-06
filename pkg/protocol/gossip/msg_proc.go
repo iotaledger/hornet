@@ -332,7 +332,6 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	p.Enqueue(msg)
 }
 
-// TODO: this is a workaround, we need to create a different channel for milestone payloads in STING instead.
 func constructMilestoneBlock(protoParams *iotago.ProtocolParameters, cachedMilestone *storage.CachedMilestone) (*iotago.Block, error) {
 	defer cachedMilestone.Release(true) // milestone -1
 
