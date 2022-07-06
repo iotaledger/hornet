@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -71,10 +70,7 @@ func (s *Importer) ImportSnapshots(ctx context.Context) error {
 		return errors.New("no snapshot files available after snapshot download")
 	}
 
-	// initialize a temporary protocol storage in memory
-	protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
-
-	if err = s.LoadFullSnapshotFromFile(ctx, s.snapshotFullPath, targetNetworkID, protocolStorage); err != nil {
+	if err = s.LoadFullSnapshotFromFile(ctx, s.snapshotFullPath, targetNetworkID); err != nil {
 		_ = s.storage.MarkDatabasesCorrupted()
 		return err
 	}
@@ -83,7 +79,7 @@ func (s *Importer) ImportSnapshots(ctx context.Context) error {
 		return nil
 	}
 
-	if err = s.LoadDeltaSnapshotFromFile(ctx, s.snapshotDeltaPath, protocolStorage); err != nil {
+	if err = s.LoadDeltaSnapshotFromFile(ctx, s.snapshotDeltaPath); err != nil {
 		_ = s.storage.MarkDatabasesCorrupted()
 		return err
 	}
@@ -155,13 +151,13 @@ func (s *Importer) downloadSnapshotFiles(ctx context.Context, targetNetworkID ui
 }
 
 // LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
-func (s *Importer) LoadFullSnapshotFromFile(ctx context.Context, filePath string, targetNetworkID iotago.NetworkID, protocolStorage *storage.ProtocolStorage) (err error) {
+func (s *Importer) LoadFullSnapshotFromFile(ctx context.Context, filePath string, targetNetworkID iotago.NetworkID) (err error) {
 	snapshotName := snapshotNames[Full]
 
 	s.LogInfof("importing %s snapshot file...", snapshotName)
 	ts := time.Now()
 
-	fullHeader, err := loadFullSnapshotFileToStorage(ctx, s.storage, filePath, targetNetworkID, protocolStorage)
+	fullHeader, err := loadFullSnapshotFileToStorage(ctx, s.storage, filePath, targetNetworkID)
 	if err != nil {
 		return err
 	}
@@ -186,13 +182,13 @@ SnapshotInfo:
 }
 
 // LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
-func (s *Importer) LoadDeltaSnapshotFromFile(ctx context.Context, filePath string, protocolStorage *storage.ProtocolStorage) (err error) {
+func (s *Importer) LoadDeltaSnapshotFromFile(ctx context.Context, filePath string) (err error) {
 	snapshotName := snapshotNames[Delta]
 
 	s.LogInfof("importing %s snapshot file...", snapshotName)
 	ts := time.Now()
 
-	header, err := loadDeltaSnapshotFileToStorage(ctx, s.storage, filePath, protocolStorage)
+	header, err := loadDeltaSnapshotFileToStorage(ctx, s.storage, filePath)
 	if err != nil {
 		return err
 	}

@@ -278,12 +278,8 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			// initialize a temporary protocol storage in memory
-			protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
-
 			require.NoError(t, snapshot.StreamFullSnapshotDataFrom(
 				snapshotFileRead,
-				protocolStorage,
 				tt.fullHeaderConsumer,
 				tt.unspentTreasuryOutputConsumer,
 				tt.outputConsumer,
@@ -381,9 +377,11 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			protocolStorage := getProtocolStorage(protoParams)
+			protocolStorageGetter := func() (*storage.ProtocolStorage, error) {
+				return getProtocolStorage(protoParams), nil
+			}
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGen := tt.msDiffGenRetriever()
@@ -494,9 +492,11 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			protocolStorage := getProtocolStorage(protoParams)
+			protocolStorageGetter := func() (*storage.ProtocolStorage, error) {
+				return getProtocolStorage(protoParams), nil
+			}
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorage, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGenRetriever, sepGenRetriever := tt.snapshotExtensionGenRetriever()

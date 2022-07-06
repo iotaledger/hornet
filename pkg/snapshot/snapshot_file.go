@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/model/utxo"
@@ -295,16 +296,8 @@ func ReadMilestoneDiffProtocolParameters(reader io.ReadSeeker, protocolStorage *
 	return int64(msDiffLength), nil
 }
 
-// SEPProducerFunc yields a solid entry point to be written to a snapshot or nil if no more is available.
-type SEPProducerFunc func() (iotago.BlockID, error)
-
-// SEPConsumerFunc consumes the given solid entry point.
-// A returned error signals to cancel further reading.
-type SEPConsumerFunc func(iotago.BlockID, iotago.MilestoneIndex) error
-
-// ProtocolParamsMilestoneOptConsumerFunc consumes the given ProtocolParamsMilestoneOpt.
-// A returned error signals to cancel further reading.
-type ProtocolParamsMilestoneOptConsumerFunc func(*iotago.ProtocolParamsMilestoneOpt) error
+// ProtocolStorageGetterFunc returns a ProtocolStorage.
+type ProtocolStorageGetterFunc func() (*storage.ProtocolStorage, error)
 
 // FullHeaderConsumerFunc consumes the full snapshot file header.
 // A returned error signals to cancel further reading.
@@ -331,6 +324,17 @@ type MilestoneDiffProducerFunc func() (*MilestoneDiff, error)
 // MilestoneDiffConsumerFunc consumes the given MilestoneDiff.
 // A returned error signals to cancel further reading.
 type MilestoneDiffConsumerFunc func(milestoneDiff *MilestoneDiff) error
+
+// SEPProducerFunc yields a solid entry point to be written to a snapshot or nil if no more is available.
+type SEPProducerFunc func() (iotago.BlockID, error)
+
+// SEPConsumerFunc consumes the given solid entry point.
+// A returned error signals to cancel further reading.
+type SEPConsumerFunc func(iotago.BlockID, iotago.MilestoneIndex) error
+
+// ProtocolParamsMilestoneOptConsumerFunc consumes the given ProtocolParamsMilestoneOpt.
+// A returned error signals to cancel further reading.
+type ProtocolParamsMilestoneOptConsumerFunc func(*iotago.ProtocolParamsMilestoneOpt) error
 
 type FullSnapshotHeader struct {
 	// Version denotes the version of this snapshot.
@@ -1147,7 +1151,6 @@ func ReadSnapshotTypeFromFile(filePath string) (Type, error) {
 // StreamFullSnapshotDataFrom consumes a full snapshot from the given reader.
 func StreamFullSnapshotDataFrom(
 	reader io.ReadSeeker,
-	protocolStorage *storage.ProtocolStorage,
 	headerConsumer FullHeaderConsumerFunc,
 	unspentTreasuryOutputConsumer UnspentTreasuryOutputConsumerFunc,
 	outputConsumer OutputConsumerFunc,
@@ -1172,6 +1175,9 @@ func StreamFullSnapshotDataFrom(
 	if err != nil {
 		return err
 	}
+
+	// initialize a temporary protocol storage in memory
+	protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
 
 	// the protocol parameters milestone option in the full snapshot is valid for the ledger milestone index.
 	if err := protocolStorage.StoreProtocolParametersMilestoneOption(fullHeader.ProtocolParamsMilestoneOpt); err != nil {
@@ -1262,11 +1268,16 @@ func StreamFullSnapshotDataFrom(
 // StreamDeltaSnapshotDataFrom consumes a delta snapshot from the given reader.
 func StreamDeltaSnapshotDataFrom(
 	reader io.ReadSeeker,
-	protocolStorage *storage.ProtocolStorage,
+	protocolStorageGetter ProtocolStorageGetterFunc,
 	headerConsumer DeltaHeaderConsumerFunc,
 	msDiffConsumer MilestoneDiffConsumerFunc,
 	sepConsumer SEPConsumerFunc,
 	protoParamsMsOptionsConsumer ProtocolParamsMilestoneOptConsumerFunc) error {
+
+	protocolStorage, err := protocolStorageGetter()
+	if err != nil {
+		return err
+	}
 
 	deltaHeader, err := ReadDeltaSnapshotHeader(reader)
 	if err != nil {

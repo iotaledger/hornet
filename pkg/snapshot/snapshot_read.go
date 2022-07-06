@@ -14,6 +14,31 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+// returns an in-memory copy of the ProtocolStorage of the dbStorage.
+func newProtocolStorageGetterFunc(dbStorage *storage.Storage) ProtocolStorageGetterFunc {
+	return func() (*storage.ProtocolStorage, error) {
+		// initialize a temporary protocol storage in memory
+		protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
+
+		// copy all existing protocol parameters milestone options to the new storage.
+		var innerErr error
+		if err := dbStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+			if err := protocolStorage.StoreProtocolParametersMilestoneOption(protoParamsMsOption); err != nil {
+				innerErr = err
+				return false
+			}
+			return true
+		}); err != nil {
+			return nil, fmt.Errorf("failed to iterate over protocol parameters milestone options: %w", err)
+		}
+		if innerErr != nil {
+			return nil, innerErr
+		}
+
+		return protocolStorage, nil
+	}
+}
+
 // returns a file header consumer, which stores the ledger milestone index up on execution in the database.
 // the given targetHeader is populated with the value of the read file header.
 func newFullHeaderConsumer(targetFullHeader *FullSnapshotHeader, dbStorage *storage.Storage, utxoManager *utxo.Manager, targetNetworkID ...uint64) FullHeaderConsumerFunc {
@@ -139,8 +164,7 @@ func loadFullSnapshotFileToStorage(
 	ctx context.Context,
 	dbStorage *storage.Storage,
 	filePath string,
-	targetNetworkID uint64,
-	protocolStorage *storage.ProtocolStorage) (fullHeader *FullSnapshotHeader, err error) {
+	targetNetworkID uint64) (fullHeader *FullSnapshotHeader, err error) {
 
 	dbStorage.WriteLockSolidEntryPoints()
 	dbStorage.ResetSolidEntryPointsWithoutLocking()
@@ -168,7 +192,6 @@ func loadFullSnapshotFileToStorage(
 
 	if err = StreamFullSnapshotDataFrom(
 		lsFile,
-		protocolStorage,
 		fullHeaderConsumer,
 		treasuryOutputConsumer,
 		outputConsumer,
@@ -214,8 +237,7 @@ func loadFullSnapshotFileToStorage(
 func loadDeltaSnapshotFileToStorage(
 	ctx context.Context,
 	dbStorage *storage.Storage,
-	filePath string,
-	protocolStorage *storage.ProtocolStorage) (deltaHeader *DeltaSnapshotHeader, err error) {
+	filePath string) (deltaHeader *DeltaSnapshotHeader, err error) {
 
 	dbStorage.WriteLockSolidEntryPoints()
 	dbStorage.ResetSolidEntryPointsWithoutLocking()
@@ -234,6 +256,7 @@ func loadDeltaSnapshotFileToStorage(
 	defer func() { _ = lsFile.Close() }()
 
 	deltaHeader = &DeltaSnapshotHeader{}
+	protocolStorageGetter := newProtocolStorageGetterFunc(dbStorage)
 	deltaHeaderConsumer := newDeltaHeaderConsumer(deltaHeader, dbStorage.UTXOManager())
 	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
 	sepConsumer := newSEPsConsumer(dbStorage)
@@ -241,7 +264,7 @@ func loadDeltaSnapshotFileToStorage(
 
 	if err = StreamDeltaSnapshotDataFrom(
 		lsFile,
-		protocolStorage,
+		protocolStorageGetter,
 		deltaHeaderConsumer,
 		msDiffConsumer,
 		sepConsumer,
@@ -292,9 +315,6 @@ func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage,
 		}
 	}
 
-	// initialize a temporary protocol storage in memory
-	protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
-
 	fullHeaderProtoParams, err := fullHeader.ProtocolParameters()
 	if err != nil {
 		return nil, nil, err
@@ -302,13 +322,13 @@ func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage,
 
 	var fullSnapshotHeader *FullSnapshotHeader
 	var deltaSnapshotHeader *DeltaSnapshotHeader
-	fullSnapshotHeader, err = loadFullSnapshotFileToStorage(ctx, dbStorage, fullPath, fullHeaderProtoParams.NetworkID(), protocolStorage)
+	fullSnapshotHeader, err = loadFullSnapshotFileToStorage(ctx, dbStorage, fullPath, fullHeaderProtoParams.NetworkID())
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if len(deltaPath) > 0 && deltaPath[0] != "" {
-		deltaSnapshotHeader, err = loadDeltaSnapshotFileToStorage(ctx, dbStorage, deltaPath[0], protocolStorage)
+		deltaSnapshotHeader, err = loadDeltaSnapshotFileToStorage(ctx, dbStorage, deltaPath[0])
 		if err != nil {
 			return nil, nil, err
 		}
