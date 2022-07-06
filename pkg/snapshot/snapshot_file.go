@@ -107,10 +107,6 @@ func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
 func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
 
-	var msDiffLength int64
-	// we increase the offsets here, but we add the bytes at the end because we can not seek in the buffer
-	increaseOffsets(serializer.UInt32ByteSize, &msDiffLength)
-
 	msBytes, err := md.Milestone.Serialize(serializer.DeSeriModePerformValidation, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize milestone for ls-milestone-diff %d: %w", md.Milestone.Index, err)
@@ -119,12 +115,10 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	if err := binary.Write(&b, binary.LittleEndian, uint32(len(msBytes))); err != nil {
 		return nil, fmt.Errorf("unable to write milestone payload length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
-	increaseOffsets(serializer.UInt32ByteSize, &msDiffLength)
 
 	if _, err := b.Write(msBytes); err != nil {
 		return nil, fmt.Errorf("unable to write milestone payload for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
-	increaseOffsets(int64(len(msBytes)), &msDiffLength)
 
 	// write in spent treasury output
 	opts := md.Milestone.Opts.MustSet()
@@ -135,46 +129,42 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 		if _, err := b.Write(md.SpentTreasuryOutput.MilestoneID[:]); err != nil {
 			return nil, fmt.Errorf("unable to write treasury input milestone hash for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 		}
-		increaseOffsets(iotago.MilestoneIDLength, &msDiffLength)
 
 		if err := binary.Write(&b, binary.LittleEndian, md.SpentTreasuryOutput.Amount); err != nil {
 			return nil, fmt.Errorf("unable to write treasury input amount for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 		}
-		increaseOffsets(serializer.UInt64ByteSize, &msDiffLength)
 	}
 
 	if err := binary.Write(&b, binary.LittleEndian, uint64(len(md.Created))); err != nil {
 		return nil, fmt.Errorf("unable to write created outputs array length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
-	increaseOffsets(serializer.UInt64ByteSize, &msDiffLength)
 
 	for x, output := range md.Created {
 		outputBytes := output.SnapshotBytes()
 		if _, err := b.Write(outputBytes); err != nil {
 			return nil, fmt.Errorf("unable to write output %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
-		increaseOffsets(int64(len(outputBytes)), &msDiffLength)
 	}
 
 	if err := binary.Write(&b, binary.LittleEndian, uint64(len(md.Consumed))); err != nil {
 		return nil, fmt.Errorf("unable to write consumed outputs array length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
-	increaseOffsets(serializer.UInt64ByteSize, &msDiffLength)
 
 	for x, spent := range md.Consumed {
 		spentBytes := spent.SnapshotBytes()
 		if _, err := b.Write(spentBytes); err != nil {
 			return nil, fmt.Errorf("unable to write spent %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
-		increaseOffsets(int64(len(spentBytes)), &msDiffLength)
 	}
 
-	var bufMilestoneDiffLengthOffset bytes.Buffer
-	if err := binary.Write(&bufMilestoneDiffLengthOffset, binary.LittleEndian, uint32(msDiffLength)); err != nil {
+	msDiffLength := uint32(b.Len())
+
+	var bufMilestoneDiffLength bytes.Buffer
+	if err := binary.Write(&bufMilestoneDiffLength, binary.LittleEndian, msDiffLength); err != nil {
 		return nil, fmt.Errorf("unable to write length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
 
-	return append(bufMilestoneDiffLengthOffset.Bytes(), b.Bytes()...), nil
+	return append(bufMilestoneDiffLength.Bytes(), b.Bytes()...), nil
 }
 
 // reads a MilestoneDiff from the given reader.
