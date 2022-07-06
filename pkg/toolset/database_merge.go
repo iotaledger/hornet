@@ -548,10 +548,7 @@ func mergeDatabase(
 
 	if tangleStoreSourceAvailable {
 		println(fmt.Sprintf("milestone range in database: %d-%d (source)", msIndexStartSource, msIndexEndSource))
-	}
-	println(fmt.Sprintf("milestone range in database: %d-%d (target)", msIndexStartTarget, msIndexEndTarget))
 
-	if tangleStoreSourceAvailable {
 		// check network ID
 		protoParamsTarget, err := tangleStoreTarget.CurrentProtocolParameters()
 		if err != nil {
@@ -563,6 +560,7 @@ func mergeDatabase(
 			return fmt.Errorf("source storage networkID not equal to target storage networkID (%d != %d)", sourceNetworkID, targetNetworkID)
 		}
 	}
+	println(fmt.Sprintf("milestone range in database: %d-%d (target)", msIndexStartTarget, msIndexEndTarget))
 
 	msIndexStart := msIndexEndTarget + 1
 	msIndexEnd := msIndexEndSource
