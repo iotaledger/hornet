@@ -55,7 +55,7 @@ func (i *SnapshotInfo) Deserialize(data []byte, _ serializer.DeSerializationMode
 		snapshotIndex         iotago.MilestoneIndex
 		entryPointIndex       iotago.MilestoneIndex
 		pruningIndex          iotago.MilestoneIndex
-		timestamp             iotago.MilestoneIndex
+		snapshotTimestamp     iotago.MilestoneIndex
 	)
 
 	offset, err := serializer.NewDeserializer(data).
@@ -71,8 +71,8 @@ func (i *SnapshotInfo) Deserialize(data []byte, _ serializer.DeSerializationMode
 		ReadNum(&pruningIndex, func(err error) error {
 			return fmt.Errorf("unable to deserialize pruning index: %w", err)
 		}).
-		ReadNum(&timestamp, func(err error) error {
-			return fmt.Errorf("unable to deserialize timestamp: %w", err)
+		ReadNum(&snapshotTimestamp, func(err error) error {
+			return fmt.Errorf("unable to deserialize snapshot timestamp: %w", err)
 		}).
 		Done()
 	if err != nil {
@@ -83,7 +83,7 @@ func (i *SnapshotInfo) Deserialize(data []byte, _ serializer.DeSerializationMode
 	i.snapshotIndex = snapshotIndex
 	i.entryPointIndex = entryPointIndex
 	i.pruningIndex = pruningIndex
-	i.snapshotTimestamp = time.Unix(int64(timestamp), 0)
+	i.snapshotTimestamp = time.Unix(int64(snapshotTimestamp), 0)
 
 	return offset, nil
 }
@@ -135,7 +135,7 @@ func (s *Storage) PrintSnapshotInfo() {
 	}
 }
 
-func (s *Storage) SetInitialSnapshotInfo(genesisMilestoneIndex iotago.MilestoneIndex, snapshotIndex iotago.MilestoneIndex, entryPointIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex, timestamp time.Time) error {
+func (s *Storage) SetInitialSnapshotInfo(genesisMilestoneIndex iotago.MilestoneIndex, snapshotIndex iotago.MilestoneIndex, entryPointIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex, snapshotTimestamp time.Time) error {
 	s.snapshotMutex.Lock()
 	defer s.snapshotMutex.Unlock()
 
@@ -144,20 +144,20 @@ func (s *Storage) SetInitialSnapshotInfo(genesisMilestoneIndex iotago.MilestoneI
 		snapshotIndex:         snapshotIndex,
 		entryPointIndex:       entryPointIndex,
 		pruningIndex:          pruningIndex,
-		snapshotTimestamp:     timestamp,
+		snapshotTimestamp:     snapshotTimestamp,
 	}
 
 	return s.storeSnapshotInfo(s.snapshot)
 }
 
-func (s *Storage) UpdateSnapshotInfo(snapshotIndex iotago.MilestoneIndex, entryPointIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex, timestamp time.Time) error {
+func (s *Storage) UpdateSnapshotInfo(snapshotIndex iotago.MilestoneIndex, entryPointIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex, snapshotTimestamp time.Time) error {
 	s.snapshotMutex.Lock()
 	defer s.snapshotMutex.Unlock()
 
 	s.snapshot.snapshotIndex = snapshotIndex
 	s.snapshot.entryPointIndex = entryPointIndex
 	s.snapshot.pruningIndex = pruningIndex
-	s.snapshot.snapshotTimestamp = timestamp
+	s.snapshot.snapshotTimestamp = snapshotTimestamp
 
 	return s.storeSnapshotInfo(s.snapshot)
 }
