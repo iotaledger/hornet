@@ -578,17 +578,26 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 }
 
 // creates a full snapshot file by streaming data from the database into a snapshot file.
-func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath string) (*FullSnapshotHeader, error) {
+// this should only be used by MergeSnapshotFiles, otherwise the SEP indexes won't be correct.
+func createFullSnapshotFromMergedSnapshotStorageState(dbStorage *storage.Storage, filePath string) (*FullSnapshotHeader, error) {
 
 	snapshotInfo := dbStorage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return nil, errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
 	}
 
-	// ledger index corresponds to the CMI
+	// ledger index corresponds to the target index of the delta snapshot
 	ledgerIndex, err := dbStorage.UTXOManager().ReadLedgerIndex()
 	if err != nil {
 		return nil, err
+	}
+
+	targetIndex := snapshotInfo.EntryPointIndex()
+
+	// if we create a snapshot from the current database state, the solid entry point index needs to match the ledger index.
+	// otherwise we need to walk the tangle to calculate the solid entry points and add all milestone diffs until this point.
+	if ledgerIndex != targetIndex {
+		return nil, errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchTargetIndex, "%d != %d", ledgerIndex, snapshotInfo.EntryPointIndex())
 	}
 
 	protoParamsMsOption, err := dbStorage.ProtocolParametersMilestoneOption(ledgerIndex)
@@ -602,8 +611,6 @@ func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, fileP
 		return nil, fmt.Errorf("failed to deserialize protocol parameters: %w", err)
 	}
 
-	targetIndex := ledgerIndex - syncmanager.MilestoneIndexDelta(protoParams.BelowMaxDepth)
-
 	cachedMilestoneTarget := dbStorage.CachedMilestoneByIndexOrNil(targetIndex) // milestone +1
 	if cachedMilestoneTarget == nil {
 		return nil, errors.Wrapf(common.ErrCritical, "target milestone (%d) not found", targetIndex)
@@ -612,12 +619,6 @@ func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, fileP
 
 	targetMilestoneTimestamp := cachedMilestoneTarget.Milestone().TimestampUnix()
 	targetMilestoneID := cachedMilestoneTarget.Milestone().MilestoneID()
-
-	// if we create a snapshot from the current database state, the solid entry point index needs to match the ledger index.
-	// otherwise we need to walk the tangle to calculate the solid entry points and add all milestone diffs until this point.
-	if ledgerIndex != snapshotInfo.EntryPointIndex() {
-		return nil, errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchTargetIndex, "%d != %d", ledgerIndex, snapshotInfo.EntryPointIndex())
-	}
 
 	// read out treasury tx
 	unspentTreasuryOutput, err := dbStorage.UTXOManager().UnspentTreasuryOutputWithoutLocking()
@@ -640,7 +641,6 @@ func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, fileP
 		SEPCount:                   0,
 	}
 
-	// TODO: this is wrong? the SEP need to match the target milestone index
 	// returns a producer which returns all solid entry points in the database.
 	sepsCount := 0
 	sepProducer := func() SEPProducerFunc {
@@ -679,10 +679,9 @@ func createFullSnapshotFromCurrentStorageState(dbStorage *storage.Storage, fileP
 		return output, err
 	}
 
-	milestoneDiffProducer := func() (*MilestoneDiff, error) {
-		// we won't have any ms diffs within this merged full snapshot file
-		return nil, nil
-	}
+	// normally we won't have any ms diffs within this merged full snapshot file,
+	// but the "AdditionalMilestoneDiffRange" milestone diffs are needed to reconstruct pending protocol parameter updates.
+	milestoneDiffProducer := NewMsDiffsProducer(MilestoneRetrieverFromStorage(dbStorage), dbStorage.UTXOManager(), MsDiffDirectionBackwards, targetIndex, targetIndex-AdditionalMilestoneDiffRange)
 
 	snapshotFile, tempFilePath, err := ioutils.CreateTempFile(filePath)
 	if err != nil {
@@ -915,7 +914,7 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		return nil, err
 	}
 
-	mergedSnapshotHeader, err := createFullSnapshotFromCurrentStorageState(dbStorage, targetFileName)
+	mergedSnapshotHeader, err := createFullSnapshotFromMergedSnapshotStorageState(dbStorage, targetFileName)
 	if err != nil {
 		return nil, err
 	}
