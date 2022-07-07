@@ -127,8 +127,14 @@ func NewUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasury
 // then its changes are roll-backed, otherwise, if the index is higher than the ledger index,
 // its mutations are applied on top of the latest state.
 // the caller needs to make sure to set the ledger index accordingly beforehand.
-func NewMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
+func NewMsDiffConsumer(dbStorage *storage.Storage, utxoManager *utxo.Manager, writeMilestonesToStorage bool) MilestoneDiffConsumerFunc {
 	return func(msDiff *MilestoneDiff) error {
+
+		if writeMilestonesToStorage {
+			cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(msDiff.Milestone, iotago.EmptyBlockID()) // milestone +1
+			cachedMilestone.Release(true)                                                                   // milestone -1
+		}
+
 		msIndex := msDiff.Milestone.Index
 		ledgerIndex, err := utxoManager.ReadLedgerIndex()
 		if err != nil {
@@ -164,7 +170,8 @@ func loadFullSnapshotFileToStorage(
 	ctx context.Context,
 	dbStorage *storage.Storage,
 	filePath string,
-	targetNetworkID uint64) (fullHeader *FullSnapshotHeader, err error) {
+	targetNetworkID uint64,
+	writeMilestonesToStorage bool) (fullHeader *FullSnapshotHeader, err error) {
 
 	dbStorage.WriteLockSolidEntryPoints()
 	dbStorage.ResetSolidEntryPointsWithoutLocking()
@@ -186,7 +193,7 @@ func loadFullSnapshotFileToStorage(
 	fullHeaderConsumer := newFullHeaderConsumer(fullHeader, dbStorage, dbStorage.UTXOManager(), targetNetworkID)
 	treasuryOutputConsumer := NewUnspentTreasuryOutputConsumer(dbStorage.UTXOManager())
 	outputConsumer := NewOutputConsumer(dbStorage.UTXOManager())
-	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
+	msDiffConsumer := NewMsDiffConsumer(dbStorage, dbStorage.UTXOManager(), writeMilestonesToStorage)
 	sepConsumer := newSEPsConsumer(dbStorage)
 	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
 
@@ -237,7 +244,8 @@ func loadFullSnapshotFileToStorage(
 func loadDeltaSnapshotFileToStorage(
 	ctx context.Context,
 	dbStorage *storage.Storage,
-	filePath string) (deltaHeader *DeltaSnapshotHeader, err error) {
+	filePath string,
+	writeMilestonesToStorage bool) (deltaHeader *DeltaSnapshotHeader, err error) {
 
 	dbStorage.WriteLockSolidEntryPoints()
 	dbStorage.ResetSolidEntryPointsWithoutLocking()
@@ -258,7 +266,7 @@ func loadDeltaSnapshotFileToStorage(
 	deltaHeader = &DeltaSnapshotHeader{}
 	protocolStorageGetter := newProtocolStorageGetterFunc(dbStorage)
 	deltaHeaderConsumer := newDeltaHeaderConsumer(deltaHeader, dbStorage.UTXOManager())
-	msDiffConsumer := NewMsDiffConsumer(dbStorage.UTXOManager())
+	msDiffConsumer := NewMsDiffConsumer(dbStorage, dbStorage.UTXOManager(), writeMilestonesToStorage)
 	sepConsumer := newSEPsConsumer(dbStorage)
 	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
 
@@ -294,7 +302,7 @@ func loadDeltaSnapshotFileToStorage(
 }
 
 // LoadSnapshotFilesToStorage loads the snapshot files from the given file paths into the storage.
-func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, fullPath string, deltaPath ...string) (*FullSnapshotHeader, *DeltaSnapshotHeader, error) {
+func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, writeMilestonesToStorage bool, fullPath string, deltaPath ...string) (*FullSnapshotHeader, *DeltaSnapshotHeader, error) {
 
 	fullHeader, err := ReadFullSnapshotHeaderFromFile(fullPath)
 	if err != nil {
@@ -322,13 +330,13 @@ func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage,
 
 	var fullSnapshotHeader *FullSnapshotHeader
 	var deltaSnapshotHeader *DeltaSnapshotHeader
-	fullSnapshotHeader, err = loadFullSnapshotFileToStorage(ctx, dbStorage, fullPath, fullHeaderProtoParams.NetworkID())
+	fullSnapshotHeader, err = loadFullSnapshotFileToStorage(ctx, dbStorage, fullPath, fullHeaderProtoParams.NetworkID(), writeMilestonesToStorage)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if len(deltaPath) > 0 && deltaPath[0] != "" {
-		deltaSnapshotHeader, err = loadDeltaSnapshotFileToStorage(ctx, dbStorage, deltaPath[0])
+		deltaSnapshotHeader, err = loadDeltaSnapshotFileToStorage(ctx, dbStorage, deltaPath[0], writeMilestonesToStorage)
 		if err != nil {
 			return nil, nil, err
 		}

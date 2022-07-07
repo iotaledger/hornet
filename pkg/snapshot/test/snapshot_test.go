@@ -197,7 +197,7 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 	producerU1 := snapshot.NewMsDiffsProducer(func(index iotago.MilestoneIndex) (*iotago.Milestone, error) {
 		return &iotago.Milestone{Index: index}, nil
 	}, u1, snapshot.MsDiffDirectionOnwards, startIndex, targetIndex)
-	consumerU2 := snapshot.NewMsDiffConsumer(u2)
+	consumerU2 := snapshot.NewMsDiffConsumer(nil, u2, false)
 
 	err := u2.StoreLedgerIndex(startIndex)
 	require.NoError(t, err)

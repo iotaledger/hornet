@@ -59,7 +59,7 @@ func TestConeRootIndexes(t *testing.T) {
 	latestMilestone := te.Milestones[len(te.Milestones)-1]
 	cmi := latestMilestone.Milestone().Index()
 
-	// Use Null hash and last milestone hash as parents
+	// Use Null hash and last milestone ID as parents
 	parents := append(latestMilestone.Milestone().Parents(), iotago.EmptyBlockID())
 	block := te.NewBlockBuilder("below max depth").Parents(parents.RemoveDupsAndSort()).BuildTaggedData().Store()
 

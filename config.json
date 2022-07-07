@@ -15,7 +15,7 @@
     "alias": "HORNET node"
   },
   "protocol": {
-    "targetNetworkName": "alphanet-7",
+    "targetNetworkName": "alphanet-8",
     "milestonePublicKeyCount": 3,
     "baseToken": {
       "name": "Shimmer",

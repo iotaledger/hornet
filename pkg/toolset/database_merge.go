@@ -107,8 +107,10 @@ func databaseMerge(args []string) error {
 			return err
 		}
 		defer func() {
-			tangleStoreSource.ShutdownStorages()
-			tangleStoreSource.FlushAndCloseStores()
+			println("\nshutdown source storage...")
+			if err := tangleStoreSource.Shutdown(); err != nil {
+				panic(err)
+			}
 		}()
 	}
 
@@ -118,11 +120,10 @@ func databaseMerge(args []string) error {
 		return err
 	}
 	defer func() {
-		println("\nshutdown storages...")
-		tangleStoreTarget.ShutdownStorages()
-
-		println("flush and close stores...")
-		tangleStoreTarget.FlushAndCloseStores()
+		println("\nshutdown target storage...")
+		if err := tangleStoreTarget.Shutdown(); err != nil {
+			panic(err)
+		}
 	}()
 
 	_, msIndexEndTarget := getStorageMilestoneRange(tangleStoreTarget)
@@ -728,8 +729,7 @@ func (s *ProxyStorage) MergeStorages() error {
 
 // Cleanup shuts down, flushes and closes the proxy store.
 func (s *ProxyStorage) Cleanup() {
-	s.storeProxy.ShutdownStorages()
-	s.storeProxy.FlushAndCloseStores()
+	s.storeProxy.Shutdown()
 }
 
 // StoreBlockInterface

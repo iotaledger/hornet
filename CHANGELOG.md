@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha.23] - 07.07.2022
+
+:warning: :warning: :warning: 
+This release contains a breaking change in the snapshot format.
+:warning: :warning: :warning: 
+
+### Added
+    - Add network-bootstrap tool (#1583)
+    - Add pruning manager (#1591) 
+    - Add snapshot importer (#1593) 
+    - Storing whiteFlagIndex in the BlockMetadata for each referenced block (#1603)
+
+### Changed
+    - Move UTXO tests to own package (#1589)
+    - Rename fields in Output and Spent types (#1590)
+    - Move test util functions to tpkg (#1596)
+    - Store protocol parameter updates for known tangle history (#1600) 
+    - Reorganize documentation (#1597)
+    - Update the Docker example README with a bit more information (#1592) 
+    - Update snapshot format (#1594) 
+    - Improve snapshot tools #1605 
+
+### Cleanups
+    - Replaced milestone.Index with iotago.MilestoneIndex (#1602) 
+
+### Config file changes
+
+`config.json`
+```diff
+  "protocol": {
++    "targetNetworkName": "alphanet-8",
+-    "parameters": {
+-      "version": 2,
+-      "networkName": "alphanet-7",
+-      "bech32HRP": "rms",
+-      "minPoWScore": 1000.0,
+-      "belowMaxDepth": 15,
+-      "vByteCost": 500,
+-      "vByteFactorData": 1,
+-      "vByteFactorKey": 10,
+-      "tokenSupply": 2779530283277761
+-    },
+    ...
+  },
+```
+
+
 ## [2.0.0-alpha.22] - 23.06.2022
 
 ### Fixed

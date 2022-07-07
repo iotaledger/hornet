@@ -157,7 +157,7 @@ func (s *Importer) LoadFullSnapshotFromFile(ctx context.Context, filePath string
 	s.LogInfof("importing %s snapshot file...", snapshotName)
 	ts := time.Now()
 
-	fullHeader, err := loadFullSnapshotFileToStorage(ctx, s.storage, filePath, targetNetworkID)
+	fullHeader, err := loadFullSnapshotFileToStorage(ctx, s.storage, filePath, targetNetworkID, false)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (s *Importer) LoadDeltaSnapshotFromFile(ctx context.Context, filePath strin
 	s.LogInfof("importing %s snapshot file...", snapshotName)
 	ts := time.Now()
 
-	header, err := loadDeltaSnapshotFileToStorage(ctx, s.storage, filePath)
+	header, err := loadDeltaSnapshotFileToStorage(ctx, s.storage, filePath, false)
 	if err != nil {
 		return err
 	}

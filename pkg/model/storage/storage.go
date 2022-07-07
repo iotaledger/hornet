@@ -87,11 +87,12 @@ type Storage struct {
 	tangleStore kvstore.KVStore
 	utxoStore   kvstore.KVStore
 
+	// kv storages
+	protocolStore kvstore.KVStore
+	snapshotStore kvstore.KVStore
+
 	// healthTrackers
 	healthTrackers []*StoreHealthTracker
-
-	// kv storages
-	snapshotStore kvstore.KVStore
 
 	// object storages
 	childrenStorage           *objectstorage.ObjectStorage
@@ -108,9 +109,6 @@ type Storage struct {
 	// snapshot info
 	snapshot      *SnapshotInfo
 	snapshotMutex syncutils.RWMutex
-
-	// protocol
-	protocolStore kvstore.KVStore
 
 	// utxo
 	utxoManager *utxo.Manager
@@ -399,10 +397,23 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 func (s *Storage) FlushAndCloseStores() error {
 
 	var flushAndCloseError error
+	if err := s.snapshotStore.Flush(); err != nil {
+		flushAndCloseError = err
+	}
+	if err := s.protocolStore.Flush(); err != nil {
+		flushAndCloseError = err
+	}
 	if err := s.tangleStore.Flush(); err != nil {
 		flushAndCloseError = err
 	}
 	if err := s.utxoStore.Flush(); err != nil {
+		flushAndCloseError = err
+	}
+
+	if err := s.snapshotStore.Close(); err != nil {
+		flushAndCloseError = err
+	}
+	if err := s.protocolStore.Close(); err != nil {
 		flushAndCloseError = err
 	}
 	if err := s.tangleStore.Close(); err != nil {
@@ -428,6 +439,14 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownBlocksStorage()
 	s.ShutdownChildrenStorage()
 	s.ShutdownUnreferencedBlocksStorage()
+}
+
+// Shutdown flushes and closes all object storages,
+// and then flushes and closes all stores.
+func (s *Storage) Shutdown() error {
+	s.FlushStorages()
+	s.ShutdownStorages()
+	return s.FlushAndCloseStores()
 }
 
 func (s *Storage) CurrentProtocolParameters() (*iotago.ProtocolParameters, error) {

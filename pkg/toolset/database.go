@@ -237,7 +237,7 @@ func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath strin
 		return fmt.Errorf("source storage networkID not equal to genesis snapshot networkID (%d != %d)", sourceNetworkID, fullHeaderProtoParams.NetworkID())
 	}
 
-	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, genesisSnapshotFilePath); err != nil {
+	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, false, genesisSnapshotFilePath); err != nil {
 		return err
 	}
 
