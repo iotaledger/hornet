@@ -1,8 +1,8 @@
 {
     "version": 2,
     "networkName": "private_tangle1",
-    "bech32HRP": "rms",
-    "minPoWScore": 1000,
+    "bech32HRP": "tst",
+    "minPoWScore": 1,
     "belowMaxDepth": 15,
     "rentStructure": {
         "vByteCost": 500,
