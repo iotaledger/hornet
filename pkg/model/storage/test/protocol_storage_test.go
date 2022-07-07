@@ -39,19 +39,6 @@ func TestProtocolStorage_Get(t *testing.T) {
 
 	_ = addRandProtocolUpgrade(t, protoStorage, 15)
 	checkProtoParamsMsOptionCount(t, protoStorage, 4)
-
-	// check pruning of the protocol storage
-	err = protoStorage.PruneProtocolParameterMilestoneOptions(6)
-	require.NoError(t, err)
-	checkProtoParamsMsOptionCount(t, protoStorage, 3) // if we prune milestone 6, only the one at milestone 0 is deleted
-
-	err = protoStorage.PruneProtocolParameterMilestoneOptions(10)
-	require.NoError(t, err)
-	checkProtoParamsMsOptionCount(t, protoStorage, 2)
-
-	err = protoStorage.PruneProtocolParameterMilestoneOptions(100)
-	require.NoError(t, err)
-	checkProtoParamsMsOptionCount(t, protoStorage, 1) // if we prune a much higher index, only the last valid should remain
 }
 
 func TestProtocolStorage_Pruning(t *testing.T) {
@@ -93,6 +80,52 @@ func TestProtocolStorage_Pruning(t *testing.T) {
 	checkProtoParamsMsOptionIndexes(t, protoStorage, map[iotago.MilestoneIndex]struct{}{
 		15: {},
 	})
+}
+
+func TestProtocolStorage_ForEachActiveProtocolParameterMilestoneOption(t *testing.T) {
+	protoStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
+
+	addRandProtocolUpgrade(t, protoStorage, 0)
+	addRandProtocolUpgrade(t, protoStorage, 5)
+	addRandProtocolUpgrade(t, protoStorage, 10)
+	addRandProtocolUpgrade(t, protoStorage, 15)
+	addRandProtocolUpgrade(t, protoStorage, 50)
+	checkProtoParamsMsOptionCount(t, protoStorage, 5)
+
+	allowedTargetIndexes := map[iotago.MilestoneIndex]struct{}{
+		10: {},
+		15: {},
+	}
+
+	err := protoStorage.ForEachActiveProtocolParameterMilestoneOption(11, func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+		if _, exists := allowedTargetIndexes[protoParamsMsOption.TargetMilestoneIndex]; !exists {
+			require.Fail(t, "unexpected target milestone index", protoParamsMsOption.TargetMilestoneIndex)
+		}
+		delete(allowedTargetIndexes, protoParamsMsOption.TargetMilestoneIndex)
+		return true
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, 0, len(allowedTargetIndexes), "expected target milestone indexes not found: %v", allowedTargetIndexes)
+}
+
+func TestProtocolStorage_ActiveProtocolParameterMilestoneOptionsHash(t *testing.T) {
+	protoStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
+
+	addRandProtocolUpgrade(t, protoStorage, 0)
+	addRandProtocolUpgrade(t, protoStorage, 5)
+	addRandProtocolUpgrade(t, protoStorage, 10)
+	addRandProtocolUpgrade(t, protoStorage, 15)
+	checkProtoParamsMsOptionCount(t, protoStorage, 4)
+	checkProtoParamsMsOptionIndexes(t, protoStorage, map[iotago.MilestoneIndex]struct{}{
+		0:  {},
+		5:  {},
+		10: {},
+		15: {},
+	})
+
+	_, err := protoStorage.ActiveProtocolParameterMilestoneOptionsHash(5)
+	require.NoError(t, err)
 }
 
 func addRandProtocolUpgrade(t *testing.T, protoStorage *storage.ProtocolStorage, activationIndex iotago.MilestoneIndex) *iotago.ProtocolParameters {
