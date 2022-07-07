@@ -20,8 +20,8 @@ import (
 func snapshotHash(args []string) error {
 
 	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
-	fullSnapshotPathFlag := fs.String(FlagToolSnapshotPathFull, "snapshots/mainnet/full_snapshot.bin", "the path to the full snapshot file")
-	deltaSnapshotPathFlag := fs.String(FlagToolSnapshotPathDelta, "snapshots/mainnet/delta_snapshot.bin", "the path to the delta snapshot file (optional)")
+	fullSnapshotPathFlag := fs.String(FlagToolSnapshotPathFull, "", "the path to the full snapshot file")
+	deltaSnapshotPathFlag := fs.String(FlagToolSnapshotPathDelta, "", "the path to the delta snapshot file (optional)")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
