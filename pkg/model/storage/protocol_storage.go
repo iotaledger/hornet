@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"crypto/sha256"
+	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -219,4 +222,37 @@ func (s *ProtocolStorage) PruneProtocolParameterMilestoneOptions(pruningIndex io
 	}
 
 	return innerErr
+}
+
+func (s *ProtocolStorage) ActiveProtocolParameterMilestoneOptionsHash(msIndex iotago.MilestoneIndex) ([]byte, error) {
+
+	// compute the sha256 of the latest active protocol parameters (current+pending)
+	protoParamsHash := sha256.New()
+
+	activeProtoParamsMsOpts := []*iotago.ProtocolParamsMilestoneOpt{}
+	if err := s.ForEachActiveProtocolParameterMilestoneOption(msIndex, func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+		activeProtoParamsMsOpts = append(activeProtoParamsMsOpts, protoParamsMsOption)
+		return true
+	}); err != nil {
+		return nil, fmt.Errorf("failed to iterate over protocol parameters milestone options: %w", err)
+	}
+
+	// sort by target index, oldest index first
+	sort.Slice(activeProtoParamsMsOpts, func(i int, j int) bool {
+		return activeProtoParamsMsOpts[i].TargetMilestoneIndex < activeProtoParamsMsOpts[j].TargetMilestoneIndex
+	})
+
+	for _, protoParamsMsOption := range activeProtoParamsMsOpts {
+		data, err := protoParamsMsOption.Serialize(serializer.DeSeriModeNoValidation, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to serialize protocol parameters milestone option: %w", err)
+		}
+
+		_, err = protoParamsHash.Write(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash protocol parameters milestone option: %w", err)
+		}
+	}
+
+	return protoParamsHash.Sum(nil), nil
 }
