@@ -248,8 +248,7 @@ func (s *ProtocolStorage) ActiveProtocolParameterMilestoneOptionsHash(msIndex io
 			return nil, fmt.Errorf("failed to serialize protocol parameters milestone option: %w", err)
 		}
 
-		_, err = protoParamsHash.Write(data)
-		if err != nil {
+		if _, err = protoParamsHash.Write(data); err != nil {
 			return nil, fmt.Errorf("failed to hash protocol parameters milestone option: %w", err)
 		}
 	}

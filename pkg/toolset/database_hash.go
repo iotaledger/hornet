@@ -183,10 +183,12 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
         - Treasury:       %s
         - Ledger index:   %d
         - Snapshot index: %d
+        - Pruning index:  %d
         - UTXOs count:    %d
         - SEPs count:     %d
         - Ledger state hash (w/o  solid entry points): %s
-        - Ledger state hash (with solid entry points): %s`+"\n\n",
+        - Ledger state hash (with solid entry points): %s
+        - Protocol parameters hash (current+pending):  %s`+"\n\n",
 		yesOrNo(!corrupted),
 		yesOrNo(tainted),
 		snapshotInfo.SnapshotTimestamp(),
@@ -199,10 +201,12 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		}(),
 		ledgerIndex,
 		snapshotInfo.SnapshotIndex(),
+		snapshotInfo.PruningIndex(),
 		len(outputIDs),
 		len(solidEntryPoints),
 		hex.EncodeToString(snapshotHashSumWithoutSEPs),
 		hex.EncodeToString(snapshotHashSumWithSEPs),
+		hex.EncodeToString(protocolParametersHashSum),
 	)
 
 	fmt.Printf("successfully calculated ledger state hash, took %v\n", time.Since(ts).Truncate(time.Millisecond))
