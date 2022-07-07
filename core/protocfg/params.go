@@ -36,7 +36,7 @@ type BaseToken struct {
 // ParametersProtocol contains the definition of the parameters used by protocol.
 type ParametersProtocol struct {
 	// the initial network name on which this node operates on.
-	TargetNetworkName string `default:"alphanet-7" usage:"the initial network name on which this node operates on"`
+	TargetNetworkName string `default:"alphanet-8" usage:"the initial network name on which this node operates on"`
 	// the amount of public keys in a milestone.
 	MilestonePublicKeyCount int `default:"2" usage:"the amount of public keys in a milestone"`
 	// the ed25519 public key of the coordinator in hex representation.

@@ -75,7 +75,7 @@ Example:
 
 | Name                                         | Description                                             | Type   | Default value     |
 | -------------------------------------------- | ------------------------------------------------------- | ------ | ----------------- |
-| targetNetworkName                            | The initial network name on which this node operates on | string | "alphanet-7"      |
+| targetNetworkName                            | The initial network name on which this node operates on | string | "alphanet-8"      |
 | milestonePublicKeyCount                      | The amount of public keys in a milestone                | int    | 2                 |
 | [baseToken](#protocol_basetoken)             | Configuration for baseToken                             | object |                   |
 | [publicKeyRanges](#protocol_publickeyranges) | Configuration for publicKeyRanges                       | array  | see example below |
@@ -104,7 +104,7 @@ Example:
 ```json
   {
     "protocol": {
-      "targetNetworkName": "alphanet-7",
+      "targetNetworkName": "alphanet-8",
       "milestonePublicKeyCount": 2,
       "baseToken": {
         "name": "IOTA",
