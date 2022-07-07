@@ -145,6 +145,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			Treasury               *treasuryStruct       `json:"treasury"`
 			LedgerIndex            iotago.MilestoneIndex `json:"ledgerIndex"`
 			SnapshotIndex          iotago.MilestoneIndex `json:"snapshotIndex"`
+			PruningIndex           iotago.MilestoneIndex `json:"pruningIndex"`
 			UTXOsCount             int                   `json:"UTXOsCount"`
 			SEPsCount              int                   `json:"SEPsCount"`
 			LedgerStateHash        string                `json:"ledgerStateHash"`
@@ -157,6 +158,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			Treasury:               treasury,
 			LedgerIndex:            ledgerIndex,
 			SnapshotIndex:          snapshotInfo.SnapshotIndex(),
+			PruningIndex:           snapshotInfo.PruningIndex(),
 			UTXOsCount:             len(outputIDs),
 			SEPsCount:              len(solidEntryPoints),
 			LedgerStateHash:        hex.EncodeToString(snapshotHashSumWithoutSEPs),
