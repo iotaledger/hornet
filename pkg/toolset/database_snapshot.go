@@ -59,8 +59,10 @@ func databaseSnapshot(args []string) error {
 		return err
 	}
 	defer func() {
-		tangleStoreSource.ShutdownStorages()
-		tangleStoreSource.FlushAndCloseStores()
+		println("\nshutdown source storage...")
+		if err := tangleStoreSource.Shutdown(); err != nil {
+			panic(err)
+		}
 	}()
 
 	if !*outputJSONFlag {

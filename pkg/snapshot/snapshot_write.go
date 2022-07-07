@@ -896,18 +896,24 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		return nil, fmt.Errorf("%s database initialization failed: %w", coreDatabase.UTXODatabaseDirectoryName, err)
 	}
 
-	// clean up temp db
-	defer func() {
-		_ = tangleStore.Close()
-		_ = utxoStore.Close()
-
-		_ = os.RemoveAll(tempDir)
-	}()
-
 	dbStorage, err := storage.New(tangleStore, utxoStore)
 	if err != nil {
+		// clean up temp db
+		_ = os.RemoveAll(tempDir)
 		return nil, err
 	}
+
+	defer func() {
+		println("\nshutdown storage...")
+		err := dbStorage.Shutdown()
+
+		// clean up temp db
+		_ = os.RemoveAll(tempDir)
+
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	fullSnapshotHeader, deltaSnapshotHeader, err := LoadSnapshotFilesToStorage(context.Background(), dbStorage, fullPath, deltaPath)
 	if err != nil {

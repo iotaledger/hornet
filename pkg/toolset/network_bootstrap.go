@@ -133,8 +133,8 @@ func networkBootstrap(args []string) error {
 	}
 
 	defer func() {
-		tangleStore.ShutdownStorages()
-		if err := tangleStore.FlushAndCloseStores(); err != nil {
+		println("\nshutdown storage...")
+		if err := tangleStore.Shutdown(); err != nil {
 			panic(err)
 		}
 	}()

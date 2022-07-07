@@ -65,8 +65,8 @@ func databaseVerify(args []string) error {
 		return err
 	}
 	defer func() {
-		tangleStoreSource.ShutdownStorages()
-		if err := tangleStoreSource.FlushAndCloseStores(); err != nil {
+		println("\nshutdown source storage...")
+		if err := tangleStoreSource.Shutdown(); err != nil {
 			panic(err)
 		}
 	}()
@@ -116,8 +116,8 @@ func verifyDatabase(
 		return err
 	}
 	defer func() {
-		tangleStoreTemp.ShutdownStorages()
-		if err := tangleStoreTemp.FlushAndCloseStores(); err != nil {
+		println("\nshutdown temp storage...")
+		if err := tangleStoreTemp.Shutdown(); err != nil {
 			panic(err)
 		}
 	}()
