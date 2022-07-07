@@ -915,7 +915,7 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		}
 	}()
 
-	fullSnapshotHeader, deltaSnapshotHeader, err := LoadSnapshotFilesToStorage(context.Background(), dbStorage, fullPath, deltaPath)
+	fullSnapshotHeader, deltaSnapshotHeader, err := LoadSnapshotFilesToStorage(context.Background(), dbStorage, true, fullPath, deltaPath)
 	if err != nil {
 		return nil, err
 	}

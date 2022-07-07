@@ -11,7 +11,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf
-	github.com/iotaledger/hive.go v0.0.0-20220623193802-86a373581cc1
+	github.com/iotaledger/hive.go v0.0.0-20220707144500-ae0ecb7af9bf
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220623193802-86a373581cc1
 	github.com/iotaledger/inx/go v0.0.0-20220705124918-775bb201b49e
 	github.com/iotaledger/iota.go v1.0.0

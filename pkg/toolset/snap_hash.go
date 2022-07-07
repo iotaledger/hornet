@@ -79,7 +79,7 @@ func snapshotHash(args []string) error {
 		return err
 	}
 
-	_, _, err = snapshot.LoadSnapshotFilesToStorage(context.Background(), dbStorage, fullPath, deltaPath)
+	_, _, err = snapshot.LoadSnapshotFilesToStorage(context.Background(), dbStorage, false, fullPath, deltaPath)
 	if err != nil {
 		return err
 	}
