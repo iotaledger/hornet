@@ -73,7 +73,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	if treasuryOutput != nil {
 		// write current treasury output
 		if _, err := lsHash.Write(treasuryOutput.MilestoneID[:]); err != nil {
-			return fmt.Errorf("unable to serialize treasury output milestone hash: %w", err)
+			return fmt.Errorf("unable to hash treasury output milestone ID: %w", err)
 		}
 		if err := binary.Write(lsHash, binary.LittleEndian, treasuryOutput.Amount); err != nil {
 			return fmt.Errorf("unable to serialize treasury output amount: %w", err)
@@ -122,6 +122,11 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 
 	snapshotHashSumWithSEPs := lsHash.Sum(nil)
 
+	protocolParametersHashSum, err := dbStorage.ActiveProtocolParameterMilestoneOptionsHash(ledgerIndex)
+	if err != nil {
+		return fmt.Errorf("unable to calculate protocol parameters hash: %w", err)
+	}
+
 	if outputJSON {
 
 		type treasuryStruct struct {
@@ -150,6 +155,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			SEPsCount              int                   `json:"SEPsCount"`
 			LedgerStateHash        string                `json:"ledgerStateHash"`
 			LedgerStateHashWithSEP string                `json:"ledgerStateHashWithSEP"`
+			ProtocolParametersHash string                `json:"protocolParametersHash"`
 		}{
 			Healthy:                !corrupted,
 			Tainted:                tainted,
@@ -163,6 +169,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			SEPsCount:              len(solidEntryPoints),
 			LedgerStateHash:        hex.EncodeToString(snapshotHashSumWithoutSEPs),
 			LedgerStateHashWithSEP: hex.EncodeToString(snapshotHashSumWithSEPs),
+			ProtocolParametersHash: hex.EncodeToString(protocolParametersHashSum),
 		}
 
 		return printJSON(result)

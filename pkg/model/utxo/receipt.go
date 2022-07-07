@@ -167,7 +167,7 @@ func ReceiptToOutputs(r *iotago.ReceiptMilestoneOpt, milestoneID iotago.Mileston
 	for outputIndex, migFundsEntry := range r.Funds {
 		entry := migFundsEntry
 		outputID := OutputIDForMigratedFunds(milestoneID, uint16(outputIndex))
-		// we use the milestone hash as the "origin block"
+		// we use the milestone ID as the "origin block"
 
 		output := &iotago.BasicOutput{
 			Amount: entry.Deposit,

@@ -142,7 +142,7 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 			panic("milestone diff includes a receipt but no spent treasury output is set")
 		}
 		if _, err := b.Write(md.SpentTreasuryOutput.MilestoneID[:]); err != nil {
-			return nil, fmt.Errorf("unable to write treasury input milestone hash for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+			return nil, fmt.Errorf("unable to write treasury input milestone ID for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 		}
 
 		if err := binary.Write(&b, binary.LittleEndian, md.SpentTreasuryOutput.Amount); err != nil {
@@ -223,7 +223,7 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolStorage *storage.ProtocolSt
 	if milestonePayload.Opts.MustSet().Receipt() != nil {
 		spentTreasuryOutput := &utxo.TreasuryOutput{Spent: true}
 		if _, err := io.ReadFull(reader, spentTreasuryOutput.MilestoneID[:]); err != nil {
-			return 0, nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone hash: %w", err)
+			return 0, nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone ID: %w", err)
 		}
 
 		if err := binary.Read(reader, binary.LittleEndian, &spentTreasuryOutput.Amount); err != nil {
