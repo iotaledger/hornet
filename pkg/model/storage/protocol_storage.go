@@ -14,6 +14,10 @@ var (
 	ErrProtocolParamsMilestoneOptAlreadyExists = errors.New("protocol parameters milestone option already exists")
 )
 
+const (
+	MaxProtocolParametersActivationRange uint32 = 30
+)
+
 // ProtocolParamsMilestoneOptConsumer consumes the given ProtocolParamsMilestoneOpt.
 // Returning false from this function indicates to abort the iteration.
 type ProtocolParamsMilestoneOptConsumer func(*iotago.ProtocolParamsMilestoneOpt) bool
@@ -27,6 +31,31 @@ func NewProtocolStorage(protocolStore kvstore.KVStore) *ProtocolStorage {
 	return &ProtocolStorage{
 		protocolStore: protocolStore,
 	}
+}
+
+// smallestActivationIndex searches the smallest activation index that is smaller than or equal to the given milestone index.
+func (s *ProtocolStorage) smallestActivationIndex(msIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
+	var smallestIndex iotago.MilestoneIndex
+	var smallestIndexFound bool
+
+	if err := s.protocolStore.IterateKeys(kvstore.EmptyPrefix, func(key kvstore.Key) bool {
+		activationIndex := milestoneIndexFromDatabaseKey(key)
+
+		if activationIndex >= smallestIndex && activationIndex <= msIndex {
+			smallestIndex = activationIndex
+			smallestIndexFound = true
+		}
+
+		return true
+	}); err != nil {
+		return 0, err
+	}
+
+	if !smallestIndexFound {
+		return 0, errors.New("no protocol parameters milestone option found for the given milestone index")
+	}
+
+	return smallestIndex, nil
 }
 
 func (s *ProtocolStorage) StoreProtocolParametersMilestoneOption(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) error {
@@ -59,26 +88,9 @@ func (s *ProtocolStorage) ProtocolParametersMilestoneOption(msIndex iotago.Miles
 	s.protocolStoreLock.RLock()
 	defer s.protocolStoreLock.RUnlock()
 
-	// search the smallest activation index that is smaller than or equal to the given milestone index
-	// to get the valid protocol parameters milestone option for the given milestone index.
-	var smallestIndex iotago.MilestoneIndex
-	var smallestIndexFound bool
-
-	if err := s.protocolStore.IterateKeys(kvstore.EmptyPrefix, func(key kvstore.Key) bool {
-		activationIndex := milestoneIndexFromDatabaseKey(key)
-
-		if activationIndex >= smallestIndex && activationIndex <= msIndex {
-			smallestIndex = activationIndex
-			smallestIndexFound = true
-		}
-
-		return true
-	}); err != nil {
+	smallestIndex, err := s.smallestActivationIndex(msIndex)
+	if err != nil {
 		return nil, err
-	}
-
-	if !smallestIndexFound {
-		return nil, errors.New("no protocol parameters milestone option found for the given milestone index")
 	}
 
 	data, err := s.protocolStore.Get(databaseKeyForMilestoneIndex(smallestIndex))
@@ -124,6 +136,41 @@ func (s *ProtocolStorage) ForEachProtocolParameterMilestoneOption(consumer Proto
 		if _, err := protoParamsMsOption.Deserialize(value, serializer.DeSeriModeNoValidation, nil); err != nil {
 			innerErr = errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters milestone option")
 			return false
+		}
+
+		return consumer(protoParamsMsOption)
+	}); err != nil {
+		return err
+	}
+
+	return innerErr
+}
+
+func (s *ProtocolStorage) ForEachActiveProtocolParameterMilestoneOption(msIndex iotago.MilestoneIndex, consumer ProtocolParamsMilestoneOptConsumer) error {
+	s.protocolStoreLock.RLock()
+	defer s.protocolStoreLock.RUnlock()
+
+	smallestIndex, err := s.smallestActivationIndex(msIndex)
+	if err != nil {
+		return err
+	}
+
+	var innerErr error
+	if err := s.protocolStore.Iterate(kvstore.EmptyPrefix, func(_ kvstore.Key, value kvstore.Value) bool {
+		protoParamsMsOption := &iotago.ProtocolParamsMilestoneOpt{}
+		if _, err := protoParamsMsOption.Deserialize(value, serializer.DeSeriModeNoValidation, nil); err != nil {
+			innerErr = errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters milestone option")
+			return false
+		}
+
+		if protoParamsMsOption.TargetMilestoneIndex < smallestIndex {
+			// protocol parameters are older than the smallest index => not active
+			return true
+		}
+
+		if protoParamsMsOption.TargetMilestoneIndex > msIndex+MaxProtocolParametersActivationRange {
+			// protocol parameters are newer than the given index + the max activation range => they do not count as active
+			return true
 		}
 
 		return consumer(protoParamsMsOption)
