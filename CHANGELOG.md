@@ -46,6 +46,13 @@ This release contains a breaking change in the snapshot format.
 -    },
     ...
   },
+  ...
+  "snapshots": {
+    ...
+     "deltaSizeThresholdPercentage": 50,
++    "deltaSizeThresholdMinSize": "50M",
+    ...
+  },
 ```
 
 
