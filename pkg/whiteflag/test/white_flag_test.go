@@ -637,7 +637,8 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 
 	seed1Wallet.PrintStatus()
 
-	// Create Alias
+	// --- Create Alias ---
+
 	blockA := te.NewBlockBuilder("A").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
@@ -661,7 +662,8 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	aliasOutput := te.UnspentAliasOutputsInLedger()[0]
 	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(0))
 
-	// Create foundry
+	// --- Create Foundry ---
+
 	blockB := te.NewBlockBuilder("B").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
@@ -686,11 +688,13 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	foundryOutput := te.UnspentFoundryOutputsInLedger()[0]
 	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
 
+	// --- Mint Tokens ---
+
 	newAlias := aliasOutput.Output().Clone().(*iotago.AliasOutput)
 	newFoundry := foundryOutput.Output().Clone().(*iotago.FoundryOutput)
 
 	// Mint tokens in foundry
-	newFoundry.TokenScheme.(*iotago.SimpleTokenScheme).MintedTokens = big.NewInt(100)
+	newFoundry.TokenScheme.(*iotago.SimpleTokenScheme).MintedTokens = big.NewInt(200)
 
 	// Send the minted tokens to a wallet
 	newBasicOutput := &iotago.BasicOutput{
@@ -698,7 +702,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 		NativeTokens: iotago.NativeTokens{
 			&iotago.NativeToken{
 				ID:     newFoundry.MustNativeTokenID(),
-				Amount: big.NewInt(100),
+				Amount: big.NewInt(200),
 			},
 		},
 		Conditions: iotago.UnlockConditions{
@@ -712,12 +716,11 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	newAlias.Amount -= newBasicOutput.Amount
 	newAlias.StateIndex++
 
-	// Mint tokens
 	blockC := te.NewBlockBuilder("C").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
-		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput, foundryOutput}, iotago.Outputs{newAlias, newFoundry, newBasicOutput}).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput, foundryOutput}, iotago.Outputs{newAlias, newFoundry, newBasicOutput}, []*utils.HDWallet{seed1Wallet}).
 		Store().
 		BookOnWallets()
 
@@ -731,7 +734,225 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
-	require.Equal(t, seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount, big.NewInt(100))
+	require.Equal(t, 1, len(seed2Wallet.Outputs()))
+	require.Equal(t, big.NewInt(200), seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount)
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
+	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(2))
+
+	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
+	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
+	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+
+	// --- Mint Tokens (invalid amount) ---
+
+	newAlias = aliasOutput.Output().Clone().(*iotago.AliasOutput)
+	newFoundry = foundryOutput.Output().Clone().(*iotago.FoundryOutput)
+
+	// Mint another 100 tokens in foundry
+	newFoundry.TokenScheme.(*iotago.SimpleTokenScheme).MintedTokens = big.NewInt(300)
+
+	// Send too many minted tokens to the wallet
+	newBasicOutput = &iotago.BasicOutput{
+		Amount: 0,
+		NativeTokens: iotago.NativeTokens{
+			&iotago.NativeToken{
+				ID:     newFoundry.MustNativeTokenID(),
+				Amount: big.NewInt(400),
+			},
+		},
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{Address: seed2Wallet.Address()},
+		},
+		Features: nil,
+	}
+
+	// Pay rent for new output holding the minted native tokens
+	newBasicOutput.Amount = te.ProtocolParameters().RentStructure.MinRent(newBasicOutput)
+	newAlias.Amount -= newBasicOutput.Amount
+	newAlias.StateIndex++
+
+	blockD := te.NewBlockBuilder("D").
+		Parents(te.LastMilestoneParents()).
+		ToWallet(seed2Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput, foundryOutput}, iotago.Outputs{newAlias, newFoundry, newBasicOutput}, []*utils.HDWallet{seed1Wallet}).
+		Store()
+
+	// Confirming milestone at block D
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockD.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // D + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	// Verify the blocks have the expected conflict reason
+	te.AssertBlockConflictReason(blockD.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	require.Equal(t, 1, len(seed2Wallet.Outputs()))
+	require.Equal(t, big.NewInt(200), seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount)
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
+	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(2))
+
+	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
+	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
+	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+
+	// --- Melt 100 tokens ---
+
+	basicOutput := seed2Wallet.Outputs()[0]
+
+	newAlias = aliasOutput.Output().Clone().(*iotago.AliasOutput)
+	newFoundry = foundryOutput.Output().Clone().(*iotago.FoundryOutput)
+
+	// Melt 100 tokens in foundry
+	newFoundry.TokenScheme.(*iotago.SimpleTokenScheme).MeltedTokens = big.NewInt(100)
+	newAlias.StateIndex++
+
+	// Burn the tokens inside the basic output
+	newBasicOutput = basicOutput.Output().Clone().(*iotago.BasicOutput)
+	newBasicOutput.NativeTokens = iotago.NativeTokens{
+		&iotago.NativeToken{
+			ID:     newFoundry.MustNativeTokenID(),
+			Amount: big.NewInt(100),
+		},
+	}
+
+	blockE := te.NewBlockBuilder("E").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		ToWallet(seed2Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput, foundryOutput, basicOutput}, iotago.Outputs{newAlias, newFoundry, newBasicOutput}, []*utils.HDWallet{seed1Wallet, seed2Wallet}).
+		Store().
+		BookOnWallets()
+
+	// Confirming milestone at block E
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockE.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // E + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, 1, len(seed2Wallet.Outputs()))
+	require.Equal(t, big.NewInt(100), seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
+	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(3))
+
+	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
+	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
+	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+
+	// --- Melt 100 tokens but don't burn enough ---
+
+	basicOutput = seed2Wallet.Outputs()[0]
+
+	newAlias = aliasOutput.Output().Clone().(*iotago.AliasOutput)
+	newFoundry = foundryOutput.Output().Clone().(*iotago.FoundryOutput)
+
+	// Melt 100 tokens in foundry
+	newFoundry.TokenScheme.(*iotago.SimpleTokenScheme).MeltedTokens = big.NewInt(200)
+	newAlias.StateIndex++
+
+	// Burn the tokens inside the basic output
+	newBasicOutput = basicOutput.Output().Clone().(*iotago.BasicOutput)
+	newBasicOutput.NativeTokens = iotago.NativeTokens{
+		&iotago.NativeToken{
+			ID:     newFoundry.MustNativeTokenID(),
+			Amount: big.NewInt(50),
+		},
+	}
+
+	blockF := te.NewBlockBuilder("F").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		ToWallet(seed2Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput, foundryOutput, basicOutput}, iotago.Outputs{newAlias, newFoundry, newBasicOutput}, []*utils.HDWallet{seed1Wallet, seed2Wallet}).
+		Store()
+
+	// Confirming milestone at block F
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockF.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // F + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	// Verify the blocks have the expected conflict reason
+	te.AssertBlockConflictReason(blockF.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
+
+	require.Equal(t, 1, len(seed2Wallet.Outputs()))
+	require.Equal(t, big.NewInt(100), seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
+	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(3))
+
+	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
+	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
+	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+
+	// --- Burn tokens ---
+
+	basicOutput = seed2Wallet.Outputs()[0]
+
+	// Burn the tokens inside the basic output
+	newBasicOutput = basicOutput.Output().Clone().(*iotago.BasicOutput)
+	newBasicOutput.NativeTokens = nil
+
+	blockG := te.NewBlockBuilder("G").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed2Wallet).
+		ToWallet(seed2Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{basicOutput}, iotago.Outputs{newBasicOutput}, []*utils.HDWallet{seed2Wallet}).
+		Store().
+		BookOnWallets()
+
+	// Confirming milestone at block F
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockG.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // G + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, 1, len(seed2Wallet.Outputs()))
+	require.Equal(t, 0, len(seed2Wallet.Outputs()[0].Output().NativeTokenSet()))
+
+	// --- Melt tokens without burning (invalid) ---
+
+	newAlias = aliasOutput.Output().Clone().(*iotago.AliasOutput)
+	newFoundry = foundryOutput.Output().Clone().(*iotago.FoundryOutput)
+
+	// Melt 100 tokens in foundry
+	newFoundry.TokenScheme.(*iotago.SimpleTokenScheme).MeltedTokens = newFoundry.TokenScheme.(*iotago.SimpleTokenScheme).MintedTokens
+	newAlias.StateIndex++
+
+	blockH := te.NewBlockBuilder("H").
+		Parents(te.LastMilestoneParents()).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput, foundryOutput}, iotago.Outputs{newAlias, newFoundry}, []*utils.HDWallet{seed1Wallet}).
+		Store()
+
+	// Confirming milestone at block H
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockH.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // H + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	// Verify the blocks have the expected conflict reason
+	te.AssertBlockConflictReason(blockH.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
+
 }
 
 func TestWhiteFlagFoundryOutputInvalidSerialNumber(t *testing.T) {
@@ -802,10 +1023,8 @@ func TestWhiteFlagFoundryOutputInvalidSerialNumber(t *testing.T) {
 	// Create foundry with invalid serial number
 	blockB := te.NewBlockBuilder("B").
 		Parents(te.LastMilestoneParents()).
-		FromWallet(seed1Wallet).
-		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias}).
-		Store().
-		BookOnWallets()
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias}, []*utils.HDWallet{seed1Wallet}).
+		Store()
 
 	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 0)
 
@@ -888,10 +1107,8 @@ func TestWhiteFlagFoundryOutputInvalidAliasFoundryCounter(t *testing.T) {
 	// Create foundry with invalid serial number
 	blockB := te.NewBlockBuilder("B").
 		Parents(te.LastMilestoneParents()).
-		FromWallet(seed1Wallet).
-		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias}).
-		Store().
-		BookOnWallets()
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias}, []*utils.HDWallet{seed1Wallet}).
+		Store()
 
 	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 0)
 

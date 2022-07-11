@@ -198,38 +198,46 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 
 func (b *BlockBuilder) BuildTransactionSendingOutputsAndCalculateRemainder(outputs ...iotago.Output) *Block {
 	txBuilder, consumedInputs := b.txBuilderFromWalletSendingOutputs(outputs...)
-	return b.buildTransactionWithBuilder(txBuilder, consumedInputs)
+	return b.buildTransactionWithBuilderAndSigned(txBuilder, consumedInputs, b.fromWalletSigner())
 }
 
-func (b *BlockBuilder) BuildTransactionWithInputsAndOutputs(consumedInputs utxo.Outputs, outputs iotago.Outputs) *Block {
+func (b *BlockBuilder) BuildTransactionWithInputsAndOutputs(consumedInputs utxo.Outputs, outputs iotago.Outputs, signingWallets []*utils.HDWallet) *Block {
+
+	var walletKeys []iotago.AddressKeys
+	for _, wallet := range signingWallets {
+		inputPrivateKey, _ := wallet.KeyPair()
+		walletKeys = append(walletKeys, iotago.AddressKeys{Address: wallet.Address(), Keys: inputPrivateKey})
+	}
 
 	txBuilder := builder.NewTransactionBuilder(b.te.protoParams.NetworkID())
-	fromAddr := b.fromWallet.Address()
-
 	for _, input := range consumedInputs {
-		if input.OutputType() == iotago.OutputFoundry {
+		switch input.OutputType() {
+		case iotago.OutputFoundry:
 			// For foundries we need to unlock the alias
 			txBuilder.AddInput(&builder.TxInput{UnlockTarget: input.Output().UnlockConditionSet().ImmutableAlias().Address, InputID: input.OutputID(), Input: input.Output()})
-			continue
+		case iotago.OutputAlias:
+			// For alias we need to unlock the state controller
+			txBuilder.AddInput(&builder.TxInput{UnlockTarget: input.Output().UnlockConditionSet().StateControllerAddress().Address, InputID: input.OutputID(), Input: input.Output()})
+		default:
+			txBuilder.AddInput(&builder.TxInput{UnlockTarget: input.Output().UnlockConditionSet().Address().Address, InputID: input.OutputID(), Input: input.Output()})
 		}
-		txBuilder.AddInput(&builder.TxInput{UnlockTarget: fromAddr, InputID: input.OutputID(), Input: input.Output()})
 	}
 
 	for _, output := range outputs {
 		txBuilder.AddOutput(output)
 	}
 
-	return b.buildTransactionWithBuilder(txBuilder, consumedInputs)
+	return b.buildTransactionWithBuilderAndSigned(txBuilder, consumedInputs, iotago.NewInMemoryAddressSigner(walletKeys...))
 }
 
-func (b *BlockBuilder) buildTransactionWithBuilder(txBuilder *builder.TransactionBuilder, consumedInputs utxo.Outputs) *Block {
+func (b *BlockBuilder) buildTransactionWithBuilderAndSigned(txBuilder *builder.TransactionBuilder, consumedInputs utxo.Outputs, signer iotago.AddressSigner) *Block {
 	if len(b.tag) > 0 {
 		txBuilder.AddTaggedDataPayload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData})
 	}
 
 	require.NotNil(b.te.TestInterface, b.parents)
 
-	iotaBlock, err := txBuilder.BuildAndSwapToBlockBuilder(b.te.protoParams, b.fromWalletSigner(), nil).
+	iotaBlock, err := txBuilder.BuildAndSwapToBlockBuilder(b.te.protoParams, signer, nil).
 		Parents(b.parents).
 		ProofOfWork(context.Background(), b.te.protoParams, float64(b.te.protoParams.MinPoWScore)).
 		Build()
@@ -324,7 +332,7 @@ func (b *BlockBuilder) BuildFoundryOnAlias(aliasOutput *utxo.Output) *Block {
 	foundry.Amount = b.amount
 	newAlias.Amount -= b.amount
 
-	return b.BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias})
+	return b.BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias}, []*utils.HDWallet{b.fromWallet})
 }
 
 func (b *BlockBuilder) BuildTransactionToWallet(wallet *utils.HDWallet) *Block {
