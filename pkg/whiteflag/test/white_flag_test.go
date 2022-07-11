@@ -687,6 +687,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput := te.UnspentFoundryOutputsInLedger()[0]
 	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
+	te.AssertFoundryTokenScheme(foundryOutput, 0, 0, 1000)
 
 	// --- Mint Tokens ---
 
@@ -744,6 +745,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
 	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
+	te.AssertFoundryTokenScheme(foundryOutput, 200, 0, 1000)
 
 	// --- Mint Tokens (invalid amount) ---
 
@@ -802,6 +804,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
 	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
+	te.AssertFoundryTokenScheme(foundryOutput, 200, 0, 1000)
 
 	// --- Melt 100 tokens ---
 
@@ -851,6 +854,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
 	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
+	te.AssertFoundryTokenScheme(foundryOutput, 200, 100, 1000)
 
 	// --- Melt 100 tokens but don't burn enough ---
 
@@ -902,6 +906,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
 	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
+	te.AssertFoundryTokenScheme(foundryOutput, 200, 100, 1000)
 
 	// --- Burn tokens ---
 

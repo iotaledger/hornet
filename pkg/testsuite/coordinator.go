@@ -271,3 +271,11 @@ func (te *TestEnvironment) UnspentFoundryOutputsInLedger() utxo.Outputs {
 	}
 	return result
 }
+
+func (te *TestEnvironment) AssertFoundryTokenScheme(foundryOutput *utxo.Output, minted uint64, melted uint64, maxSupply uint64) {
+	foundry := foundryOutput.Output().(*iotago.FoundryOutput)
+	scheme := foundry.TokenScheme.(*iotago.SimpleTokenScheme)
+	require.Equal(te.TestInterface, minted, scheme.MintedTokens.Uint64())
+	require.Equal(te.TestInterface, melted, scheme.MeltedTokens.Uint64())
+	require.Equal(te.TestInterface, maxSupply, scheme.MaximumSupply.Uint64())
+}
