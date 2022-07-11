@@ -68,6 +68,11 @@ func (b *BlockBuilder) FromWallet(wallet *utils.HDWallet) *BlockBuilder {
 	return b
 }
 
+func (b *BlockBuilder) ToWallet(wallet *utils.HDWallet) *BlockBuilder {
+	b.toWallet = wallet
+	return b
+}
+
 func (b *BlockBuilder) Amount(amount uint64) *BlockBuilder {
 	b.amount = amount
 	return b
@@ -202,6 +207,11 @@ func (b *BlockBuilder) BuildTransactionWithInputsAndOutputs(consumedInputs utxo.
 	fromAddr := b.fromWallet.Address()
 
 	for _, input := range consumedInputs {
+		if input.OutputType() == iotago.OutputFoundry {
+			// For foundries we need to unlock the alias
+			txBuilder.AddInput(&builder.TxInput{UnlockTarget: input.Output().UnlockConditionSet().ImmutableAlias().Address, InputID: input.OutputID(), Input: input.Output()})
+			continue
+		}
 		txBuilder.AddInput(&builder.TxInput{UnlockTarget: fromAddr, InputID: input.OutputID(), Input: input.Output()})
 	}
 
@@ -318,6 +328,7 @@ func (b *BlockBuilder) BuildFoundryOnAlias(aliasOutput *utxo.Output) *Block {
 }
 
 func (b *BlockBuilder) BuildTransactionToWallet(wallet *utils.HDWallet) *Block {
+	require.Nil(b.te.TestInterface, b.toWallet)
 	b.toWallet = wallet
 	output := &iotago.BasicOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: b.toWallet.Address()}}, Amount: b.amount}
 	return b.BuildTransactionSendingOutputsAndCalculateRemainder(output)

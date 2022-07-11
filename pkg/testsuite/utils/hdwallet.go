@@ -110,7 +110,16 @@ func (hd *HDWallet) PrintStatus() {
 	status += fmt.Sprintf("Balance: %d\n", hd.Balance())
 	status += "Outputs: \n"
 	for _, u := range hd.utxo {
-		status += fmt.Sprintf("\t%s [%s] = %d\n", u.OutputID().ToHex(), u.OutputType().String(), u.Deposit())
+		nativeTokenDescription := ""
+		nativeTokens := u.Output().NativeTokenSet().MustSet()
+		if len(nativeTokens) > 0 {
+			nativeTokenDescription = "["
+			for id, amount := range nativeTokens {
+				nativeTokenDescription += fmt.Sprintf("%s: %s, ", id.ToHex(), amount.Amount.String())
+			}
+			nativeTokenDescription = "]"
+		}
+		status += fmt.Sprintf("\t%s [%s] = %d %v\n", u.OutputID().ToHex(), u.OutputType().String(), u.Deposit(), nativeTokenDescription)
 	}
 	fmt.Printf("%s\n", status)
 }

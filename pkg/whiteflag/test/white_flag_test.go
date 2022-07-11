@@ -624,6 +624,7 @@ func TestWhiteFlagAliasOutput(t *testing.T) {
 
 func TestWhiteFlagFoundryOutput(t *testing.T) {
 	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
+	seed2Wallet := utils.NewHDWallet("Seed2", seed2, 0)
 
 	genesisAddress := seed1Wallet.Address()
 
@@ -684,6 +685,51 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
 	foundryOutput := te.UnspentFoundryOutputsInLedger()[0]
 	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+
+	newAlias := aliasOutput.Output().Clone().(*iotago.AliasOutput)
+	newFoundry := foundryOutput.Output().Clone().(*iotago.FoundryOutput)
+
+	// Mint tokens in foundry
+	newFoundry.TokenScheme.(*iotago.SimpleTokenScheme).MintedTokens = big.NewInt(100)
+
+	// Send the minted tokens to a wallet
+	newBasicOutput := &iotago.BasicOutput{
+		Amount: 0,
+		NativeTokens: iotago.NativeTokens{
+			&iotago.NativeToken{
+				ID:     newFoundry.MustNativeTokenID(),
+				Amount: big.NewInt(100),
+			},
+		},
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{Address: seed2Wallet.Address()},
+		},
+		Features: nil,
+	}
+
+	// Pay rent for new output holding the minted native tokens
+	newBasicOutput.Amount = te.ProtocolParameters().RentStructure.MinRent(newBasicOutput)
+	newAlias.Amount -= newBasicOutput.Amount
+	newAlias.StateIndex++
+
+	// Mint tokens
+	blockC := te.NewBlockBuilder("C").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		ToWallet(seed2Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput, foundryOutput}, iotago.Outputs{newAlias, newFoundry, newBasicOutput}).
+		Store().
+		BookOnWallets()
+
+	// Confirming milestone at block C
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockC.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // C + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
 }
 
 func TestWhiteFlagFoundryOutputInvalidSerialNumber(t *testing.T) {
