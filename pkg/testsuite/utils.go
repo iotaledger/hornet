@@ -2,6 +2,8 @@ package testsuite
 
 import (
 	"context"
+	"encoding/json"
+	"math/big"
 
 	"github.com/stretchr/testify/require"
 
@@ -34,8 +36,8 @@ type Block struct {
 	builder *BlockBuilder
 	block   *storage.Block
 
-	consumedOutputs []*utxo.Output
-	createdOutputs  []*utxo.Output
+	consumedOutputs utxo.Outputs
+	createdOutputs  utxo.Outputs
 
 	booked        bool
 	storedBlockID iotago.BlockID
@@ -189,9 +191,28 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 	}
 }
 
-func (b *BlockBuilder) BuildTransactionUsingOutputs(outputs ...iotago.Output) *Block {
+func (b *BlockBuilder) BuildTransactionSendingOutputsAndCalculateRemainder(outputs ...iotago.Output) *Block {
 	txBuilder, consumedInputs := b.txBuilderFromWalletSendingOutputs(outputs...)
+	return b.buildTransactionWithBuilder(txBuilder, consumedInputs)
+}
 
+func (b *BlockBuilder) BuildTransactionWithInputsAndOutputs(consumedInputs utxo.Outputs, outputs iotago.Outputs) *Block {
+
+	txBuilder := builder.NewTransactionBuilder(b.te.protoParams.NetworkID())
+	fromAddr := b.fromWallet.Address()
+
+	for _, input := range consumedInputs {
+		txBuilder.AddInput(&builder.TxInput{UnlockTarget: fromAddr, InputID: input.OutputID(), Input: input.Output()})
+	}
+
+	for _, output := range outputs {
+		txBuilder.AddOutput(output)
+	}
+
+	return b.buildTransactionWithBuilder(txBuilder, consumedInputs)
+}
+
+func (b *BlockBuilder) buildTransactionWithBuilder(txBuilder *builder.TransactionBuilder, consumedInputs utxo.Outputs) *Block {
 	if len(b.tag) > 0 {
 		txBuilder.AddTaggedDataPayload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData})
 	}
@@ -207,7 +228,11 @@ func (b *BlockBuilder) BuildTransactionUsingOutputs(outputs ...iotago.Output) *B
 	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, b.te.protoParams)
 	require.NoError(b.te.TestInterface, err)
 
-	var sentUTXO []*utxo.Output
+	jsonBlockBytes, err := json.MarshalIndent(block.Block(), "", "   ")
+	require.NoError(b.te.TestInterface, err)
+	println(string(jsonBlockBytes))
+
+	var sentUTXO utxo.Outputs
 
 	// Book the outputs in the wallets
 	blockTx := block.Transaction()
@@ -249,17 +274,53 @@ func (b *BlockBuilder) BuildAlias() *Block {
 
 	if b.amount == 0 {
 		b.amount = b.te.protoParams.RentStructure.MinRent(aliasOutput)
-		aliasOutput.Amount = b.amount
 	}
-	require.Greater(b.te.TestInterface, b.amount, uint64(0), "trying to send a transaction with no value")
+	aliasOutput.Amount = b.amount
 
-	return b.BuildTransactionUsingOutputs(aliasOutput)
+	return b.BuildTransactionSendingOutputsAndCalculateRemainder(aliasOutput)
+}
+
+func (b *BlockBuilder) BuildFoundryOnAlias(aliasOutput *utxo.Output) *Block {
+	require.NotNil(b.te.TestInterface, b.fromWallet)
+
+	newAlias := aliasOutput.Output().Clone().(*iotago.AliasOutput)
+	if newAlias.AliasID.Empty() {
+		newAlias.AliasID = iotago.AliasIDFromOutputID(aliasOutput.OutputID())
+	}
+
+	newAlias.StateIndex++
+	newAlias.FoundryCounter++
+
+	foundry := &iotago.FoundryOutput{
+		Amount:       0,
+		NativeTokens: nil,
+		SerialNumber: newAlias.FoundryCounter,
+		TokenScheme: &iotago.SimpleTokenScheme{
+			MintedTokens:  big.NewInt(0),
+			MeltedTokens:  big.NewInt(0),
+			MaximumSupply: big.NewInt(1000),
+		},
+		Conditions: iotago.UnlockConditions{
+			&iotago.ImmutableAliasUnlockCondition{Address: newAlias.AliasID.ToAddress().(*iotago.AliasAddress)},
+		},
+		Features:          nil,
+		ImmutableFeatures: nil,
+	}
+
+	if b.amount == 0 {
+		b.amount = b.te.protoParams.RentStructure.MinRent(foundry)
+	}
+
+	foundry.Amount = b.amount
+	newAlias.Amount -= b.amount
+
+	return b.BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias})
 }
 
 func (b *BlockBuilder) BuildTransactionToWallet(wallet *utils.HDWallet) *Block {
 	b.toWallet = wallet
 	output := &iotago.BasicOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: b.toWallet.Address()}}, Amount: b.amount}
-	return b.BuildTransactionUsingOutputs(output)
+	return b.BuildTransactionSendingOutputsAndCalculateRemainder(output)
 }
 
 func (m *Block) Store() *Block {
@@ -302,6 +363,10 @@ func (m *Block) BookOnWallets() *Block {
 				output.UnlockConditionSet().StateControllerAddress().Address.Equal(m.builder.fromWallet.Address()) {
 				m.builder.fromWallet.BookOutput(sentOutput)
 			}
+
+		case *iotago.FoundryOutput:
+			// We always book the foundry to the controlling wallet here, since everything else is too complex for the testsuite
+			m.builder.fromWallet.BookOutput(sentOutput)
 		}
 	}
 	m.booked = true

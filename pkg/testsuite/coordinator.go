@@ -234,12 +234,26 @@ func (te *TestEnvironment) UnspentAliasOutputsInLedger() utxo.Outputs {
 	outputs, err := te.UTXOManager().UnspentOutputs()
 	require.NoError(te.TestInterface, err)
 
-	var aliasOutputs utxo.Outputs
+	var result utxo.Outputs
 	for _, output := range outputs {
 		switch output.OutputType() {
 		case iotago.OutputAlias:
-			aliasOutputs = append(aliasOutputs, output)
+			result = append(result, output)
 		}
 	}
-	return aliasOutputs
+	return result
+}
+
+func (te *TestEnvironment) UnspentFoundryOutputsInLedger() utxo.Outputs {
+	outputs, err := te.UTXOManager().UnspentOutputs()
+	require.NoError(te.TestInterface, err)
+
+	var result utxo.Outputs
+	for _, output := range outputs {
+		switch output.OutputType() {
+		case iotago.OutputFoundry:
+			result = append(result, output)
+		}
+	}
+	return result
 }
