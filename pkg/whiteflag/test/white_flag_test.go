@@ -658,9 +658,9 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentAliasOutputsInLedger()))
 	aliasOutput := te.UnspentAliasOutputsInLedger()[0]
-	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(0))
+	require.Equal(t, uint32(0), aliasOutput.Output().(*iotago.AliasOutput).StateIndex)
 
 	// --- Create Foundry ---
 
@@ -671,7 +671,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 		Store().
 		BookOnWallets()
 
-	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 0)
+	require.Equal(t, 0, len(te.UnspentFoundryOutputsInLedger()))
 
 	// Confirming milestone at block B
 	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockB.StoredBlockID()}, true)
@@ -680,13 +680,13 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentAliasOutputsInLedger()))
 	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
-	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(1))
+	require.Equal(t, uint32(1), aliasOutput.Output().(*iotago.AliasOutput).StateIndex)
 
-	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput := te.UnspentFoundryOutputsInLedger()[0]
-	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
 
 	// --- Mint Tokens ---
 
@@ -737,13 +737,13 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 1, len(seed2Wallet.Outputs()))
 	require.Equal(t, big.NewInt(200), seed2Wallet.Outputs()[0].Output().NativeTokenList().MustSet()[newFoundry.MustNativeTokenID()].Amount)
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentAliasOutputsInLedger()))
 	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
-	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(2))
+	require.Equal(t, uint32(2), aliasOutput.Output().(*iotago.AliasOutput).StateIndex)
 
-	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
-	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
 
 	// --- Mint Tokens (invalid amount) ---
 
@@ -795,13 +795,13 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 1, len(seed2Wallet.Outputs()))
 	require.Equal(t, big.NewInt(200), seed2Wallet.Outputs()[0].Output().NativeTokenList().MustSet()[newFoundry.MustNativeTokenID()].Amount)
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentAliasOutputsInLedger()))
 	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
-	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(2))
+	require.Equal(t, uint32(2), aliasOutput.Output().(*iotago.AliasOutput).StateIndex)
 
-	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
-	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
 
 	// --- Melt 100 tokens ---
 
@@ -844,13 +844,13 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentAliasOutputsInLedger()))
 	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
-	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(3))
+	require.Equal(t, uint32(3), aliasOutput.Output().(*iotago.AliasOutput).StateIndex)
 
-	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
-	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
 
 	// --- Melt 100 tokens but don't burn enough ---
 
@@ -895,13 +895,13 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentAliasOutputsInLedger()))
 	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
-	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(3))
+	require.Equal(t, uint32(3), aliasOutput.Output().(*iotago.AliasOutput).StateIndex)
 
-	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentFoundryOutputsInLedger()))
 	foundryOutput = te.UnspentFoundryOutputsInLedger()[0]
-	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+	require.Equal(t, uint32(1), foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber)
 
 	// --- Burn tokens ---
 
@@ -980,7 +980,7 @@ func TestWhiteFlagFoundryOutputInvalidSerialNumber(t *testing.T) {
 
 	seed1Wallet.PrintStatus()
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 0)
+	require.Equal(t, 0, len(te.UnspentAliasOutputsInLedger()))
 
 	// Confirming milestone at block A
 	_, confStats := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockA.StoredBlockID()}, true)
@@ -989,9 +989,9 @@ func TestWhiteFlagFoundryOutputInvalidSerialNumber(t *testing.T) {
 	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentAliasOutputsInLedger()))
 	aliasOutput := te.UnspentAliasOutputsInLedger()[0]
-	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(0))
+	require.Equal(t, uint32(0), aliasOutput.Output().(*iotago.AliasOutput).StateIndex)
 
 	newAlias := aliasOutput.Output().Clone().(*iotago.AliasOutput)
 	if newAlias.AliasID.Empty() {
@@ -1026,7 +1026,7 @@ func TestWhiteFlagFoundryOutputInvalidSerialNumber(t *testing.T) {
 		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias}, []*utils.HDWallet{seed1Wallet}).
 		Store()
 
-	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 0)
+	require.Equal(t, 0, len(te.UnspentFoundryOutputsInLedger()))
 
 	// Confirming milestone at block B
 	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockB.StoredBlockID()}, true)
@@ -1064,7 +1064,7 @@ func TestWhiteFlagFoundryOutputInvalidAliasFoundryCounter(t *testing.T) {
 
 	seed1Wallet.PrintStatus()
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 0)
+	require.Equal(t, 0, len(te.UnspentAliasOutputsInLedger()))
 
 	// Confirming milestone at block A
 	_, confStats := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockA.StoredBlockID()}, true)
@@ -1073,9 +1073,9 @@ func TestWhiteFlagFoundryOutputInvalidAliasFoundryCounter(t *testing.T) {
 	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
-	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentAliasOutputsInLedger()))
 	aliasOutput := te.UnspentAliasOutputsInLedger()[0]
-	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(0))
+	require.Equal(t, uint32(0), aliasOutput.Output().(*iotago.AliasOutput).StateIndex)
 
 	newAlias := aliasOutput.Output().Clone().(*iotago.AliasOutput)
 	if newAlias.AliasID.Empty() {
@@ -1110,7 +1110,7 @@ func TestWhiteFlagFoundryOutputInvalidAliasFoundryCounter(t *testing.T) {
 		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias}, []*utils.HDWallet{seed1Wallet}).
 		Store()
 
-	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 0)
+	require.Equal(t, 0, len(te.UnspentFoundryOutputsInLedger()))
 
 	// Confirming milestone at block B
 	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockB.StoredBlockID()}, true)
@@ -1170,7 +1170,7 @@ func TestWhiteFlagNFTOutputs(t *testing.T) {
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
-	require.Equal(t, len(te.UnspentNFTOutputsInLedger()), 0)
+	require.Equal(t, 0, len(te.UnspentNFTOutputsInLedger()))
 
 	// Confirming milestone at block A
 	_, confStats := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockA.StoredBlockID()}, true)
@@ -1213,7 +1213,7 @@ func TestWhiteFlagNFTOutputs(t *testing.T) {
 	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
-	require.Equal(t, len(te.UnspentNFTOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentNFTOutputsInLedger()))
 	nftOutput = te.UnspentNFTOutputsInLedger()[0]
 	require.Equal(t, []byte("test"), nftOutput.Output().(*iotago.NFTOutput).ImmutableFeatures.MustSet().MetadataFeature().Data)
 
@@ -1249,7 +1249,7 @@ func TestWhiteFlagNFTOutputs(t *testing.T) {
 	// Verify the blocks have the expected conflict reason
 	te.AssertBlockConflictReason(blockC.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
 
-	require.Equal(t, len(te.UnspentNFTOutputsInLedger()), 1)
+	require.Equal(t, 1, len(te.UnspentNFTOutputsInLedger()))
 	nftOutput = te.UnspentNFTOutputsInLedger()[0]
 	require.Equal(t, []byte("test"), nftOutput.Output().(*iotago.NFTOutput).ImmutableFeatures.MustSet().MetadataFeature().Data)
 
@@ -1285,7 +1285,7 @@ func TestWhiteFlagNFTOutputs(t *testing.T) {
 	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
-	require.Equal(t, len(te.UnspentNFTOutputsInLedger()), 0)
+	require.Equal(t, 0, len(te.UnspentNFTOutputsInLedger()))
 
 	te.AssertTotalSupplyStillValid()
 }
