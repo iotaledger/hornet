@@ -730,6 +730,8 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
+
+	require.Equal(t, seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount, big.NewInt(100))
 }
 
 func TestWhiteFlagFoundryOutputInvalidSerialNumber(t *testing.T) {

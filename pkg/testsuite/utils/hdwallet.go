@@ -117,7 +117,7 @@ func (hd *HDWallet) PrintStatus() {
 			for id, amount := range nativeTokens {
 				nativeTokenDescription += fmt.Sprintf("%s: %s, ", id.ToHex(), amount.Amount.String())
 			}
-			nativeTokenDescription = "]"
+			nativeTokenDescription += "]"
 		}
 		status += fmt.Sprintf("\t%s [%s] = %d %v\n", u.OutputID().ToHex(), u.OutputType().String(), u.Deposit(), nativeTokenDescription)
 	}
