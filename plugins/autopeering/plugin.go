@@ -272,9 +272,7 @@ func configureEvents() {
 		// we block peers that are connected via manual peering in the autopeering module.
 		// this ensures that no additional connections are established via autopeering.
 		switch p.Relation {
-		case p2p.PeerRelationKnown:
-			deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
-		case p2p.PeerRelationUnknown:
+		case p2p.PeerRelationKnown, p2p.PeerRelationUnknown:
 			deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
 		}
 	})
@@ -298,7 +296,7 @@ func configureEvents() {
 			return
 		}
 
-		Plugin.LogInfof("removing: %s", peerOptErr.Peer.ID.ShortString())
+		Plugin.LogDebugf("removing: %s", peerOptErr.Peer.ID.ShortString())
 		deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 	})
 
@@ -317,9 +315,7 @@ func configureEvents() {
 		// this ensures that no additional connections are established via autopeering.
 		// if a peer gets updated to autopeered, we need to unblock it.
 		switch p.Relation {
-		case p2p.PeerRelationKnown:
-			deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
-		case p2p.PeerRelationUnknown:
+		case p2p.PeerRelationKnown, p2p.PeerRelationUnknown:
 			deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
 		case p2p.PeerRelationAutopeered:
 			deps.AutopeeringManager.Selection().UnblockNeighbor(id.ID())
