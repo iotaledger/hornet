@@ -2,12 +2,14 @@ package test
 
 import (
 	"encoding/hex"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	_ "golang.org/x/crypto/blake2b"
 
 	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hornet/pkg/testsuite"
 	"github.com/iotaledger/hornet/pkg/testsuite/utils"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -682,5 +684,176 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 1)
 	foundryOutput := te.UnspentFoundryOutputsInLedger()[0]
 	require.Equal(t, foundryOutput.Output().(*iotago.FoundryOutput).SerialNumber, uint32(1))
+}
 
+func TestWhiteFlagFoundryOutputInvalidSerialNumber(t *testing.T) {
+	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
+
+	genesisAddress := seed1Wallet.Address()
+
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
+
+	//Add token supply to our local HDWallet
+	seed1Wallet.BookOutput(te.GenesisOutput)
+	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
+
+	seed1Wallet.PrintStatus()
+
+	// Create Alias
+	blockA := te.NewBlockBuilder("A").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		Amount(1_000_000_000).
+		BuildAlias().
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 0)
+
+	// Confirming milestone at block A
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockA.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // A + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	aliasOutput := te.UnspentAliasOutputsInLedger()[0]
+	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(0))
+
+	newAlias := aliasOutput.Output().Clone().(*iotago.AliasOutput)
+	if newAlias.AliasID.Empty() {
+		newAlias.AliasID = iotago.AliasIDFromOutputID(aliasOutput.OutputID())
+	}
+
+	newAlias.StateIndex++
+	newAlias.FoundryCounter++
+
+	foundry := &iotago.FoundryOutput{
+		Amount:       0,
+		NativeTokens: nil,
+		SerialNumber: 1337,
+		TokenScheme: &iotago.SimpleTokenScheme{
+			MintedTokens:  big.NewInt(0),
+			MeltedTokens:  big.NewInt(0),
+			MaximumSupply: big.NewInt(1000),
+		},
+		Conditions: iotago.UnlockConditions{
+			&iotago.ImmutableAliasUnlockCondition{Address: newAlias.AliasID.ToAddress().(*iotago.AliasAddress)},
+		},
+		Features:          nil,
+		ImmutableFeatures: nil,
+	}
+
+	foundry.Amount = te.ProtocolParameters().RentStructure.MinRent(foundry)
+	newAlias.Amount -= foundry.Amount
+
+	// Create foundry with invalid serial number
+	blockB := te.NewBlockBuilder("B").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias}).
+		Store().
+		BookOnWallets()
+
+	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 0)
+
+	// Confirming milestone at block B
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockB.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // B + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	// Verify the blocks have the expected conflict reason
+	te.AssertBlockConflictReason(blockB.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
+}
+
+func TestWhiteFlagFoundryOutputInvalidAliasFoundryCounter(t *testing.T) {
+	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
+
+	genesisAddress := seed1Wallet.Address()
+
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
+
+	//Add token supply to our local HDWallet
+	seed1Wallet.BookOutput(te.GenesisOutput)
+	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
+
+	seed1Wallet.PrintStatus()
+
+	// Create Alias
+	blockA := te.NewBlockBuilder("A").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		Amount(1_000_000_000).
+		BuildAlias().
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 0)
+
+	// Confirming milestone at block A
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockA.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // A + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
+	aliasOutput := te.UnspentAliasOutputsInLedger()[0]
+	require.Equal(t, aliasOutput.Output().(*iotago.AliasOutput).StateIndex, uint32(0))
+
+	newAlias := aliasOutput.Output().Clone().(*iotago.AliasOutput)
+	if newAlias.AliasID.Empty() {
+		newAlias.AliasID = iotago.AliasIDFromOutputID(aliasOutput.OutputID())
+	}
+
+	newAlias.StateIndex++
+	newAlias.FoundryCounter = 1337
+
+	foundry := &iotago.FoundryOutput{
+		Amount:       0,
+		NativeTokens: nil,
+		SerialNumber: 1337,
+		TokenScheme: &iotago.SimpleTokenScheme{
+			MintedTokens:  big.NewInt(0),
+			MeltedTokens:  big.NewInt(0),
+			MaximumSupply: big.NewInt(1000),
+		},
+		Conditions: iotago.UnlockConditions{
+			&iotago.ImmutableAliasUnlockCondition{Address: newAlias.AliasID.ToAddress().(*iotago.AliasAddress)},
+		},
+		Features:          nil,
+		ImmutableFeatures: nil,
+	}
+
+	foundry.Amount = te.ProtocolParameters().RentStructure.MinRent(foundry)
+	newAlias.Amount -= foundry.Amount
+
+	// Create foundry with invalid serial number
+	blockB := te.NewBlockBuilder("B").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{aliasOutput}, iotago.Outputs{foundry, newAlias}).
+		Store().
+		BookOnWallets()
+
+	require.Equal(t, len(te.UnspentFoundryOutputsInLedger()), 0)
+
+	// Confirming milestone at block B
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockB.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // B + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	// Verify the blocks have the expected conflict reason
+	te.AssertBlockConflictReason(blockB.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
 }
