@@ -361,7 +361,7 @@ func (m *Block) BookOnWallets() *Block {
 	for _, sentOutput := range m.createdOutputs {
 		// Check if we should book the output to the toWallet or to the fromWallet
 		switch output := sentOutput.Output().(type) {
-		case *iotago.BasicOutput:
+		case *iotago.BasicOutput, *iotago.NFTOutput:
 			if m.builder.toWallet != nil {
 				if output.UnlockConditionSet().Address().Address.Equal(m.builder.toWallet.Address()) {
 					m.builder.toWallet.BookOutput(sentOutput)

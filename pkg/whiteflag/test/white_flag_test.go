@@ -1122,3 +1122,170 @@ func TestWhiteFlagFoundryOutputInvalidAliasFoundryCounter(t *testing.T) {
 	// Verify the blocks have the expected conflict reason
 	te.AssertBlockConflictReason(blockB.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
 }
+
+func TestWhiteFlagNFTOutputs(t *testing.T) {
+	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
+	seed2Wallet := utils.NewHDWallet("Seed2", seed2, 0)
+	seed3Wallet := utils.NewHDWallet("Seed3", seed3, 0)
+
+	genesisAddress := seed1Wallet.Address()
+
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
+	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
+
+	//Add token supply to our local HDWallet
+	seed1Wallet.BookOutput(te.GenesisOutput)
+	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	// --- Create NFT ---
+
+	newNFT := &iotago.NFTOutput{
+		Amount:       1_000_000_000,
+		NativeTokens: nil,
+		NFTID:        iotago.NFTID{},
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{Address: seed2Wallet.Address()},
+		},
+		Features: iotago.Features{
+			&iotago.SenderFeature{Address: seed1Wallet.Address()},
+		},
+		ImmutableFeatures: iotago.Features{
+			&iotago.IssuerFeature{Address: seed1Wallet.Address()},
+			&iotago.MetadataFeature{Data: []byte("test")},
+		},
+	}
+
+	blockA := te.NewBlockBuilder("A").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed1Wallet).
+		ToWallet(seed2Wallet).
+		Amount(1_000_000_000).
+		BuildTransactionSendingOutputsAndCalculateRemainder(newNFT).
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+
+	require.Equal(t, len(te.UnspentNFTOutputsInLedger()), 0)
+
+	// Confirming milestone at block A
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockA.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // A + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, 1, len(te.UnspentNFTOutputsInLedger()))
+	nftOutput := te.UnspentNFTOutputsInLedger()[0]
+	require.Equal(t, []byte("test"), nftOutput.Output().(*iotago.NFTOutput).ImmutableFeatures.MustSet().MetadataFeature().Data)
+
+	// --- Send NFT ---
+
+	newNFT = nftOutput.Output().Clone().(*iotago.NFTOutput)
+	newNFT.NFTID = iotago.NFTIDFromOutputID(nftOutput.OutputID())
+	newNFT.Features = nil // remove previous Sender field
+	newNFT.Conditions = iotago.UnlockConditions{
+		&iotago.AddressUnlockCondition{Address: seed3Wallet.Address()},
+	}
+
+	blockB := te.NewBlockBuilder("B").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed2Wallet).
+		ToWallet(seed3Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{nftOutput}, iotago.Outputs{newNFT}, []*utils.HDWallet{seed2Wallet}).
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+	seed3Wallet.PrintStatus()
+
+	require.Equal(t, 1, len(te.UnspentNFTOutputsInLedger()))
+
+	// Confirming milestone at block B
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockB.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // B + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, len(te.UnspentNFTOutputsInLedger()), 1)
+	nftOutput = te.UnspentNFTOutputsInLedger()[0]
+	require.Equal(t, []byte("test"), nftOutput.Output().(*iotago.NFTOutput).ImmutableFeatures.MustSet().MetadataFeature().Data)
+
+	// --- Mutate NFT (invalid) ---
+
+	newNFT = nftOutput.Output().Clone().(*iotago.NFTOutput)
+	newNFT.Features = nil // remove previous Sender field
+	newNFT.ImmutableFeatures = iotago.Features{
+		newNFT.ImmutableFeatures.MustSet().IssuerFeature(),
+		&iotago.MetadataFeature{Data: []byte("faked")},
+	}
+
+	blockC := te.NewBlockBuilder("B").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed3Wallet).
+		ToWallet(seed3Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{nftOutput}, iotago.Outputs{newNFT}, []*utils.HDWallet{seed3Wallet}).
+		Store()
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+	seed3Wallet.PrintStatus()
+
+	require.Equal(t, 1, len(te.UnspentNFTOutputsInLedger()))
+
+	// Confirming milestone at block C
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockC.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // C + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	// Verify the blocks have the expected conflict reason
+	te.AssertBlockConflictReason(blockC.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
+
+	require.Equal(t, len(te.UnspentNFTOutputsInLedger()), 1)
+	nftOutput = te.UnspentNFTOutputsInLedger()[0]
+	require.Equal(t, []byte("test"), nftOutput.Output().(*iotago.NFTOutput).ImmutableFeatures.MustSet().MetadataFeature().Data)
+
+	// --- Burn NFT ---
+
+	newBasicOutput := &iotago.BasicOutput{
+		Amount:       nftOutput.Deposit(),
+		NativeTokens: nil,
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{Address: seed3Wallet.Address()},
+		},
+		Features: nil,
+	}
+
+	blockD := te.NewBlockBuilder("D").
+		Parents(te.LastMilestoneParents()).
+		FromWallet(seed3Wallet).
+		ToWallet(seed3Wallet).
+		BuildTransactionWithInputsAndOutputs(utxo.Outputs{nftOutput}, iotago.Outputs{newBasicOutput}, []*utils.HDWallet{seed3Wallet}).
+		Store().
+		BookOnWallets()
+
+	seed1Wallet.PrintStatus()
+	seed2Wallet.PrintStatus()
+	seed3Wallet.PrintStatus()
+
+	require.Equal(t, 1, len(te.UnspentNFTOutputsInLedger()))
+
+	// Confirming milestone at block D
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockD.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // D + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
+
+	require.Equal(t, len(te.UnspentNFTOutputsInLedger()), 0)
+
+	te.AssertTotalSupplyStillValid()
+}

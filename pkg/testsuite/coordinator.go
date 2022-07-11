@@ -230,6 +230,20 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips iotago.BlockIDs, 
 	return te.ConfirmMilestone(ms, createConfirmationGraph)
 }
 
+func (te *TestEnvironment) UnspentNFTOutputsInLedger() utxo.Outputs {
+	outputs, err := te.UTXOManager().UnspentOutputs()
+	require.NoError(te.TestInterface, err)
+
+	var result utxo.Outputs
+	for _, output := range outputs {
+		switch output.OutputType() {
+		case iotago.OutputNFT:
+			result = append(result, output)
+		}
+	}
+	return result
+}
+
 func (te *TestEnvironment) UnspentAliasOutputsInLedger() utxo.Outputs {
 	outputs, err := te.UTXOManager().UnspentOutputs()
 	require.NoError(te.TestInterface, err)
