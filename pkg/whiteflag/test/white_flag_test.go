@@ -735,7 +735,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	require.Equal(t, 1, len(seed2Wallet.Outputs()))
-	require.Equal(t, big.NewInt(200), seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount)
+	require.Equal(t, big.NewInt(200), seed2Wallet.Outputs()[0].Output().NativeTokenList().MustSet()[newFoundry.MustNativeTokenID()].Amount)
 
 	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
 	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
@@ -793,7 +793,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	require.Equal(t, 1, len(seed2Wallet.Outputs()))
-	require.Equal(t, big.NewInt(200), seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount)
+	require.Equal(t, big.NewInt(200), seed2Wallet.Outputs()[0].Output().NativeTokenList().MustSet()[newFoundry.MustNativeTokenID()].Amount)
 
 	require.Equal(t, len(te.UnspentAliasOutputsInLedger()), 1)
 	aliasOutput = te.UnspentAliasOutputsInLedger()[0]
@@ -839,7 +839,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	require.Equal(t, 1, len(seed2Wallet.Outputs()))
-	require.Equal(t, big.NewInt(100), seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount)
+	require.Equal(t, big.NewInt(100), seed2Wallet.Outputs()[0].Output().NativeTokenList().MustSet()[newFoundry.MustNativeTokenID()].Amount)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
@@ -890,7 +890,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	te.AssertBlockConflictReason(blockF.StoredBlockID(), storage.ConflictInvalidChainStateTransition)
 
 	require.Equal(t, 1, len(seed2Wallet.Outputs()))
-	require.Equal(t, big.NewInt(100), seed2Wallet.Outputs()[0].Output().NativeTokenSet().MustSet()[newFoundry.MustNativeTokenID()].Amount)
+	require.Equal(t, big.NewInt(100), seed2Wallet.Outputs()[0].Output().NativeTokenList().MustSet()[newFoundry.MustNativeTokenID()].Amount)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
@@ -927,7 +927,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	require.Equal(t, 1, len(seed2Wallet.Outputs()))
-	require.Equal(t, 0, len(seed2Wallet.Outputs()[0].Output().NativeTokenSet()))
+	require.Equal(t, 0, len(seed2Wallet.Outputs()[0].Output().NativeTokenList()))
 
 	// --- Melt tokens without burning (invalid) ---
 

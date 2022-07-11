@@ -111,7 +111,7 @@ func (hd *HDWallet) PrintStatus() {
 	status += "Outputs: \n"
 	for _, u := range hd.utxo {
 		nativeTokenDescription := ""
-		nativeTokens := u.Output().NativeTokenSet().MustSet()
+		nativeTokens := u.Output().NativeTokenList().MustSet()
 		if len(nativeTokens) > 0 {
 			nativeTokenDescription = "["
 			for id, amount := range nativeTokens {
