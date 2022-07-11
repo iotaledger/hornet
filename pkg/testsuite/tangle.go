@@ -85,7 +85,7 @@ func (te *TestEnvironment) AssertBlockConflictReason(blockID iotago.BlockID, con
 	cachedBlockMeta := te.storage.CachedBlockMetadataOrNil(blockID)
 	require.NotNil(te.TestInterface, cachedBlockMeta)
 	defer cachedBlockMeta.Release(true) // meta -1
-	require.Equal(te.TestInterface, cachedBlockMeta.Metadata().Conflict(), conflict)
+	require.Equal(te.TestInterface, conflict, cachedBlockMeta.Metadata().Conflict())
 }
 
 // generateDotFileFromConfirmation generates a dot file from a whiteflag confirmation cone.

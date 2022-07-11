@@ -230,16 +230,52 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips iotago.BlockIDs, 
 	return te.ConfirmMilestone(ms, createConfirmationGraph)
 }
 
+func (te *TestEnvironment) UnspentNFTOutputsInLedger() utxo.Outputs {
+	outputs, err := te.UTXOManager().UnspentOutputs()
+	require.NoError(te.TestInterface, err)
+
+	var result utxo.Outputs
+	for _, output := range outputs {
+		switch output.OutputType() {
+		case iotago.OutputNFT:
+			result = append(result, output)
+		}
+	}
+	return result
+}
+
 func (te *TestEnvironment) UnspentAliasOutputsInLedger() utxo.Outputs {
 	outputs, err := te.UTXOManager().UnspentOutputs()
 	require.NoError(te.TestInterface, err)
 
-	var aliasOutputs utxo.Outputs
+	var result utxo.Outputs
 	for _, output := range outputs {
 		switch output.OutputType() {
 		case iotago.OutputAlias:
-			aliasOutputs = append(aliasOutputs, output)
+			result = append(result, output)
 		}
 	}
-	return aliasOutputs
+	return result
+}
+
+func (te *TestEnvironment) UnspentFoundryOutputsInLedger() utxo.Outputs {
+	outputs, err := te.UTXOManager().UnspentOutputs()
+	require.NoError(te.TestInterface, err)
+
+	var result utxo.Outputs
+	for _, output := range outputs {
+		switch output.OutputType() {
+		case iotago.OutputFoundry:
+			result = append(result, output)
+		}
+	}
+	return result
+}
+
+func (te *TestEnvironment) AssertFoundryTokenScheme(foundryOutput *utxo.Output, minted uint64, melted uint64, maxSupply uint64) {
+	foundry := foundryOutput.Output().(*iotago.FoundryOutput)
+	scheme := foundry.TokenScheme.(*iotago.SimpleTokenScheme)
+	require.Equal(te.TestInterface, minted, scheme.MintedTokens.Uint64())
+	require.Equal(te.TestInterface, melted, scheme.MeltedTokens.Uint64())
+	require.Equal(te.TestInterface, maxSupply, scheme.MaximumSupply.Uint64())
 }
