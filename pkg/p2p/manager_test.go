@@ -140,7 +140,8 @@ func TestManager(t *testing.T) {
 
 	// if we then tell node 1 to connect to node 2 again explicitly (even if they're already connected),
 	// but with a different relation than what node 2 currently is for node 1, it will be updated:
-	_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
+	err = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
+	require.ErrorIs(t, err, p2p.ErrPeerInManagerAlready)
 	require.True(t, node1.ConnManager().IsProtected(node2.ID(), p2p.PeerConnectivityProtectionTag))
 
 	// connect node 4 to node 2 too

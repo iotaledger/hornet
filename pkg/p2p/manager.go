@@ -515,6 +515,7 @@ type connectpeerattemptmsg struct {
 	peerRelation PeerRelation
 	alias        string
 	back         chan error
+	connect      bool
 	connectErr   error
 }
 
@@ -593,11 +594,13 @@ func (m *Manager) eventLoop(ctx context.Context) {
 
 		case connectPeerAttemptMsg := <-m.connectPeerAttemptChan:
 			if connectPeerAttemptMsg.connectErr != nil {
-				// unsuccessful connect:
-				// get rid of the peer instance if the relation is unknown
-				// or initiate a reconnect timer
-				m.cleanupPeerIfNotKnown(connectPeerAttemptMsg.addrInfo.ID)
-				m.scheduleReconnectIfKnown(connectPeerAttemptMsg.addrInfo.ID)
+				if connectPeerAttemptMsg.connect {
+					// unsuccessful connect:
+					// get rid of the peer instance if the relation is unknown
+					// or initiate a reconnect timer
+					m.cleanupPeerIfNotKnown(connectPeerAttemptMsg.addrInfo.ID)
+					m.scheduleReconnectIfKnown(connectPeerAttemptMsg.addrInfo.ID)
+				}
 
 				m.Events.Error.Trigger(fmt.Errorf("error connect to %s (%v): %w", connectPeerAttemptMsg.addrInfo.ID.ShortString(), connectPeerAttemptMsg.addrInfo.Addrs, connectPeerAttemptMsg.connectErr))
 
@@ -699,14 +702,28 @@ func (m *Manager) eventLoop(ctx context.Context) {
 func (m *Manager) connectPeer(connectPeerMsg *connectpeermsg) {
 
 	if _, has := m.peers[connectPeerMsg.addrInfo.ID]; has {
-		// directly return the error back to the caller
-		connectPeerMsg.back <- ErrPeerInManagerAlready
+		m.connectPeerAttemptChan <- &connectpeerattemptmsg{
+			addrInfo:     connectPeerMsg.addrInfo,
+			peerRelation: connectPeerMsg.peerRelation,
+			alias:        connectPeerMsg.alias,
+			// pass the error channel of the caller to the connectPeerAttemptChan
+			back:       connectPeerMsg.back,
+			connect:    false,
+			connectErr: ErrPeerInManagerAlready,
+		}
 		return
 	}
 
 	if connectPeerMsg.addrInfo.ID == m.host.ID() {
-		// directly return the error back to the caller
-		connectPeerMsg.back <- ErrCantConnectToItself
+		m.connectPeerAttemptChan <- &connectpeerattemptmsg{
+			addrInfo:     connectPeerMsg.addrInfo,
+			peerRelation: connectPeerMsg.peerRelation,
+			alias:        connectPeerMsg.alias,
+			// pass the error channel of the caller to the connectPeerAttemptChan
+			back:       connectPeerMsg.back,
+			connect:    false,
+			connectErr: ErrCantConnectToItself,
+		}
 		return
 	}
 
@@ -733,6 +750,7 @@ func (m *Manager) connectPeer(connectPeerMsg *connectpeermsg) {
 			alias:        connectPeerMsg.alias,
 			// pass the error channel of the caller to the connectPeerAttemptChan
 			back:       connectPeerMsg.back,
+			connect:    true,
 			connectErr: m.host.Connect(ctx, *connectPeerMsg.addrInfo),
 		}
 	}()
