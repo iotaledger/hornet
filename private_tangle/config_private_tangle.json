@@ -1,6 +1,5 @@
 {
   "app": {
-    "checkForUpdates": true,
     "disablePlugins": [
       "Autopeering"
     ],
@@ -8,11 +7,9 @@
       "Debug",
       "Prometheus",
       "INX"
-    ],
-    "stopGracePeriod": "5m"
+    ]
   },
   "node": {
-    "profile": "auto",
     "alias": "HORNET private-tangle node"
   },
   "protocol": {
@@ -40,132 +37,27 @@
     ]
   },
   "db": {
-    "engine": "rocksdb",
     "path": "privatedb",
-    "autoRevalidation": false
-  },
-  "pow": {
-    "refreshTipsInterval": "5s"
   },
   "p2p": {
-    "bindMultiAddresses": [
-      "/ip4/0.0.0.0/tcp/15600",
-      "/ip6/::/tcp/15600"
-    ],
-    "connectionManager": {
-      "highWatermark": 10,
-      "lowWatermark": 5
-    },
-    "identityPrivateKey": "",
     "db": {
       "path": "p2pstore"
     },
-    "reconnectInterval": "30s",
-    "gossip": {
-      "unknownPeersLimit": 4,
-      "streamReadTimeout": "1m",
-      "streamWriteTimeout": "10s"
-    },
-    "autopeering": {
-      "bindAddress": "0.0.0.0:14626",
-      "entryNodes": [],
-      "entryNodesPreferIPv6": false,
-      "runAsEntryNode": false
-    }
-  },
-  "requests": {
-    "discardOlderThan": "15s",
-    "pendingReEnqueueInterval": "5s"
-  },
-  "tangle": {
-    "milestoneTimeout": "30s",
-    "maxDeltaBlockYoungestConeRootIndexToCMI": 2,
-    "maxDeltaBlockOldestConeRootIndexToCMI": 7,
-    "whiteFlagParentsSolidTimeout": "2s"
   },
   "snapshots": {
-    "depth": 50,
-    "interval": 200,
     "fullPath": "snapshots/full_snapshot.bin",
     "deltaPath": "snapshots/delta_snapshot.bin",
-    "deltaSizeThresholdPercentage": 50.0,
-    "deltaSizeThresholdMinSize": "50M",
     "downloadURLs": []
   },
-  "pruning": {
-    "milestones": {
-      "enabled": false,
-      "maxMilestonesToKeep": 60480
-    },
-    "size": {
-      "enabled": true,
-      "targetSize": "30GB",
-      "thresholdPercentage": 10.0,
-      "cooldownTime": "5m"
-    },
-    "pruneReceipts": false
-  },
-  "profiling": {
-    "bindAddress": "localhost:6060"
-  },
   "restAPI": {
-    "bindAddress": "0.0.0.0:14265",
     "publicRoutes": [
       "/health",
       "/api/*"
     ],
     "protectedRoutes": [
     ],
-    "jwtAuth": {
-      "salt": "HORNET"
-    },
     "pow": {
       "enabled": true,
-      "workerCount": 1
     },
-    "limits": {
-      "maxBodyLength": "1M",
-      "maxResults": 1000
-    }
   },
-  "warpsync": {
-    "advancementRange": 150
-  },
-  "tipsel": {
-    "nonLazy": {
-      "retentionRulesTipsLimit": 100,
-      "maxReferencedTipAge": "3s",
-      "maxChildren": 30
-    },
-    "semiLazy": {
-      "retentionRulesTipsLimit": 20,
-      "maxReferencedTipAge": "3s",
-      "maxChildren": 2
-    }
-  },
-  "prometheus": {
-    "bindAddress": "0.0.0.0:9311",
-    "fileServiceDiscovery": {
-      "enabled": false,
-      "path": "target.json",
-      "target": "0.0.0.0:9311"
-    },
-    "databaseMetrics": true,
-    "nodeMetrics": true,
-    "gossipMetrics": true,
-    "cachesMetrics": true,
-    "restAPIMetrics": true,
-    "inxMetrics": true,
-    "migrationMetrics": true,
-    "debugMetrics": false,
-    "goMetrics": false,
-    "processMetrics": false,
-    "promhttpMetrics": false
-  },
-  "inx": {
-    "bindAddress": "localhost:9029",
-    "pow": {
-      "workerCount": 0
-    }
-  }
 }

@@ -3,7 +3,7 @@ services:
   create-snapshots:
     build:
       context: ../
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile
     image: hornet:dev
     networks:
       peering_net:
@@ -23,7 +23,7 @@ services:
   bootstrap-network:
     build:
       context: ../
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile
     image: hornet:dev
     networks:
       peering_net:
@@ -276,7 +276,7 @@ services:
   hornet-coo:
     build:
       context: ../
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile
     image: hornet:dev
     networks:
       peering_net:

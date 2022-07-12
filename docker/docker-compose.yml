@@ -37,6 +37,7 @@ services:
       - "--p2p.db.path=data/p2pstore"
       - "--snapshots.fullPath=data/snapshots/full_snapshot.bin"
       - "--snapshots.deltaPath=data/snapshots/delta_snapshot.bin"
+      - "--app.enablePlugins=INX,Prometheus"
       - "--inx.bindAddress=hornet:9029"
       - "--prometheus.bindAddress=hornet:9311"
 

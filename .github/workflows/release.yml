@@ -53,28 +53,30 @@ jobs:
           username: ${{ secrets.IOTALEDGER_DOCKER_USERNAME }}
           password: ${{ secrets.IOTALEDGER_DOCKER_PASSWORD }}
 
-      - name: Prepare docker-example files
+      - name: Prepare docker files
         run: |
-          cp config_template.json docker-example/config.json
-          cp peering.json docker-example/
+          cp config_alphanet.json docker/config.json
+          cp config_defaults.json docker/
+          cp config_alphanet.json docker/
+          cp peering.json docker/
 
-      - name: Create docker-example.tar.gz
+      - name: Create docker.tar.gz
         uses: ihiroky/archive-action@v1
         with:
-          root_dir: docker-example
-          file_path: docker-example.tar.gz
+          root_dir: docker
+          file_path: docker.tar.gz
 
-      - name: Upload docker-example.tar.gz file
+      - name: Upload docker.tar.gz file
         uses: Shopify/upload-to-release@v1.0.1
         with:
-          name: HORNET-${{ steps.meta.outputs.version }}-docker-example.tar.gz
-          path: docker-example.tar.gz
+          name: HORNET-${{ steps.meta.outputs.version }}-docker.tar.gz
+          path: docker.tar.gz
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push to Dockerhub
         uses: docker/build-push-action@v2
         with:
-          file: ./docker/Dockerfile
+          file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
