@@ -71,7 +71,7 @@ archives:
     files:
       - README.md
       - LICENSE
-      - config.json
+      - config_template.json
       - peering.json
       - profiles.json
 
