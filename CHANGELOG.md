@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha.24] - 12.07.2022
+
+### Added
+    - Added Foundry, NativeTokens and NFT whiteflag tests (#1607)
+
+### Fixed
+    - Do not check storage deposits of full snapshot outputs (#1610)
+    - Avoid locking of the p2p Manager while connection attempts are performed (#1614)
+
+### Changed
+    - Renamed `config.json` to `config_alphanet.json` and added `config_defaults.json` (#1613)
+    - Renamed `-docker-example.tar.gz` release to `-docker.tar.gz` (#1615)
+    - Block static peers in autopeering module (#1608)
+
+### Chore
+    -  Update modules (#1606)
+
 ## [2.0.0-alpha.23] - 07.07.2022
 
 :warning: :warning: :warning: 
