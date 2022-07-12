@@ -4,7 +4,7 @@ on:
   pull_request:
     paths-ignore:
       - 'documentation/**'
-      - 'docker-example/**'
+      - 'docker/**'
       - 'nfpm/**'
       - 'private_tangle/**'
       - 'scripts/**'

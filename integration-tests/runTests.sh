@@ -3,7 +3,7 @@
 TEST_NAMES='common value migration snapshot autopeering'
 
 echo "Build latest HORNET image"
-docker build -f ../docker/Dockerfile -t hornet:dev ../.
+docker build -f ../Dockerfile -t hornet:dev ../.
 
 if ! docker image ls | grep -q wfmock
 then

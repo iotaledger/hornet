@@ -43,7 +43,7 @@ services:
   hornet:
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile
     image: hornet:dev
     ulimits:
       nofile:

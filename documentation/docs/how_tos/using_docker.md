@@ -146,7 +146,7 @@ You can edit `config.json` and customize the _dashboard_ section to your needs.
 You can build your own Docker image by running the following command:
 
 ```sh
-docker build -f docker/Dockerfile -t hornet:latest .
+docker build -f Dockerfile -t hornet:latest .
 ```
 
 Or pull it from Docker hub (only available for amd64/x86_64):
