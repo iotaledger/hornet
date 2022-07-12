@@ -385,7 +385,13 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 		return true
 	}
 
-	a.selectionProtocol = selection.New(localPeerContainer.Local(), a.discoveryProtocol, selection.Logger(a.LoggerNamed("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
+	a.selectionProtocol = selection.New(
+		localPeerContainer.Local(),
+		a.discoveryProtocol,
+		selection.Logger(a.LoggerNamed("sel")),
+		selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)),
+		selection.NeighborBlockDuration(0), // disable neighbor block duration (we manually block neighbors)
+	)
 }
 
 func (a *AutopeeringManager) Run(ctx context.Context) {
