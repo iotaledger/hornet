@@ -23,7 +23,7 @@ jobs:
 
       - name: Run gendoc
         working-directory: tools/gendoc
-        run: go run main.go
+        run: go mod tidy && go run main.go
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4
