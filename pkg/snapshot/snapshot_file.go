@@ -1186,6 +1186,11 @@ func StreamFullSnapshotDataFrom(
 		return err
 	}
 
+	// the outputs of the full snapshot are not checked for correct storage deposits,
+	// because there might be some outputs in the ledger that were created
+	// with different rent structure parameters.
+	fullHeaderProtoParams.RentStructure.VByteCost = 0
+
 	// initialize a temporary protocol storage in memory
 	protocolStorage := storage.NewProtocolStorage(mapdb.NewMapDB())
 
