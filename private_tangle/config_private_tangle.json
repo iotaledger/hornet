@@ -15,7 +15,7 @@
   "protocol": {
     "targetNetworkName": "private_tangle1",
     "milestonePublicKeyCount": 2,
-    "baseToken" : {
+    "baseToken": {
       "name": "TestCoin",
       "tickerSymbol": "TEST",
       "unit": "TEST",
@@ -37,12 +37,12 @@
     ]
   },
   "db": {
-    "path": "privatedb",
+    "path": "privatedb"
   },
   "p2p": {
     "db": {
       "path": "p2pstore"
-    },
+    }
   },
   "snapshots": {
     "fullPath": "snapshots/full_snapshot.bin",
@@ -54,10 +54,9 @@
       "/health",
       "/api/*"
     ],
-    "protectedRoutes": [
-    ],
+    "protectedRoutes": [],
     "pow": {
-      "enabled": true,
-    },
-  },
+      "enabled": true
+    }
+  }
 }
