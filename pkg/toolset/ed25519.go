@@ -10,6 +10,7 @@ import (
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/bip39"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
+	"github.com/wollac/iota-crypto-demo/pkg/slip10/eddsa"
 
 	"github.com/iotaledger/hornet/pkg/utils"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -124,11 +125,12 @@ func generateEd25519Key(args []string) error {
 		return err
 	}
 
-	key, err := slip10.DeriveKeyFromPath(seed, slip10.Ed25519(), path)
+	key, err := slip10.DeriveKeyFromPath(seed, eddsa.Ed25519(), path)
 	if err != nil {
 		return err
 	}
-	pubKey, prvKey := slip10.Ed25519Key(key)
+
+	pubKey, prvKey := key.Key.(eddsa.Seed).Ed25519Key()
 
 	return printEd25519Info(mnemonicSentence, path, ed25519.PrivateKey(prvKey), ed25519.PublicKey(pubKey), iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
 }

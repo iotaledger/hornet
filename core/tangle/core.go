@@ -242,9 +242,9 @@ func configureEvents() {
 }
 
 func attachHeartbeatEvents() {
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
-	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
+	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Hook(onPruningMilestoneIndexChanged)
+	deps.Tangle.Events.LatestMilestoneIndexChanged.Hook(onLatestMilestoneIndexChanged)
 }
 
 func detachHeartbeatEvents() {

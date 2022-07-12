@@ -575,10 +575,10 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-	deps.Coordinator.Events.IssuedCheckpointMessage.Attach(onIssuedCheckpoint)
-	deps.Coordinator.Events.IssuedMilestone.Attach(onIssuedMilestone)
+	deps.Tangle.Events.MessageSolid.Hook(onMessageSolid)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
+	deps.Coordinator.Events.IssuedCheckpointMessage.Hook(onIssuedCheckpoint)
+	deps.Coordinator.Events.IssuedMilestone.Hook(onIssuedMilestone)
 }
 
 func detachEvents() {

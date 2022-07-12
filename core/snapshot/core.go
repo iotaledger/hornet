@@ -246,7 +246,7 @@ func run() {
 	if err := CorePlugin.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
 		CorePlugin.LogInfo("Starting Snapshots ... done")
 
-		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
 		defer deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 
 		for {

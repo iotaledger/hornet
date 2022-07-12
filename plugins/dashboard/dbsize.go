@@ -78,10 +78,10 @@ func runDatabaseSizeCollector() {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(ctx context.Context) {
-		deps.TangleDatabase.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
+		deps.TangleDatabase.Events().DatabaseCleanup.Hook(onDatabaseCleanup)
 		defer deps.TangleDatabase.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
 
-		deps.UTXODatabase.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
+		deps.UTXODatabase.Events().DatabaseCleanup.Hook(onDatabaseCleanup)
 		defer deps.UTXODatabase.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
 
 		ticker := timeutil.NewTicker(func() {

@@ -89,7 +89,7 @@ func provide(c *dig.Container) {
 
 func configure() {
 
-	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.Receipt) {
+	deps.Tangle.Events.NewReceipt.Hook(events.NewClosure(func(r *iotago.Receipt) {
 		if deps.ReceiptService.ValidationEnabled {
 			Plugin.LogInfof("receipt passed validation against %s", deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress))
 		}

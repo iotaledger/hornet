@@ -86,21 +86,21 @@ func configureDebug() {
 		[]string{"type"},
 	)
 
-	deps.SnapshotManager.Events.SnapshotMetricsUpdated.Attach(events.NewClosure(func(metrics *snapshot.SnapshotMetrics) {
+	deps.SnapshotManager.Events.SnapshotMetricsUpdated.Hook(events.NewClosure(func(metrics *snapshot.SnapshotMetrics) {
 		snapshotTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()
 		lastSnapshotMetrics = metrics
 	}))
 
-	deps.SnapshotManager.Events.PruningMetricsUpdated.Attach(events.NewClosure(func(metrics *snapshot.PruningMetrics) {
+	deps.SnapshotManager.Events.PruningMetricsUpdated.Hook(events.NewClosure(func(metrics *snapshot.PruningMetrics) {
 		databasePruningTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()
 		lastDatabasePruningMetrics = metrics
 	}))
 
-	deps.Tangle.Events.ConfirmationMetricsUpdated.Attach(events.NewClosure(func(metrics *whiteflag.ConfirmationMetrics) {
+	deps.Tangle.Events.ConfirmationMetricsUpdated.Hook(events.NewClosure(func(metrics *whiteflag.ConfirmationMetrics) {
 		milestoneConfirmationTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()

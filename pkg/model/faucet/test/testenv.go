@@ -320,7 +320,7 @@ func (env *FaucetTestEnv) processFaucetRequests(preFlushFunc func() error) (horn
 		tips = append(tips, messageID)
 		wg.Done()
 	})
-	env.Faucet.Events.IssuedMessage.Attach(onFaucetIssuedMessage)
+	env.Faucet.Events.IssuedMessage.Hook(onFaucetIssuedMessage)
 	defer env.Faucet.Events.IssuedMessage.Detach(onFaucetIssuedMessage)
 
 	if preFlushFunc != nil {

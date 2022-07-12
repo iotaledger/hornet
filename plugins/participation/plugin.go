@@ -298,7 +298,7 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.Tangle.Events.LedgerUpdated.Attach(onLedgerUpdated)
+	deps.Tangle.Events.LedgerUpdated.Hook(onLedgerUpdated)
 }
 
 func detachEvents() {

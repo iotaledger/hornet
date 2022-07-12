@@ -174,8 +174,8 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
-	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	deps.Tangle.Events.MessageSolid.Hook(onMessageSolid)
+	deps.Tangle.Events.MilestoneConfirmed.Hook(onMilestoneConfirmed)
 }
 
 func detachEvents() {

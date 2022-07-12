@@ -275,7 +275,7 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	deps.Tangle.Events.MilestoneConfirmed.Hook(onMilestoneConfirmed)
 }
 
 func detachEvents() {

@@ -210,10 +210,10 @@ func run() {
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(ctx context.Context) {
 		go hub.Run(ctx)
-		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
-		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
-		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
+		deps.Tangle.Events.MPSMetricsUpdated.Hook(onMPSMetricsUpdated)
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
+		deps.Tangle.Events.LatestMilestoneIndexChanged.Hook(onLatestMilestoneIndexChanged)
+		deps.Tangle.Events.NewConfirmedMilestoneMetric.Hook(onNewConfirmedMilestoneMetric)
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[WSSend] ...")
 		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)

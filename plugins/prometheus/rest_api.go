@@ -81,7 +81,7 @@ func configureRestAPI() {
 	registry.MustRegister(restapiPoWMessageSizes)
 	registry.MustRegister(restapiPoWDurations)
 
-	deps.RestAPIMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(messageSize int, duration time.Duration) {
+	deps.RestAPIMetrics.Events.PoWCompleted.Hook(events.NewClosure(func(messageSize int, duration time.Duration) {
 		restapiPoWMessageSizes.Observe(float64(messageSize))
 		restapiPoWDurations.Observe(duration.Seconds())
 	}))

@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/utils"
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/database"
 )
@@ -65,11 +65,11 @@ func SplitIntoTangleAndUTXO(databasePath string, dbEngine ...database.Engine) er
 		return err
 	}
 
-	if err := utils.CreateDirectory(tangleDatabasePath, 0700); err != nil {
+	if err := ioutils.CreateDirectory(tangleDatabasePath, 0700); err != nil {
 		return err
 	}
 
-	if err := utils.CreateDirectory(utxoDatabasePath, 0700); err != nil {
+	if err := ioutils.CreateDirectory(utxoDatabasePath, 0700); err != nil {
 		return err
 	}
 

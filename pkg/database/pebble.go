@@ -62,7 +62,7 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	// of dirty filesystem buffers. This option only controls SSTable syncs; WAL
 	// syncs are controlled by WALBytesPerSync.
 	//
-	// The default value is 512 KB.
+	// The default value is 512KB.
 	opts.BytesPerSync = 512 << 10 // 512 KB
 
 	// Cache is used to cache uncompressed blocks from sstables.
@@ -107,14 +107,6 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	//
 	// The default value is 1 GB.
 	opts.Experimental.CompactionDebtConcurrency = 10 << 30 // 10 GB
-
-	// DeleteRangeFlushDelay configures how long the database should wait
-	// before forcing a flush of a memtable that contains a range
-	// deletion. Disk space cannot be reclaimed until the range deletion
-	// is flushed. No automatic flush occurs if zero.
-	//
-	// The default value is 0.
-	opts.Experimental.DeleteRangeFlushDelay = 10 * time.Second
 
 	// MinDeletionRate is the minimum number of bytes per second that would
 	// be deleted. Deletion pacing is used to slow down deletions when
@@ -161,6 +153,14 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	//
 	// The default value is 1.
 	opts.Experimental.ReadSamplingMultiplier = 0
+
+	// DeleteRangeFlushDelay configures how long the database should wait
+	// before forcing a flush of a memtable that contains a range
+	// deletion. Disk space cannot be reclaimed until the range deletion
+	// is flushed. No automatic flush occurs if zero.
+	//
+	// The default value is 0.
+	opts.FlushDelayDeleteRange = 10 * time.Second
 
 	// FlushSplitBytes denotes the target number of bytes per sublevel in
 	// each flush split interval (i.e. range between two flush split keys)
@@ -236,7 +236,7 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	// when L0 read-amplification passes the L0CompactionConcurrency threshold.
 	//
 	// The default value is 1.
-	opts.MaxConcurrentCompactions = 1
+	opts.MaxConcurrentCompactions = func() int { return 1 }
 
 	return pebble.CreateDB(directory, opts)
 }

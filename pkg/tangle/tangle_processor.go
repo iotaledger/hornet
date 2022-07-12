@@ -108,7 +108,7 @@ func (t *Tangle) RunTangleProcessor() {
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(ctx context.Context) {
-		t.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
+		t.Events.MPSMetricsUpdated.Hook(onMPSMetricsUpdated)
 		t.startWaitGroup.Done()
 		<-ctx.Done()
 		t.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
@@ -118,8 +118,8 @@ func (t *Tangle) RunTangleProcessor() {
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(ctx context.Context) {
 		t.LogInfo("Starting TangleProcessor[ReceiveTx] ... done")
-		t.messageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
-		t.Events.MessageSolid.Attach(onMessageSolid)
+		t.messageProcessor.Events.MessageProcessed.Hook(onMsgProcessed)
+		t.Events.MessageSolid.Hook(onMessageSolid)
 		t.receiveMsgWorkerPool.Start()
 		t.startWaitGroup.Done()
 		<-ctx.Done()
@@ -147,9 +147,9 @@ func (t *Tangle) RunTangleProcessor() {
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(ctx context.Context) {
 		t.LogInfo("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
-		t.milestoneManager.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
-		t.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
-		t.Events.MilestoneTimeout.Attach(onMilestoneTimeout)
+		t.milestoneManager.Events.ReceivedValidMilestone.Hook(onReceivedValidMilestone)
+		t.Events.LatestMilestoneIndexChanged.Hook(onLatestMilestoneIndexChanged)
+		t.Events.MilestoneTimeout.Hook(onMilestoneTimeout)
 		t.startWaitGroup.Done()
 		<-ctx.Done()
 		t.LogInfo("Stopping TangleProcessor[ProcessMilestone] ...")

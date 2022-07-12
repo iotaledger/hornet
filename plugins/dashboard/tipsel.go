@@ -21,7 +21,7 @@ func runTipSelMetricWorker() {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[TipSelMetricUpdater]", func(ctx context.Context) {
-		deps.TipSelector.Events.TipSelPerformed.Attach(onTipSelPerformed)
+		deps.TipSelector.Events.TipSelPerformed.Hook(onTipSelPerformed)
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[TipSelMetricUpdater] ...")
 		deps.TipSelector.Events.TipSelPerformed.Detach(onTipSelPerformed)

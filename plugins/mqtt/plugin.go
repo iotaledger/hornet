@@ -331,17 +331,17 @@ func run() {
 	if err := Plugin.Daemon().BackgroundWorker("MQTT Events", func(ctx context.Context) {
 		Plugin.LogInfo("Starting MQTT Events ... done")
 
-		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
-		deps.Tangle.Events.ConfirmedMilestoneChanged.Attach(onConfirmedMilestoneChanged)
+		deps.Tangle.Events.LatestMilestoneChanged.Hook(onLatestMilestoneChanged)
+		deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
 
-		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
-		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
-		deps.Tangle.Events.MessageReferenced.Attach(onMessageReferenced)
+		deps.Tangle.Events.ReceivedNewMessage.Hook(onReceivedNewMessage)
+		deps.Tangle.Events.MessageSolid.Hook(onMessageSolid)
+		deps.Tangle.Events.MessageReferenced.Hook(onMessageReferenced)
 
-		deps.Tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
-		deps.Tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
+		deps.Tangle.Events.NewUTXOOutput.Hook(onUTXOOutput)
+		deps.Tangle.Events.NewUTXOSpent.Hook(onUTXOSpent)
 
-		deps.Tangle.Events.NewReceipt.Attach(onReceipt)
+		deps.Tangle.Events.NewReceipt.Hook(onReceipt)
 
 		messagesWorkerPool.Start()
 		newLatestMilestoneWorkerPool.Start()
