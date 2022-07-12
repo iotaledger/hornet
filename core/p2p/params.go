@@ -28,7 +28,7 @@ type ParametersP2P struct {
 
 	Database struct {
 		// Defines the path to the p2p database.
-		Path string `default:"p2pstore" usage:"the path to the p2p database"`
+		Path string `default:"alphanet/p2pstore" usage:"the path to the p2p database"`
 	} `name:"db"`
 
 	// Defines the time to wait before trying to reconnect to a disconnected peer.

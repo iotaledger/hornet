@@ -11,7 +11,7 @@ type ParametersAutopeering struct {
 	// BindAddress is bind address for autopeering.
 	BindAddress string `default:"0.0.0.0:14626" usage:"bind address for autopeering"`
 	// EntryNodes list of autopeering entry nodes to use.
-	EntryNodes []string `default:"" usage:"list of autopeering entry nodes to use"`
+	EntryNodes []string `default:"/dns/entry-hornet-0.h.alphanet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr,/dns/entry-hornet-1.h.alphanet.iotaledger.net/udp/14626/autopeering/CbYtFzRQtqeNQJQFYRZk1WewxfKCmqXCHZ16od1d23PX" usage:"list of autopeering entry nodes to use"`
 	// EntryNodesPreferIPv6 defines if connecting over IPv6 is preferred for entry nodes.
 	EntryNodesPreferIPv6 bool `default:"false" usage:"defines if connecting over IPv6 is preferred for entry nodes"`
 	// RunAsEntryNode whether the node should act as an autopeering entry node.

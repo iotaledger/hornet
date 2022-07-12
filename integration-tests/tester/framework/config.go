@@ -616,6 +616,8 @@ func DefaultMigratorConfig() MigratorConfig {
 type ProtocolConfig struct {
 	// The initial network name on which this node operates on.
 	TargetNetworkName string
+	// The amount of public keys in a milestone.
+	MilestonePublicKeyCount int
 	// The coo public key ranges.
 	PublicKeyRanges []protocfg.ConfigPublicKeyRange
 }
@@ -630,6 +632,7 @@ func (protoConfig *ProtocolConfig) CLIFlags() []string {
 
 	return []string{
 		fmt.Sprintf("--protocol.targetNetworkName=%s", protoConfig.TargetNetworkName),
+		fmt.Sprintf("--protocol.milestonePublicKeyCount=%d", protoConfig.MilestonePublicKeyCount),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolPublicKeyRangesJSON, string(keyRangesJSON)),
 	}
 }
@@ -637,7 +640,8 @@ func (protoConfig *ProtocolConfig) CLIFlags() []string {
 // DefaultProtocolConfig returns the default protocol config.
 func DefaultProtocolConfig() ProtocolConfig {
 	return ProtocolConfig{
-		TargetNetworkName: "alphanet1",
+		TargetNetworkName:       "alphanet1",
+		MilestonePublicKeyCount: 2,
 		PublicKeyRanges: []protocfg.ConfigPublicKeyRange{
 			{
 				Key:        "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",

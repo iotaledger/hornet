@@ -55,7 +55,7 @@ jobs:
 
       - name: Prepare docker-example files
         run: |
-          cp config.json docker-example/
+          cp config_template.json docker-example/config.json
           cp peering.json docker-example/
 
       - name: Create docker-example.tar.gz
