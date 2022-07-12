@@ -2,12 +2,7 @@
   "app": {
     "checkForUpdates": true,
     "disablePlugins": [],
-    "enablePlugins": [
-      "Autopeering",
-      "Debug",
-      "Prometheus",
-      "INX"
-    ],
+    "enablePlugins": [],
     "stopGracePeriod": "5m"
   },
   "node": {
@@ -105,7 +100,7 @@
     "interval": 200,
     "fullPath": "alphanet/snapshots/full_snapshot.bin",
     "deltaPath": "alphanet/snapshots/delta_snapshot.bin",
-    "deltaSizeThresholdPercentage": 50.0,
+    "deltaSizeThresholdPercentage": 50,
     "deltaSizeThresholdMinSize": "50M",
     "downloadURLs": [
       {
@@ -122,7 +117,7 @@
     "size": {
       "enabled": true,
       "targetSize": "30GB",
-      "thresholdPercentage": 10.0,
+      "thresholdPercentage": 10,
       "cooldownTime": "5m"
     },
     "pruneReceipts": false

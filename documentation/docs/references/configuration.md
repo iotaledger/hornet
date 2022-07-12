@@ -18,7 +18,7 @@ keywords:
 
 Hornet uses a JSON standard format as a config file. If you are unsure about JSON syntax, you can find more information in the [official JSON specs](https://www.json.org).
 
-The default config file is `config.json`. You can change the path or name of the config file by using the `-c` or `--config` argument while executing `hornet` executable.
+You can change the path of the config file by using the `-c` or `--config` argument while executing `hornet` executable.
 
 For example:
 ```bash
@@ -76,7 +76,7 @@ Example:
 | Name                                         | Description                                             | Type   | Default value     |
 | -------------------------------------------- | ------------------------------------------------------- | ------ | ----------------- |
 | targetNetworkName                            | The initial network name on which this node operates on | string | "alphanet-8"      |
-| milestonePublicKeyCount                      | The amount of public keys in a milestone                | int    | 2                 |
+| milestonePublicKeyCount                      | The amount of public keys in a milestone                | int    | 3                 |
 | [baseToken](#protocol_basetoken)             | Configuration for baseToken                             | object |                   |
 | [publicKeyRanges](#protocol_publickeyranges) | Configuration for publicKeyRanges                       | array  | see example below |
 
@@ -84,12 +84,12 @@ Example:
 
 | Name            | Description                           | Type    | Default value |
 | --------------- | ------------------------------------- | ------- | ------------- |
-| name            | The base token name                   | string  | "IOTA"        |
-| tickerSymbol    | The base token ticker symbol          | string  | "MIOTA"       |
-| unit            | The base token unit                   | string  | "i"           |
-| subunit         | The base token subunit                | string  | ""            |
-| decimals        | The base token amount of decimals     | uint    | 0             |
-| useMetricPrefix | The base token uses the metric prefix | boolean | true          |
+| name            | The base token name                   | string  | "Shimmer"     |
+| tickerSymbol    | The base token ticker symbol          | string  | "SMR"         |
+| unit            | The base token unit                   | string  | "SMR"         |
+| subunit         | The base token subunit                | string  | "glow"        |
+| decimals        | The base token amount of decimals     | uint    | 6             |
+| useMetricPrefix | The base token uses the metric prefix | boolean | false         |
 
 ### <a id="protocol_publickeyranges"></a> PublicKeyRanges
 
@@ -105,54 +105,39 @@ Example:
   {
     "protocol": {
       "targetNetworkName": "alphanet-8",
-      "milestonePublicKeyCount": 2,
+      "milestonePublicKeyCount": 3,
       "baseToken": {
-        "name": "IOTA",
-        "tickerSymbol": "MIOTA",
-        "unit": "i",
-        "subunit": "",
-        "decimals": 0,
-        "useMetricPrefix": true
+        "name": "Shimmer",
+        "tickerSymbol": "SMR",
+        "unit": "SMR",
+        "subunit": "glow",
+        "decimals": 6,
+        "useMetricPrefix": false
       },
       "publicKeyRanges": [
         {
-          "key": "a9b46fe743df783dedd00c954612428b34241f5913cf249d75bed3aafd65e4cd",
+          "key": "d9922819a39e94ddf3907f4b9c8df93f39f026244fcb609205b9a879022599f2",
           "start": 0,
-          "end": 777600
-        },
-        {
-          "key": "365fb85e7568b9b32f7359d6cbafa9814472ad0ecbad32d77beaf5dd9e84c6ba",
-          "start": 0,
-          "end": 1555200
-        },
-        {
-          "key": "ba6d07d1a1aea969e7e435f9f7d1b736ea9e0fcb8de400bf855dba7f2a57e947",
-          "start": 552960,
-          "end": 2108160
-        },
-        {
-          "key": "760d88e112c0fd210cf16a3dce3443ecf7e18c456c2fb9646cabb2e13e367569",
-          "start": 1333460,
-          "end": 2888660
-        },
-        {
-          "key": "7bac2209b576ea2235539358c7df8ca4d2f2fc35a663c760449e65eba9f8a6e7",
-          "start": 2108160,
-          "end": 3359999
-        },
-        {
-          "key": "edd9c639a719325e465346b84133bf94740b7d476dd87fc949c0e8df516f9954",
-          "start": 2888660,
-          "end": 3359999
-        },
-        {
-          "key": "47a5098c696e0fb53e6339edac574be4172cb4701a8210c2ae7469b536fd2c59",
-          "start": 3360000,
           "end": 0
         },
         {
-          "key": "ae4e03072b4869e87dd4cd59315291a034493a8c202b43b257f9c07bc86a2f3e",
-          "start": 3360000,
+          "key": "d85e5b1590d898d1e0cdebb2e3b5337c8b76270142663d78811683ba47c17c98",
+          "start": 0,
+          "end": 0
+        },
+        {
+          "key": "f9d9656a60049083eef61487632187b351294c1fa23d118060d813db6d03e8b6",
+          "start": 0,
+          "end": 0
+        },
+        {
+          "key": "3df80964cc83921e08c1fa0a4f5fc05810a634da45461b2b315fcbfd62f7cab7",
+          "start": 0,
+          "end": 0
+        },
+        {
+          "key": "8e222ae7e2adcfb87a2984a19aad52b1979ed1472c3cb17239a73ef1d344c35a",
+          "start": 0,
           "end": 0
         }
       ]
@@ -162,11 +147,11 @@ Example:
 
 ## <a id="db"></a> 4. Database
 
-| Name             | Description                                                                         | Type    | Default value |
-| ---------------- | ----------------------------------------------------------------------------------- | ------- | ------------- |
-| engine           | The used database engine (pebble/rocksdb/mapdb)                                     | string  | "rocksdb"     |
-| path             | The path to the database folder                                                     | string  | "mainnetdb"   |
-| autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | boolean | false         |
+| Name             | Description                                                                         | Type    | Default value       |
+| ---------------- | ----------------------------------------------------------------------------------- | ------- | ------------------- |
+| engine           | The used database engine (pebble/rocksdb/mapdb)                                     | string  | "rocksdb"           |
+| path             | The path to the database folder                                                     | string  | "alphanet/database" |
+| autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | boolean | false               |
 
 Example:
 
@@ -174,7 +159,7 @@ Example:
   {
     "db": {
       "engine": "rocksdb",
-      "path": "mainnetdb",
+      "path": "alphanet/database",
       "autoRevalidation": false
     }
   }
@@ -217,9 +202,9 @@ Example:
 
 ### <a id="p2p_db"></a> Database
 
-| Name | Description                  | Type   | Default value |
-| ---- | ---------------------------- | ------ | ------------- |
-| path | The path to the p2p database | string | "p2pstore"    |
+| Name | Description                  | Type   | Default value       |
+| ---- | ---------------------------- | ------ | ------------------- |
+| path | The path to the p2p database | string | "alphanet/p2pstore" |
 
 ### <a id="p2p_gossip"></a> Gossip
 
@@ -231,12 +216,12 @@ Example:
 
 ### <a id="p2p_autopeering"></a> Autopeering
 
-| Name                 | Description                                                  | Type    | Default value   |
-| -------------------- | ------------------------------------------------------------ | ------- | --------------- |
-| bindAddress          | Bind address for autopeering                                 | string  | "0.0.0.0:14626" |
-| entryNodes           | List of autopeering entry nodes to use                       | array   |                 |
-| entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes | boolean | false           |
-| runAsEntryNode       | Whether the node should act as an autopeering entry node     | boolean | false           |
+| Name                 | Description                                                  | Type    | Default value                                                                                                                                                                                                                         |
+| -------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| bindAddress          | Bind address for autopeering                                 | string  | "0.0.0.0:14626"                                                                                                                                                                                                                       |
+| entryNodes           | List of autopeering entry nodes to use                       | array   | /dns/entry-hornet-0.h.alphanet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr<br/>/dns/entry-hornet-1.h.alphanet.iotaledger.net/udp/14626/autopeering/CbYtFzRQtqeNQJQFYRZk1WewxfKCmqXCHZ16od1d23PX |
+| entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes | boolean | false                                                                                                                                                                                                                                 |
+| runAsEntryNode       | Whether the node should act as an autopeering entry node     | boolean | false                                                                                                                                                                                                                                 |
 
 Example:
 
@@ -253,7 +238,7 @@ Example:
       },
       "identityPrivateKey": "",
       "db": {
-        "path": "p2pstore"
+        "path": "alphanet/p2pstore"
       },
       "reconnectInterval": "30s",
       "gossip": {
@@ -263,7 +248,10 @@ Example:
       },
       "autopeering": {
         "bindAddress": "0.0.0.0:14626",
-        "entryNodes": [],
+        "entryNodes": [
+          "/dns/entry-hornet-0.h.alphanet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr",
+          "/dns/entry-hornet-1.h.alphanet.iotaledger.net/udp/14626/autopeering/CbYtFzRQtqeNQJQFYRZk1WewxfKCmqXCHZ16od1d23PX"
+        ],
         "entryNodesPreferIPv6": false,
         "runAsEntryNode": false
       }
@@ -313,15 +301,15 @@ Example:
 
 ## <a id="snapshots"></a> 9. Snapshots
 
-| Name                                    | Description                                                                                                                                                           | Type   | Default value                          |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------------------------- |
-| depth                                   | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                            | int    | 50                                     |
-| interval                                | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                       | int    | 200                                    |
-| fullPath                                | Path to the full snapshot file                                                                                                                                        | string | "snapshots/mainnet/full_snapshot.bin"  |
-| deltaPath                               | Path to the delta snapshot file                                                                                                                                       | string | "snapshots/mainnet/delta_snapshot.bin" |
-| deltaSizeThresholdPercentage            | Create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history) | float  | 50.0                                   |
-| deltaSizeThresholdMinSize               | The minimum size of the delta snapshot file before the threshold percentage condition is checked (below that size the delta snapshot is always created)               | string | "50M"                                  |
-| [downloadURLs](#snapshots_downloadurls) | Configuration for downloadURLs                                                                                                                                        | array  | see example below                      |
+| Name                                    | Description                                                                                                                                                           | Type   | Default value                           |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------------------------------- |
+| depth                                   | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                            | int    | 50                                      |
+| interval                                | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                       | int    | 200                                     |
+| fullPath                                | Path to the full snapshot file                                                                                                                                        | string | "alphanet/snapshots/full_snapshot.bin"  |
+| deltaPath                               | Path to the delta snapshot file                                                                                                                                       | string | "alphanet/snapshots/delta_snapshot.bin" |
+| deltaSizeThresholdPercentage            | Create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history) | float  | 50.0                                    |
+| deltaSizeThresholdMinSize               | The minimum size of the delta snapshot file before the threshold percentage condition is checked (below that size the delta snapshot is always created)               | string | "50M"                                   |
+| [downloadURLs](#snapshots_downloadurls) | Configuration for downloadURLs                                                                                                                                        | array  | see example below                       |
 
 ### <a id="snapshots_downloadurls"></a> DownloadURLs
 
@@ -337,18 +325,14 @@ Example:
     "snapshots": {
       "depth": 50,
       "interval": 200,
-      "fullPath": "snapshots/mainnet/full_snapshot.bin",
-      "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
+      "fullPath": "alphanet/snapshots/full_snapshot.bin",
+      "deltaPath": "alphanet/snapshots/delta_snapshot.bin",
       "deltaSizeThresholdPercentage": 50,
       "deltaSizeThresholdMinSize": "50M",
       "downloadURLs": [
         {
-          "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
-          "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
-        },
-        {
-          "full": "https://cdn.tanglebay.com/snapshots/mainnet/full_snapshot.bin",
-          "delta": "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin"
+          "full": "https://files.alphanet.iotaledger.net/snapshots/latest-full_snapshot.bin",
+          "delta": "https://files.alphanet.iotaledger.net/snapshots/latest-delta_snapshot.bin"
         }
       ]
     }
