@@ -29,7 +29,7 @@ RUN go mod verify
 RUN go build -o /app/hornet -a -tags="$BUILD_TAGS" -ldflags='-w -s'
 
 # Copy the assets
-COPY ./config_template.json /app/config.json
+COPY ./config_defaults.json /app/config.json
 COPY ./peering.json /app/peering.json
 COPY ./profiles.json /app/profiles.json
 

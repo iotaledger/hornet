@@ -55,7 +55,9 @@ jobs:
 
       - name: Prepare docker files
         run: |
-          cp config_template.json docker/config.json
+          cp config_alphanet.json docker/config.json
+          cp config_defaults.json docker/
+          cp config_alphanet.json docker/
           cp peering.json docker/
 
       - name: Create docker.tar.gz

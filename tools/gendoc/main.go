@@ -67,7 +67,7 @@ func main() {
 
 	createDefaultConfigFile(
 		application,
-		"../../config_template.json",
+		"../../config_defaults.json",
 		ignoreFlags,
 	)
 }
