@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [2.0.0-alpha.25] - 13.07.2022
 
+### Fixed
+    - Fixed `final ledger index does not match target index` (#1620)
+
 ### Changed
     - Removed `app.enablePlugins` and `app.disablePlugins` and replaced them with plugin-specific `enabled` settings (#1617)
 

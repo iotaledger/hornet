@@ -1240,7 +1240,7 @@ func StreamFullSnapshotDataFrom(
 
 		// we do not consume milestone diffs that are below the target milestone index.
 		// these additional milestone diffs are only used to get the protocol parameter updates.
-		if msDiff.Milestone.Index < fullHeader.TargetMilestoneIndex {
+		if msDiff.Milestone.Index <= fullHeader.TargetMilestoneIndex {
 			// we can break the loop here since we are walking backwards.
 			// we also need to jump to the end of the milestone diffs.
 			reader.Seek(msDiffsLength-msDiffsParsedLength, io.SeekCurrent)
