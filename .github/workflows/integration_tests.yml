@@ -26,8 +26,8 @@ jobs:
 
       - name: Pull additional Docker images
         run: |
-          docker pull iotaledger/inx-coordinator:0.7
-          docker pull iotaledger/inx-indexer:0.9
+          docker pull iotaledger/inx-coordinator:0.8
+          docker pull iotaledger/inx-indexer:0.10
 
       - name: Run integration tests
         run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
@@ -59,8 +59,8 @@ jobs:
 
       - name: Pull additional Docker images
         run: |
-          docker pull iotaledger/inx-coordinator:0.7
-          docker pull iotaledger/inx-indexer:0.9
+          docker pull iotaledger/inx-coordinator:0.8
+          docker pull iotaledger/inx-indexer:0.10
 
       - name: Run integration tests
         run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
@@ -92,8 +92,8 @@ jobs:
 
       - name: Pull additional Docker images
         run: |
-          docker pull iotaledger/inx-coordinator:0.7
-          docker pull iotaledger/inx-indexer:0.9
+          docker pull iotaledger/inx-coordinator:0.8
+          docker pull iotaledger/inx-indexer:0.10
           docker build github.com/iotaledger/chrysalis-tools#:wfmock -t wfmock:latest
 
       - name: Run integration tests
@@ -126,8 +126,8 @@ jobs:
 
       - name: Pull additional Docker images
         run: |
-          docker pull iotaledger/inx-coordinator:0.7
-          docker pull iotaledger/inx-indexer:0.9
+          docker pull iotaledger/inx-coordinator:0.8
+          docker pull iotaledger/inx-indexer:0.10
 
       - name: Run integration tests
         run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
@@ -159,8 +159,8 @@ jobs:
 
       - name: Pull additional Docker images
         run: |
-          docker pull iotaledger/inx-coordinator:0.7
-          docker pull iotaledger/inx-indexer:0.9
+          docker pull iotaledger/inx-coordinator:0.8
+          docker pull iotaledger/inx-indexer:0.10
 
       - name: Run integration tests
         run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build

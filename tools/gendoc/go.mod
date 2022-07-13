@@ -63,7 +63,7 @@ require (
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220713112541-3bfe06a592ed // indirect
 	github.com/iotaledger/inx/go v0.0.0-20220705124918-775bb201b49e // indirect
 	github.com/iotaledger/iota.go v1.0.0 // indirect
-	github.com/iotaledger/iota.go/v3 v3.0.0-20220713111307-e56bfeff5451 // indirect
+	github.com/iotaledger/iota.go/v3 v3.0.0-20220713125317-0f9382655ffc // indirect
 	github.com/ipfs/go-cid v0.2.0 // indirect
 	github.com/ipfs/go-datastore v0.5.1 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect

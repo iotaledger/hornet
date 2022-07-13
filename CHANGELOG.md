@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha.25] - 13.07.2022
+
+### Changed
+    - Removed `app.enablePlugins` and `app.disablePlugins` and replaced them with plugin-specific `enabled` settings (#1617)
+
 ## [2.0.0-alpha.24] - 12.07.2022
 
 ### Added
