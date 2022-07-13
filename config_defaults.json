@@ -1,8 +1,6 @@
 {
   "app": {
     "checkForUpdates": true,
-    "disablePlugins": [],
-    "enablePlugins": [],
     "stopGracePeriod": "5m"
   },
   "node": {
@@ -76,6 +74,7 @@
       "streamWriteTimeout": "10s"
     },
     "autopeering": {
+      "enabled": false,
       "bindAddress": "0.0.0.0:14626",
       "entryNodes": [
         "/dns/entry-hornet-0.h.alphanet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr",
@@ -123,9 +122,11 @@
     "pruneReceipts": false
   },
   "profiling": {
+    "enabled": false,
     "bindAddress": "localhost:6060"
   },
   "restAPI": {
+    "enabled": true,
     "bindAddress": "0.0.0.0:14265",
     "publicRoutes": [
       "/health",
@@ -161,9 +162,11 @@
     }
   },
   "warpsync": {
+    "enabled": true,
     "advancementRange": 150
   },
   "tipsel": {
+    "enabled": true,
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAge": "3s",
@@ -176,6 +179,7 @@
     }
   },
   "receipts": {
+    "enabled": true,
     "backup": {
       "enabled": false,
       "path": "receipts"
@@ -194,6 +198,7 @@
     }
   },
   "prometheus": {
+    "enabled": false,
     "bindAddress": "localhost:9311",
     "fileServiceDiscovery": {
       "enabled": false,
@@ -213,9 +218,13 @@
     "promhttpMetrics": false
   },
   "inx": {
+    "enabled": false,
     "bindAddress": "localhost:9029",
     "pow": {
       "workerCount": 0
     }
+  },
+  "debug": {
+    "enabled": false
   }
 }

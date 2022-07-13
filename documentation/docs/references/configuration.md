@@ -36,8 +36,6 @@ hornet -h --full
 | Name            | Description                                                                                            | Type    | Default value |
 | --------------- | ------------------------------------------------------------------------------------------------------ | ------- | ------------- |
 | checkForUpdates | Whether to check for updates of the application or not                                                 | boolean | true          |
-| disablePlugins  | A list of plugins that shall be disabled                                                               | array   |               |
-| enablePlugins   | A list of plugins that shall be enabled                                                                | array   |               |
 | stopGracePeriod | The maximum time to wait for background processes to finish during shutdown before terminating the app | string  | "5m"          |
 
 Example:
@@ -46,8 +44,6 @@ Example:
   {
     "app": {
       "checkForUpdates": true,
-      "disablePlugins": [],
-      "enablePlugins": [],
       "stopGracePeriod": "5m"
     }
   }
@@ -218,6 +214,7 @@ Example:
 
 | Name                 | Description                                                  | Type    | Default value                                                                                                                                                                                                                         |
 | -------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| enabled              | Whether the autopeering plugin is enabled                    | boolean | false                                                                                                                                                                                                                                 |
 | bindAddress          | Bind address for autopeering                                 | string  | "0.0.0.0:14626"                                                                                                                                                                                                                       |
 | entryNodes           | List of autopeering entry nodes to use                       | array   | /dns/entry-hornet-0.h.alphanet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr<br/>/dns/entry-hornet-1.h.alphanet.iotaledger.net/udp/14626/autopeering/CbYtFzRQtqeNQJQFYRZk1WewxfKCmqXCHZ16od1d23PX |
 | entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes | boolean | false                                                                                                                                                                                                                                 |
@@ -247,6 +244,7 @@ Example:
         "streamWriteTimeout": "10s"
       },
       "autopeering": {
+        "enabled": false,
         "bindAddress": "0.0.0.0:14626",
         "entryNodes": [
           "/dns/entry-hornet-0.h.alphanet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr",
@@ -385,15 +383,17 @@ Example:
 
 ## <a id="profiling"></a> 11. Profiling
 
-| Name        | Description                                       | Type   | Default value    |
-| ----------- | ------------------------------------------------- | ------ | ---------------- |
-| bindAddress | The bind address on which the profiler listens on | string | "localhost:6060" |
+| Name        | Description                                       | Type    | Default value    |
+| ----------- | ------------------------------------------------- | ------- | ---------------- |
+| enabled     | Whether the profiling plugin is enabled           | boolean | false            |
+| bindAddress | The bind address on which the profiler listens on | string  | "localhost:6060" |
 
 Example:
 
 ```json
   {
     "profiling": {
+      "enabled": false,
       "bindAddress": "localhost:6060"
     }
   }
@@ -401,14 +401,15 @@ Example:
 
 ## <a id="restapi"></a> 12. RestAPI
 
-| Name                        | Description                                                                                    | Type   | Default value                                                                                                                                                                                                                                                                                                                                                                                                |
-| --------------------------- | ---------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| bindAddress                 | The bind address on which the REST API listens on                                              | string | "0.0.0.0:14265"                                                                                                                                                                                                                                                                                                                                                                                              |
-| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using \* are allowed  | array  | /health<br/>/api/routes<br/>/api/core/v2/info<br/>/api/core/v2/tips<br/>/api/core/v2/blocks\*<br/>/api/core/v2/transactions\*<br/>/api/core/v2/milestones\*<br/>/api/core/v2/outputs\*<br/>/api/core/v2/treasury<br/>/api/core/v2/receipts\*<br/>/api/debug/v1/\*<br/>/api/indexer/v1/\*<br/>/api/mqtt/v1<br/>/api/participation/v1/events\*<br/>/api/participation/v1/outputs\*<br/>/api/participation/v1/addresses\* |
-| protectedRoutes             | The HTTP REST routes which need to be called with authorization. Wildcards using \* are allowed | array  | /api/\*                                                                                                                                                                                                                                                                                                                                                                                                       |
-| [jwtAuth](#restapi_jwtauth) | Configuration for JWT Auth                                                                     | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
-| [pow](#restapi_pow)         | Configuration for Proof of Work                                                                | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
-| [limits](#restapi_limits)   | Configuration for limits                                                                       | object |                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Name                        | Description                                                                                    | Type    | Default value                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------- | ---------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| enabled                     | Whether the REST API plugin is enabled                                                         | boolean | true                                                                                                                                                                                                                                                                                                                                                                                                         |
+| bindAddress                 | The bind address on which the REST API listens on                                              | string  | "0.0.0.0:14265"                                                                                                                                                                                                                                                                                                                                                                                              |
+| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using \* are allowed  | array   | /health<br/>/api/routes<br/>/api/core/v2/info<br/>/api/core/v2/tips<br/>/api/core/v2/blocks\*<br/>/api/core/v2/transactions\*<br/>/api/core/v2/milestones\*<br/>/api/core/v2/outputs\*<br/>/api/core/v2/treasury<br/>/api/core/v2/receipts\*<br/>/api/debug/v1/\*<br/>/api/indexer/v1/\*<br/>/api/mqtt/v1<br/>/api/participation/v1/events\*<br/>/api/participation/v1/outputs\*<br/>/api/participation/v1/addresses\* |
+| protectedRoutes             | The HTTP REST routes which need to be called with authorization. Wildcards using \* are allowed | array   | /api/\*                                                                                                                                                                                                                                                                                                                                                                                                       |
+| [jwtAuth](#restapi_jwtauth) | Configuration for JWT Auth                                                                     | object  |                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [pow](#restapi_pow)         | Configuration for Proof of Work                                                                | object  |                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [limits](#restapi_limits)   | Configuration for limits                                                                       | object  |                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 ### <a id="restapi_jwtauth"></a> JWT Auth
 
@@ -435,6 +436,7 @@ Example:
 ```json
   {
     "restAPI": {
+      "enabled": true,
       "bindAddress": "0.0.0.0:14265",
       "publicRoutes": [
         "/health",
@@ -474,15 +476,17 @@ Example:
 
 ## <a id="warpsync"></a> 13. WarpSync
 
-| Name             | Description                                        | Type | Default value |
-| ---------------- | -------------------------------------------------- | ---- | ------------- |
-| advancementRange | The used advancement range per warpsync checkpoint | int  | 150           |
+| Name             | Description                                        | Type    | Default value |
+| ---------------- | -------------------------------------------------- | ------- | ------------- |
+| enabled          | Whether the warpsync plugin is enabled             | boolean | true          |
+| advancementRange | The used advancement range per warpsync checkpoint | int     | 150           |
 
 Example:
 
 ```json
   {
     "warpsync": {
+      "enabled": true,
       "advancementRange": 150
     }
   }
@@ -490,10 +494,11 @@ Example:
 
 ## <a id="tipsel"></a> 14. Tipselection
 
-| Name                         | Description                | Type   | Default value |
-| ---------------------------- | -------------------------- | ------ | ------------- |
-| [nonLazy](#tipsel_nonlazy)   | Configuration for nonLazy  | object |               |
-| [semiLazy](#tipsel_semilazy) | Configuration for semiLazy | object |               |
+| Name                         | Description                                | Type    | Default value |
+| ---------------------------- | ------------------------------------------ | ------- | ------------- |
+| enabled                      | Whether the tipselection plugin is enabled | boolean | true          |
+| [nonLazy](#tipsel_nonlazy)   | Configuration for nonLazy                  | object  |               |
+| [semiLazy](#tipsel_semilazy) | Configuration for semiLazy                 | object  |               |
 
 ### <a id="tipsel_nonlazy"></a> NonLazy
 
@@ -516,6 +521,7 @@ Example:
 ```json
   {
     "tipsel": {
+      "enabled": true,
       "nonLazy": {
         "retentionRulesTipsLimit": 100,
         "maxReferencedTipAge": "3s",
@@ -532,10 +538,11 @@ Example:
 
 ## <a id="receipts"></a> 15. Receipts
 
-| Name                             | Description                 | Type   | Default value |
-| -------------------------------- | --------------------------- | ------ | ------------- |
-| [backup](#receipts_backup)       | Configuration for backup    | object |               |
-| [validator](#receipts_validator) | Configuration for validator | object |               |
+| Name                             | Description                            | Type    | Default value |
+| -------------------------------- | -------------------------------------- | ------- | ------------- |
+| enabled                          | Whether the receipts plugin is enabled | boolean | true          |
+| [backup](#receipts_backup)       | Configuration for backup               | object  |               |
+| [validator](#receipts_validator) | Configuration for validator            | object  |               |
 
 ### <a id="receipts_backup"></a> Backup
 
@@ -572,6 +579,7 @@ Example:
 ```json
   {
     "receipts": {
+      "enabled": true,
       "backup": {
         "enabled": false,
         "path": "receipts"
@@ -596,6 +604,7 @@ Example:
 
 | Name                                                     | Description                                                  | Type    | Default value    |
 | -------------------------------------------------------- | ------------------------------------------------------------ | ------- | ---------------- |
+| enabled                                                  | Whether the prometheus plugin is enabled                     | boolean | false            |
 | bindAddress                                              | The bind address on which the Prometheus exporter listens on | string  | "localhost:9311" |
 | [fileServiceDiscovery](#prometheus_fileservicediscovery) | Configuration for fileServiceDiscovery                       | object  |                  |
 | databaseMetrics                                          | Whether to include database metrics                          | boolean | true             |
@@ -623,6 +632,7 @@ Example:
 ```json
   {
     "prometheus": {
+      "enabled": false,
       "bindAddress": "localhost:9311",
       "fileServiceDiscovery": {
         "enabled": false,
@@ -646,10 +656,11 @@ Example:
 
 ## <a id="inx"></a> 17. INX
 
-| Name            | Description                                            | Type   | Default value    |
-| --------------- | ------------------------------------------------------ | ------ | ---------------- |
-| bindAddress     | The bind address on which the INX can be accessed from | string | "localhost:9029" |
-| [pow](#inx_pow) | Configuration for Proof of Work                        | object |                  |
+| Name            | Description                                            | Type    | Default value    |
+| --------------- | ------------------------------------------------------ | ------- | ---------------- |
+| enabled         | Whether the INX plugin is enabled                      | boolean | false            |
+| bindAddress     | The bind address on which the INX can be accessed from | string  | "localhost:9029" |
+| [pow](#inx_pow) | Configuration for Proof of Work                        | object  |                  |
 
 ### <a id="inx_pow"></a> Proof of Work
 
@@ -662,10 +673,27 @@ Example:
 ```json
   {
     "inx": {
+      "enabled": false,
       "bindAddress": "localhost:9029",
       "pow": {
         "workerCount": 0
       }
+    }
+  }
+```
+
+## <a id="debug"></a> 18. Debug
+
+| Name    | Description                         | Type    | Default value |
+| ------- | ----------------------------------- | ------- | ------------- |
+| enabled | Whether the debug plugin is enabled | boolean | false         |
+
+Example:
+
+```json
+  {
+    "debug": {
+      "enabled": false
     }
   }
 ```
