@@ -2,7 +2,7 @@ version: '3'
 services:
 
   hornet:
-    image: iotaledger/hornet:2.0.0-alpha.24
+    image: iotaledger/hornet:2.0.0-alpha.25
     ulimits:
       nofile:
         soft: 16384
@@ -104,7 +104,7 @@ services:
 ##################################################################
 
   inx-indexer:
-    image: iotaledger/inx-indexer:0.9
+    image: iotaledger/inx-indexer:0.10
     stop_grace_period: 5m
     restart: unless-stopped
     volumes:
@@ -117,7 +117,7 @@ services:
       - "--prometheus.bindAddress=inx-indexer:9312"
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.10
+    image: iotaledger/inx-mqtt:0.11
     stop_grace_period: 5m
     restart: unless-stopped
     command:
@@ -127,7 +127,7 @@ services:
       - "--prometheus.bindAddress=inx-mqtt:9312"
 
   inx-participation:
-    image: iotaledger/inx-participation:0.6
+    image: iotaledger/inx-participation:0.7
     stop_grace_period: 5m
     restart: unless-stopped
     ulimits:
@@ -142,7 +142,7 @@ services:
       - "--participation.bindAddress=inx-participation:9892"
 
   inx-spammer:
-    image: iotaledger/inx-spammer:0.3
+    image: iotaledger/inx-spammer:0.4
     stop_grace_period: 5m
     restart: unless-stopped
     command:
@@ -152,7 +152,7 @@ services:
       - "--prometheus.bindAddress=inx-spammer:9312"
 
   inx-poi:
-    image: iotaledger/inx-poi:0.3
+    image: iotaledger/inx-poi:0.4
     stop_grace_period: 5m
     restart: unless-stopped
     command:
@@ -160,7 +160,7 @@ services:
       - "--poi.bindAddress=inx-poi:9687"
 
   inx-dashboard:
-    image: iotaledger/inx-dashboard:0.2
+    image: iotaledger/inx-dashboard:0.3
     stop_grace_period: 5m
     restart: unless-stopped
     labels:
