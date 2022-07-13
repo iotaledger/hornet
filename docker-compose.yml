@@ -57,7 +57,7 @@ services:
     cap_drop:
       - ALL
     volumes:
-      - ./config_defaults.json:/app/config.json:ro
+      - ./config_alphanet.json:/app/config.json:ro
       - ./peering.json:/app/peering.json
       - ./alphanet:/app/alphanet
     command:

@@ -46,6 +46,7 @@
       "path": "alphanet/p2pstore"
     },
     "autopeering": {
+      "enabled": true,
       "entryNodes": [
         "/dns/entry-hornet-0.h.alphanet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr",
         "/dns/entry-hornet-1.h.alphanet.iotaledger.net/udp/14626/autopeering/CbYtFzRQtqeNQJQFYRZk1WewxfKCmqXCHZ16od1d23PX"
