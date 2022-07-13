@@ -63,5 +63,5 @@ services:
     command:
       - "-c"
       - "config.json"
-      - "--app.enablePlugins=INX"
+      - "--inx.enabled=true"
       - "--inx.bindAddress=hornet:9029"

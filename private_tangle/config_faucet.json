@@ -1,8 +1,6 @@
 {
   "app": {
     "checkForUpdates": true,
-    "disablePlugins": [],
-    "enablePlugins": [],
     "stopGracePeriod": "5m"
   },
   "inx": {

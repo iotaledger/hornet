@@ -1,10 +1,6 @@
 {
   "app": {
     "checkForUpdates": true,
-    "disablePlugins": [],
-    "enablePlugins": [
-      "Prometheus"
-    ],
     "stopGracePeriod": "5m"
   },
   "inx": {
@@ -15,5 +11,8 @@
   },
   "profiling": {
     "bindAddress": "localhost:6060"
+  },
+  "prometheus": {
+    "enabled": true
   }
 }

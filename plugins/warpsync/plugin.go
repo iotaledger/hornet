@@ -18,13 +18,15 @@ import (
 
 func init() {
 	Plugin = &app.Plugin{
-		Status: app.StatusEnabled,
 		Component: &app.Component{
 			Name:      "WarpSync",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
 			Configure: configure,
 			Run:       run,
+		},
+		IsEnabled: func() bool {
+			return ParamsWarpSync.Enabled
 		},
 	}
 }

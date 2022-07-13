@@ -4,8 +4,10 @@ import (
 	"github.com/iotaledger/hive.go/app"
 )
 
-// ParametersPrometheus contains the definition of the parameters used by WarpSync.
+// ParametersPrometheus contains the definition of the parameters used by Prometheus.
 type ParametersPrometheus struct {
+	// Enabled defines whether the prometheus plugin is enabled.
+	Enabled bool `default:"false" usage:"whether the prometheus plugin is enabled"`
 	// defines the bind address on which the Prometheus exporter listens on.
 	BindAddress string `default:"localhost:9311" usage:"the bind address on which the Prometheus exporter listens on"`
 

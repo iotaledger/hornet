@@ -2,7 +2,6 @@ package autopeering
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -40,7 +39,6 @@ import (
 
 func init() {
 	Plugin = &app.Plugin{
-		Status: app.StatusDisabled,
 		Component: &app.Component{
 			Name:       "Autopeering",
 			DepsFunc:   func(cDeps dependencies) { deps = cDeps },
@@ -49,6 +47,9 @@ func init() {
 			Provide:    provide,
 			Configure:  configure,
 			Run:        run,
+		},
+		IsEnabled: func() bool {
+			return ParamsAutopeering.Enabled
 		},
 	}
 }
@@ -83,30 +84,7 @@ type dependencies struct {
 
 func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error {
 
-	pluginEnabled := true
-
-	containsPlugin := func(pluginsList []string, pluginIdentifier string) bool {
-		contains := false
-		for _, plugin := range pluginsList {
-			if strings.ToLower(plugin) == pluginIdentifier {
-				contains = true
-				break
-			}
-		}
-		return contains
-	}
-
-	if disabled := containsPlugin(initConfig.DisabledPlugins, Plugin.Identifier()); disabled {
-		// Autopeering is disabled
-		pluginEnabled = false
-	}
-
-	if enabled := containsPlugin(initConfig.EnabledPlugins, Plugin.Identifier()); !enabled {
-		// Autopeering was not enabled
-		pluginEnabled = false
-	}
-
-	runAsEntryNode := pluginEnabled && ParamsAutopeering.RunAsEntryNode
+	runAsEntryNode := Plugin.IsEnabled() && ParamsAutopeering.RunAsEntryNode
 	if runAsEntryNode {
 		// the following pluggables stay enabled
 		// - profile
