@@ -8,6 +8,9 @@ import (
 
 // ParametersTipsel contains the definition of the parameters used by Tipselection.
 type ParametersTipsel struct {
+	// Enabled defines whether the tipselection plugin is enabled.
+	Enabled bool `default:"true" usage:"whether the tipselection plugin is enabled"`
+
 	// the config group used for the non-lazy tip-pool
 	NonLazy struct {
 		// Defines the maximum amount of current tips for which "CfgTipSelMaxReferencedTipAge"

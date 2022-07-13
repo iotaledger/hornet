@@ -8,6 +8,8 @@ import (
 
 // ParametersAutopeering contains the definition of the parameters used by autopeering.
 type ParametersAutopeering struct {
+	// Enabled defines whether the autopeering plugin is enabled.
+	Enabled bool `default:"false" usage:"whether the autopeering plugin is enabled"`
 	// BindAddress is bind address for autopeering.
 	BindAddress string `default:"0.0.0.0:14626" usage:"bind address for autopeering"`
 	// EntryNodes list of autopeering entry nodes to use.

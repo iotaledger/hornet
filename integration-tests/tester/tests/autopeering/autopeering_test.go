@@ -16,7 +16,7 @@ import (
 // are able to synchronize.
 func TestAutopeering(t *testing.T) {
 	n, err := f.CreateAutopeeredNetwork("test_autopeering", 4, 2, func(index int, cfg *framework.AppConfig) {
-		cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Autopeering")
+		cfg.Autopeering.Enabled = true
 	})
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)

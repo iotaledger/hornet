@@ -33,12 +33,15 @@ const (
 
 func init() {
 	Plugin = &app.Plugin{
-		Status: app.StatusEnabled,
 		Component: &app.Component{
 			Name:      "DashboardMetrics",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Configure: configure,
 			Run:       run,
+		},
+		IsEnabled: func() bool {
+			// the plugin is enabled if the restapi plugin is enabled
+			return restapi.ParamsRestAPI.Enabled
 		},
 	}
 }

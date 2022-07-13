@@ -6,6 +6,8 @@ import (
 
 // ParametersWarpSync contains the definition of the parameters used by WarpSync.
 type ParametersWarpSync struct {
+	// Enabled defines whether the warpsync plugin is enabled.
+	Enabled bool `default:"true" usage:"whether the warpsync plugin is enabled"`
 	// Defines the used advancement range per warpsync checkpoint
 	AdvancementRange int `default:"150" usage:"the used advancement range per warpsync checkpoint"`
 }

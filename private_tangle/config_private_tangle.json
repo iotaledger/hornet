@@ -1,13 +1,7 @@
 {
   "app": {
-    "disablePlugins": [
-      "Autopeering"
-    ],
-    "enablePlugins": [
-      "Debug",
-      "Prometheus",
-      "INX"
-    ]
+    "checkForUpdates": true,
+    "stopGracePeriod": "5m"
   },
   "node": {
     "alias": "HORNET private-tangle node"

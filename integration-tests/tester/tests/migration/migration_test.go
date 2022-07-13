@@ -54,7 +54,7 @@ func TestMigration(t *testing.T) {
 			cfg.INXCoo.Migrator.StartIndex = 1
 			cfg.INXCoo.Validator = cfg.Receipts.Validator
 		default:
-			cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
+			cfg.Receipts.Enabled = true
 		}
 
 		cfg.Snapshot.FullSnapshotFilePath = "/assets/migration_full_snapshot.bin"
@@ -133,7 +133,7 @@ func TestAPIError(t *testing.T) {
 				cfg.INXCoo.Migrator.StartIndex = 1
 				cfg.INXCoo.Validator = cfg.Receipts.Validator
 			default:
-				cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
+				cfg.Receipts.Enabled = true
 			}
 			cfg.Snapshot.FullSnapshotFilePath = "/assets/migration_full_snapshot.bin"
 			cfg.Snapshot.DeltaSnapshotFilePath = "/assets/migration_delta_snapshot.bin" // doesn't exist so the node will only load the full one

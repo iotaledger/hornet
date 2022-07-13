@@ -49,11 +49,14 @@ const (
 
 func init() {
 	Plugin = &app.Plugin{
-		Status: app.StatusDisabled,
 		Component: &app.Component{
 			Name:      "Debug",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
 			Configure: configure,
+		},
+		IsEnabled: func() bool {
+			return ParamsDebug.Enabled
 		},
 	}
 }

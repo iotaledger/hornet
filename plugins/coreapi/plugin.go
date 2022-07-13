@@ -124,11 +124,13 @@ const (
 
 func init() {
 	Plugin = &app.Plugin{
-		Status: app.StatusEnabled,
 		Component: &app.Component{
 			Name:      "CoreAPIV2",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Configure: configure,
+		},
+		IsEnabled: func() bool {
+			return restapi.ParamsRestAPI.Enabled
 		},
 	}
 }

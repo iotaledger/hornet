@@ -22,7 +22,6 @@ import (
 
 func init() {
 	Plugin = &app.Plugin{
-		Status: app.StatusEnabled,
 		Component: &app.Component{
 			Name:           "RestAPI",
 			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
@@ -31,6 +30,9 @@ func init() {
 			Provide:        provide,
 			Configure:      configure,
 			Run:            run,
+		},
+		IsEnabled: func() bool {
+			return ParamsRestAPI.Enabled
 		},
 	}
 }

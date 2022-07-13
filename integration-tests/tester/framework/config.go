@@ -46,8 +46,6 @@ const (
 )
 
 var (
-	disabledPluginsPeer      = []string{}
-	disabledPluginsEntryNode = []string{}
 	// GenesisSeed defines the seed on which the total supply resides on per default.
 	GenesisSeed ed25519.PrivateKey
 	// GenesisAddress defines the address computed from the GenesisSeed
@@ -76,7 +74,6 @@ func DefaultConfig() *AppConfig {
 		Protocol:    DefaultProtocolConfig(),
 		RestAPI:     DefaultRestAPIConfig(),
 		INX:         DefaultINXConfig(),
-		Plugins:     DefaultPluginConfig(),
 		Profiling:   DefaultProfilingConfig(),
 		Receipts:    DefaultNodeReceiptValidatorConfig(),
 		Autopeering: DefaultAutopeeringConfig(),
@@ -113,31 +110,6 @@ func DefaultWhiteFlagMockServerConfig(name string, configFileName string) *White
 	}
 }
 
-//TODO: remove when we rename the node config to app in HORNET
-// AppPluginConfig defines plugin specific configuration.
-type AppPluginConfig struct {
-	// Holds explicitly enabled plugins.
-	Enabled []string
-	// Holds explicitly disabled plugins.
-	Disabled []string
-}
-
-// CLIFlags returns the config as CLI flags.
-func (pluginConfig *AppPluginConfig) CLIFlags() []string {
-	return []string{
-		fmt.Sprintf("--%s=%s", "app.enablePlugins", strings.Join(pluginConfig.Enabled, ",")),
-		fmt.Sprintf("--%s=%s", "app.disablePlugins", strings.Join(pluginConfig.Disabled, ",")),
-	}
-}
-
-// DefaultAppPluginConfig returns the default plugin config.
-func DefaultAppPluginConfig() AppPluginConfig {
-	return AppPluginConfig{
-		Enabled:  []string{},
-		Disabled: []string{},
-	}
-}
-
 type INXCoordinatorConfig struct {
 	// Whether to let the node run as the coordinator.
 	RunAsCoo bool
@@ -151,8 +123,6 @@ type INXCoordinatorConfig struct {
 	INXAddress string
 	// Coordinator config.
 	Coordinator CoordinatorConfig
-	// Plugin config.
-	Plugins AppPluginConfig
 	// Migrator config.
 	Migrator MigratorConfig
 	// Receipt validator config.
@@ -169,7 +139,6 @@ func DefaultINXCoordinatorConfig() *INXCoordinatorConfig {
 			fmt.Sprintf("hornet-testing-assets:%s:rw", assetsDir),
 		},
 		Coordinator: DefaultCoordinatorConfig(),
-		Plugins:     DefaultAppPluginConfig(),
 		Migrator:    DefaultMigratorConfig(),
 		Validator:   DefaultReceiptValidatorConfig(),
 	}
@@ -177,8 +146,8 @@ func DefaultINXCoordinatorConfig() *INXCoordinatorConfig {
 
 // WithMigration adjusts the config to activate the migrator plugin.
 func (cfg *INXCoordinatorConfig) WithMigration() {
+	cfg.Migrator.Enabled = true
 	cfg.Migrator.Bootstrap = true
-	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Migrator")
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -186,7 +155,6 @@ func (cfg *INXCoordinatorConfig) CLIFlags() []string {
 	var cliFlags []string
 	cliFlags = append(cliFlags, fmt.Sprintf("--inx.address=%s", cfg.INXAddress))
 	cliFlags = append(cliFlags, cfg.Coordinator.CLIFlags()...)
-	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Migrator.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Validator.CLIFlags()...)
 	return cliFlags
@@ -241,8 +209,6 @@ type AppConfig struct {
 	Snapshot SnapshotConfig
 	// Protocol config.
 	Protocol ProtocolConfig
-	// Plugin config.
-	Plugins PluginConfig
 	// Profiling config.
 	Profiling ProfilingConfig
 	// Receipts config
@@ -255,14 +221,14 @@ type AppConfig struct {
 
 // AsCoo adjusts the config to make it usable as the Coordinator's config.
 func (cfg *AppConfig) AsCoo() {
-	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "INX")
+	cfg.INX.Enabled = true
 	cfg.INXCoo.RunAsCoo = true
 	cfg.INXCoo.Envs = append(cfg.INXCoo.Envs, fmt.Sprintf("COO_PRV_KEYS=%s", strings.Join(cfg.INXCoo.Coordinator.PrivateKeys, ",")))
 }
 
 // WithReceipts adjusts the config to activate the receipts plugin.
 func (cfg *AppConfig) WithReceipts() {
-	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
+	cfg.Receipts.Enabled = true
 	cfg.INXCoo.WithMigration()
 }
 
@@ -274,7 +240,6 @@ func (cfg *AppConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Protocol.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.RestAPI.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.INX.CLIFlags()...)
-	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Receipts.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Autopeering.CLIFlags()...)
@@ -335,7 +300,9 @@ func DefaultNetworkConfig() NetworkConfig {
 
 // AutopeeringConfig defines the autopeering specific configuration.
 type AutopeeringConfig struct {
-	// The ist of autopeering entry nodes to use.
+	// Enabled defines whether the autopeering plugin is enabled.
+	Enabled bool
+	// The list of autopeering entry nodes to use.
 	EntryNodes []string
 	// BindAddr bind address for autopeering.
 	BindAddr string
@@ -352,6 +319,7 @@ type AutopeeringConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (autoConfig *AutopeeringConfig) CLIFlags() []string {
 	return []string{
+		fmt.Sprintf("--%s=%v", "p2p.autopeering.enabled", autoConfig.Enabled),
 		fmt.Sprintf("--%s=%s", "p2p.autopeering.entryNodes", strings.Join(autoConfig.EntryNodes, ",")),
 		fmt.Sprintf("--%s=%s", "p2p.autopeering.bindAddress", autoConfig.BindAddr),
 		fmt.Sprintf("--%s=%v", "p2p.autopeering.runAsEntryNode", autoConfig.RunAsEntryNode),
@@ -364,6 +332,7 @@ func (autoConfig *AutopeeringConfig) CLIFlags() []string {
 // DefaultAutopeeringConfig returns the default autopeering config.
 func DefaultAutopeeringConfig() AutopeeringConfig {
 	return AutopeeringConfig{
+		Enabled:        false,
 		EntryNodes:     nil,
 		BindAddr:       "0.0.0.0:14626",
 		RunAsEntryNode: false,
@@ -410,6 +379,8 @@ func DefaultRestAPIConfig() RestAPIConfig {
 
 // INXConfig defines the INX specific configuration.
 type INXConfig struct {
+	// Enabled defines whether the INX plugin is enabled.
+	Enabled bool
 	// The bind address for the INX.
 	BindAddress string
 }
@@ -417,6 +388,7 @@ type INXConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (inxConfig *INXConfig) CLIFlags() []string {
 	return []string{
+		fmt.Sprintf("--%s=%v", "inx.enabled", inxConfig.Enabled),
 		fmt.Sprintf("--%s=%s", "inx.bindAddress", inxConfig.BindAddress),
 	}
 }
@@ -424,42 +396,8 @@ func (inxConfig *INXConfig) CLIFlags() []string {
 // DefaultINXConfig returns the default INX config.
 func DefaultINXConfig() INXConfig {
 	return INXConfig{
+		Enabled:     false,
 		BindAddress: "0.0.0.0:9029",
-	}
-}
-
-// PluginConfig defines plugin specific configuration.
-type PluginConfig struct {
-	// Holds explicitly enabled plugins.
-	Enabled []string
-	// Holds explicitly disabled plugins.
-	Disabled []string
-}
-
-func (pluginConfig *PluginConfig) ContainsINX() bool {
-	for _, p := range pluginConfig.Enabled {
-		if strings.EqualFold(p, "INX") {
-			return true
-		}
-	}
-	return false
-}
-
-// CLIFlags returns the config as CLI flags.
-func (pluginConfig *PluginConfig) CLIFlags() []string {
-	return []string{
-		fmt.Sprintf("--%s=%s", "app.enablePlugins", strings.Join(pluginConfig.Enabled, ",")),
-		fmt.Sprintf("--%s=%s", "app.disablePlugins", strings.Join(pluginConfig.Disabled, ",")),
-	}
-}
-
-// DefaultPluginConfig returns the default plugin config.
-func DefaultPluginConfig() PluginConfig {
-	disabled := make([]string, len(disabledPluginsPeer))
-	copy(disabled, disabledPluginsPeer)
-	return PluginConfig{
-		Enabled:  []string{},
-		Disabled: disabled,
 	}
 }
 
@@ -517,6 +455,8 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 
 // ReceiptsConfig defines the receipt validator plugin specific configuration.
 type ReceiptsConfig struct {
+	// Enabled defines whether the receipts plugin is enabled.
+	Enabled bool
 	// Whether receipt backups are enabled.
 	BackupEnabled bool
 	// The path to the receipts folder.
@@ -531,6 +471,7 @@ type ReceiptsConfig struct {
 
 func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
 	flags := []string{
+		fmt.Sprintf("--%s=%v", "receipts.enabled", receiptsConfig.Enabled),
 		fmt.Sprintf("--%s=%v", "receipts.backup.enabled", receiptsConfig.BackupEnabled),
 		fmt.Sprintf("--%s=%s", "receipts.backup.path", receiptsConfig.BackupFolder),
 		fmt.Sprintf("--%s=%v", "receipts.validator.validate", receiptsConfig.Validate),
@@ -553,6 +494,7 @@ type ReceiptValidatorConfig struct {
 
 func DefaultNodeReceiptValidatorConfig() ReceiptsConfig {
 	return ReceiptsConfig{
+		Enabled:          false,
 		BackupEnabled:    false,
 		BackupFolder:     "receipts",
 		Validate:         false,
@@ -582,6 +524,8 @@ func DefaultReceiptValidatorConfig() ReceiptValidatorConfig {
 
 // MigratorConfig defines migrator plugin specific configuration.
 type MigratorConfig struct {
+	// Enabled defines whether the migrator plugin is enabled.
+	Enabled bool
 	// The max amount of entries to include in a receipt.
 	MaxEntries int
 	// Whether to run the migrator plugin in bootstrap mode.
@@ -595,6 +539,7 @@ type MigratorConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (migConfig *MigratorConfig) CLIFlags() []string {
 	return []string{
+		fmt.Sprintf("--migrator.enabled=%v", migConfig.Enabled),
 		fmt.Sprintf("--migratorBootstrap=%v", migConfig.Bootstrap),
 		fmt.Sprintf("--migrator.receiptMaxEntries=%v", migConfig.MaxEntries),
 		fmt.Sprintf("--migratorStartIndex=%d", migConfig.StartIndex),
@@ -605,6 +550,7 @@ func (migConfig *MigratorConfig) CLIFlags() []string {
 // DefaultMigratorConfig returns the default migrator plugin config.
 func DefaultMigratorConfig() MigratorConfig {
 	return MigratorConfig{
+		Enabled:       false,
 		Bootstrap:     false,
 		MaxEntries:    iotago.MaxMigratedFundsEntryCount,
 		StartIndex:    1,

@@ -109,7 +109,7 @@ func (f *Framework) CreateStaticNetwork(name string, intNetCfg *IntegrationNetwo
 		cfg.Network.GossipUnknownPeersLimit = len(layout)
 		cfg.Network.ConnMngLowWatermark = len(layout)
 		cfg.Network.ConnMngHighWatermark = len(layout) + 1
-		cfg.Plugins.Disabled = append(cfg.Plugins.Disabled, "autopeering")
+		cfg.Autopeering.Enabled = false
 		if len(cfgOverrideF) > 0 && cfgOverrideF[0] != nil {
 			cfgOverrideF[0](i, cfg)
 		}
@@ -182,7 +182,7 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumP
 }
 
 func setupINX(network *Network, cfg *AppConfig) error {
-	if cfg.Plugins.ContainsINX() {
+	if cfg.INX.Enabled {
 		inxAddress := fmt.Sprintf("%s:9029", cfg.Name)
 		if cfg.INXCoo.RunAsCoo {
 			cfg.INXCoo.INXAddress = inxAddress

@@ -86,8 +86,6 @@ func init() {
 		},
 		NonHiddenFlags: []string{
 			"app.checkForUpdates",
-			"app.disablePlugins",
-			"app.enablePlugins",
 			"app.profile",
 			"config",
 			"help",

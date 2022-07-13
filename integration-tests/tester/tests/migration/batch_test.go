@@ -49,7 +49,7 @@ func TestBatch(t *testing.T) {
 			cfg.INXCoo.Validator = cfg.Receipts.Validator
 			cfg.INXCoo.Migrator.StartIndex = 1
 		default:
-			cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
+			cfg.Receipts.Enabled = true
 		}
 
 		cfg.Snapshot.FullSnapshotFilePath = "/assets/migration_full_snapshot.bin"

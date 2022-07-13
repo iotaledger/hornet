@@ -16,13 +16,15 @@ import (
 
 func init() {
 	Plugin = &app.Plugin{
-		Status: app.StatusEnabled,
 		Component: &app.Component{
 			Name:      "Receipts",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
 			Provide:   provide,
 			Configure: configure,
+		},
+		IsEnabled: func() bool {
+			return ParamsReceipts.Enabled
 		},
 	}
 }
