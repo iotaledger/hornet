@@ -31,7 +31,7 @@ func createMarkdownFile(app *app.App, markdownHeaderPath string, markdownFilePat
 func createDefaultConfigFile(app *app.App, configFilePath string, ignoreFlags map[string]struct{}) {
 	println(fmt.Sprintf("Create default configuration file for %s...", app.Info().Name))
 	conf := config.GetDefaultAppConfigJSON(app.Config(), app.FlagSet(), ignoreFlags)
-	os.WriteFile(configFilePath, append([]byte(conf), byte(10)), os.ModePerm)
+	os.WriteFile(configFilePath, []byte(conf), os.ModePerm)
 	println(fmt.Sprintf("Default configuration file for %s stored: %s", app.Info().Name, configFilePath))
 }
 

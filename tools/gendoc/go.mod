@@ -5,8 +5,8 @@ go 1.18
 replace github.com/iotaledger/hornet => ../../
 
 require (
-	github.com/iotaledger/hive.go v0.0.0-20220713112541-3bfe06a592ed
-	github.com/iotaledger/hive.go/app/utils v0.0.0-20220712074345-8348bfb71841
+	github.com/iotaledger/hive.go v0.0.0-20220714075325-11202fe498d6
+	github.com/iotaledger/hive.go/app/utils v0.0.0-20220714075325-11202fe498d6
 	github.com/iotaledger/hornet v0.0.0-00010101000000-000000000000
 )
 
