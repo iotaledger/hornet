@@ -7,7 +7,7 @@ import (
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
 
-	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

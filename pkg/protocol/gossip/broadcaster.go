@@ -3,9 +3,9 @@ package gossip
 import (
 	"context"
 
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/model/syncmanager"
-	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
 
 // Broadcaster provides functions to broadcast data to gossip streams.

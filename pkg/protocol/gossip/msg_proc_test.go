@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/p2p"
-	"github.com/iotaledger/hornet/pkg/protocol/gossip"
-	"github.com/iotaledger/hornet/pkg/testsuite"
+	"github.com/iotaledger/hornet/v2/pkg/metrics"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/p2p"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/v2/pkg/testsuite"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

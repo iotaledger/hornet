@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 )
 
 // sets up the event handlers which propagate STING messages.

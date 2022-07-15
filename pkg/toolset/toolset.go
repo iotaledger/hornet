@@ -14,7 +14,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/database"
 )
 
 const (

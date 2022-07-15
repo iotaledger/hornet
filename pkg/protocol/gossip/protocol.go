@@ -11,7 +11,7 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/protocol"
-	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

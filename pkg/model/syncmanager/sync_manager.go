@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hornet/pkg/protocol"
+	"github.com/iotaledger/hornet/v2/pkg/protocol"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

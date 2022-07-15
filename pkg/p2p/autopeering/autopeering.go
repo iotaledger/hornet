@@ -25,7 +25,7 @@ import (
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/netutil"
-	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
 
 const (

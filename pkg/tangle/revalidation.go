@@ -7,10 +7,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/contextutils"
-	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/snapshot"
-	"github.com/iotaledger/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/snapshot"
+	"github.com/iotaledger/hornet/v2/pkg/utils"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

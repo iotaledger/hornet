@@ -5,9 +5,9 @@ import (
 
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hornet/pkg/pruning"
-	"github.com/iotaledger/hornet/pkg/snapshot"
-	"github.com/iotaledger/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/v2/pkg/pruning"
+	"github.com/iotaledger/hornet/v2/pkg/snapshot"
+	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
 )
 
 var (

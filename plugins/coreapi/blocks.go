@@ -9,10 +9,10 @@ import (
 
 	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/restapi"
-	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

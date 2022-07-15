@@ -5,7 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/v2/pkg/restapi"
 )
 
 const (

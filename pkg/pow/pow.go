@@ -9,7 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/common"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/pow"
 )

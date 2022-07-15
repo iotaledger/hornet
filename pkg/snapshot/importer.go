@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

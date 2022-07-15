@@ -9,7 +9,7 @@ import (
 
 	"github.com/multiformats/go-multiaddr"
 
-	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/database"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"

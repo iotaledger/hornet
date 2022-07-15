@@ -10,8 +10,8 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 
-	"github.com/iotaledger/hornet/pkg/jwt"
-	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/v2/pkg/jwt"
+	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
 
 func generateJWTApiToken(args []string) error {

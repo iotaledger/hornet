@@ -17,9 +17,9 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/p2p"
-	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/v2/pkg/metrics"
+	"github.com/iotaledger/hornet/v2/pkg/p2p"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 )
 
 const protocolID = "/iota/abcdf/1.0.0"

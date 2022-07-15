@@ -6,7 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/iotaledger/hornet/pkg/jwt"
+	"github.com/iotaledger/hornet/v2/pkg/jwt"
 )
 
 func compileRouteAsRegex(route string) *regexp.Regexp {

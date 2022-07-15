@@ -10,11 +10,11 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/daemon"
-	"github.com/iotaledger/hornet/pkg/database"
-	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
-	"github.com/iotaledger/hornet/pkg/tangle"
-	"github.com/iotaledger/hornet/plugins/restapi"
+	"github.com/iotaledger/hornet/v2/pkg/daemon"
+	"github.com/iotaledger/hornet/v2/pkg/database"
+	restapipkg "github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/hornet/v2/pkg/tangle"
+	"github.com/iotaledger/hornet/v2/plugins/restapi"
 )
 
 const (

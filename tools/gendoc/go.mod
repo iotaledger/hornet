@@ -2,12 +2,12 @@ module github.com/iotaledger/hornet/tools/gendoc
 
 go 1.18
 
-replace github.com/iotaledger/hornet => ../../
+replace github.com/iotaledger/hornet/v2 => ../../
 
 require (
 	github.com/iotaledger/hive.go v0.0.0-20220714075325-11202fe498d6
 	github.com/iotaledger/hive.go/app/utils v0.0.0-20220714075325-11202fe498d6
-	github.com/iotaledger/hornet v0.0.0-00010101000000-000000000000
+	github.com/iotaledger/hornet/v2 v2.0.0-00010101000000-000000000000
 )
 
 require (
@@ -60,10 +60,10 @@ require (
 	github.com/huin/goupnp v1.0.3 // indirect
 	github.com/iancoleman/orderedmap v0.2.0 // indirect
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf // indirect
-	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220713112541-3bfe06a592ed // indirect
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220714075325-11202fe498d6 // indirect
 	github.com/iotaledger/inx/go v0.0.0-20220705124918-775bb201b49e // indirect
 	github.com/iotaledger/iota.go v1.0.0 // indirect
-	github.com/iotaledger/iota.go/v3 v3.0.0-20220713125317-0f9382655ffc // indirect
+	github.com/iotaledger/iota.go/v3 v3.0.0-beta.1 // indirect
 	github.com/ipfs/go-cid v0.2.0 // indirect
 	github.com/ipfs/go-datastore v0.5.1 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
@@ -166,7 +166,7 @@ require (
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	golang.org/x/tools v0.1.11 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
-	google.golang.org/genproto v0.0.0-20220712132514-bdd2acd4974d // indirect
+	google.golang.org/genproto v0.0.0-20220714211235-042d03aeabc9 // indirect
 	google.golang.org/grpc v1.48.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect

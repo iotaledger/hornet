@@ -9,8 +9,8 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 
-	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 )
 
 func databaseHealth(args []string) error {

@@ -8,8 +8,8 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
+	"github.com/iotaledger/hornet/v2/pkg/profile"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

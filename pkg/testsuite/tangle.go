@@ -6,11 +6,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/tangle"
-	"github.com/iotaledger/hornet/pkg/testsuite/utils"
-	"github.com/iotaledger/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/v2/pkg/dag"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/tangle"
+	"github.com/iotaledger/hornet/v2/pkg/testsuite/utils"
+	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

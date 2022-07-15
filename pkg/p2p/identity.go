@@ -20,7 +20,7 @@ import (
 	hivecrypto "github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/database"
 )
 
 const (

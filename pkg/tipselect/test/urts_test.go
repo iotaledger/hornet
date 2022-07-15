@@ -8,13 +8,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/model/syncmanager"
-	"github.com/iotaledger/hornet/pkg/tangle"
-	"github.com/iotaledger/hornet/pkg/testsuite"
-	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/v2/pkg/dag"
+	"github.com/iotaledger/hornet/v2/pkg/metrics"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/v2/pkg/tangle"
+	"github.com/iotaledger/hornet/v2/pkg/testsuite"
+	"github.com/iotaledger/hornet/v2/pkg/tipselect"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

@@ -9,7 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/v2/pkg/profile"
 )
 
 var (

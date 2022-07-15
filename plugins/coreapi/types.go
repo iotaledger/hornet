@@ -3,12 +3,12 @@ package coreapi
 import (
 	"encoding/json"
 
-	"github.com/iotaledger/hornet/pkg/protocol"
+	"github.com/iotaledger/hornet/v2/pkg/protocol"
 
-	"github.com/iotaledger/hornet/core/protocfg"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/v2/core/protocfg"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
