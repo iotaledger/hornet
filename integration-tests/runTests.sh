@@ -16,8 +16,8 @@ then
   fi
 fi
 
-docker pull iotaledger/inx-coordinator:0.8
-docker pull iotaledger/inx-indexer:0.10
+docker pull iotaledger/inx-coordinator:1.0.0-beta.1
+docker pull iotaledger/inx-indexer:1.0.0-beta.1
 
 echo "Run integration tests"
 for name in $TEST_NAMES; do
