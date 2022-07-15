@@ -9,7 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/v2/pkg/metrics"
 )
 
 type Engine string

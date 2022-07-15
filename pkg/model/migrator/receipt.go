@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	iotago "github.com/iotaledger/iota.go/v3"
 )

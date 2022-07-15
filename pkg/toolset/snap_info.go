@@ -8,7 +8,7 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 
-	"github.com/iotaledger/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 )
 
 func snapshotInfo(args []string) error {

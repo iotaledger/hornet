@@ -6,10 +6,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/dag"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

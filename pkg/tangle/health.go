@@ -3,7 +3,7 @@ package tangle
 import (
 	"time"
 
-	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 )
 
 const (

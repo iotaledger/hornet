@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/v2/pkg/tangle"
 )
 
 var (

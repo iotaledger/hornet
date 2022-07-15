@@ -9,10 +9,10 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/daemon"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/daemon"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

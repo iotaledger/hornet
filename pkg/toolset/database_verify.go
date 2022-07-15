@@ -11,12 +11,12 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/v2/pkg/dag"
+	"github.com/iotaledger/hornet/v2/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
+	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

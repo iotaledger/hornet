@@ -8,12 +8,12 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/daemon"
-	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/model/syncmanager"
-	"github.com/iotaledger/hornet/pkg/pruning"
-	"github.com/iotaledger/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/v2/pkg/daemon"
+	"github.com/iotaledger/hornet/v2/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/v2/pkg/pruning"
+	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

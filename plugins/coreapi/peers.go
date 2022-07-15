@@ -6,9 +6,9 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/pkg/p2p"
-	"github.com/iotaledger/hornet/pkg/protocol/gossip"
-	"github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/v2/pkg/p2p"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/v2/pkg/restapi"
 )
 
 // WrapInfoSnapshot wraps the given peer info snapshot with additional metadata, such as gossip protocol information.

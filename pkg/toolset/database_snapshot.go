@@ -8,9 +8,9 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
-	snapCore "github.com/iotaledger/hornet/core/snapshot"
-	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/snapshot"
+	snapCore "github.com/iotaledger/hornet/v2/core/snapshot"
+	"github.com/iotaledger/hornet/v2/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

@@ -11,11 +11,11 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/dag"
-	"github.com/iotaledger/hornet/pkg/database"
-	storagepkg "github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/dag"
+	"github.com/iotaledger/hornet/v2/pkg/database"
+	storagepkg "github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

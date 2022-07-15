@@ -4,9 +4,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/restapi"
-	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

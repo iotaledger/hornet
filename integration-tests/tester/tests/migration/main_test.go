@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/iotaledger/hornet/integration-tests/tester/framework"
+	"github.com/iotaledger/hornet/v2/integration-tests/tester/framework"
 )
 
 var f *framework.Framework

@@ -12,8 +12,8 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/v2/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/utils"
 )
 
 func databaseMigration(args []string) error {

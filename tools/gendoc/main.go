@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/app/utils/config"
 
-	hornetApp "github.com/iotaledger/hornet/core/app"
+	hornetApp "github.com/iotaledger/hornet/v2/core/app"
 )
 
 func createMarkdownFile(app *app.App, markdownHeaderPath string, markdownFilePath string, ignoreFlags map[string]struct{}, replaceTopicNames map[string]string) {

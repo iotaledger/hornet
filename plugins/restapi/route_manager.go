@@ -5,7 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
+	restapipkg "github.com/iotaledger/hornet/v2/pkg/restapi"
 )
 
 type RestRouteManager struct {

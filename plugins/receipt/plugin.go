@@ -7,9 +7,9 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/model/migrator"
-	"github.com/iotaledger/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/v2/pkg/model/migrator"
+	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
+	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	"github.com/iotaledger/iota.go/api"
 	iotago "github.com/iotaledger/iota.go/v3"
 )

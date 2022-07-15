@@ -11,10 +11,10 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 
-	coreDatabase "github.com/iotaledger/hornet/core/database"
-	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/snapshot"
+	coreDatabase "github.com/iotaledger/hornet/v2/core/database"
+	"github.com/iotaledger/hornet/v2/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 )
 
 func snapshotHash(args []string) error {

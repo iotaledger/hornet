@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 )
 
 func TestAdvanceAtEightyPercentReached(t *testing.T) {

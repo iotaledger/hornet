@@ -9,14 +9,14 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/serializer/v2"
-	databasecore "github.com/iotaledger/hornet/core/database"
-	"github.com/iotaledger/hornet/core/protocfg"
-	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/database"
-	"github.com/iotaledger/hornet/pkg/model/milestonemanager"
-	"github.com/iotaledger/hornet/pkg/model/storage"
-	"github.com/iotaledger/hornet/pkg/restapi"
-	"github.com/iotaledger/hornet/pkg/snapshot"
+	databasecore "github.com/iotaledger/hornet/v2/core/database"
+	"github.com/iotaledger/hornet/v2/core/protocfg"
+	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/database"
+	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
+	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

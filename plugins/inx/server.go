@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/iotaledger/hive.go/workerpool"
-	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/common"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )

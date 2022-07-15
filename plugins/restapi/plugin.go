@@ -14,10 +14,10 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hornet/pkg/daemon"
-	"github.com/iotaledger/hornet/pkg/jwt"
-	"github.com/iotaledger/hornet/pkg/metrics"
-	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/v2/pkg/daemon"
+	"github.com/iotaledger/hornet/v2/pkg/jwt"
+	"github.com/iotaledger/hornet/v2/pkg/metrics"
+	"github.com/iotaledger/hornet/v2/pkg/tangle"
 )
 
 func init() {
