@@ -17,12 +17,12 @@ if [[ $1 = "build" ]]; then
 fi
 
 # Prepare db directory
-mkdir -p alphanet
-mkdir -p alphanet/indexer
-mkdir -p alphanet/participation
-mkdir -p alphanet/dashboard
+mkdir -p testnet
+mkdir -p testnet/indexer
+mkdir -p testnet/participation
+mkdir -p testnet/dashboard
 if [[ "$OSTYPE" != "darwin"* ]]; then
-  chown -R 65532:65532 alphanet
+  chown -R 65532:65532 testnet
 fi
 
 docker-compose up

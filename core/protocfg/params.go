@@ -36,9 +36,9 @@ type BaseToken struct {
 // ParametersProtocol contains the definition of the parameters used by protocol.
 type ParametersProtocol struct {
 	// the initial network name on which this node operates on.
-	TargetNetworkName string `default:"alphanet-8" usage:"the initial network name on which this node operates on"`
+	TargetNetworkName string `default:"testnet" usage:"the initial network name on which this node operates on"`
 	// the amount of public keys in a milestone.
-	MilestonePublicKeyCount int `default:"3" usage:"the amount of public keys in a milestone"`
+	MilestonePublicKeyCount int `default:"7" usage:"the amount of public keys in a milestone"`
 	// the ed25519 public key of the coordinator in hex representation.
 	PublicKeyRanges ConfigPublicKeyRanges `noflag:"true"`
 
@@ -48,23 +48,43 @@ type ParametersProtocol struct {
 var ParamsProtocol = &ParametersProtocol{
 	PublicKeyRanges: ConfigPublicKeyRanges{
 		{
-			Key:        "d9922819a39e94ddf3907f4b9c8df93f39f026244fcb609205b9a879022599f2",
+			Key:        "13ccdc2f5d3d9a3ebe06074c6b49b49090dd79ca72e04abf20f10f871ad8293b",
 			StartIndex: 0,
 			EndIndex:   0,
 		}, {
-			Key:        "d85e5b1590d898d1e0cdebb2e3b5337c8b76270142663d78811683ba47c17c98",
+			Key:        "f18f3f6a2d940b9bacd3084713f6877db22064ada4335cb53ae1da75044f978d",
 			StartIndex: 0,
 			EndIndex:   0,
 		}, {
-			Key:        "f9d9656a60049083eef61487632187b351294c1fa23d118060d813db6d03e8b6",
+			Key:        "b3b4c920909720ba5f7c30dddc0f9169bf8243b529b601fc4776b8cb0a8ca253",
 			StartIndex: 0,
 			EndIndex:   0,
 		}, {
-			Key:        "3df80964cc83921e08c1fa0a4f5fc05810a634da45461b2b315fcbfd62f7cab7",
+			Key:        "bded01e93adf7a623118fd375fd93dc7d7ddf222324239cae33e4e4c47ec3b0e",
 			StartIndex: 0,
 			EndIndex:   0,
 		}, {
-			Key:        "8e222ae7e2adcfb87a2984a19aad52b1979ed1472c3cb17239a73ef1d344c35a",
+			Key:        "488ac3fb1b8df5ef8c4acb4ef1f3e3d039c5d7197db87094a61af66320722313",
+			StartIndex: 0,
+			EndIndex:   0,
+		}, {
+			Key:        "61f95fed30b6e9bf0b2d03938f56d35789ff7f0ea122d01c5c1b7e869525e218",
+			StartIndex: 0,
+			EndIndex:   0,
+		}, {
+			Key:        "4587040de05907b70806c8725bdae1f7370785993b2a139208e247885d4ed1f8",
+			StartIndex: 0,
+			EndIndex:   0,
+		}, {
+			Key:        "aa6b36116206cc7d6c8f688e22113aa46f0de88d51aa7acf881ec2bd9d015f62",
+			StartIndex: 0,
+			EndIndex:   0,
+		}, {
+			Key:        "ede9760c7f2aaa4618a58a1357705cdc1874962ad369309543230394bb77548b",
+			StartIndex: 0,
+			EndIndex:   0,
+		}, {
+			Key:        "98d1f907caa99f9320f0e0eb64a5cf208751c2171c7938da5659328061e82a8e",
 			StartIndex: 0,
 			EndIndex:   0,
 		},

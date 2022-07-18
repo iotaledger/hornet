@@ -55,8 +55,9 @@ jobs:
 
       - name: Prepare docker files
         run: |
-          cp config_alphanet.json docker/config.json
+          cp config_testnet.json docker/config.json
           cp config_defaults.json docker/
+          cp config_testnet.json docker/
           cp config_alphanet.json docker/
           cp peering.json docker/
 

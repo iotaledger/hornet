@@ -61,7 +61,7 @@ require (
 	github.com/iancoleman/orderedmap v0.2.0 // indirect
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf // indirect
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220714075325-11202fe498d6 // indirect
-	github.com/iotaledger/inx/go v0.0.0-20220705124918-775bb201b49e // indirect
+	github.com/iotaledger/inx/go v1.0.0-beta.1 // indirect
 	github.com/iotaledger/iota.go v1.0.0 // indirect
 	github.com/iotaledger/iota.go/v3 v3.0.0-beta.1 // indirect
 	github.com/ipfs/go-cid v0.2.0 // indirect

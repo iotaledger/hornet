@@ -1,5 +1,5 @@
 # Hornet Docker Setup
-This setup lets you run an [IOTA Hornet node](https://wiki.iota.org/hornet/welcome) that connects to the `alphanet` test network, using Docker to manage your services and Traefik as [a reverse proxy](https://en.wikipedia.org/wiki/Reverse_proxy) to enable TLS using [Let's Encrypt](https://letsencrypt.org/), control access to your node and route requests to the correct endpoints.
+This setup lets you run an [IOTA Hornet node](https://wiki.iota.org/hornet/welcome) that connects to the `testnet` test network, using Docker to manage your services and Traefik as [a reverse proxy](https://en.wikipedia.org/wiki/Reverse_proxy) to enable TLS using [Let's Encrypt](https://letsencrypt.org/), control access to your node and route requests to the correct endpoints.
 
 ## Prerequisites
 - [Docker engine](https://docs.docker.com/engine/install/).

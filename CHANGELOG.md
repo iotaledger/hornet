@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-beta.1] - 18.07.2022
+
+### Changed
+    - Initial Stardust beta release.
+
+
 ## [2.0.0-alpha.25] - 13.07.2022
 
 ### Fixed
