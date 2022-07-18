@@ -4,7 +4,7 @@ services:
     image: iotaledger/inx-indexer:1.0.0-beta.1
     restart: on-failure
     volumes:
-      - ./alphanet/indexer:/app/database
+      - ./testnet/indexer:/app/database
     command:
       - "--inx.address=hornet:9029"
       - "--indexer.bindAddress=inx-indexer:9091"
@@ -20,7 +20,7 @@ services:
     image: iotaledger/inx-participation:1.0.0-beta.1
     restart: on-failure
     volumes:
-      - ./alphanet/participation:/app/database
+      - ./testnet/participation:/app/database
     command:
       - "--inx.address=hornet:9029"
       - "--participation.bindAddress=inx-participation:9892"
@@ -31,7 +31,7 @@ services:
     ports:
       - "8081:8081/tcp"
     volumes:
-      - ./alphanet/dashboard:/app/dashboard
+      - ./testnet/dashboard:/app/dashboard
     command:
       - "--inx.address=hornet:9029"
       - "--dashboard.bindAddress=inx-dashboard:8081"
@@ -57,9 +57,9 @@ services:
     cap_drop:
       - ALL
     volumes:
-      - ./config_alphanet.json:/app/config.json:ro
+      - ./config_testnet.json:/app/config.json:ro
       - ./peering.json:/app/peering.json
-      - ./alphanet:/app/alphanet
+      - ./testnet:/app/testnet
     command:
       - "-c"
       - "config.json"

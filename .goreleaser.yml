@@ -73,6 +73,7 @@ archives:
       - LICENSE
       - config_defaults.json
       - config_alphanet.json
+      - config_testnet.json
       - peering.json
       - profiles.json
 

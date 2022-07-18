@@ -37,6 +37,7 @@ devnetdb*/
 mainnetdb*/
 p2pstore*/
 alphanet/
+testnet/
 
 # snapshot dir
 snapshots/
