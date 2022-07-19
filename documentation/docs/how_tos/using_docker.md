@@ -36,16 +36,15 @@ Please take into consideration the points explained in the [Security 101](https:
 HORNET Docker images (amd64/x86_64 and arm64 architecture) are available at the [iotaledger/hornet](https://hub.docker.com/r/iotaledger/hornet) Docker hub.
 
 ## Requirements
-
 1. A recent release of Docker enterprise or community edition. You can find installation instructions in the [official Docker documentation](https://docs.docker.com/engine/install/).
 2. [Docker Compose CLI plugin](https://docs.docker.com/compose/install/compose-plugin/).
-3. [CURL](https://curl.se/).
-4. A registered domain name pointing to the public IP address of your server.
-5. Opening up the following ports in your servers firewall:
+3. A registered domain name pointing to the public IP address of your server.
+4. Opening up the following ports in your servers firewall:
    - `15600 TCP` - Used for gossip.
    - `14626 UDP` - Used for autopeering.
    - `80 TCP` - Used for HTTP.
    - `443 TCP` - Used for HTTPS.
+5. [CURL](https://curl.se/).
 
 ## Download the latest release
 
