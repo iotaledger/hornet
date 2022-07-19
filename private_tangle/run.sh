@@ -6,9 +6,9 @@ if [ ! -d "privatedb" ]; then
 fi
 
 if [ $# -eq 0 ]; then
-    docker-compose --profile "2-nodes" up
+    docker compose --profile "2-nodes" up
 elif [[ $1 = "3" || $1 = "4" ]]; then
-    docker-compose --profile "$1-nodes" up
+    docker compose --profile "$1-nodes" up
 else
   echo "Usage: ./run.sh [3|4]"
 fi
