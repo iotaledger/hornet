@@ -74,7 +74,7 @@ DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
 ```
 
 * Replace `your-email@example.com` with the e-mail used for issuing a [Let's Encrypt](https://letsencrypt.org) SSL certificate.
-* Replace `node.your-domain.com` with the domain pointor to your public IP address as described in the [requirements](#requirements). 
+* Replace `node.your-domain.com` with the domain pointing to your public IP address as described in the [requirements](#requirements). 
 
 ### 2. Setup neighbors
 
@@ -135,7 +135,6 @@ You can configure your wallet software to use `https://node.your-domain.com`
 ### Displaying Log Output
 
 You can display the HORNET logs by running:
-
 ```sh
 docker compose logs -f hornet
 ```
@@ -146,20 +145,27 @@ Instructs Docker to continue displaying the log to `stdout` until CTRL+C is pres
 ### Stopping HORNET
 
 You can stop HORNET container by running:
-
 ```sh
 docker compose down
 ```
 
 ### Tools
 
-To access the tools provided inside HORNET you can use
-
+To access the tools provided inside HORNET you can use:
 ```sh
 docker compose run hornet tool <tool-name>
 ```
 
-To see the list of tools included run
+To see the list of tools included run:
 ```sh
 docker compose run hornet tool -h
 ```
+
+## JWT Auth
+
+To generate a JWT token to be used to access protected routes you can run:
+```sh
+docker compose run hornet tool jwt-api --databasePath data/p2pstore
+```
+
+* If you changed the `restAPI.jwtAuth.salt` value in the `config.json`, then you need to pass that value as a parameter as `--salt <restAPI.jwtAuth.salt value from your config.json>`

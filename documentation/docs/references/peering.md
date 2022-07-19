@@ -115,7 +115,7 @@ This is `peering.json` example, with `ip4`, `ip6` and `dns` peers:
 
 ## Autopeering
 
-HORNET also supports automatically finding peers through the _autopeering_ module.
+HORNET also supports automatic discovery of peers through the _autopeering_ module.
 To minimize service distribution in case your autopeered peers are flaky, we recommend you only use autopeering if you have at least four static peers.
 
 Autopeering is disabled by default. If you want to enable it, set the `"p2p.autopeering.enabled"` value to `"true"`.
