@@ -125,8 +125,7 @@ After starting HORNET you will be able to access your node at the following endp
 - Grafana: `https://node.your-domain.com/grafana`
 
 :::warning
-   After starting your node for the first time, please change the default grafana credentials:
-
+   After starting your node for the first time, please change the default grafana credentials<br />
    User: `admin`<br />
    Password: `admin`
 :::

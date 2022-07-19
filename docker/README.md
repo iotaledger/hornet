@@ -13,7 +13,7 @@ This setup lets you run an [IOTA Hornet node](https://wiki.iota.org/hornet/welco
 
 ## Prepare
 
-*NOTE: The commands assume you are using Linux.*
+> **NOTE**: The commands assume you are using Linux.
 
 ### 1. Setup Environment
 
@@ -36,10 +36,9 @@ DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
 
 Add your neighbors addresses to the `peering.json` file.
 
-:::note
-This step is recommended, but optional if you are using autopeering.
-See [peering](../references/peering.md) for more information.
-:::
+> **NOTE**:
+> This step is recommended, but optional if you are using autopeering.
+> See [peering](../references/peering.md) for more information.
 
 
 ### 3. Create the `data` folder
@@ -80,12 +79,10 @@ After starting HORNET you will be able to access your node at the following endp
 - Dashboard: `https://node.your-domain.com/dashboard`
 - Grafana: `https://node.your-domain.com/grafana`
 
-:::warning
-After starting your node for the first time, please change the default grafana credentials:
-
-User: `admin`<br />
-Password: `admin`
-:::
+> **_Warning:_**
+> After starting your node for the first time, please change the default grafana credentials<br />
+> User: `admin`<br />
+> assword: `admin`
 
 You can configure your wallet software to use `https://node.your-domain.com`
 
