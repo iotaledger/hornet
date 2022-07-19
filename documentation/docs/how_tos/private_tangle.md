@@ -3,7 +3,7 @@ description: How to run your own private Chrysalis Tangle
 image: /img/Banner/banner_hornet_private_tangle.png
 keywords:
 - IOTA Node 
-- Hornet Node
+- HORNET Node
 - Private Tangle
 - Chrysalis
 - Coordinator
@@ -12,57 +12,46 @@ keywords:
 
 ---
 
-# Private Tangle
+# Run a Private Tangle
 
-![Hornet Node Private Tangle](/img/Banner/banner_hornet_private_tangle.png)
+![HORNET Node Private Tangle](/img/Banner/banner_hornet_private_tangle.png)
 
-This is a small tutorial on how to run your own private [Chrysalis](https://chrysalis.iota.org/) tangle.
+This guide explains how you can run your own private tangle.
+Private tangles are targetted at developers wanting to test their solutions in a private network environment. 
 
-You will need to set up [a Coordinator](https://wiki.iota.org/learn/about-iota/an-introduction-to-iota#the-coordinator) and at least one additional [node](../getting_started/getting_started.md) and distribute some tokens to an address that you can manage using a wallet. You will do this by running some scripts from the _private_tangle_ folder that you can find in the HORNET repository.
+## Requirements
 
-## Configuration
+1. A recent release of Docker enterprise or community edition. You can find installation instructions in the [official Docker documentation](https://docs.docker.com/engine/install/).
+2. [Docker Compose CLI plugin](https://docs.docker.com/compose/install/compose-plugin/).
 
-The scripts in the _private_tangle_ folder of the HORNET repository, which you will use to run the Coordinator and the nodes, are preconfigured. By default, they will distribute the tokens to the following address:
+## Download the latest release
 
-```
-atoi1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vluehe53e
-```
+Once you have completed all the installation [requirements](#requirements), you can download the latest release by running:
 
-If you want to use an existing address, search for your address in [the explorer](https://explorer.iota.org/mainnet) and look for the corresponding ED25519 address. You can find the _create_snapshot_private_tangle_ script in the _private_tangle_ directory. You will need to update the following line to use your own ED25519 address:
-
-```bash
-...
-go run "..\main.go" tool snap-gen --networkName private_tangle1 --mintAddress [ADDRESS] --outputPath "snapshots\private_tangle1\full_snapshot.bin"
-...
-```
-
-## Start the Coordinator
-
-In the HORNET repository, change to the _private_tangle_ directory and run the `run_coo_bootstrap` script. This will create all the necessary files to run the network, distribute the tokens to the address you configured, and start the Coordinator.
-
-In subsequent starts, you can use the `run_coo` script, to skip the bootstrap step.
-
-## Start Additional Nodes
-
-To start additional nodes, you can use the _run_ scripts provided in the +private_tangle_ folder. You can run them on the same device, as they are preconfigured to listen on different ports.
-
-Congratulations, you are now running a private network! You can find the dashboard at [http://localhost:8081](http://localhost:8081), and use it to monitor your Coordinator. You can log in to the Dashboard using `admin` as username and password.
-
-## Use a Wallet to Manage the Tokens
-
-To access the tokens on the network, you need to take one more step. If you used the default configuration, you can use the following mnemonic to set up a wallet:
-
-```
-giant dynamic museum toddler six deny defense ostrich bomb access mercy blood explain muscle shoot shallow glad autumn author calm heavy hawk abuse rally
+```sh
+mkdir private_tangle
+cd private_tangle
+curl -L -O "https://github.com/iotaledger/hornet/releases/download/v2.0.0-beta.1/HORNET-2.0.0-beta.1-private_tangle.tar.gz"
+tar -zxf HORNET-2.0.0-beta.1-private_tangle.tar.gz
 ```
 
-You can now connect your wallet to one of the nodes that are running. You should be able to find the tokens distributed to your wallet.
+## Bootstrap your network
 
-If you are using the [cli-wallet](https://github.com/iotaledger/cli-wallet), you should run the following command:
-
-```bash
-> wallet mnemonic "giant dynamic museum toddler six deny defense ostrich bomb access mercy blood explain muscle shoot shallow glad autumn author calm heavy hawk abuse rally"
-> wallet new --node "http://localhost:14266" --alias EXAMPLE
+To bootstrap the network you should run:
+```sh
+./bootstrap.sh
 ```
 
-You are now ready start using your own private tangle!
+## Run your network
+
+To run the private tangle you should run:
+```sh
+./run.sh
+```
+
+This will start the private tangle using a coordinator node and second node.
+You can use `./run.sh 3` or `./run.sh 4` to start the private tangle with additional nodes instead.
+
+## Access your network
+
+All the information required to access the private tangle is contained inside the `README.md`.

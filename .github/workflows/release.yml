@@ -53,14 +53,6 @@ jobs:
           username: ${{ secrets.IOTALEDGER_DOCKER_USERNAME }}
           password: ${{ secrets.IOTALEDGER_DOCKER_PASSWORD }}
 
-      - name: Prepare docker files
-        run: |
-          cp config_testnet.json docker/config.json
-          cp config_defaults.json docker/
-          cp config_testnet.json docker/
-          cp config_alphanet.json docker/
-          cp peering.json docker/
-
       - name: Create docker.tar.gz
         uses: ihiroky/archive-action@v1
         with:

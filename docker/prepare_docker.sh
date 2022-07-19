@@ -17,4 +17,5 @@ mkdir -p data/prometheus
 mkdir -p data/dashboard
 if [[ "$OSTYPE" != "darwin"* ]]; then
   chown -R 65532:65532 data
+  chown 65532:65532 peering.json
 fi

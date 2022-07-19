@@ -1,9 +1,9 @@
 ---
-description: Learn how to install and run a Hornet node using Docker. It is recommended for macOS and Windows.
+description: Learn how to install and run a HORNET node using Docker. It is recommended for macOS and Windows.
 image: /img/Banner/banner_hornet_using_docker.png
 keywords:
 - IOTA Node
-- Hornet Node
+- HORNET Node
 - Docker
 - Install
 - Run
@@ -13,199 +13,159 @@ keywords:
 
 ---
 
-# Using Docker
+# Install HORNET using Docker
 
-![Hornet Node using Docker](/img/Banner/banner_hornet_using_docker.png)
+![HORNET Node using Docker](/img/Banner/banner_hornet_using_docker.png)
 
-Hornet Docker images (amd64/x86_64 architecture) are available at the [iotaledger/hornet](https://hub.docker.com/r/iotaledger/hornet) Docker hub.
+This guide represents the recommended setup to run a HORNET node.
+It includes everything required to setup a public node accessible by wallets and applications:
+- [HORNET](https://github.com/iotaledger/hornet)
+- [Traefik](https://traefik.io) - Reverse proxy using SSL certificates to secure access to the node API and dashboard.
+- [Prometheus](https://prometheus.io) - Metrics scraper configured to collect all metrics from HORNET and INX extensions.
+- [Grafana](https://grafana.com) - Data visualizer that can be used to display the metrics collected by Prometheus.
+- [inx-dashboard](https://github.com/iotaledger/inx-dashboard) - Node dashboard.
+- [inx-indexer](https://github.com/iotaledger/inx-dashboard) - Indexer extension for wallets and applications.
+- [inx-mqtt](https://github.com/iotaledger/inx-mqtt) - MQTT extension providing the Event API.
+- [inx-participation](https://github.com/iotaledger/inx-participation) - Participation extension providing on-tangle-voting.
+- [inx-poi](https://github.com/iotaledger/inx-poi) - Extention to generate proofs of inclusion.
+- [inx-spammer](https://github.com/iotaledger/inx-spammer) - Network spammer.
+
+We only recommend running a node on hosted servers and not on personal computers.
+Please take into consideration the points explained in the [Security 101](https://wiki.iota.org/nodes/explanations/security_101#securing-your-device).
+
+HORNET Docker images (amd64/x86_64 and arm64 architecture) are available at the [iotaledger/hornet](https://hub.docker.com/r/iotaledger/hornet) Docker hub.
 
 ## Requirements
-
 1. A recent release of Docker enterprise or community edition. You can find installation instructions in the [official Docker documentation](https://docs.docker.com/engine/install/).
-2. [GIT](https://git-scm.com/).
-3. [CURL](https://curl.se/).
-4. At least 1GB available RAM.
+2. [Docker Compose CLI plugin](https://docs.docker.com/compose/install/compose-plugin/).
+3. A registered domain name pointing to the public IP address of your server.
+4. Opening up the following ports in your servers firewall:
+   - `15600 TCP` - Used for gossip.
+   - `14626 UDP` - Used for autopeering.
+   - `80 TCP` - Used for HTTP.
+   - `443 TCP` - Used for HTTPS.
+5. [CURL](https://curl.se/).
 
-## Clone the Repository
+## Download the latest release
 
-Once you have completed all the installation [requirements](#requirements), you can clone the repository by running:
+Once you have completed all the installation [requirements](#requirements), you can download the latest release by running:
 
 ```sh
-git clone https://github.com/iotaledger/hornet && cd hornet && git checkout mainnet
+mkdir hornet
+cd hornet
+curl -L -O "https://github.com/iotaledger/hornet/releases/download/v2.0.0-beta.1/HORNET-2.0.0-beta.1-docker.tar.gz"
+tar -zxf HORNET-2.0.0-beta.1-docker.tar.gz
 ```
-
-:::note
-
-The next portion of the guide assumes you are executing commands from the root directory of the repository.
-
-:::
 
 ## Prepare
 
-1. If you want to use alternative ports, edit the `config.json` file.
+### 1. Setup Environment
 
-2. Add your neighbors addresses to the `peering.json` file.
+Create a file named `.env` add the following to the file:
 
-The Docker image runs under user with user id 65532 and group id 65532. To make sure there are no permission issues, you will need to:
+```
+ACME_EMAIL=your-email@example.com
 
-1. Create the directory for the database by running the following command:
+HORNET_HOST=node.your-domain.com
 
-   ```sh
-   sudo mkdir mainnetdb && sudo chown 65532:65532 mainnetdb
-   ```
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=0000000000000000000000000000000000000000000000000000000000000000
+DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
+```
 
-2. Create the directory for the peer database by running the following command:
+* Replace `your-email@example.com` with the e-mail used for issuing a [Let's Encrypt](https://letsencrypt.org) SSL certificate.
+* Replace `node.your-domain.com` with the domain pointing to your public IP address as described in the [requirements](#requirements). 
 
-   ```sh
-   sudo mkdir p2pstore && sudo chown 65532:65532 p2pstore
-   ```
+### 2. Setup neighbors
 
-3. Create the directory for the snapshots by running the following command:
+Add your neighbors addresses to the `peering.json` file.
 
-   ```sh
-   sudo mkdir -p snapshots/mainnet && sudo chown -R 65532:65532 snapshots
-   ```
+:::note
+This step is recommended, but optional if you are using autopeering.
+See [peering](../references/peering.md) for more information.
+:::
+
+
+### 3. Create the `data` folder
+
+All files used by HORNET, the INX extensions, Traefik & co will be stored in a directory called `data`.
+Docker image runs under user with user id 65532 and group id 65532, so this directory needs to have the correct permissions to be accessed by HORNET.
+To create this directory with correct permissions run the contained script:
+
+```sh
+./prepare_docker.sh
+```
+
+### 4. Set dashboard credentials
+
+To access your nodes dashboard, a set of credentials need to be configured.
+Run the following command to generate a password hash and salt for the dashboard:
+
+```
+docker compose run hornet tool pwd-hash
+```
+
+* Update the `DASHBOARD_PASSWORD` and `DASHBOARD_SALT` values in the `.env` file with the result of the previous command.
 
 ## Run
 
-You can pull the latest image from `iotaledger/hornet` public Docker hub registry by running:
+### Starting HORNET
 
-```bash
-docker pull iotaledger/hornet:latest && docker tag iotaledger/hornet:latest hornet:latest
-```
-
-We recommend that you run on host network to improve performance. Otherwise, you will have to publish ports using iptables NAT which is slower.
+You can start a HORNET by running:
 
 ```sh
-docker run \
-  -v $(pwd)/config.json:/app/config.json:ro \
-  -v $(pwd)/peering.json:/app/peering.json \
-  -v $(pwd)/profiles.json:/app/profiles.json:ro \
-  -v $(pwd)/mainnetdb:/app/mainnetdb \
-  -v $(pwd)/p2pstore:/app/p2pstore \
-  -v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet \
-  --restart always \
-  --name hornet\
-  --net=host \
-  --ulimit nofile=8192:8192 \
-  -d \
-  hornet:latest
+docker compose up -d
 ```
 
-* `$(pwd)` Stands for the present working directory. All mentioned directories are mapped to the container, so the Hornet in the container persists the data directly to those directories.
-* `-v $(pwd)/config.json:/app/config.json:ro` Maps the local `config.json` file into the container in `readonly` mode.
-* `-v $(pwd)/peering.json:/app/peering.json` Maps the local `peering.json` file into the container.
-* `-v $(pwd)/profiles.json:/app/profiles.json:ro` Maps the local `profiles.json` file into the container in `readonly` mode.
-* `-v $(pwd)/mainnetdb:/app/mainnetdb` Maps the local `mainnetdb` directory into the container.
-* `-v $(pwd)/p2pstore:/app/p2pstore` Maps the local `p2pstore` directory into the container.
-* `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet` Maps the local `snapshots` directory into the container.
-* `--restart always` Instructs Docker to restart the container after Docker reboots.
-* `--name hornet` Name of the running container instance. You can refer to the given container by this name.
-* `--net=host` Instructs Docker to use the host's network, so the network is not isolated. We recommend that you run on host network for better performance. This way, the container will also open any ports it needs on the host network, so you will not need to specify any ports.
-* `--ulimit nofile=8192:8192` increases the ulimits inside the container. This is important when running with large databases.
-* `-d` Instructs Docker to run the container instance in a detached mode (daemon).
+* `-d` Instructs Docker to start HORNET in the background.
 
+After starting HORNET you will be able to access your node at the following endpoints:
+- API: `https://node.your-domain.com/api/routes`
+- Dashboard: `https://node.your-domain.com/dashboard`
+- Grafana: `https://node.your-domain.com/grafana`
 
-You can run `docker stop -t 300 hornet` to gracefully end the process.
-
-## Create Username and Password for the Hornet Dashboard
-
-If you use the Hornet dashboard, you need to create a secure password. You can start your Hornet container and execute the following command when the container is running:
-
-```sh
-docker exec -it hornet /app/hornet tool pwd-hash
-
-```
-
-Expected output:
-
-```plaintext
-Enter a password:
-Re-enter your password:
-Success!
-Your hash: [YOUR_HASH_HERE]
-Your salt: [YOUR_SALT_HERE]
-```
-
-You can edit `config.json` and customize the _dashboard_ section to your needs.
-
-```sh
-  "dashboard": {
-    "bindAddress": "0.0.0.0:8081",
-    "auth": {
-      "sessionTimeout": "72h",
-      "username": "admin",
-      "passwordHash": "[YOUR_HASH_HERE]",
-      "passwordSalt": "[YOUR_SALT_HERE]"
-    }
-  },
-```
-
-## Build Your Own Hornet Image
-
-You can build your own Docker image by running the following command:
-
-```sh
-docker build -f Dockerfile -t hornet:latest .
-```
-
-Or pull it from Docker hub (only available for amd64/x86_64):
-
-```sh
-docker pull iotaledger/hornet:latest && docker tag iotaledger/hornet:latest hornet:latest
-```
-
-## Managing a Node
-
-:::note
-
-Hornet uses an in-memory cache so to save all data to the underlying persistent storage, a grace period of at least 200 seconds for a shutdown is necessary.
-
+:::warning
+   After starting your node for the first time, please change the default grafana credentials<br />
+   User: `admin`<br />
+   Password: `admin`
 :::
 
-### Starting an Existing Hornet
-
-You can start an existing Hornet container by running:
-
-```bash
-docker start hornet
-```
-
-### Restarting Hornet
-
-You can restart an existing Hornet container by running:
-
-```bash
-docker restart -t 300 hornet
-```
-
-* `-t 300` Instructs Docker to wait for a grace period before shutting down.
-
-### Stopping Hornet
-
-You can stop an existing Hornet container by running:
-
-```bash
-docker stop -t 300 hornet
-```
-
-* `-t 300` Instructs Docker to wait for a grace period before shutting down.
+You can configure your wallet software to use `https://node.your-domain.com`
 
 ### Displaying Log Output
 
-You can display existing Hornet container logs by running:
-
-```bash
-docker logs -f hornet
+You can display the HORNET logs by running:
+```sh
+docker compose logs -f hornet
 ```
 
 * `-f`
 Instructs Docker to continue displaying the log to `stdout` until CTRL+C is pressed.
 
-## Removing a Container
+### Stopping HORNET
 
-You can remove an existing Hornet container by running:
-
-```bash
-docker container rm hornet
+You can stop HORNET container by running:
+```sh
+docker compose down
 ```
+
+### Tools
+
+To access the tools provided inside HORNET you can use:
+```sh
+docker compose run hornet tool <tool-name>
+```
+
+To see the list of tools included run:
+```sh
+docker compose run hornet tool -h
+```
+
+## JWT Auth
+
+To generate a JWT token to be used to access protected routes you can run:
+```sh
+docker compose run hornet tool jwt-api --databasePath data/p2pstore
+```
+
+* If you changed the `restAPI.jwtAuth.salt` value in the `config.json`, then you need to pass that value as a parameter as `--salt <restAPI.jwtAuth.salt value from your config.json>`

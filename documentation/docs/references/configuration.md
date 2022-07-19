@@ -1,9 +1,9 @@
 ---
-description: This section describes the configuration parameters and their types for your Hornet node.
+description: This section describes the configuration parameters and their types for your HORNET node.
 image: /img/Banner/banner_hornet_configuration.png
 keywords:
 - IOTA Node 
-- Hornet Node
+- HORNET Node
 - Configuration
 - JSON
 - Customize
@@ -12,11 +12,11 @@ keywords:
 ---
 
 
-# Core Configuration
+# Configuration
 
-![Hornet Node Configuration](/img/Banner/banner_hornet_configuration.png)
+![HORNET Node Configuration](/img/Banner/banner_hornet_configuration.png)
 
-Hornet uses a JSON standard format as a config file. If you are unsure about JSON syntax, you can find more information in the [official JSON specs](https://www.json.org).
+HORNET uses a JSON standard format as a config file. If you are unsure about JSON syntax, you can find more information in the [official JSON specs](https://www.json.org).
 
 You can change the path of the config file by using the `-c` or `--config` argument while executing `hornet` executable.
 
