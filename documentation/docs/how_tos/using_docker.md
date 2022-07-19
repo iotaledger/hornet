@@ -1,9 +1,9 @@
 ---
-description: Learn how to install and run a Hornet node using Docker. It is recommended for macOS and Windows.
+description: Learn how to install and run a HORNET node using Docker. It is recommended for macOS and Windows.
 image: /img/Banner/banner_hornet_using_docker.png
 keywords:
 - IOTA Node
-- Hornet Node
+- HORNET Node
 - Docker
 - Install
 - Run
@@ -15,7 +15,7 @@ keywords:
 
 # Install HORNET using Docker
 
-![Hornet Node using Docker](/img/Banner/banner_hornet_using_docker.png)
+![HORNET Node using Docker](/img/Banner/banner_hornet_using_docker.png)
 
 This guide represents the recommended setup to run a HORNET node.
 It includes everything required to setup a public node accessible by wallets and applications:
@@ -112,7 +112,7 @@ docker compose run hornet tool pwd-hash
 
 ### Starting HORNET
 
-You can start an existing Hornet container by running:
+You can start a HORNET by running:
 
 ```sh
 docker compose up -d
@@ -136,7 +136,7 @@ You can configure your wallet software to use `https://node.your-domain.com`
 
 ### Displaying Log Output
 
-You can display existing Hornet container logs by running:
+You can display the HORNET logs by running:
 
 ```sh
 docker compose logs -f hornet
@@ -147,7 +147,7 @@ Instructs Docker to continue displaying the log to `stdout` until CTRL+C is pres
 
 ### Stopping HORNET
 
-You can stop an existing Hornet container by running:
+You can stop HORNET container by running:
 
 ```sh
 docker compose down
