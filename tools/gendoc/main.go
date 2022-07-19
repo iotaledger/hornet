@@ -70,4 +70,10 @@ func main() {
 		"../../config_defaults.json",
 		ignoreFlags,
 	)
+
+	createDefaultConfigFile(
+		application,
+		"../../docker/config_defaults.json",
+		ignoreFlags,
+	)
 }

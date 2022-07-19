@@ -1,0 +1,58 @@
+{
+  "protocol": {
+    "targetNetworkName": "alphanet-8",
+    "milestonePublicKeyCount": 3,
+    "baseToken": {
+      "name": "Shimmer",
+      "tickerSymbol": "SMR",
+      "unit": "SMR",
+      "subunit": "glow",
+      "decimals": 6,
+      "useMetricPrefix": false
+    },
+    "publicKeyRanges": [
+      {
+        "key": "d9922819a39e94ddf3907f4b9c8df93f39f026244fcb609205b9a879022599f2",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "d85e5b1590d898d1e0cdebb2e3b5337c8b76270142663d78811683ba47c17c98",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "f9d9656a60049083eef61487632187b351294c1fa23d118060d813db6d03e8b6",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "3df80964cc83921e08c1fa0a4f5fc05810a634da45461b2b315fcbfd62f7cab7",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "8e222ae7e2adcfb87a2984a19aad52b1979ed1472c3cb17239a73ef1d344c35a",
+        "start": 0,
+        "end": 0
+      }
+    ]
+  },
+  "p2p": {
+    "autopeering": {
+      "enabled": true,
+      "entryNodes": [
+        "/dns/entry-hornet-0.h.alphanet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr",
+        "/dns/entry-hornet-1.h.alphanet.iotaledger.net/udp/14626/autopeering/CbYtFzRQtqeNQJQFYRZk1WewxfKCmqXCHZ16od1d23PX"
+      ]
+    }
+  },
+  "snapshots": {
+    "downloadURLs": [
+      {
+        "full": "https://files.alphanet.iotaledger.net/snapshots/latest-full_snapshot.bin",
+        "delta": "https://files.alphanet.iotaledger.net/snapshots/latest-delta_snapshot.bin"
+      }
+    ]
+  }
+}

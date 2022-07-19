@@ -63,13 +63,7 @@
       }    
     ]
   },
-  "db": {
-    "path": "testnet/database"
-  },
   "p2p": {
-    "db": {
-      "path": "testnet/p2pstore"
-    },
     "autopeering": {
       "enabled": true,
       "entryNodes": [
@@ -79,8 +73,6 @@
     }
   },
   "snapshots": {
-    "fullPath": "testnet/snapshots/full_snapshot.bin",
-    "deltaPath": "testnet/snapshots/delta_snapshot.bin",
     "downloadURLs": [
       {
         "full": "https://files.testnet.shimmer.network/snapshots/latest-full_snapshot.bin",
