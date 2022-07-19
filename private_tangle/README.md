@@ -2,7 +2,7 @@ This folder contains a Docker-based setup to run your own development private Ta
 are:
 
 1. `./bootstrap.sh` this will bootstrap your own private tangle by creating the genesis snapshot and required files.
-   - _**Note:** You should run `./bootstrap.sh build` to re-build the docker images after any updates to the HORNET codebase (e.g. changing files or pulling git changes)_ 
+   - _**Note:** If you are running this from inside the repository, you should run `./bootstrap.sh build` to re-build the docker images after any updates to the HORNET codebase (e.g. changing files or pulling git changes)_ 
 2. Run:
    - `./run.sh` to run COO + 1 additional node.
    - `./run.sh 3` to run COO + 2 additional nodes.
