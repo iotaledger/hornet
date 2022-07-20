@@ -5,7 +5,7 @@ if [[ "$OSTYPE" != "darwin"* && "$EUID" -ne 0 ]]; then
   exit
 fi
 
-docker-compose down --remove-orphans
+docker compose down --remove-orphans
 
 rm -Rf privatedb
 rm -Rf snapshots

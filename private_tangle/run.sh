@@ -16,5 +16,5 @@ if [[ ($1 = "3" || $1 = "4") && ($2 = "" || $2 = -*) ]]; then
 elif [[ $1 = "" || $1 = -* ]]; then
     docker compose --profile "2-nodes" up $@ 
 else
-  echo "Usage: ./run.sh [3|4] [docker-compose up options]"
+  echo "Usage: ./run.sh [3|4] [docker compose up options]"
 fi
