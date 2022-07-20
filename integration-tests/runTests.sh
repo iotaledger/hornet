@@ -22,8 +22,8 @@ docker pull iotaledger/inx-indexer:1.0.0-beta.1
 echo "Run integration tests"
 for name in $TEST_NAMES; do
   echo "Run ${name}"
-  TEST_NAME=$name docker-compose -f tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
+  TEST_NAME=$name docker compose -f tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
   docker logs tester &>logs/"$name"_tester.log
-  TEST_NAME=$name docker-compose -f tester/docker-compose.yml down
+  TEST_NAME=$name docker compose -f tester/docker-compose.yml down
 done
 
