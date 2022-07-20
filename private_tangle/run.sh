@@ -5,10 +5,10 @@ if [ ! -d "privatedb" ]; then
   exit
 fi
 
-# first arguments must be '3|4' and extra argument must not exist or must start with '-'
+# first argument must be '3|4' and extra argument must not exist or must start with '-'
 if [[ ($1 = "3" || $1 = "4") && ($2 = "" || $2 = -*) ]]; then
     PROFILE=$1
-    # shift arguments to remove profile
+    # shift arguments to remove profile arg
     shift;
     docker compose --profile "$PROFILE-nodes" up $@
 
