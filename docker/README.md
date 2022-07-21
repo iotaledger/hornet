@@ -123,3 +123,9 @@ docker compose run hornet tool jwt-api --databasePath data/p2pstore
 ```
 
 * If you changed the `restAPI.jwtAuth.salt` value in the `config.json`, then you need to pass that value as a parameter as `--salt <restAPI.jwtAuth.salt value from your config.json>`
+
+## INX
+
+This setup includes the INX extensions listed at the beginning of this guide.
+If you want to disable certain extensions you can comment out the different services in the `docker-compose.yml` file and restart HORNET.
+

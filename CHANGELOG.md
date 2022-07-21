@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-beta.2] - 21.07.2022
+
+:warning: :warning: :warning:
+This release contains a breaking change in the validation, so you need to update your node to keep participating in the testnet.
+:warning: :warning: :warning:
+
+### Fixed
+    - Updated iota.go with fixes for transaction validation
+
+
 ## [2.0.0-beta.1] - 18.07.2022
 
 ### Changed

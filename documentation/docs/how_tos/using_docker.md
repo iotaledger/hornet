@@ -53,8 +53,8 @@ Once you have completed all the installation [requirements](#requirements), you 
 ```sh
 mkdir hornet
 cd hornet
-curl -L -O "https://github.com/iotaledger/hornet/releases/download/v2.0.0-beta.1/HORNET-2.0.0-beta.1-docker.tar.gz"
-tar -zxf HORNET-2.0.0-beta.1-docker.tar.gz
+curl -L -O "https://github.com/iotaledger/hornet/releases/download/v2.0.0-beta.2/HORNET-2.0.0-beta.2-docker.tar.gz"
+tar -zxf HORNET-2.0.0-beta.2-docker.tar.gz
 ```
 
 ## Prepare
@@ -169,3 +169,9 @@ docker compose run hornet tool jwt-api --databasePath data/p2pstore
 ```
 
 * If you changed the `restAPI.jwtAuth.salt` value in the `config.json`, then you need to pass that value as a parameter as `--salt <restAPI.jwtAuth.salt value from your config.json>`
+
+## INX
+
+This setup includes the INX extensions listed at the beginning of this guide.
+If you want to disable certain extensions you can comment out the different services in the `docker-compose.yaml` file and restart HORNET.
+
