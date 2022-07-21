@@ -1,2 +1,7 @@
 {
+  "p2p": {
+    "autopeering": {
+      "enabled": true
+    }
+  }
 }
