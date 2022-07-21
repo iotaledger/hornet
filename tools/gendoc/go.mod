@@ -61,9 +61,9 @@ require (
 	github.com/iancoleman/orderedmap v0.2.0 // indirect
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf // indirect
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220714075325-11202fe498d6 // indirect
-	github.com/iotaledger/inx/go v1.0.0-beta.1 // indirect
+	github.com/iotaledger/inx/go v1.0.0-beta.2 // indirect
 	github.com/iotaledger/iota.go v1.0.0 // indirect
-	github.com/iotaledger/iota.go/v3 v3.0.0-beta.1 // indirect
+	github.com/iotaledger/iota.go/v3 v3.0.0-beta.3 // indirect
 	github.com/ipfs/go-cid v0.2.0 // indirect
 	github.com/ipfs/go-datastore v0.5.1 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
@@ -160,13 +160,13 @@ require (
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
-	golang.org/x/sys v0.0.0-20220712014510-0a85c31ab51e // indirect
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	golang.org/x/tools v0.1.11 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
-	google.golang.org/genproto v0.0.0-20220714211235-042d03aeabc9 // indirect
+	google.golang.org/genproto v0.0.0-20220720214146-176da50484ac // indirect
 	google.golang.org/grpc v1.48.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect

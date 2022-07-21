@@ -1,7 +1,7 @@
 version: '3'
 services:
   inx-indexer:
-    image: iotaledger/inx-indexer:1.0.0-beta.1
+    image: iotaledger/inx-indexer:1.0.0-beta.2
     restart: on-failure
     volumes:
       - ./testnet/indexer:/app/database
@@ -10,14 +10,14 @@ services:
       - "--indexer.bindAddress=inx-indexer:9091"
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:1.0.0-beta.1
+    image: iotaledger/inx-mqtt:1.0.0-beta.2
     restart: on-failure
     command:
       - "--inx.address=hornet:9029"
       - "--mqtt.websocket.bindAddress=inx-mqtt:1888"
 
   inx-participation:
-    image: iotaledger/inx-participation:1.0.0-beta.1
+    image: iotaledger/inx-participation:1.0.0-beta.2
     restart: on-failure
     volumes:
       - ./testnet/participation:/app/database
@@ -26,7 +26,7 @@ services:
       - "--participation.bindAddress=inx-participation:9892"
 
   inx-dashboard:
-    image: iotaledger/inx-dashboard:1.0.0-beta.1
+    image: iotaledger/inx-dashboard:1.0.0-beta.2
     restart: on-failure
     ports:
       - "8081:8081/tcp"
