@@ -1,6 +1,6 @@
 {
   "protocol": {
-    "targetNetworkName": "alphanet-8",
+    "targetNetworkName": "alphanet-9",
     "milestonePublicKeyCount": 3,
     "baseToken": {
       "name": "Shimmer",
@@ -47,12 +47,21 @@
       ]
     }
   },
+  "tangle": {
+    "maxDeltaBlockYoungestConeRootIndexToCMI": 80,
+    "maxDeltaBlockOldestConeRootIndexToCMI": 130
+  },
   "snapshots": {
+    "depth": 500,
+    "interval": 2000,
     "downloadURLs": [
       {
         "full": "https://files.alphanet.iotaledger.net/snapshots/latest-full_snapshot.bin",
         "delta": "https://files.alphanet.iotaledger.net/snapshots/latest-delta_snapshot.bin"
       }
     ]
+  },
+  "warpsync": {
+    "advancementRange": 1500
   }
 }
