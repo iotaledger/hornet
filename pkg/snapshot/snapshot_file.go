@@ -150,7 +150,7 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 		}
 	}
 
-	if err := binary.Write(&b, binary.LittleEndian, uint64(len(md.Created))); err != nil {
+	if err := binary.Write(&b, binary.LittleEndian, uint32(len(md.Created))); err != nil {
 		return nil, fmt.Errorf("unable to write created outputs array length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
 
@@ -161,7 +161,7 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 		}
 	}
 
-	if err := binary.Write(&b, binary.LittleEndian, uint64(len(md.Consumed))); err != nil {
+	if err := binary.Write(&b, binary.LittleEndian, uint32(len(md.Consumed))); err != nil {
 		return nil, fmt.Errorf("unable to write consumed outputs array length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
 
@@ -233,13 +233,13 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolStorage *storage.ProtocolSt
 		msDiff.SpentTreasuryOutput = spentTreasuryOutput
 	}
 
-	var createdCount, consumedCount uint64
+	var createdCount, consumedCount uint32
 	if err := binary.Read(reader, binary.LittleEndian, &createdCount); err != nil {
 		return 0, nil, fmt.Errorf("unable to read LS ms-diff created count: %w", err)
 	}
 
 	msDiff.Created = make(utxo.Outputs, createdCount)
-	for i := uint64(0); i < createdCount; i++ {
+	for i := uint32(0); i < createdCount; i++ {
 		diffCreatedOutput, err := ReadOutput(reader, protoParams)
 		if err != nil {
 			return 0, nil, fmt.Errorf("(ms-diff created-output) at pos %d: %w", i, err)
@@ -252,7 +252,7 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolStorage *storage.ProtocolSt
 	}
 
 	msDiff.Consumed = make(utxo.Spents, consumedCount)
-	for i := uint64(0); i < consumedCount; i++ {
+	for i := uint32(0); i < consumedCount; i++ {
 		diffConsumedSpent, err := readSpent(reader, protoParams, milestonePayload.Index, milestonePayload.Timestamp)
 		if err != nil {
 			return 0, nil, fmt.Errorf("(ms-diff consumed-output) at pos %d: %w", i, err)
