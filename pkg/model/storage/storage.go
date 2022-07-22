@@ -240,6 +240,7 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 	}
 }
 
+//lint:ignore U1000 used for easier debugging
 // profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
 func (s *Storage) profileCacheEnabled() *profile.Caches {
 	return &profile.Caches{
@@ -300,6 +301,7 @@ func (s *Storage) profileCacheEnabled() *profile.Caches {
 	}
 }
 
+//lint:ignore U1000 used for easier debugging
 // profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
 func (s *Storage) profileLeakDetectionEnabled() *profile.Caches {
 	return &profile.Caches{

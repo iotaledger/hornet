@@ -80,20 +80,6 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	require.Equal(te.TestInterface, 0, confirmedMilestoneStats.BlocksReferenced)
 }
 
-func (te *TestEnvironment) milestoneIDForIndex(msIndex iotago.MilestoneIndex) iotago.MilestoneID {
-	cachedMilestone := te.storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
-	require.NotNil(te.TestInterface, cachedMilestone)
-	defer cachedMilestone.Release(true) // milestone -1
-	return cachedMilestone.Milestone().MilestoneID()
-}
-
-func (te *TestEnvironment) milestoneForIndex(msIndex iotago.MilestoneIndex) *storage.Milestone {
-	ms := te.storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
-	require.NotNil(te.TestInterface, ms)
-	defer ms.Release(true) // milestone -1
-	return ms.Milestone()
-}
-
 func (te *TestEnvironment) ReattachBlock(blockID iotago.BlockID, parents ...iotago.BlockID) iotago.BlockID {
 	block := te.storage.CachedBlockOrNil(blockID)
 	require.NotNil(te.TestInterface, block)

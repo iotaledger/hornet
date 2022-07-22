@@ -81,15 +81,6 @@ func (m *Manager) loadPending(ledgerIndex iotago.MilestoneIndex) {
 	})
 }
 
-func (m *Manager) readProtocolParasFromMilestone(index iotago.MilestoneIndex) *iotago.ProtocolParamsMilestoneOpt {
-	cachedMs := m.storage.CachedMilestoneByIndexOrNil(index)
-	if cachedMs == nil {
-		return nil
-	}
-	defer cachedMs.Release(true)
-	return cachedMs.Milestone().Milestone().Opts.MustSet().ProtocolParams()
-}
-
 // SupportedVersions returns a slice of supported protocol versions.
 func (m *Manager) SupportedVersions() Versions {
 	return SupportedVersions

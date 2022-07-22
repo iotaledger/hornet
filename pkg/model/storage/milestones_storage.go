@@ -462,6 +462,7 @@ func (s *Storage) SearchLatestMilestoneIndexInStore() iotago.MilestoneIndex {
 	return latestMilestoneIndex
 }
 
+// StoreMilestoneIfAbsent stores a milestone if it is not known yet.
 // milestone +1
 func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blockID iotago.BlockID) (cachedMilestone *CachedMilestone, newlyAdded bool) {
 

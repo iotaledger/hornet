@@ -72,7 +72,7 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 	}
 }
 
-// returns a producer which produces solid entry points.
+// NewSEPsProducer returns a producer which produces solid entry points.
 func NewSEPsProducer(
 	ctx context.Context,
 	dbStorage *storage.Storage,
@@ -117,7 +117,7 @@ func NewSEPsProducer(
 	}
 }
 
-// returns a producer which produces unspent outputs which exist for the current confirmed milestone.
+// NewCMIUTXOProducer returns a producer which produces unspent outputs which exist for the current confirmed milestone.
 func NewCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
@@ -144,7 +144,7 @@ func NewCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	}
 }
 
-// returns an iterator producing milestone indices with the given direction from/to the milestone range.
+// NewMsIndexIterator returns an iterator producing milestone indices with the given direction from/to the milestone range.
 func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex iotago.MilestoneIndex, targetIndex iotago.MilestoneIndex) func() (msIndex iotago.MilestoneIndex, done bool) {
 	var firstPassDone bool
 	switch direction {
@@ -195,7 +195,7 @@ func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieve
 	}
 }
 
-// returns a producer which produces milestone diffs from/to with the given direction.
+// NewMsDiffsProducer returns a producer which produces milestone diffs from/to with the given direction.
 func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex iotago.MilestoneIndex, targetIndex iotago.MilestoneIndex) MilestoneDiffProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
@@ -504,7 +504,8 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 	// a delta snapshot contains the milestone diffs from a full snapshot's target index onwards.
 	// if the delta snapshot already exists, we can reuse the existing file and just append to it.
 	if deltaSnapshotFileExists {
-		oldDeltaHeader, err := ReadDeltaSnapshotHeaderFromFile(s.snapshotDeltaPath)
+		var oldDeltaHeader *DeltaSnapshotHeader
+		oldDeltaHeader, err = ReadDeltaSnapshotHeaderFromFile(s.snapshotDeltaPath)
 		if err != nil {
 			return fmt.Errorf("unable to read delta snapshot header: %w", err)
 		}

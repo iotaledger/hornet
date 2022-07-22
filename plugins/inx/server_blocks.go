@@ -104,27 +104,27 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 }
 
 func (s *INXServer) ReadBlock(_ context.Context, blockID *inx.BlockId) (*inx.RawBlock, error) {
-	blkId := blockID.Unwrap()
-	cachedBlock := deps.Storage.CachedBlockOrNil(blkId) // block +1
+	blkID := blockID.Unwrap()
+	cachedBlock := deps.Storage.CachedBlockOrNil(blkID) // block +1
 	if cachedBlock == nil {
-		return nil, status.Errorf(codes.NotFound, "block %s not found", blkId.ToHex())
+		return nil, status.Errorf(codes.NotFound, "block %s not found", blkID.ToHex())
 	}
 	defer cachedBlock.Release(true) // block -1
 	return inx.WrapBlock(cachedBlock.Block().Block())
 }
 
 func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (*inx.BlockMetadata, error) {
-	blkId := blockID.Unwrap()
-	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(blkId) // meta +1
+	blkID := blockID.Unwrap()
+	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(blkID) // meta +1
 	if cachedBlockMeta == nil {
-		isSolidEntryPoint, err := deps.Storage.SolidEntryPointsContain(blkId)
+		isSolidEntryPoint, err := deps.Storage.SolidEntryPointsContain(blkID)
 		if err == nil && isSolidEntryPoint {
 			return &inx.BlockMetadata{
 				BlockId: blockID,
 				Solid:   true,
 			}, nil
 		}
-		return nil, status.Errorf(codes.NotFound, "block metadata %s not found", blkId.ToHex())
+		return nil, status.Errorf(codes.NotFound, "block metadata %s not found", blkID.ToHex())
 	}
 	defer cachedBlockMeta.Release(true) // meta -1
 	return INXNewBlockMetadata(cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())

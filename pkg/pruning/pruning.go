@@ -259,7 +259,6 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 		return 0, errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
 	}
 
-	//lint:ignore SA5011 nil pointer is already checked before with a panic
 	//if snapshotInfo.SnapshotIndex() < p.solidEntryPointCheckThresholdPast+p.additionalPruningThreshold+1 {
 	if snapshotInfo.SnapshotIndex() < p.additionalPruningThreshold+1 {
 		// Not enough history

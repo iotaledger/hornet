@@ -669,6 +669,7 @@ func NewProxyStorage(
 	}, nil
 }
 
+// CachedBlock returns a cached block object.
 // block +1
 func (s *ProxyStorage) CachedBlock(blockID iotago.BlockID) (*storage.CachedBlock, error) {
 	if !s.storeTarget.ContainsBlock(blockID) {
@@ -696,6 +697,7 @@ func (s *ProxyStorage) CachedBlock(blockID iotago.BlockID) (*storage.CachedBlock
 	return s.storeTarget.CachedBlock(blockID) // block +1
 }
 
+// CachedBlockMetadata returns a cached block metadata object.
 // meta +1
 func (s *ProxyStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.CachedMetadata, error) {
 	cachedBlock, err := s.CachedBlock(blockID) // block +1
@@ -733,6 +735,7 @@ func (s *ProxyStorage) Cleanup() {
 }
 
 // StoreBlockInterface
+
 func (s *ProxyStorage) StoreBlockIfAbsent(block *storage.Block) (cachedBlock *storage.CachedBlock, newlyAdded bool) {
 	return s.storeProxy.StoreBlockIfAbsent(block)
 }
