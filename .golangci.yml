@@ -21,6 +21,7 @@ linters:
         - gofmt
         - goimports
         - govet
+        - staticcheck
     disable:
         - errcheck
         - gochecknoglobals
