@@ -23,6 +23,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           golangci_lint_flags: "--timeout=10m"
-          reporter: "github-pr-review"
+          reporter: github-pr-check
           filter_mode: nofilter
           fail_on_error: true
