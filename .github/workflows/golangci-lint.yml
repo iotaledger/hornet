@@ -25,3 +25,4 @@ jobs:
           golangci_lint_flags: "--timeout=10m"
           reporter: "github-pr-review"
           filter_mode: nofilter
+          fail_on_error: true
