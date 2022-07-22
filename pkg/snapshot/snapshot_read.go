@@ -111,18 +111,18 @@ func newProtocolParamsMilestoneOptConsumerFunc(dbStorage *storage.Storage) Proto
 	}
 }
 
-// returns an output consumer storing them into the database.
+// NewOutputConsumer returns an output consumer storing them into the database.
 func NewOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 	return utxoManager.AddUnspentOutput
 }
 
-// returns a treasury output consumer which overrides an existing unspent treasury output with the new one.
+// NewUnspentTreasuryOutputConsumer returns a treasury output consumer which overrides an existing unspent treasury output with the new one.
 func NewUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasuryOutputConsumerFunc {
 	// leave like this for now in case we need to do more in the future
 	return utxoManager.StoreUnspentTreasuryOutput
 }
 
-// creates a milestone diff consumer storing them into the database.
+// NewMsDiffConsumer creates a milestone diff consumer storing them into the database.
 // if the ledger index within the database equals the produced milestone diff's index,
 // then its changes are roll-backed, otherwise, if the index is higher than the ledger index,
 // its mutations are applied on top of the latest state.

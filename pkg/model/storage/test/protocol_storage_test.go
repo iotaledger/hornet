@@ -1,5 +1,7 @@
 package storage_test
 
+//lint:file-ignore ST1003 we do not care about the underlines in the test
+
 import (
 	"testing"
 

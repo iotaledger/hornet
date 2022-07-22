@@ -150,7 +150,7 @@ func (s *Importer) downloadSnapshotFiles(ctx context.Context, targetNetworkID ui
 	return nil
 }
 
-// LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
+// LoadFullSnapshotFromFile loads a snapshot file from the given file path into the storage.
 func (s *Importer) LoadFullSnapshotFromFile(ctx context.Context, filePath string, targetNetworkID iotago.NetworkID) (err error) {
 	snapshotName := snapshotNames[Full]
 
@@ -188,7 +188,7 @@ SnapshotInfo:
 	return nil
 }
 
-// LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
+// LoadDeltaSnapshotFromFile loads a snapshot file from the given file path into the storage.
 func (s *Importer) LoadDeltaSnapshotFromFile(ctx context.Context, filePath string) (err error) {
 	snapshotName := snapshotNames[Delta]
 

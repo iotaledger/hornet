@@ -22,28 +22,28 @@ type SnapshotInfo struct {
 	snapshotTimestamp time.Time
 }
 
-// The index of the genesis milestone of the network.
+// GenesisMilestoneIndex returns the index of the genesis milestone of the network.
 func (i *SnapshotInfo) GenesisMilestoneIndex() iotago.MilestoneIndex {
 	return i.genesisMilestoneIndex
 }
 
-// The index of the snapshot file.
+// SnapshotIndex returns the index of the snapshot file.
 func (i *SnapshotInfo) SnapshotIndex() iotago.MilestoneIndex {
 	return i.snapshotIndex
 }
 
-// The index of the milestone of which the SEPs within the database are from.
+// EntryPointIndex returns the index of the milestone of which the SEPs within the database are from.
 func (i *SnapshotInfo) EntryPointIndex() iotago.MilestoneIndex {
 	return i.entryPointIndex
 }
 
-// The index of the milestone before which the tangle history is pruned.
+// PruningIndex returns the index of the milestone before which the tangle history is pruned.
 // This is not the same as EntryPointIndex, so we can cleanly prune again even if the pruning was aborted last time.
 func (i *SnapshotInfo) PruningIndex() iotago.MilestoneIndex {
 	return i.pruningIndex
 }
 
-// The timestamp of the target milestone of the snapshot.
+// SnapshotTimestamp returns the timestamp of the target milestone of the snapshot.
 func (i *SnapshotInfo) SnapshotTimestamp() time.Time {
 	return i.snapshotTimestamp
 }

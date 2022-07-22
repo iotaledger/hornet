@@ -15,8 +15,6 @@ const (
 	metricsChartPrefix = "metrics_charts"
 
 	timeoutProfilingQuery = 1 * time.Minute
-
-	byteMBDivider = 1000000
 )
 
 // Profiler profiles a node for metrics.

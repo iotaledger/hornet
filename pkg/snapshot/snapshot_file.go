@@ -183,7 +183,7 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	return append(bufMilestoneDiffLength.Bytes(), b.Bytes()...), nil
 }
 
-// reads a MilestoneDiff from the given reader.
+// ReadMilestoneDiff reads a MilestoneDiff from the given reader.
 func ReadMilestoneDiff(reader io.ReadSeeker, protocolStorage *storage.ProtocolStorage, addProtocolParameterUpdates bool) (int64, *MilestoneDiff, error) {
 	msDiff := &MilestoneDiff{}
 
@@ -263,7 +263,7 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolStorage *storage.ProtocolSt
 	return int64(msDiffLength), msDiff, nil
 }
 
-// reads protocol parameter updates from a MilestoneDiff from the given reader.
+// ReadMilestoneDiffProtocolParameters reads protocol parameter updates from a MilestoneDiff from the given reader.
 // automatically seek to the end of the MilestoneDiff.
 func ReadMilestoneDiffProtocolParameters(reader io.ReadSeeker, protocolStorage *storage.ProtocolStorage) (int64, error) {
 
@@ -1147,7 +1147,7 @@ func ReadSnapshotType(readSeeker io.ReadSeeker) (Type, error) {
 	}
 }
 
-// ReadSnapshotHeaderFromFile reads the snapshot type of the given snapshot file.
+// ReadSnapshotTypeFromFile reads the snapshot type of the given snapshot file.
 func ReadSnapshotTypeFromFile(filePath string) (Type, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -1357,7 +1357,7 @@ func StreamDeltaSnapshotDataFrom(
 	return nil
 }
 
-// reads an Output from the given reader.
+// ReadOutput reads an Output from the given reader.
 func ReadOutput(reader io.ReadSeeker, protoParams *iotago.ProtocolParameters) (*utxo.Output, error) {
 	return utxo.OutputFromSnapshotReader(reader, protoParams)
 }
