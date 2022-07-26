@@ -6,6 +6,8 @@ import (
 
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/common"
@@ -122,17 +124,7 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 		})
 	}
 
-	var pendingProtoParas []*inx.PendingProtocolParameters
-	for _, ele := range deps.ProtocolManager.Pending() {
-		pendingProtoParas = append(pendingProtoParas, &inx.PendingProtocolParameters{
-			TargetMilestoneIndex: ele.TargetMilestoneIndex,
-			Version:              uint32(ele.ProtocolVersion),
-			Params:               ele.Params,
-		})
-	}
-
 	return &inx.NodeConfiguration{
-		ProtocolParameters:      inx.NewProtocolParameters(deps.ProtocolManager.Current()),
 		MilestonePublicKeyCount: uint32(deps.MilestonePublicKeyCount),
 		MilestoneKeyRanges:      keyRanges,
 		BaseToken: &inx.BaseToken{
@@ -144,8 +136,21 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 			UseMetricPrefix: deps.BaseToken.UseMetricPrefix,
 		},
 		SupportedProtocolVersions: deps.ProtocolManager.SupportedVersions(),
-		PendingProtocolParameters: pendingProtoParas,
 	}, nil
+}
+
+func (s *INXServer) ReadProtocolParameters(_ context.Context, req *inx.MilestoneRequest) (*inx.RawProtocolParameters, error) {
+	if req.GetMilestoneIndex() == 0 && req.GetMilestoneId() == nil {
+		return rawProtocolParametersForIndex(deps.SyncManager.ConfirmedMilestoneIndex())
+	}
+
+	cachedMilestone := cachedMilestoneFromRequestOrNil(req) // milestone +1
+	if cachedMilestone == nil {
+		return nil, status.Error(codes.NotFound, "milestone not found")
+	}
+	defer cachedMilestone.Release(true)
+
+	return rawProtocolParametersForIndex(cachedMilestone.Milestone().Index())
 }
 
 type streamRange struct {

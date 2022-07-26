@@ -2,11 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.0-beta.2] - 21.07.2022
+## [2.0.0-beta.3] - 26.07.2022
 
 :warning: :warning: :warning:
-This release contains a breaking change in the validation, so you need to update your node to keep participating in the testnet.
+This release contains a breaking change in the Rest API, so you need to update your clients to connect to this node version.
 :warning: :warning: :warning:
+
+### Changed
+    - Updated iota.go with changes to the REST api models.
+
+## [2.0.0-beta.2] - 21.07.2022
 
 ### Fixed
     - Updated iota.go with fixes for transaction validation
