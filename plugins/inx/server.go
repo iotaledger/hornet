@@ -140,17 +140,25 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 }
 
 func (s *INXServer) ReadProtocolParameters(_ context.Context, req *inx.MilestoneRequest) (*inx.RawProtocolParameters, error) {
-	if req.GetMilestoneIndex() == 0 && req.GetMilestoneId() == nil {
-		return rawProtocolParametersForIndex(deps.SyncManager.ConfirmedMilestoneIndex())
+
+	msIndex := req.GetMilestoneIndex()
+
+	// If a milestoneId was passed, use that instead
+	if req.GetMilestoneId() != nil {
+		cachedMilestone := deps.Storage.CachedMilestoneOrNil(req.GetMilestoneId().Unwrap()) // milestone +1
+		if cachedMilestone == nil {
+			return nil, status.Error(codes.NotFound, "milestone not found")
+		}
+		defer cachedMilestone.Release(true)
+		msIndex = cachedMilestone.Milestone().Index()
 	}
 
-	cachedMilestone := cachedMilestoneFromRequestOrNil(req) // milestone +1
-	if cachedMilestone == nil {
-		return nil, status.Error(codes.NotFound, "milestone not found")
+	// If requested no index, use the confirmed milestone index
+	if msIndex == 0 {
+		msIndex = deps.SyncManager.ConfirmedMilestoneIndex()
 	}
-	defer cachedMilestone.Release(true)
 
-	return rawProtocolParametersForIndex(cachedMilestone.Milestone().Index())
+	return rawProtocolParametersForIndex(msIndex)
 }
 
 type streamRange struct {
