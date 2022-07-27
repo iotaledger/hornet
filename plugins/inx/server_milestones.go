@@ -52,6 +52,17 @@ func milestoneForIndex(msIndex iotago.MilestoneIndex) (*inx.Milestone, error) {
 	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone + 1
 }
 
+func rawProtocolParametersForIndex(msIndex iotago.MilestoneIndex) (*inx.RawProtocolParameters, error) {
+	milestoneOpt, err := deps.Storage.ProtocolParametersMilestoneOption(msIndex)
+	if err != nil {
+		return nil, err
+	}
+	return &inx.RawProtocolParameters{
+		ProtocolVersion: uint32(milestoneOpt.ProtocolVersion),
+		Params:          milestoneOpt.Params,
+	}, nil
+}
+
 func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*inx.Milestone, error) {
 	cachedMilestone := cachedMilestoneFromRequestOrNil(req) // milestone +1
 	if cachedMilestone == nil {
@@ -98,10 +109,21 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 	}
 
 	createMilestonePayloadForIndexAndSend := func(msIndex iotago.MilestoneIndex) error {
-		payload, err := milestoneForIndex(msIndex)
+		inxMilestone, err := milestoneForIndex(msIndex)
 		if err != nil {
 			return err
 		}
+
+		rawParams, err := rawProtocolParametersForIndex(msIndex)
+		if err != nil {
+			return err
+		}
+
+		payload := &inx.MilestoneAndProtocolParameters{
+			Milestone:                 inxMilestone,
+			CurrentProtocolParameters: rawParams,
+		}
+
 		if err := srv.Send(payload); err != nil {
 			return fmt.Errorf("send error: %w", err)
 		}
@@ -109,9 +131,19 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 	}
 
 	createMilestonePayloadForCachedMilestoneAndSend := func(ms *storage.CachedMilestone) error {
-		payload, err := milestoneForCachedMilestone(ms)
+		inxMilestone, err := milestoneForCachedMilestone(ms)
 		if err != nil {
 			return err
+		}
+
+		rawParams, err := rawProtocolParametersForIndex(ms.Milestone().Index())
+		if err != nil {
+			return err
+		}
+
+		payload := &inx.MilestoneAndProtocolParameters{
+			Milestone:                 inxMilestone,
+			CurrentProtocolParameters: rawParams,
 		}
 		if err := srv.Send(payload); err != nil {
 			return fmt.Errorf("send error: %w", err)

@@ -30,13 +30,13 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 	if referenced {
 		m.ReferencedByMilestoneIndex = msIndex
 		m.WhiteFlagIndex = wfIndex
-		inclusionState := inx.BlockMetadata_NO_TRANSACTION
+		inclusionState := inx.BlockMetadata_LEDGER_INCLUSION_STATE_NO_TRANSACTION
 		conflict := metadata.Conflict()
 		if conflict != storage.ConflictNone {
-			inclusionState = inx.BlockMetadata_CONFLICTING
+			inclusionState = inx.BlockMetadata_LEDGER_INCLUSION_STATE_CONFLICTING
 			m.ConflictReason = inx.BlockMetadata_ConflictReason(conflict)
 		} else if metadata.IsIncludedTxInLedger() {
-			inclusionState = inx.BlockMetadata_INCLUDED
+			inclusionState = inx.BlockMetadata_LEDGER_INCLUSION_STATE_INCLUDED
 		}
 		m.LedgerInclusionState = inclusionState
 
