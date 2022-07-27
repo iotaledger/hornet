@@ -2,14 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.0-beta.3] - 26.07.2022
+## [2.0.0-beta.3] - 27.07.2022
 
 :warning: :warning: :warning:
-This release contains a breaking change in the Rest API, so you need to update your clients to connect to this node version.
+This release contains a breaking change in the Rest API and INX interface, so you need to update your clients to connect to this node version.
+It also contains a breaking change in the snapshot format. You need to delete old snapshot files before starting your node.
 :warning: :warning: :warning:
 
 ### Changed
-    - Updated iota.go with changes to the REST api models.
+    - Updated iota.go with changes to the REST api models. (#1643)
+
+### Fixed
+    - Fix datatypes of milestone diffs in snapshot files (#1635)
+    - Fix adding commit hash when building a local copy of hornet with the scripts (#1646)
+
 
 ## [2.0.0-beta.2] - 21.07.2022
 
