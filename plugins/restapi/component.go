@@ -18,6 +18,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/jwt"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
+	"github.com/iotaledger/inx-app/httpserver"
 )
 
 func init() {
@@ -87,12 +88,18 @@ func provide(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func() *echo.Echo {
-		e := echo.New()
-		e.HideBanner = true
-		e.Use(middleware.Recover())
+
+		e := httpserver.NewEcho(
+			Plugin.Logger(),
+			func(err error, c echo.Context) {
+				deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
+			},
+			ParamsRestAPI.DebugRequestLoggerEnabled,
+		)
 		e.Use(middleware.CORS())
 		e.Use(middleware.Gzip())
 		e.Use(middleware.BodyLimit(ParamsRestAPI.Limits.MaxBodyLength))
+
 		return e
 	}); err != nil {
 		Plugin.LogPanic(err)

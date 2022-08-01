@@ -23,6 +23,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	"github.com/iotaledger/hornet/v2/pkg/tipselect"
 	"github.com/iotaledger/hornet/v2/plugins/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 )
 
 const (
@@ -196,7 +197,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
@@ -206,7 +207,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
-			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}, checkNodeAlmostSynced(), checkUpcomingUnsupportedProtocolVersion())
 	}
 
@@ -215,22 +216,22 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	}, checkNodeAlmostSynced())
 
 	routeGroup.GET(RouteBlock, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
-		if err != nil && err != restapipkg.ErrNotAcceptable {
+		mimeType, err := httpserver.GetAcceptHeaderContentType(c, httpserver.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+		if err != nil && err != httpserver.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
+		case httpserver.MIMEApplicationVendorIOTASerializerV1:
 			resp, err := blockBytesByID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
+			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
@@ -238,7 +239,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
-			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
 
@@ -248,22 +249,22 @@ func configure() error {
 			return err
 		}
 		c.Response().Header().Set(echo.HeaderLocation, resp.BlockID)
-		return restapipkg.JSONResponse(c, http.StatusCreated, resp)
+		return httpserver.JSONResponse(c, http.StatusCreated, resp)
 	}, checkNodeAlmostSynced(), checkUpcomingUnsupportedProtocolVersion())
 
 	routeGroup.GET(RouteTransactionsIncludedBlock, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
-		if err != nil && err != restapipkg.ErrNotAcceptable {
+		mimeType, err := httpserver.GetAcceptHeaderContentType(c, httpserver.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+		if err != nil && err != httpserver.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
+		case httpserver.MIMEApplicationVendorIOTASerializerV1:
 			resp, err := blockBytesByTransactionID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
+			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
@@ -271,23 +272,23 @@ func configure() error {
 			if err != nil {
 				return err
 			}
-			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
 
 	routeGroup.GET(RouteMilestoneByID, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
-		if err != nil && err != restapipkg.ErrNotAcceptable {
+		mimeType, err := httpserver.GetAcceptHeaderContentType(c, httpserver.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+		if err != nil && err != httpserver.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
+		case httpserver.MIMEApplicationVendorIOTASerializerV1:
 			resp, err := milestoneBytesByID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
+			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
@@ -295,7 +296,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
-			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
 
@@ -304,22 +305,22 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMilestoneByIndex, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
-		if err != nil && err != restapipkg.ErrNotAcceptable {
+		mimeType, err := httpserver.GetAcceptHeaderContentType(c, httpserver.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+		if err != nil && err != httpserver.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
+		case httpserver.MIMEApplicationVendorIOTASerializerV1:
 			resp, err := milestoneBytesByIndex(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
+			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
@@ -327,7 +328,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
-			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
 
@@ -336,22 +337,22 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
-		if err != nil && err != restapipkg.ErrNotAcceptable {
+		mimeType, err := httpserver.GetAcceptHeaderContentType(c, httpserver.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+		if err != nil && err != httpserver.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
+		case httpserver.MIMEApplicationVendorIOTASerializerV1:
 			resp, err := rawOutputByID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
+			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
@@ -359,7 +360,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
-			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
 
@@ -368,7 +369,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteTreasury, func(c echo.Context) error {
@@ -376,7 +377,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteReceipts, func(c echo.Context) error {
@@ -384,7 +385,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteReceiptsMigratedAtIndex, func(c echo.Context) error {
@@ -392,7 +393,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RoutePeer, func(c echo.Context) error {
@@ -400,7 +401,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.DELETE(RoutePeer, func(c echo.Context) error {
@@ -415,7 +416,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
@@ -423,7 +424,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteComputeWhiteFlagMutations, func(c echo.Context) error {
@@ -431,7 +432,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	}, checkNodeAlmostSynced(), checkUpcomingUnsupportedProtocolVersion())
 
 	routeGroup.POST(RouteControlDatabasePrune, func(c echo.Context) error {
@@ -439,7 +440,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteControlSnapshotsCreate, func(c echo.Context) error {
@@ -447,7 +448,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	return nil

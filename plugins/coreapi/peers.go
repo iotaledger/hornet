@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 )
 
 // WrapInfoSnapshot wraps the given peer info snapshot with additional metadata, such as gossip protocol information.
@@ -81,17 +82,17 @@ func addPeer(c echo.Context) (*PeerResponse, error) {
 	request := &addPeerRequest{}
 
 	if err := c.Bind(request); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid addPeerRequest, error: %s", err)
+		return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid addPeerRequest, error: %s", err)
 	}
 
 	multiAddr, err := multiaddr.NewMultiaddr(request.MultiAddress)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid multiAddress, error: %s", err)
+		return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid multiAddress, error: %s", err)
 	}
 
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid multiAddress, error: %s", err)
+		return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid multiAddress, error: %s", err)
 	}
 
 	var alias string

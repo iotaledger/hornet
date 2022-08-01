@@ -14,6 +14,7 @@ import (
 	restapipkg "github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	"github.com/iotaledger/hornet/v2/plugins/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 )
 
 const (
@@ -96,7 +97,7 @@ func configure() error {
 			return err
 		}
 
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsUnspent, func(c echo.Context) error {
@@ -105,7 +106,7 @@ func configure() error {
 			return err
 		}
 
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
@@ -114,7 +115,7 @@ func configure() error {
 			return err
 		}
 
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
@@ -123,7 +124,7 @@ func configure() error {
 			return err
 		}
 
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugRequests, func(c echo.Context) error {
@@ -132,7 +133,7 @@ func configure() error {
 			return err
 		}
 
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugBlockCone, func(c echo.Context) error {
@@ -141,7 +142,7 @@ func configure() error {
 			return err
 		}
 
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	return nil

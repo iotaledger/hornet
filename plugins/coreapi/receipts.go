@@ -6,6 +6,7 @@ import (
 
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 )
 
 func receipts(_ echo.Context) (*receiptsResponse, error) {
@@ -21,7 +22,7 @@ func receipts(_ echo.Context) (*receiptsResponse, error) {
 }
 
 func receiptsByMigratedAtIndex(c echo.Context) (*receiptsResponse, error) {
-	migratedAt, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
+	migratedAt, err := httpserver.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}

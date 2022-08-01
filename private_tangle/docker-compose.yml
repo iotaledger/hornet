@@ -118,6 +118,9 @@ services:
       - "config.json"
       - "--inx.address=172.18.211.11:9029"
       - "--faucet.bindAddress=172.18.211.23:8091"
+      - "--faucet.amount=100000000000"
+      - "--faucet.smallAmount=10000000000"
+      - "--faucet.maxAddressBalance=200000000000"
     profiles:
       - 2-nodes
       - 3-nodes

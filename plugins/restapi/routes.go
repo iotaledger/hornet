@@ -5,7 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 )
 
 const (
@@ -19,13 +19,6 @@ type RoutesResponse struct {
 }
 
 func setupRoutes() {
-	errorHandler := restapi.ErrorHandler()
-
-	deps.Echo.HTTPErrorHandler = func(err error, c echo.Context) {
-		Plugin.LogDebugf("HTTP request failed: %s", err)
-		deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
-		errorHandler(err, c)
-	}
 
 	deps.Echo.GET(nodeAPIHealthRoute, func(c echo.Context) error {
 		// node mode
@@ -41,7 +34,7 @@ func setupRoutes() {
 			resp := &RoutesResponse{
 				Routes: deps.RestRouteManager.Routes(),
 			}
-			return restapi.JSONResponse(c, http.StatusOK, resp)
+			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		})
 	}
 }

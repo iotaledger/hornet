@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/gommon/bytes"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -20,14 +20,14 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 
 	request := &pruneDatabaseRequest{}
 	if err := c.Bind(request); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
+		return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
 	if (request.Index == nil && request.Depth == nil && request.TargetDatabaseSize == nil) ||
 		(request.Index != nil && request.Depth != nil) ||
 		(request.Index != nil && request.TargetDatabaseSize != nil) ||
 		(request.Depth != nil && request.TargetDatabaseSize != nil) {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "either index, depth or size has to be specified")
+		return nil, errors.WithMessage(httpserver.ErrInvalidParameter, "either index, depth or size has to be specified")
 	}
 
 	var err error
@@ -72,11 +72,11 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 
 	request := &createSnapshotsRequest{}
 	if err := c.Bind(request); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
+		return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
 	if request.Index == 0 {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "index needs to be specified")
+		return nil, errors.WithMessage(httpserver.ErrInvalidParameter, "index needs to be specified")
 	}
 
 	filePath := filepath.Join(filepath.Dir(deps.SnapshotsFullPath), fmt.Sprintf("full_snapshot_%d.bin", request.Index))
