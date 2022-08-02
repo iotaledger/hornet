@@ -67,11 +67,13 @@ func configureRestAPI() {
 
 	addCollect(collectRestAPI)
 
-	p := echoprometheus.NewPrometheus("iota_restapi", nil)
-	for _, m := range p.MetricsList {
-		registry.MustRegister(m.MetricCollector)
+	if deps.Echo != nil {
+		p := echoprometheus.NewPrometheus("iota_restapi", nil)
+		for _, m := range p.MetricsList {
+			registry.MustRegister(m.MetricCollector)
+		}
+		deps.Echo.Use(p.HandlerFunc)
 	}
-	deps.Echo.Use(p.HandlerFunc)
 }
 
 func collectRestAPI() {
