@@ -3,8 +3,8 @@ package prometheus
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	coreDatabase "github.com/iotaledger/hornet/core/database"
@@ -86,6 +86,7 @@ type dependencies struct {
 	SnapshotManager  *snapshot.SnapshotManager
 	Coordinator      *coordinator.Coordinator `optional:"true"`
 	MQTTBroker       *mqtt.Broker             `optional:"true"`
+	Echo             *echo.Echo               `optional:"true"`
 }
 
 func configure() {
@@ -154,7 +155,7 @@ func writeFileServiceDiscoveryFile() {
 	}
 
 	// this truncates an existing file
-	if err := ioutil.WriteFile(path, j, 0666); err != nil {
+	if err := os.WriteFile(path, j, 0666); err != nil {
 		Plugin.LogPanic("unable to write file service discovery file:", err)
 	}
 
