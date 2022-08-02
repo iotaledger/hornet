@@ -1,6 +1,8 @@
 package debug
 
 import (
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -13,11 +15,38 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/hornet/v2/plugins/coreapi"
+	"github.com/iotaledger/inx-app/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+const (
+
+	// QueryParameterOutputType is used to filter for a certain output type.
+	QueryParameterOutputType = "type"
+)
+
+func parseOutputTypeQueryParam(c echo.Context) (*iotago.OutputType, error) {
+	typeParam := strings.ToLower(c.QueryParam(QueryParameterOutputType))
+	var filteredType *iotago.OutputType
+
+	if len(typeParam) > 0 {
+		outputTypeInt, err := strconv.ParseInt(typeParam, 10, 32)
+		if err != nil {
+			return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
+		}
+		outputType := iotago.OutputType(outputTypeInt)
+		switch outputType {
+		case iotago.OutputBasic, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
+		default:
+			return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
+		}
+		filteredType = &outputType
+	}
+	return filteredType, nil
+}
+
 func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
-	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	filterType, err := parseOutputTypeQueryParam(c)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +79,7 @@ func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 }
 
 func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
-	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	filterType, err := parseOutputTypeQueryParam(c)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +112,7 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 }
 
 func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
-	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	filterType, err := parseOutputTypeQueryParam(c)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +146,7 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 
-	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
+	msIndex, err := httpserver.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +228,7 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 
 func blockCone(c echo.Context) (*blockConeResponse, error) {
 
-	blockID, err := restapi.ParseBlockIDParam(c)
+	blockID, err := httpserver.ParseBlockIDParam(c, restapi.ParameterBlockID)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -13,7 +14,7 @@ import (
 
 func storageMilestoneByIndex(c echo.Context) (*storage.Milestone, error) {
 
-	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
+	msIndex, err := httpserver.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +30,7 @@ func storageMilestoneByIndex(c echo.Context) (*storage.Milestone, error) {
 
 func storageMilestoneByID(c echo.Context) (*storage.Milestone, error) {
 
-	milestoneID, err := restapi.ParseMilestoneIDParam(c)
+	milestoneID, err := httpserver.ParseMilestoneIDParam(c, restapi.ParameterMilestoneID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +104,7 @@ func milestoneUTXOChanges(msIndex iotago.MilestoneIndex) (*milestoneUTXOChangesR
 }
 
 func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse, error) {
-	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
+	msIndex, err := httpserver.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
+	"github.com/iotaledger/inx-app/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -21,7 +22,7 @@ var (
 )
 
 func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
-	blockID, err := restapi.ParseBlockIDParam(c)
+	blockID, err := httpserver.ParseBlockIDParam(c, restapi.ParameterBlockID)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +106,7 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 }
 
 func storageBlockByID(c echo.Context) (*storage.Block, error) {
-	blockID, err := restapi.ParseBlockIDParam(c)
+	blockID, err := httpserver.ParseBlockIDParam(c, restapi.ParameterBlockID)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +137,7 @@ func blockBytesByID(c echo.Context) ([]byte, error) {
 }
 
 func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
-	mimeType, err := restapi.GetRequestContentType(c, restapi.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+	mimeType, err := httpserver.GetRequestContentType(c, httpserver.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -146,23 +147,23 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 	switch mimeType {
 	case echo.MIMEApplicationJSON:
 		if err := c.Bind(iotaBlock); err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
+			return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
-	case restapi.MIMEApplicationVendorIOTASerializerV1:
+	case httpserver.MIMEApplicationVendorIOTASerializerV1:
 		if c.Request().Body == nil {
-			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid block, error: request body missing")
+			return nil, errors.WithMessage(httpserver.ErrInvalidParameter, "invalid block, error: request body missing")
 			// bad request
 		}
 
 		bytes, err := ioutil.ReadAll(c.Request().Body)
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
+			return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
 		// Do not validate here, the parents might need to be set
 		if _, err := iotaBlock.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.ProtocolManager.Current()); err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
+			return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
 	default:
@@ -170,13 +171,13 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 	}
 
 	if iotaBlock.ProtocolVersion != deps.ProtocolManager.Current().Version {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid block, error: protocolVersion invalid")
+		return nil, errors.WithMessage(httpserver.ErrInvalidParameter, "invalid block, error: protocolVersion invalid")
 	}
 
 	switch payload := iotaBlock.Payload.(type) {
 	case *iotago.Transaction:
 		if payload.Essence.NetworkID != deps.ProtocolManager.Current().NetworkID() {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
+			return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
 		}
 	default:
 	}
@@ -190,7 +191,7 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 		}
 		if errors.Is(err, tangle.ErrBlockAttacherInvalidBlock) {
-			return nil, errors.WithMessage(restapi.ErrInvalidParameter, err.Error())
+			return nil, errors.WithMessage(httpserver.ErrInvalidParameter, err.Error())
 		}
 		return nil, err
 	}

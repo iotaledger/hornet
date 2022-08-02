@@ -7,12 +7,13 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func storageBlockByTransactionID(c echo.Context) (*storage.Block, error) {
 
-	transactionID, err := restapi.ParseTransactionIDParam(c)
+	transactionID, err := httpserver.ParseTransactionIDParam(c, restapi.ParameterTransactionID)
 	if err != nil {
 		return nil, err
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -65,7 +66,7 @@ func NewSpentResponse(spent *utxo.Spent, ledgerIndex iotago.MilestoneIndex) (*Ou
 }
 
 func outputByID(c echo.Context) (*OutputResponse, error) {
-	outputID, err := restapi.ParseOutputIDParam(c)
+	outputID, err := httpserver.ParseOutputIDParam(c, restapi.ParameterOutputID)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 }
 
 func outputMetadataByID(c echo.Context) (*OutputMetadataResponse, error) {
-	outputID, err := restapi.ParseOutputIDParam(c)
+	outputID, err := httpserver.ParseOutputIDParam(c, restapi.ParameterOutputID)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +148,7 @@ func outputMetadataByID(c echo.Context) (*OutputMetadataResponse, error) {
 }
 
 func rawOutputByID(c echo.Context) ([]byte, error) {
-	outputID, err := restapi.ParseOutputIDParam(c)
+	outputID, err := httpserver.ParseOutputIDParam(c, restapi.ParameterOutputID)
 	if err != nil {
 		return nil, err
 	}

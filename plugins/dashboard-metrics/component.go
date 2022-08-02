@@ -12,9 +12,9 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
-	restapipkg "github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	"github.com/iotaledger/hornet/v2/plugins/restapi"
+	"github.com/iotaledger/inx-app/httpserver"
 )
 
 const (
@@ -71,7 +71,7 @@ func configure() error {
 	routeGroup := deps.RestRouteManager.AddRoute("dashboard-metrics/v1")
 
 	routeGroup.GET(RouteNodeInfoExtended, func(c echo.Context) error {
-		return restapipkg.JSONResponse(c, http.StatusOK, nodeInfoExtended(c))
+		return httpserver.JSONResponse(c, http.StatusOK, nodeInfoExtended(c))
 	})
 
 	routeGroup.GET(RouteDatabaseSizes, func(c echo.Context) error {
@@ -80,11 +80,11 @@ func configure() error {
 			return err
 		}
 
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteGossipMetrics, func(c echo.Context) error {
-		return restapipkg.JSONResponse(c, http.StatusOK, gossipMetrics(c))
+		return httpserver.JSONResponse(c, http.StatusOK, gossipMetrics(c))
 	})
 
 	return nil

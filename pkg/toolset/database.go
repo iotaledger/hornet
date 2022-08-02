@@ -15,8 +15,8 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
-	"github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/hornet/v2/pkg/snapshot"
+	"github.com/iotaledger/inx-app/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -119,7 +119,7 @@ func storeBlock(protoParams *iotago.ProtocolParameters, dbStorage StoreBlockInte
 
 	block, err := storage.NewBlock(blk, serializer.DeSeriModePerformValidation, protoParams)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
+		return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid block, error: %s", err)
 	}
 
 	cachedBlock, isNew := dbStorage.StoreBlockIfAbsent(block) // block +1
