@@ -3,6 +3,7 @@ package prometheus
 import (
 	"time"
 
+	echoprometheus "github.com/labstack/echo-contrib/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/iotaledger/hive.go/events"
@@ -65,6 +66,14 @@ func configureRestAPI() {
 	}))
 
 	addCollect(collectRestAPI)
+
+	if deps.Echo != nil {
+		p := echoprometheus.NewPrometheus("iota_restapi", nil)
+		for _, m := range p.MetricsList {
+			registry.MustRegister(m.MetricCollector)
+		}
+		deps.Echo.Use(p.HandlerFunc)
+	}
 }
 
 func collectRestAPI() {
