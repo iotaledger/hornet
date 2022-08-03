@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/pow"
+	inxpow "github.com/iotaledger/inx-app/pow"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -24,7 +25,7 @@ var (
 type BlockAttacherOption func(opts *BlockAttacherOptions)
 
 type BlockAttacherOptions struct {
-	tipSelFunc            pow.RefreshTipsFunc
+	tipSelFunc            inxpow.RefreshTipsFunc
 	blockProcessedTimeout time.Duration
 
 	powHandler     *pow.Handler
@@ -52,7 +53,7 @@ func WithTimeout(blockProcessedTimeout time.Duration) BlockAttacherOption {
 	}
 }
 
-func WithTipSel(tipsFunc pow.RefreshTipsFunc) BlockAttacherOption {
+func WithTipSel(tipsFunc inxpow.RefreshTipsFunc) BlockAttacherOption {
 	return func(opts *BlockAttacherOptions) {
 		opts.tipSelFunc = tipsFunc
 	}
@@ -85,7 +86,7 @@ func (t *Tangle) BlockAttacher(opts ...BlockAttacherOption) *BlockAttacher {
 
 func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block) (iotago.BlockID, error) {
 
-	var tipSelFunc pow.RefreshTipsFunc
+	var tipSelFunc inxpow.RefreshTipsFunc
 
 	if len(iotaBlock.Parents) == 0 {
 		if a.opts.tipSelFunc == nil {
@@ -129,7 +130,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 				}
 
 				ts := time.Now()
-				blockSize, err := a.opts.powHandler.DoPoW(powCtx, iotaBlock, powWorkerCount, tipSelFunc)
+				blockSize, err := a.opts.powHandler.DoPoW(powCtx, iotaBlock, a.tangle.protocolManager.Current().MinPoWScore, powWorkerCount, tipSelFunc)
 				if err != nil {
 					return iotago.EmptyBlockID(), err
 				}

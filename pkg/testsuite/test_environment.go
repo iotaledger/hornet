@@ -99,7 +99,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		Milestones:             make(storage.CachedMilestones, 0),
 		cachedBlocks:           make(storage.CachedBlocks, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
-		PoWHandler:             pow.New(targetScore, 5*time.Second),
+		PoWHandler:             pow.New(5*time.Second),
 		protoParams: &iotago.ProtocolParameters{
 			Version:       protocolVersion,
 			NetworkName:   "alphapnet1",
