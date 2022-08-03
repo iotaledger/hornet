@@ -35,7 +35,7 @@ func provide(c *dig.Container) error {
 
 	if err := c.Provide(func(deps handlerDeps) *pow.Handler {
 		// init the pow handler with all possible settings
-		return pow.New(deps.ProtocolManager.Current().MinPoWScore, ParamsPoW.RefreshTipsInterval)
+		return pow.New(ParamsPoW.RefreshTipsInterval)
 	}); err != nil {
 		CoreComponent.LogPanic(err)
 	}

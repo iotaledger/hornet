@@ -93,7 +93,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	iotaBlock.Parents = iotago.BlockIDs{[32]byte{}}
 
 	// pow again, so we have a valid block
-	_, err = te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)
+	_, err = te.PoWHandler.DoPoW(context.Background(), iotaBlock, te.ProtocolParameters().MinPoWScore, 1, nil)
 	assert.NoError(t, err)
 
 	// need to create a new block, so the iotago block is serialized again
@@ -108,7 +108,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	iotaBlock.ProtocolVersion = 1
 
 	// pow again, so we have a valid block
-	_, err = te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)
+	_, err = te.PoWHandler.DoPoW(context.Background(), iotaBlock, te.ProtocolParameters().MinPoWScore, 1, nil)
 	assert.NoError(t, err)
 
 	// need to create a new block, so the iotago block is serialized again
@@ -123,7 +123,7 @@ func TestMessageProcessorEmit(t *testing.T) {
 	iotaBlock.ProtocolVersion = ProtocolVersion
 
 	// pow again, so we have a valid block
-	_, err = te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)
+	_, err = te.PoWHandler.DoPoW(context.Background(), iotaBlock, te.ProtocolParameters().MinPoWScore, 1, nil)
 	assert.NoError(t, err)
 
 	// need to create a new block, so the iotago block is serialized again

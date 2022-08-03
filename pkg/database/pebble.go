@@ -236,7 +236,7 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	// when L0 read-amplification passes the L0CompactionConcurrency threshold.
 	//
 	// The default value is 1.
-	opts.MaxConcurrentCompactions = 1
+	opts.MaxConcurrentCompactions = func() int { return 1 }
 
 	return pebble.CreateDB(directory, opts)
 }

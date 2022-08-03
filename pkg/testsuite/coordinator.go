@@ -99,7 +99,7 @@ func (te *TestEnvironment) ReattachBlock(blockID iotago.BlockID, parents ...iota
 		Nonce:           iotaBlock.Nonce,
 	}
 
-	_, err := te.PoWHandler.DoPoW(context.Background(), newBlock, 1)
+	_, err := te.PoWHandler.DoPoW(context.Background(), newBlock, te.protoParams.MinPoWScore, 1, nil)
 	require.NoError(te.TestInterface, err)
 
 	// We brute-force a new nonce until it is different than the original one (this is important when reattaching valid milestones)
@@ -107,8 +107,8 @@ func (te *TestEnvironment) ReattachBlock(blockID iotago.BlockID, parents ...iota
 	for newBlock.Nonce == iotaBlock.Nonce {
 		powMinScore += 10.0
 		// Use a higher PowScore on every iteration to force a different nonce
-		handler := pow.New(powMinScore, 5*time.Minute)
-		_, err := handler.DoPoW(context.Background(), newBlock, 1)
+		handler := pow.New(5 * time.Minute)
+		_, err := handler.DoPoW(context.Background(), newBlock, powMinScore, 1, nil)
 		require.NoError(te.TestInterface, err)
 	}
 
