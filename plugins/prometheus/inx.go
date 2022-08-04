@@ -47,7 +47,7 @@ func configureINX() {
 	registry.MustRegister(inxPoWBlockSizes)
 	registry.MustRegister(inxPoWDurations)
 
-	deps.INXMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(blockSize int, duration time.Duration) {
+	deps.INXMetrics.Events.PoWCompleted.Hook(events.NewClosure(func(blockSize int, duration time.Duration) {
 		inxPoWBlockSizes.Observe(float64(blockSize))
 		inxPoWDurations.Observe(duration.Seconds())
 	}))

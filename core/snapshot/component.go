@@ -203,7 +203,7 @@ func run() error {
 	if err := CoreComponent.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting snapshot background worker ... done")
 
-		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
 		defer deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 
 		for {

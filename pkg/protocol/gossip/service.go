@@ -691,15 +691,15 @@ func (s *Service) configureEvents() {
 
 func (s *Service) attachEvents() {
 	// peering manager
-	s.peeringManager.Events.Connected.Attach(s.onPeeringManagerConnected)
-	s.peeringManager.Events.Disconnected.Attach(s.onPeeringManagerDisconnected)
-	s.peeringManager.Events.RelationUpdated.Attach(s.onPeeringManagerRelationUpdated)
+	s.peeringManager.Events.Connected.Hook(s.onPeeringManagerConnected)
+	s.peeringManager.Events.Disconnected.Hook(s.onPeeringManagerDisconnected)
+	s.peeringManager.Events.RelationUpdated.Hook(s.onPeeringManagerRelationUpdated)
 
 	// logger
-	s.Events.ProtocolStarted.Attach(s.onGossipServiceProtocolStarted)
-	s.Events.ProtocolTerminated.Attach(s.onGossipServiceProtocolTerminated)
-	s.Events.InboundStreamCanceled.Attach(s.onGossipServiceInboundStreamCanceled)
-	s.Events.Error.Attach(s.onGossipServiceError)
+	s.Events.ProtocolStarted.Hook(s.onGossipServiceProtocolStarted)
+	s.Events.ProtocolTerminated.Hook(s.onGossipServiceProtocolTerminated)
+	s.Events.InboundStreamCanceled.Hook(s.onGossipServiceInboundStreamCanceled)
+	s.Events.Error.Hook(s.onGossipServiceError)
 }
 
 func (s *Service) detachEvents() {

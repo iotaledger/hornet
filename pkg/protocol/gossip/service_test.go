@@ -86,10 +86,10 @@ func TestServiceEvents(t *testing.T) {
 	fmt.Println("node 2", node2.ID().ShortString())
 
 	var protocolStartedCalled1, protocolStartedCalled2 bool
-	node1Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled1 = true
 	}))
-	node2Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node2Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled2 = true
 	}))
 
@@ -119,10 +119,10 @@ func TestServiceEvents(t *testing.T) {
 	require.True(t, protocolStartedCalled2)
 
 	var protocolTerminatedCalled1, protocolTerminatedCalled2 bool
-	node1Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolTerminatedCalled1 = true
 	}))
-	node2Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node2Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolTerminatedCalled2 = true
 	}))
 
@@ -156,10 +156,10 @@ func TestServiceEvents(t *testing.T) {
 
 	protocolStartedCalled1 = false
 	protocolTerminatedCalled1 = false
-	node1Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled1 = true
 	}))
-	node1Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolTerminatedCalled1 = true
 	}))
 
@@ -224,10 +224,10 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 	fmt.Println("node 3", node3.ID().ShortString())
 
 	var protocolStartedCalled1, protocolStartedCalled2 bool
-	node1Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled1 = true
 	}))
-	node2Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node2Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled2 = true
 	}))
 
@@ -259,7 +259,7 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 	// now lets verify that node 3 can't build a gossip stream to neither node 1 and 2 since both
 	// have their available slots filled
 	var node3ProtocolTerminated int
-	node3Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node3Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		node3ProtocolTerminated++
 	}))
 

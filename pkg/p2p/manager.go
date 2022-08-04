@@ -1023,15 +1023,15 @@ func (m *Manager) configureEvents() {
 }
 
 func (m *Manager) attachEvents() {
-	m.Events.Connect.Attach(m.onP2PManagerConnect)
-	m.Events.Connected.Attach(m.onP2PManagerConnected)
-	m.Events.Disconnect.Attach(m.onP2PManagerDisconnect)
-	m.Events.Disconnected.Attach(m.onP2PManagerDisconnected)
-	m.Events.ScheduledReconnect.Attach(m.onP2PManagerScheduledReconnect)
-	m.Events.Reconnecting.Attach(m.onP2PManagerReconnecting)
-	m.Events.RelationUpdated.Attach(m.onP2PManagerRelationUpdated)
-	m.Events.StateChange.Attach(m.onP2PManagerStateChange)
-	m.Events.Error.Attach(m.onP2PManagerError)
+	m.Events.Connect.Hook(m.onP2PManagerConnect)
+	m.Events.Connected.Hook(m.onP2PManagerConnected)
+	m.Events.Disconnect.Hook(m.onP2PManagerDisconnect)
+	m.Events.Disconnected.Hook(m.onP2PManagerDisconnected)
+	m.Events.ScheduledReconnect.Hook(m.onP2PManagerScheduledReconnect)
+	m.Events.Reconnecting.Hook(m.onP2PManagerReconnecting)
+	m.Events.RelationUpdated.Hook(m.onP2PManagerRelationUpdated)
+	m.Events.StateChange.Hook(m.onP2PManagerStateChange)
+	m.Events.Error.Hook(m.onP2PManagerError)
 }
 
 func (m *Manager) detachEvents() {

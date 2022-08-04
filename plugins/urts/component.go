@@ -143,8 +143,8 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.Tangle.Events.BlockSolid.Attach(onBlockSolid)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
+	deps.Tangle.Events.BlockSolid.Hook(onBlockSolid)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
 }
 
 func detachEvents() {

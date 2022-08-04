@@ -112,7 +112,7 @@ func run() error {
 
 	if err := CoreComponent.Daemon().BackgroundWorker("Pruning", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting pruning background worker ... done")
-		deps.SnapshotManager.Events.HandledConfirmedMilestoneIndexChanged.Attach(onSnapshotHandledConfirmedMilestoneIndexChanged)
+		deps.SnapshotManager.Events.HandledConfirmedMilestoneIndexChanged.Hook(onSnapshotHandledConfirmedMilestoneIndexChanged)
 
 		<-ctx.Done()
 

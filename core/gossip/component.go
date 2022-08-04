@@ -318,8 +318,8 @@ func configureEvents() {
 			}
 		}
 
-		proto.Events.Errors.Attach(events.NewClosure(closeConnectionDueToProtocolError))
-		proto.Parser.Events.Error.Attach(event.NewClosure(closeConnectionDueToProtocolError))
+		proto.Events.Errors.Hook(events.NewClosure(closeConnectionDueToProtocolError))
+		proto.Parser.Events.Error.Hook(event.NewClosure(closeConnectionDueToProtocolError))
 
 		if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
 			buf := make([]byte, readBufSize)
@@ -388,12 +388,12 @@ func configureEvents() {
 }
 
 func attachEventsGossipService() {
-	deps.GossipService.Events.ProtocolStarted.Attach(onGossipServiceProtocolStarted)
-	deps.GossipService.Events.ProtocolTerminated.Attach(onGossipServiceProtocolTerminated)
+	deps.GossipService.Events.ProtocolStarted.Hook(onGossipServiceProtocolStarted)
+	deps.GossipService.Events.ProtocolTerminated.Hook(onGossipServiceProtocolTerminated)
 }
 
 func attachEventsBroadcastQueue() {
-	deps.MessageProcessor.Events.BroadcastBlock.Attach(onMessageProcessorBroadcastMessage)
+	deps.MessageProcessor.Events.BroadcastBlock.Hook(onMessageProcessorBroadcastMessage)
 }
 
 func detachEventsGossipService() {

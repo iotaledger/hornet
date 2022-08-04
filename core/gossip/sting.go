@@ -11,43 +11,43 @@ import (
 // sets up the event handlers which propagate STING messages.
 func attachEventsProtocolMessages(proto *gossip.Protocol) {
 
-	proto.Parser.Events.Received[gossip.MessageTypeBlock].Attach(event.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeBlock].Hook(event.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedBlocks.Inc()
 		deps.ServerMetrics.Blocks.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeBlock, data)
 	}))
 
-	proto.Events.Sent[gossip.MessageTypeBlock].Attach(events.NewClosure(func() {
+	proto.Events.Sent[gossip.MessageTypeBlock].Hook(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentBlocks.Inc()
 		deps.ServerMetrics.SentBlocks.Inc()
 	}))
 
-	proto.Parser.Events.Received[gossip.MessageTypeBlockRequest].Attach(event.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeBlockRequest].Hook(event.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedBlockRequests.Inc()
 		deps.ServerMetrics.ReceivedBlockRequests.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeBlockRequest, data)
 	}))
 
-	proto.Events.Sent[gossip.MessageTypeBlockRequest].Attach(events.NewClosure(func() {
+	proto.Events.Sent[gossip.MessageTypeBlockRequest].Hook(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentBlockRequests.Inc()
 		deps.ServerMetrics.SentBlockRequests.Inc()
 	}))
 
-	proto.Parser.Events.Received[gossip.MessageTypeMilestoneRequest].Attach(event.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeMilestoneRequest].Hook(event.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMilestoneRequests.Inc()
 		deps.ServerMetrics.ReceivedMilestoneRequests.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeMilestoneRequest, data)
 	}))
 
-	proto.Events.Sent[gossip.MessageTypeMilestoneRequest].Attach(events.NewClosure(func() {
+	proto.Events.Sent[gossip.MessageTypeMilestoneRequest].Hook(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentMilestoneRequests.Inc()
 		deps.ServerMetrics.SentMilestoneRequests.Inc()
 	}))
 
-	proto.Parser.Events.Received[gossip.MessageTypeHeartbeat].Attach(event.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeHeartbeat].Hook(event.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedHeartbeats.Inc()
 		deps.ServerMetrics.ReceivedHeartbeats.Inc()
 
@@ -68,7 +68,7 @@ func attachEventsProtocolMessages(proto *gossip.Protocol) {
 		proto.Events.HeartbeatUpdated.Trigger(proto.LatestHeartbeat)
 	}))
 
-	proto.Events.Sent[gossip.MessageTypeHeartbeat].Attach(events.NewClosure(func() {
+	proto.Events.Sent[gossip.MessageTypeHeartbeat].Hook(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentHeartbeats.Inc()
 		deps.ServerMetrics.SentHeartbeats.Inc()

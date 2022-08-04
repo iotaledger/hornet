@@ -433,19 +433,19 @@ func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
 func attachEvents() {
 
 	if deps.AutopeeringManager.Discovery() != nil {
-		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Attach(onDiscoveryPeerDiscovered)
-		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Attach(onDiscoveryPeerDeleted)
+		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Hook(onDiscoveryPeerDiscovered)
+		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Hook(onDiscoveryPeerDeleted)
 	}
 
 	if deps.AutopeeringManager.Selection() != nil {
 		// notify the selection when a connection is closed or failed.
-		deps.PeeringManager.Events.Connected.Attach(onPeerConnected)
-		deps.PeeringManager.Events.Disconnected.Attach(onPeerDisconnected)
-		deps.PeeringManager.Events.RelationUpdated.Attach(onPeeringRelationUpdated)
-		deps.AutopeeringManager.Selection().Events().SaltUpdated.Attach(onSelectionSaltUpdated)
-		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Attach(onSelectionOutgoingPeering)
-		deps.AutopeeringManager.Selection().Events().IncomingPeering.Attach(onSelectionIncomingPeering)
-		deps.AutopeeringManager.Selection().Events().Dropped.Attach(onSelectionDropped)
+		deps.PeeringManager.Events.Connected.Hook(onPeerConnected)
+		deps.PeeringManager.Events.Disconnected.Hook(onPeerDisconnected)
+		deps.PeeringManager.Events.RelationUpdated.Hook(onPeeringRelationUpdated)
+		deps.AutopeeringManager.Selection().Events().SaltUpdated.Hook(onSelectionSaltUpdated)
+		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Hook(onSelectionOutgoingPeering)
+		deps.AutopeeringManager.Selection().Events().IncomingPeering.Hook(onSelectionIncomingPeering)
+		deps.AutopeeringManager.Selection().Events().Dropped.Hook(onSelectionDropped)
 	}
 }
 

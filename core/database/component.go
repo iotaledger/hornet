@@ -305,7 +305,7 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.Storage.Events.PruningStateChanged.Attach(onPruningStateChanged)
+	deps.Storage.Events.PruningStateChanged.Hook(onPruningStateChanged)
 }
 
 func detachEvents() {

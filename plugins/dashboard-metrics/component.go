@@ -100,7 +100,7 @@ func run() error {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("DashboardMetricsUpdater", func(ctx context.Context) {
-		deps.Tangle.Events.BPSMetricsUpdated.Attach(onBPSMetricsUpdated)
+		deps.Tangle.Events.BPSMetricsUpdated.Hook(onBPSMetricsUpdated)
 		<-ctx.Done()
 		deps.Tangle.Events.BPSMetricsUpdated.Detach(onBPSMetricsUpdated)
 	}, daemon.PriorityMetricsUpdater); err != nil {

@@ -84,7 +84,7 @@ func configureEvents() {
 	})
 
 	onGossipServiceProtocolStarted = events.NewClosure(func(p *gossip.Protocol) {
-		p.Events.HeartbeatUpdated.Attach(onHeartbeatUpdated)
+		p.Events.HeartbeatUpdated.Hook(onHeartbeatUpdated)
 	})
 
 	onGossipServiceProtocolTerminated = events.NewClosure(func(p *gossip.Protocol) {
@@ -145,14 +145,14 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.GossipService.Events.ProtocolStarted.Attach(onGossipServiceProtocolStarted)
-	deps.GossipService.Events.ProtocolTerminated.Attach(onGossipServiceProtocolTerminated)
-	deps.Tangle.Events.ReferencedBlocksCountUpdated.Attach(onReferencedBlocksCountUpdated)
-	deps.Tangle.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
-	warpSync.Events.CheckpointUpdated.Attach(onWarpSyncCheckpointUpdated)
-	warpSync.Events.TargetUpdated.Attach(onWarpSyncTargetUpdated)
-	warpSync.Events.Start.Attach(onWarpSyncStart)
-	warpSync.Events.Done.Attach(onWarpSyncDone)
+	deps.GossipService.Events.ProtocolStarted.Hook(onGossipServiceProtocolStarted)
+	deps.GossipService.Events.ProtocolTerminated.Hook(onGossipServiceProtocolTerminated)
+	deps.Tangle.Events.ReferencedBlocksCountUpdated.Hook(onReferencedBlocksCountUpdated)
+	deps.Tangle.Events.MilestoneSolidificationFailed.Hook(onMilestoneSolidificationFailed)
+	warpSync.Events.CheckpointUpdated.Hook(onWarpSyncCheckpointUpdated)
+	warpSync.Events.TargetUpdated.Hook(onWarpSyncTargetUpdated)
+	warpSync.Events.Start.Hook(onWarpSyncStart)
+	warpSync.Events.Done.Hook(onWarpSyncDone)
 }
 
 func detachEvents() {
