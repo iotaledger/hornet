@@ -44,27 +44,54 @@ func NewLedgerSpent(s *utxo.Spent) (*inx.LedgerSpent, error) {
 	return l, nil
 }
 
-func NewLedgerUpdate(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) (*inx.LedgerUpdate, error) {
-	u := &inx.LedgerUpdate{
-		MilestoneIndex: index,
-		Created:        make([]*inx.LedgerOutput, len(newOutputs)),
-		Consumed:       make([]*inx.LedgerSpent, len(newSpents)),
+func NewLedgerUpdateBatchBegin(index iotago.MilestoneIndex, newOutputsCount int, newSpentsCount int) *inx.LedgerUpdate {
+	return &inx.LedgerUpdate{
+		Op: &inx.LedgerUpdate_BatchMarker{
+			BatchMarker: &inx.LedgerUpdate_Marker{
+				MilestoneIndex: index,
+				MarkerType:     inx.LedgerUpdate_Marker_BEGIN,
+				CreatedCount:   uint32(newOutputsCount),
+				ConsumedCount:  uint32(newSpentsCount),
+			},
+		},
 	}
-	for i, o := range newOutputs {
-		output, err := NewLedgerOutput(o)
-		if err != nil {
-			return nil, err
-		}
-		u.Created[i] = output
+}
+
+func NewLedgerUpdateBatchEnd(index iotago.MilestoneIndex, newOutputsCount int, newSpentsCount int) *inx.LedgerUpdate {
+	return &inx.LedgerUpdate{
+		Op: &inx.LedgerUpdate_BatchMarker{
+			BatchMarker: &inx.LedgerUpdate_Marker{
+				MilestoneIndex: index,
+				MarkerType:     inx.LedgerUpdate_Marker_END,
+				CreatedCount:   uint32(newOutputsCount),
+				ConsumedCount:  uint32(newSpentsCount),
+			},
+		},
 	}
-	for i, s := range newSpents {
-		spent, err := NewLedgerSpent(s)
-		if err != nil {
-			return nil, err
-		}
-		u.Consumed[i] = spent
+}
+
+func NewLedgerUpdateBatchOperationCreated(output *utxo.Output) (*inx.LedgerUpdate, error) {
+	o, err := NewLedgerOutput(output)
+	if err != nil {
+		return nil, err
 	}
-	return u, nil
+	return &inx.LedgerUpdate{
+		Op: &inx.LedgerUpdate_Created{
+			Created: o,
+		},
+	}, nil
+}
+
+func NewLedgerUpdateBatchOperationConsumed(spent *utxo.Spent) (*inx.LedgerUpdate, error) {
+	s, err := NewLedgerSpent(spent)
+	if err != nil {
+		return nil, err
+	}
+	return &inx.LedgerUpdate{
+		Op: &inx.LedgerUpdate_Consumed{
+			Consumed: s,
+		},
+	}, nil
 }
 
 func NewTreasuryUpdate(index iotago.MilestoneIndex, created *utxo.TreasuryOutput, consumed *utxo.TreasuryOutput) (*inx.TreasuryUpdate, error) {
@@ -175,11 +202,36 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	}
 
 	createLedgerUpdatePayloadAndSend := func(msIndex iotago.MilestoneIndex, outputs utxo.Outputs, spents utxo.Spents) error {
-		payload, err := NewLedgerUpdate(msIndex, outputs, spents)
-		if err != nil {
-			return err
+
+		// Send Begin
+		if err := srv.Send(NewLedgerUpdateBatchBegin(msIndex, len(outputs), len(spents))); err != nil {
+			return fmt.Errorf("send error: %w", err)
 		}
-		if err := srv.Send(payload); err != nil {
+
+		// Send consumed
+		for _, spent := range spents {
+			payload, err := NewLedgerUpdateBatchOperationConsumed(spent)
+			if err != nil {
+				return err
+			}
+			if err := srv.Send(payload); err != nil {
+				return fmt.Errorf("send error: %w", err)
+			}
+		}
+
+		// Send created
+		for _, output := range outputs {
+			payload, err := NewLedgerUpdateBatchOperationCreated(output)
+			if err != nil {
+				return err
+			}
+			if err := srv.Send(payload); err != nil {
+				return fmt.Errorf("send error: %w", err)
+			}
+		}
+
+		// Send End
+		if err := srv.Send(NewLedgerUpdateBatchEnd(msIndex, len(outputs), len(spents))); err != nil {
 			return fmt.Errorf("send error: %w", err)
 		}
 		return nil

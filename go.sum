@@ -418,10 +418,10 @@ github.com/iotaledger/hive.go v0.0.0-20220714075325-11202fe498d6 h1:2XEsyh+LCSKJ
 github.com/iotaledger/hive.go v0.0.0-20220714075325-11202fe498d6/go.mod h1:qY0Eg2w/r+Ot0KrocMQHrtHzrcYKxDAEf33c6nSd8mI=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220714075325-11202fe498d6 h1:ayhSELd1o+qjaDV2kdlH4+0M8Y/V0BshjwjUiLNMOW4=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220714075325-11202fe498d6/go.mod h1:7fVUqbLY+iBjCNjFwzbhOyS07OZJFIYJEDNJAItzMw8=
-github.com/iotaledger/inx-app v1.0.0-beta.5 h1:A8OhAotymxraHnfsA2swcjelLW5i3Y7MBnhVb7czo2k=
-github.com/iotaledger/inx-app v1.0.0-beta.5/go.mod h1:w+fmEjD22xJkX0NP9gz9Em8HYaTIt6JOJi7qApitMgc=
-github.com/iotaledger/inx/go v1.0.0-beta.3 h1:dfqHDuiLnxnrjnMthT3h65jN6aXzes2VvNe0WFjN7vM=
-github.com/iotaledger/inx/go v1.0.0-beta.3/go.mod h1:yDhKgqnasqydYMossxUM7JcJnIbas4Zp823sM/0AB+s=
+github.com/iotaledger/inx-app v1.0.0-beta.6 h1:TvFw1ui+oTPGVIPYR0bDEIfk//j64LloQishQLVAjTw=
+github.com/iotaledger/inx-app v1.0.0-beta.6/go.mod h1:LYJVsN3U2IJGu/Xi3yYwHlho/BflrNrJSKQx8PPtY6A=
+github.com/iotaledger/inx/go v1.0.0-beta.4 h1:Om1ORLy4hMQy0rg6oREyuBY1/6ULqdZmGG9tHILGg5o=
+github.com/iotaledger/inx/go v1.0.0-beta.4/go.mod h1:ONo8cSWyo4Nb4fuyeSFmZf4Vf71wZuyisxDTfH46ZBo=
 github.com/iotaledger/iota.go v1.0.0 h1:tqm1FxJ/zOdzbrAaQ5BQpVF8dUy2eeGlSeWlNG8GoXY=
 github.com/iotaledger/iota.go v1.0.0/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go/v3 v3.0.0-beta.4 h1:T4yWpxaAEu/itx6QK7CaNfNMtgsdCKacdpIktiUdo78=
@@ -1169,8 +1169,8 @@ golang.org/x/sys v0.0.0-20220412211240-33da011f77ad/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20220731174439-a90be440212d h1:Sv5ogFZatcgIMMtBSTTAgMYsicp25MXBubjXNDKwm80=
-golang.org/x/sys v0.0.0-20220731174439-a90be440212d/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20220803195053-6e608f9ce704 h1:Y7NOhdqIOU8kYI7BxsgL38d0ot0raxvcW+EMQU2QrT4=
+golang.org/x/sys v0.0.0-20220803195053-6e608f9ce704/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 h1:Q5284mrmYTpACcm+eAKjKJH48BBwSyfJqmmGDTtT8Vc=
@@ -1332,8 +1332,8 @@ google.golang.org/genproto v0.0.0-20200729003335-053ba62fc06f/go.mod h1:FWY/as6D
 google.golang.org/genproto v0.0.0-20200804131852-c06518451d9c/go.mod h1:FWY/as6DDZQgahTzZj3fqbO1CbirC29ZNUFHwi0/+no=
 google.golang.org/genproto v0.0.0-20200825200019-8632dd797987/go.mod h1:FWY/as6DDZQgahTzZj3fqbO1CbirC29ZNUFHwi0/+no=
 google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84/go.mod h1:SzzZ/N+nwJDaO1kznhnlzqS8ocJICar6hYhVyhi++24=
-google.golang.org/genproto v0.0.0-20220802133213-ce4fa296bf78 h1:QntLWYqZeuBtJkth3m/6DLznnI0AHJr+AgJXvVh/izw=
-google.golang.org/genproto v0.0.0-20220802133213-ce4fa296bf78/go.mod h1:iHe1svFLAZg9VWz891+QbRMwUv9O/1Ww+/mngYeThbc=
+google.golang.org/genproto v0.0.0-20220803205849-8f55acc8769f h1:ywoA0TLvF/4n7P2lr/+bNRueYxWYUJZbRwV3hyYt8gY=
+google.golang.org/genproto v0.0.0-20220803205849-8f55acc8769f/go.mod h1:iHe1svFLAZg9VWz891+QbRMwUv9O/1Ww+/mngYeThbc=
 google.golang.org/grpc v1.12.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
 google.golang.org/grpc v1.14.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
 google.golang.org/grpc v1.16.0/go.mod h1:0JHn/cJsOMiMfNA9+DeHDlAU7KAAB5GDlYFpa9MZMio=
