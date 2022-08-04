@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-beta.4] - 04.08.2022
+
+### Changed
+    - Adapt to new INX LedgerUpdate batch API (#1653)
+
+### Added
+    - Added a way to log all REST API requests (#1649)
+    - Added per endpoint prometheus metrics for the REST API (#1651)
+    - Allow MinPoWScore set to zero for tests (#1652)
+
 ## [2.0.0-beta.3] - 27.07.2022
 
 :warning: :warning: :warning:
