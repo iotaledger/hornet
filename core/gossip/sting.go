@@ -3,14 +3,15 @@ package gossip
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/generics/event"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 )
 
 // sets up the event handlers which propagate STING messages.
 func attachEventsProtocolMessages(proto *gossip.Protocol) {
 
-	proto.Parser.Events.Received[gossip.MessageTypeBlock].Attach(events.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeBlock].Attach(event.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedBlocks.Inc()
 		deps.ServerMetrics.Blocks.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeBlock, data)
@@ -22,7 +23,7 @@ func attachEventsProtocolMessages(proto *gossip.Protocol) {
 		deps.ServerMetrics.SentBlocks.Inc()
 	}))
 
-	proto.Parser.Events.Received[gossip.MessageTypeBlockRequest].Attach(events.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeBlockRequest].Attach(event.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedBlockRequests.Inc()
 		deps.ServerMetrics.ReceivedBlockRequests.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeBlockRequest, data)
@@ -34,7 +35,7 @@ func attachEventsProtocolMessages(proto *gossip.Protocol) {
 		deps.ServerMetrics.SentBlockRequests.Inc()
 	}))
 
-	proto.Parser.Events.Received[gossip.MessageTypeMilestoneRequest].Attach(events.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeMilestoneRequest].Attach(event.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMilestoneRequests.Inc()
 		deps.ServerMetrics.ReceivedMilestoneRequests.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeMilestoneRequest, data)
@@ -46,7 +47,7 @@ func attachEventsProtocolMessages(proto *gossip.Protocol) {
 		deps.ServerMetrics.SentMilestoneRequests.Inc()
 	}))
 
-	proto.Parser.Events.Received[gossip.MessageTypeHeartbeat].Attach(events.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeHeartbeat].Attach(event.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedHeartbeats.Inc()
 		deps.ServerMetrics.ReceivedHeartbeats.Inc()
 

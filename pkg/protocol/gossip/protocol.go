@@ -9,8 +9,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"go.uber.org/atomic"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/protocol"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/protocol"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	iotago "github.com/iotaledger/iota.go/v3"
 )

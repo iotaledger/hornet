@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/app/core/shutdown"
-	"github.com/iotaledger/hive.go/app/plugins/profiling"
+	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/core/app/core/shutdown"
+	"github.com/iotaledger/hive.go/core/app/plugins/profiling"
 	"github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/core/gossip"
 	"github.com/iotaledger/hornet/v2/core/p2p"

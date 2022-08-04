@@ -6,7 +6,7 @@ import (
 	echoprometheus "github.com/labstack/echo-contrib/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 )
 
 var (

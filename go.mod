@@ -10,10 +10,10 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf
-	github.com/iotaledger/hive.go v0.0.0-20220714075325-11202fe498d6
-	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220714075325-11202fe498d6
-	github.com/iotaledger/inx-app v1.0.0-beta.6
+	github.com/iotaledger/go-ds-kvstore v0.0.0-20220804162330-1af738c10bba
+	github.com/iotaledger/hive.go/core v0.0.0-20220804161003-6fa4960fde5f
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220804161003-6fa4960fde5f
+	github.com/iotaledger/inx-app v1.0.0-beta.6.0.20220804163132-4b3385148b70
 	github.com/iotaledger/inx/go v1.0.0-beta.4
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v3 v3.0.0-beta.4
@@ -73,7 +73,6 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gohornet/grocksdb v1.7.1-0.20220426081058-60f50d7c59e8 // indirect
-	github.com/golang/glog v1.0.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
@@ -173,7 +172,7 @@ require (
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
-	google.golang.org/genproto v0.0.0-20220803205849-8f55acc8769f // indirect
+	google.golang.org/genproto v0.0.0-20220804142021-4e6b2dfa6612 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

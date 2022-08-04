@@ -1,7 +1,7 @@
 package protocfg
 
 import (
-	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/core/app"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

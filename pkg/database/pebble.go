@@ -6,7 +6,7 @@ import (
 	pebbleDB "github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
 
-	"github.com/iotaledger/hive.go/kvstore/pebble"
+	"github.com/iotaledger/hive.go/core/kvstore/pebble"
 )
 
 // NewPebbleDB creates a new pebble DB instance.

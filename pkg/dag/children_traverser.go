@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/contextutils"
+	"github.com/iotaledger/hive.go/core/contextutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	iotago "github.com/iotaledger/iota.go/v3"
 )

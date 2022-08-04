@@ -10,10 +10,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/generics/event"
+	"github.com/iotaledger/hive.go/core/logger"
+	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -309,16 +310,16 @@ func configureEvents() {
 		attachEventsProtocolMessages(proto)
 
 		// attach protocol errors
-		closeConnectionDueToProtocolError := events.NewClosure(func(err error) {
+		closeConnectionDueToProtocolError := func(err error) {
 			CoreComponent.LogWarnf("closing connection to peer %s because of a protocol error: %s", proto.PeerID.ShortString(), err.Error())
 
 			if err := deps.GossipService.CloseStream(proto.PeerID); err != nil {
 				CoreComponent.LogWarnf("closing connection to peer %s failed, error: %s", proto.PeerID.ShortString(), err.Error())
 			}
-		})
+		}
 
-		proto.Events.Errors.Attach(closeConnectionDueToProtocolError)
-		proto.Parser.Events.Error.Attach(closeConnectionDueToProtocolError)
+		proto.Events.Errors.Attach(events.NewClosure(closeConnectionDueToProtocolError))
+		proto.Parser.Events.Error.Attach(event.NewClosure(closeConnectionDueToProtocolError))
 
 		if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
 			buf := make([]byte, readBufSize)

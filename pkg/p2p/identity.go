@@ -17,9 +17,9 @@ import (
 	"github.com/pkg/errors"
 
 	kvstoreds "github.com/iotaledger/go-ds-kvstore"
-	hivecrypto "github.com/iotaledger/hive.go/crypto"
-	"github.com/iotaledger/hive.go/ioutils"
-	"github.com/iotaledger/hive.go/kvstore"
+	hivecrypto "github.com/iotaledger/hive.go/core/crypto"
+	"github.com/iotaledger/hive.go/core/ioutils"
+	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 )
 

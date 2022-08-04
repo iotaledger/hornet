@@ -8,7 +8,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/inx-app/httpserver"
 
-	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/core/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

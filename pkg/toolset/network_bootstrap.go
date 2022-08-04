@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/crypto"
-	"github.com/iotaledger/hive.go/ioutils"
+	"github.com/iotaledger/hive.go/core/configuration"
+	"github.com/iotaledger/hive.go/core/crypto"
+	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	databasecore "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/core/protocfg"
