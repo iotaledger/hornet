@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  hornet-nest:
+    build:
+      dockerfile: Dockerfile
+    image: hornet-nest:dev
+    ports:
+      - "14265:14265/tcp"
+      - "8081:8081/tcp"
+      - "8091:8091/tcp"
+      - "9029:9029/tcp"
