@@ -77,8 +77,10 @@ jobs:
       - name: Prepare private_tangle files
         run: |
           yq -i 'del(.services.create-snapshots.build)' private_tangle/docker-compose.yml
+          yq -i 'del(.services.bootstrap-network.build)' private_tangle/docker-compose.yml
           yq -i 'del(.services.hornet-coo.build)' private_tangle/docker-compose.yml
           yq -i '.services.create-snapshots.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.bootstrap-network'.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
           yq -i '.services.hornet-coo.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
           yq -i '.services.hornet-2.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
           yq -i '.services.hornet-3.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
