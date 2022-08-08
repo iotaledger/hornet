@@ -1,0 +1,52 @@
+{
+  "node": {
+    "alias": "HORNET nest node"
+  },
+  "protocol": {
+    "targetNetworkName": "hornet-nest-private-tangle-1",
+    "milestonePublicKeyCount": 2,
+    "baseToken": {
+      "name": "TestCoin",
+      "tickerSymbol": "TEST",
+      "unit": "TEST",
+      "subunit": "testies",
+      "decimals": 6,
+      "useMetricPrefix": false
+    },
+    "publicKeyRanges": [
+      {
+        "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
+        "start": 0,
+        "end": 0
+      }
+    ]
+  },
+  "db": {
+    "path": "privatedb"
+  },
+  "p2p": {
+    "db": {
+      "path": "p2pstore"
+    }
+  },
+  "snapshots": {
+    "fullPath": "snapshots/full_snapshot.bin",
+    "deltaPath": "snapshots/delta_snapshot.bin",
+    "downloadURLs": []
+  },
+  "restAPI": {
+    "publicRoutes": [
+      "/health",
+      "/api/*"
+    ],
+    "protectedRoutes": [],
+    "pow": {
+      "enabled": true
+    }
+  }
+}

@@ -1,0 +1,68 @@
+FROM iotaledger/hornet:2.0.0-beta.4 AS hornet
+FROM iotaledger/inx-indexer:1.0.0-beta.4 AS indexer
+FROM iotaledger/inx-faucet:1.0.0-beta.4 AS faucet
+FROM iotaledger/inx-dashboard:1.0.0-beta.4 AS dashboard
+FROM iotaledger/inx-mqtt:1.0.0-beta.4 AS mqtt
+FROM iotaledger/inx-spammer:1.0.0-beta.4 AS spammer
+FROM iotaledger/inx-coordinator:1.0.0-beta.4 AS coordinator
+FROM iotaledger/inx-poi:1.0.0-beta.4 AS poi
+
+FROM debian:11
+
+# hornet-coo API
+EXPOSE 14265/tcp
+
+# hornet-coo dashboard
+EXPOSE 8081/tcp
+
+# hornet-coo INX
+EXPOSE 9029/tcp
+
+# faucet
+EXPOSE 8091/tcp
+
+RUN mkdir /app
+WORKDIR /app
+
+# Prepare supervisor
+RUN apt update && apt install -y supervisor parallel
+RUN mkdir -p /var/log/supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+
+# Copy the inx apps dir into HORNET image
+COPY --from=hornet /app /app/hornet-coo
+COPY --from=hornet /app /app/hornet-2
+COPY --from=indexer /app /app/indexer
+COPY --from=faucet /app /app/faucet
+COPY --from=dashboard /app /app/dashboard
+COPY --from=mqtt /app /app/mqtt
+COPY --from=spammer /app /app/spammer
+COPY --from=coordinator /app /app/coordinator
+COPY --from=poi /app /app/poi
+
+# Overwrite default config
+COPY config.json /app/hornet-coo/config.json
+COPY config.json /app/hornet-2/config.json
+
+# Create snapshots
+COPY protocol_parameters.json /app/protocol_parameters.json
+RUN mkdir /app/hornet-coo/snapshots
+
+RUN /app/hornet-coo/hornet tool snap-gen \
+	--protocolParametersPath=/app/protocol_parameters.json \
+	--mintAddress=60200bad8137a704216e84f8f9acfe65b972d9f4155becb4815282b03cef99fe \
+	--outputPath=/app/hornet-coo/snapshots/full_snapshot.bin
+
+RUN cp -R /app/hornet-coo/snapshots /app/hornet-2/
+
+# Bootstrap network
+RUN mkdir /app/coordinator/state
+RUN COO_PRV_KEYS=651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c,0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c /app/hornet-coo/hornet tool bootstrap-private-tangle \
+	--configFile=/app/hornet-coo/config.json \
+	--snapshotPath=/app/hornet-coo/snapshots/full_snapshot.bin \
+	--databasePath=/app/hornet-coo/privatedb \
+	--cooStatePath=/app/coordinator/state/coordinator.state
+
+
+CMD ["/usr/bin/supervisord"]

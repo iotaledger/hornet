@@ -1,0 +1,13 @@
+{
+    "version": 2,
+    "networkName": "hornet-nest-private-tangle-1",
+    "bech32HRP": "tst",
+    "minPoWScore": 0,
+    "belowMaxDepth": 15,
+    "rentStructure": {
+        "vByteCost": 500,
+        "vByteFactorData": 1,
+        "vByteFactorKey": 10
+    },
+    "tokenSupply": "2779530283277761"
+}
