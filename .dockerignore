@@ -18,6 +18,9 @@
 .github/
 .git/
 
+# OSX related files
+.DS_Store
+
 # Docker related files
 docker/
 .dockerignore
@@ -26,9 +29,8 @@ docker-compose.yml
 # dist packages
 dist/
 
-# OSX related files
-.DS_Store
-/hornet
+# Integration test related files
+integration-tests/
 
 # Database directory
 privatedb*/
@@ -39,6 +41,9 @@ p2pstore*/
 # snapshot dir
 snapshots/
 
+# private tangle
+private_tangle/
+
 # log files
 hornet.log
 integration-tests/logs/*.log
@@ -48,3 +53,13 @@ integration-tests/logs/*.profile
 # coordinator files
 coordinator.state
 migrator.state
+
+# Documentation
+documentation/
+
+# Scripts + Tools
+scripts/
+tools/
+
+# Executable
+/hornet
