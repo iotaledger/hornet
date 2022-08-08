@@ -1,6 +1,6 @@
 module github.com/iotaledger/hornet/v2
 
-go 1.18
+go 1.19
 
 require (
 	github.com/blang/vfs v1.0.0
