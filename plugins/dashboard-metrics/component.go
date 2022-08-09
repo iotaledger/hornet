@@ -8,8 +8,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
@@ -100,7 +100,7 @@ func run() error {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("DashboardMetricsUpdater", func(ctx context.Context) {
-		deps.Tangle.Events.BPSMetricsUpdated.Attach(onBPSMetricsUpdated)
+		deps.Tangle.Events.BPSMetricsUpdated.Hook(onBPSMetricsUpdated)
 		<-ctx.Done()
 		deps.Tangle.Events.BPSMetricsUpdated.Detach(onBPSMetricsUpdated)
 	}, daemon.PriorityMetricsUpdater); err != nil {

@@ -7,9 +7,9 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/app/core/shutdown"
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/core/app/core/shutdown"
+	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -143,8 +143,8 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.Tangle.Events.BlockSolid.Attach(onBlockSolid)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
+	deps.Tangle.Events.BlockSolid.Hook(onBlockSolid)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
 }
 
 func detachEvents() {

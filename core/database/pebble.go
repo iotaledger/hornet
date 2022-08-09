@@ -1,8 +1,8 @@
 package database
 
 import (
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/kvstore/pebble"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 )

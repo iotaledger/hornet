@@ -1,7 +1,7 @@
 package snapshot
 
 import (
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 )
 
 // SnapshotMetricsCaller is used to signal updated snapshot metrics.

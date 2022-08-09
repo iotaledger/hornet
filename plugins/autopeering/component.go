@@ -10,12 +10,13 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/autopeering/discover"
-	"github.com/iotaledger/hive.go/autopeering/peer/service"
-	"github.com/iotaledger/hive.go/autopeering/selection"
-	"github.com/iotaledger/hive.go/crypto/ed25519"
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/core/autopeering/discover"
+	"github.com/iotaledger/hive.go/core/autopeering/peer/service"
+	"github.com/iotaledger/hive.go/core/autopeering/selection"
+	"github.com/iotaledger/hive.go/core/crypto/ed25519"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/generics/event"
 	databaseCore "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/core/gossip"
 	"github.com/iotaledger/hornet/v2/core/pow"
@@ -60,12 +61,12 @@ var (
 
 	localPeerContainer *autopeering.LocalPeerContainer
 
-	onDiscoveryPeerDiscovered  *events.Closure
-	onDiscoveryPeerDeleted     *events.Closure
-	onSelectionSaltUpdated     *events.Closure
-	onSelectionOutgoingPeering *events.Closure
-	onSelectionIncomingPeering *events.Closure
-	onSelectionDropped         *events.Closure
+	onDiscoveryPeerDiscovered  *event.Closure[*discover.PeerDiscoveredEvent]
+	onDiscoveryPeerDeleted     *event.Closure[*discover.PeerDeletedEvent]
+	onSelectionSaltUpdated     *event.Closure[*selection.SaltUpdatedEvent]
+	onSelectionOutgoingPeering *event.Closure[*selection.PeeringEvent]
+	onSelectionIncomingPeering *event.Closure[*selection.PeeringEvent]
+	onSelectionDropped         *event.Closure[*selection.DroppedEvent]
 	onPeerConnected            *events.Closure
 	onPeerDisconnected         *events.Closure
 	onPeeringRelationUpdated   *events.Closure
@@ -216,7 +217,7 @@ func run() error {
 
 func configureEvents() {
 
-	onDiscoveryPeerDiscovered = events.NewClosure(func(ev *discover.DiscoveredEvent) {
+	onDiscoveryPeerDiscovered = event.NewClosure(func(ev *discover.PeerDiscoveredEvent) {
 		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 		if err != nil {
 			Plugin.LogWarnf("unable to convert discovered autopeering peer to peerID: %s", err)
@@ -226,7 +227,7 @@ func configureEvents() {
 		Plugin.LogInfof("discovered: %s / %s", ev.Peer.Address(), peerID.ShortString())
 	})
 
-	onDiscoveryPeerDeleted = events.NewClosure(func(ev *discover.DeletedEvent) {
+	onDiscoveryPeerDeleted = event.NewClosure(func(ev *discover.PeerDeletedEvent) {
 		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 		if err != nil {
 			Plugin.LogWarnf("unable to convert deleted autopeering peer to peerID: %s", err)
@@ -307,11 +308,11 @@ func configureEvents() {
 		deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 	})
 
-	onSelectionSaltUpdated = events.NewClosure(func(ev *selection.SaltUpdatedEvent) {
+	onSelectionSaltUpdated = event.NewClosure(func(ev *selection.SaltUpdatedEvent) {
 		Plugin.LogInfof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
 	})
 
-	onSelectionOutgoingPeering = events.NewClosure(func(ev *selection.PeeringEvent) {
+	onSelectionOutgoingPeering = event.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return
 		}
@@ -332,7 +333,7 @@ func configureEvents() {
 		})
 	})
 
-	onSelectionIncomingPeering = events.NewClosure(func(ev *selection.PeeringEvent) {
+	onSelectionIncomingPeering = event.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return
 		}
@@ -352,7 +353,7 @@ func configureEvents() {
 		})
 	})
 
-	onSelectionDropped = events.NewClosure(func(ev *selection.DroppedEvent) {
+	onSelectionDropped = event.NewClosure(func(ev *selection.DroppedEvent) {
 		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 		if err != nil {
 			Plugin.LogWarnf("unable to convert dropped autopeering peer to peerID: %s", err)
@@ -432,19 +433,19 @@ func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
 func attachEvents() {
 
 	if deps.AutopeeringManager.Discovery() != nil {
-		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Attach(onDiscoveryPeerDiscovered)
-		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Attach(onDiscoveryPeerDeleted)
+		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Hook(onDiscoveryPeerDiscovered)
+		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Hook(onDiscoveryPeerDeleted)
 	}
 
 	if deps.AutopeeringManager.Selection() != nil {
 		// notify the selection when a connection is closed or failed.
-		deps.PeeringManager.Events.Connected.Attach(onPeerConnected)
-		deps.PeeringManager.Events.Disconnected.Attach(onPeerDisconnected)
-		deps.PeeringManager.Events.RelationUpdated.Attach(onPeeringRelationUpdated)
-		deps.AutopeeringManager.Selection().Events().SaltUpdated.Attach(onSelectionSaltUpdated)
-		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Attach(onSelectionOutgoingPeering)
-		deps.AutopeeringManager.Selection().Events().IncomingPeering.Attach(onSelectionIncomingPeering)
-		deps.AutopeeringManager.Selection().Events().Dropped.Attach(onSelectionDropped)
+		deps.PeeringManager.Events.Connected.Hook(onPeerConnected)
+		deps.PeeringManager.Events.Disconnected.Hook(onPeerDisconnected)
+		deps.PeeringManager.Events.RelationUpdated.Hook(onPeeringRelationUpdated)
+		deps.AutopeeringManager.Selection().Events().SaltUpdated.Hook(onSelectionSaltUpdated)
+		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Hook(onSelectionOutgoingPeering)
+		deps.AutopeeringManager.Selection().Events().IncomingPeering.Hook(onSelectionIncomingPeering)
+		deps.AutopeeringManager.Selection().Events().Dropped.Hook(onSelectionDropped)
 	}
 }
 

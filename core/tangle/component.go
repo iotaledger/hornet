@@ -9,10 +9,10 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/logger"
+	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -277,9 +277,9 @@ func configureEvents() {
 }
 
 func attachHeartbeatEvents() {
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-	deps.PruningManager.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
-	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
+	deps.PruningManager.Events.PruningMilestoneIndexChanged.Hook(onPruningMilestoneIndexChanged)
+	deps.Tangle.Events.LatestMilestoneIndexChanged.Hook(onLatestMilestoneIndexChanged)
 }
 
 func detachHeartbeatEvents() {

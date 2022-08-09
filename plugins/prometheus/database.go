@@ -5,7 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -44,7 +44,7 @@ func configureStorage(storage *storage.Storage, metrics *metrics.StorageMetrics)
 		},
 	)
 
-	storage.Events.PruningStateChanged.Attach(events.NewClosure(func(running bool) {
+	storage.Events.PruningStateChanged.Hook(events.NewClosure(func(running bool) {
 		if running {
 			m.pruningCount.Inc()
 		}
@@ -95,7 +95,7 @@ func configureDatabase(name string, db *database.Database) {
 		},
 	)
 
-	db.Events().DatabaseCompaction.Attach(events.NewClosure(func(running bool) {
+	db.Events().DatabaseCompaction.Hook(events.NewClosure(func(running bool) {
 		if running {
 			m.compactionCount.Inc()
 		}

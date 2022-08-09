@@ -3,7 +3,7 @@ package receipt
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/core/app"
 )
 
 // ParametersReceipts contains the definition of the parameters used by receipts.

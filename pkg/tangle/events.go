@@ -1,7 +1,7 @@
 package tangle
 
 import (
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"

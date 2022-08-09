@@ -10,9 +10,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/contextutils"
-	"github.com/iotaledger/hive.go/ioutils"
-	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/core/contextutils"
+	"github.com/iotaledger/hive.go/core/ioutils"
+	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	coreDatabase "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/pkg/common"

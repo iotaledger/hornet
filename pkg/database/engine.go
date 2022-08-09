@@ -8,11 +8,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/ioutils"
-	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
-	"github.com/iotaledger/hive.go/kvstore/rocksdb"
+	"github.com/iotaledger/hive.go/core/ioutils"
+	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/kvstore/mapdb"
+	"github.com/iotaledger/hive.go/core/kvstore/pebble"
+	"github.com/iotaledger/hive.go/core/kvstore/rocksdb"
 )
 
 type databaseInfo struct {

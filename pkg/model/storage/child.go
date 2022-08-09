@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/core/objectstorage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

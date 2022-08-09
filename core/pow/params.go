@@ -3,7 +3,7 @@ package pow
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/core/app"
 )
 
 // ParametersPoW contains the definition of the parameters used by PoW.

@@ -13,7 +13,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/contextutils"
+	"github.com/iotaledger/hive.go/core/contextutils"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

@@ -7,10 +7,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/iotaledger/hive.go/contextutils"
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/contextutils"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/workerpool"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hive.go/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
@@ -147,7 +147,7 @@ func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksSe
 		wp.Submit(cachedBlock)
 	})
 	wp.Start()
-	deps.Tangle.Events.ReceivedNewBlock.Attach(closure)
+	deps.Tangle.Events.ReceivedNewBlock.Hook(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.ReceivedNewBlock.Detach(closure)
 	wp.Stop()
@@ -176,7 +176,7 @@ func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSol
 		wp.Submit(blockMeta)
 	})
 	wp.Start()
-	deps.Tangle.Events.BlockSolid.Attach(closure)
+	deps.Tangle.Events.BlockSolid.Hook(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.BlockSolid.Detach(closure)
 	wp.Stop()
@@ -205,7 +205,7 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 		wp.Submit(blockMeta)
 	})
 	wp.Start()
-	deps.Tangle.Events.BlockReferenced.Attach(closure)
+	deps.Tangle.Events.BlockReferenced.Hook(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.BlockReferenced.Detach(closure)
 	wp.Stop()
@@ -238,8 +238,8 @@ func (s *INXServer) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenT
 
 	closure := events.NewClosure(func(tip *tipselect.Tip) { wp.Submit(tip) })
 	wp.Start()
-	deps.TipSelector.Events.TipAdded.Attach(closure)
-	deps.TipSelector.Events.TipRemoved.Attach(closure)
+	deps.TipSelector.Events.TipAdded.Hook(closure)
+	deps.TipSelector.Events.TipRemoved.Hook(closure)
 	<-ctx.Done()
 	deps.TipSelector.Events.TipAdded.Detach(closure)
 	deps.TipSelector.Events.TipRemoved.Detach(closure)

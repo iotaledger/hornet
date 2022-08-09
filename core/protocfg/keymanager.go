@@ -1,7 +1,7 @@
 package protocfg
 
 import (
-	"github.com/iotaledger/hive.go/crypto"
+	"github.com/iotaledger/hive.go/core/crypto"
 	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 

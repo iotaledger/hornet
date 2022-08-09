@@ -4,8 +4,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/core/objectstorage"
+	"github.com/iotaledger/hive.go/core/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 )
 

@@ -6,7 +6,7 @@ import (
 	echoprometheus "github.com/labstack/echo-contrib/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 )
 
 var (
@@ -60,7 +60,7 @@ func configureRestAPI() {
 	registry.MustRegister(restapiPoWBlockSizes)
 	registry.MustRegister(restapiPoWDurations)
 
-	deps.RestAPIMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(blockSize int, duration time.Duration) {
+	deps.RestAPIMetrics.Events.PoWCompleted.Hook(events.NewClosure(func(blockSize int, duration time.Duration) {
 		restapiPoWBlockSizes.Observe(float64(blockSize))
 		restapiPoWDurations.Observe(duration.Seconds())
 	}))

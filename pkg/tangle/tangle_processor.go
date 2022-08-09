@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iotaledger/hive.go/contextutils"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/hive.go/core/contextutils"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/timeutil"
+	"github.com/iotaledger/hive.go/core/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -111,7 +111,7 @@ func (t *Tangle) RunTangleProcessor() {
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(ctx context.Context) {
-		t.Events.BPSMetricsUpdated.Attach(onBPSMetricsUpdated)
+		t.Events.BPSMetricsUpdated.Hook(onBPSMetricsUpdated)
 		t.startWaitGroup.Done()
 		<-ctx.Done()
 		t.Events.BPSMetricsUpdated.Detach(onBPSMetricsUpdated)
@@ -121,8 +121,8 @@ func (t *Tangle) RunTangleProcessor() {
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(ctx context.Context) {
 		t.LogInfo("Starting TangleProcessor[ReceiveTx] ... done")
-		t.messageProcessor.Events.BlockProcessed.Attach(onBlockProcessed)
-		t.Events.BlockSolid.Attach(onBlockSolid)
+		t.messageProcessor.Events.BlockProcessed.Hook(onBlockProcessed)
+		t.Events.BlockSolid.Hook(onBlockSolid)
 		t.receiveBlockWorkerPool.Start()
 		t.startWaitGroup.Done()
 		<-ctx.Done()
@@ -150,9 +150,9 @@ func (t *Tangle) RunTangleProcessor() {
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(ctx context.Context) {
 		t.LogInfo("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
-		t.milestoneManager.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
-		t.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
-		t.Events.MilestoneTimeout.Attach(onMilestoneTimeout)
+		t.milestoneManager.Events.ReceivedValidMilestone.Hook(onReceivedValidMilestone)
+		t.Events.LatestMilestoneIndexChanged.Hook(onLatestMilestoneIndexChanged)
+		t.Events.MilestoneTimeout.Hook(onMilestoneTimeout)
 		t.startWaitGroup.Done()
 		<-ctx.Done()
 		t.LogInfo("Stopping TangleProcessor[ProcessMilestone] ...")

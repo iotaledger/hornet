@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/hive.go/core/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"

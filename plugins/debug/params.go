@@ -1,7 +1,7 @@
 package debug
 
 import (
-	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/core/app"
 )
 
 // ParametersDebug contains the definition of the parameters used by the debug plugin.

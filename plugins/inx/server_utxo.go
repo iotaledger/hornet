@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	inx "github.com/iotaledger/inx/go"
@@ -343,7 +343,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	})
 
 	wp.Start()
-	deps.Tangle.Events.LedgerUpdated.Attach(closure)
+	deps.Tangle.Events.LedgerUpdated.Hook(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.LedgerUpdated.Detach(closure)
 	wp.Stop()
@@ -518,7 +518,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 	})
 
 	wp.Start()
-	deps.Tangle.Events.TreasuryMutated.Attach(closure)
+	deps.Tangle.Events.TreasuryMutated.Hook(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.TreasuryMutated.Detach(closure)
 	wp.Stop()
@@ -545,7 +545,7 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 		wp.Submit(receipt)
 	})
 	wp.Start()
-	deps.Tangle.Events.NewReceipt.Attach(closure)
+	deps.Tangle.Events.NewReceipt.Hook(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.NewReceipt.Detach(closure)
 	wp.Stop()

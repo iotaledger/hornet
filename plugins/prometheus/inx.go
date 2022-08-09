@@ -5,7 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 )
 
 var (
@@ -47,7 +47,7 @@ func configureINX() {
 	registry.MustRegister(inxPoWBlockSizes)
 	registry.MustRegister(inxPoWDurations)
 
-	deps.INXMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(blockSize int, duration time.Duration) {
+	deps.INXMetrics.Events.PoWCompleted.Hook(events.NewClosure(func(blockSize int, duration time.Duration) {
 		inxPoWBlockSizes.Observe(float64(blockSize))
 		inxPoWDurations.Observe(duration.Seconds())
 	}))

@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/atomic"
 
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 )
 
 type INXEvents struct {

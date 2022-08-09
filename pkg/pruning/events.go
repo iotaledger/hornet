@@ -1,7 +1,7 @@
 package pruning
 
 import (
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 )
 
 // PruningMetricsCaller is used to signal updated pruning metrics.

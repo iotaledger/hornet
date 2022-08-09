@@ -1,7 +1,7 @@
 package inx
 
 import (
-	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/core/app"
 )
 
 // ParametersINX contains the definition of the parameters used by INX.

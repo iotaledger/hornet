@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/model/migrator"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
@@ -85,7 +85,7 @@ func provide(c *dig.Container) error {
 
 func configure() error {
 
-	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.ReceiptMilestoneOpt) {
+	deps.Tangle.Events.NewReceipt.Hook(events.NewClosure(func(r *iotago.ReceiptMilestoneOpt) {
 		if deps.ReceiptService.ValidationEnabled {
 			Plugin.LogInfof("receipt passed validation against %s", ParamsReceipts.Validator.API.Address)
 		}

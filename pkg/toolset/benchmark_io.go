@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/tpkg"
 )
 

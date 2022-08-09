@@ -11,9 +11,9 @@ import (
 
 	"github.com/iotaledger/hornet/v2/pkg/database"
 
-	"github.com/iotaledger/hive.go/autopeering/peer"
-	"github.com/iotaledger/hive.go/autopeering/peer/service"
-	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/core/autopeering/peer"
+	"github.com/iotaledger/hive.go/core/autopeering/peer/service"
+	"github.com/iotaledger/hive.go/core/kvstore"
 )
 
 // LocalPeerContainer defines the container for the local autopeering peer.

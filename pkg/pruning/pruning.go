@@ -7,10 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/contextutils"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/core/contextutils"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/logger"
+	"github.com/iotaledger/hive.go/core/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/database"

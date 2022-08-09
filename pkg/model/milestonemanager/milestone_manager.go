@@ -3,7 +3,7 @@ package milestonemanager
 import (
 	"math"
 
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"

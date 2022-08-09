@@ -3,8 +3,8 @@ package prometheus
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/pruning"
 	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
@@ -87,21 +87,21 @@ func configureDebug() {
 		[]string{"type"},
 	)
 
-	deps.SnapshotManager.Events.SnapshotMetricsUpdated.Attach(events.NewClosure(func(metrics *snapshot.SnapshotMetrics) {
+	deps.SnapshotManager.Events.SnapshotMetricsUpdated.Hook(events.NewClosure(func(metrics *snapshot.SnapshotMetrics) {
 		snapshotTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()
 		lastSnapshotMetrics = metrics
 	}))
 
-	deps.PruningManager.Events.PruningMetricsUpdated.Attach(events.NewClosure(func(metrics *pruning.PruningMetrics) {
+	deps.PruningManager.Events.PruningMetricsUpdated.Hook(events.NewClosure(func(metrics *pruning.PruningMetrics) {
 		databasePruningTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()
 		lastDatabasePruningMetrics = metrics
 	}))
 
-	deps.Tangle.Events.ConfirmationMetricsUpdated.Attach(events.NewClosure(func(metrics *whiteflag.ConfirmationMetrics) {
+	deps.Tangle.Events.ConfirmationMetricsUpdated.Hook(events.NewClosure(func(metrics *whiteflag.ConfirmationMetrics) {
 		milestoneConfirmationTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()

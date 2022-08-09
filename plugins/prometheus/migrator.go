@@ -3,7 +3,7 @@ package prometheus
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/events"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -34,7 +34,7 @@ func configureReceipts() {
 	registry.MustRegister(receiptCount)
 	registry.MustRegister(receiptMigrationEntriesApplied)
 
-	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.ReceiptMilestoneOpt) {
+	deps.Tangle.Events.NewReceipt.Hook(events.NewClosure(func(r *iotago.ReceiptMilestoneOpt) {
 		receiptCount.Inc()
 		receiptMigrationEntriesApplied.Add(float64(len(r.Funds)))
 	}))

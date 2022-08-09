@@ -11,11 +11,11 @@ import (
 	"github.com/mr-tron/base58"
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/core/configuration"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
 
-	hivecrypto "github.com/iotaledger/hive.go/crypto"
+	hivecrypto "github.com/iotaledger/hive.go/core/crypto"
 
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )

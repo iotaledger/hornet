@@ -7,9 +7,9 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/app/core/shutdown"
-	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/core/app/core/shutdown"
+	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
@@ -136,14 +136,14 @@ func provide(c *dig.Container) error {
 }
 
 func configure() error {
-	deps.Tangle.Events.ConfirmedMilestoneChanged.Attach(events.NewClosure(deps.ProtocolManager.HandleConfirmedMilestone))
+	deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(events.NewClosure(deps.ProtocolManager.HandleConfirmedMilestone))
 
 	unsupportedProtoParamsMsOptionClosure := events.NewClosure(func(unsupportedProtoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) {
 		unsupportedVersion := unsupportedProtoParamsMsOption.ProtocolVersion
 		CoreComponent.LogWarnf("next milestone will run under unsupported protocol version %d!", unsupportedVersion)
 	})
-	deps.ProtocolManager.Events.NextMilestoneUnsupported.Attach(unsupportedProtoParamsMsOptionClosure)
-	deps.ProtocolManager.Events.CriticalErrors.Attach(events.NewClosure(func(err error) {
+	deps.ProtocolManager.Events.NextMilestoneUnsupported.Hook(unsupportedProtoParamsMsOptionClosure)
+	deps.ProtocolManager.Events.CriticalErrors.Hook(events.NewClosure(func(err error) {
 		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("protocol manager hit a critical error: %s", err), true)
 	}))
 
