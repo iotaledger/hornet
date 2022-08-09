@@ -51,6 +51,7 @@
     "protectedRoutes": [],
     "pow": {
       "enabled": true
-    }
+    },
+    "debugRequestLoggerEnabled": false
   }
 }

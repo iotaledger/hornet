@@ -15,6 +15,7 @@
     "bpsRateLimit": 5.0,
     "workers": 0,
     "autostart": true,
+    "valueSpamEnabled": false,
     "nonLazyTipsThreshold": 0,
     "semiLazyTipsThreshold": 30
   },

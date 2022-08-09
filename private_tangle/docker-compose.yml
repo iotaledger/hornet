@@ -10,12 +10,14 @@ services:
         ipv4_address: 172.18.211.11
     volumes:
       - ./protocol_parameters.json:/app/protocol_parameters.json:ro
+      - ./genesis_addresses.json:/app/genesis_addresses.json:ro
       - ./snapshots:/app/snapshots
     command:
       - "tool"
       - "snap-gen"
       - "--protocolParametersPath=/app/protocol_parameters.json"
-      - "--mintAddress=60200bad8137a704216e84f8f9acfe65b972d9f4155becb4815282b03cef99fe"
+      - "--mintAddress=15664f85080415d9081840367d6cea31885f5d929366dffdf063f1c0856baed1"
+      - "--genesisAddressesPath=/app/genesis_addresses.json"
       - "--outputPath=/app/snapshots/coo/full_snapshot.bin"
     profiles:
       - snapshots
@@ -110,7 +112,7 @@ services:
     ports:
       - "8091:8091/tcp"
     environment:
-      - "FAUCET_PRV_KEY=52d23081a626b1eca34b63f1eaeeafcbd66bf545635befc12cd0f19926efefb031f176dadf38cdec0eadd1d571394be78f0bbee3ed594316678dffc162a095cb"
+      - "FAUCET_PRV_KEY=887844b1e6bf9ca9e0b57584656add4370dbb49a8cb79e2e3032229f30fd80359e3df559ad0de8e5fa019b9ea46d1ee40879f3f3f74594a3306de9dfd43dcd25"
     volumes:
       - ./config_faucet.json:/app/config.json:ro
     command:
@@ -155,6 +157,8 @@ services:
     restart: on-failure
     ports:
       - "9092:9092/tcp"
+    environment:
+      - "SPAMMER_MNEMONIC=reward addict anger tongue denial supply cattle lawn foot climb ask friend base spring ensure spike alien equal burst bitter crowd august ignore animal"
     volumes:
       - ./config_spammer.json:/app/config.json:ro
     command:

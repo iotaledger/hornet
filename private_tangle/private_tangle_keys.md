@@ -14,6 +14,22 @@ token ed25519 public key:              31f176dadf38cdec0eadd1d571394be78f0bbee3e
 token ed25519 address:                 60200bad8137a704216e84f8f9acfe65b972d9f4155becb4815282b03cef99fe <br>
 token bech32 address with `tst` HRP:   tst1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vlupxvxq2
 
+## Faucet
+
+token mnemonic:            average day true meadow dawn pistol near vicious have ordinary sting fetch mobile month ladder explain tornado curious energy orange belt glue surge urban <br>
+token ed25519 private key: 887844b1e6bf9ca9e0b57584656add4370dbb49a8cb79e2e3032229f30fd80359e3df559ad0de8e5fa019b9ea46d1ee40879f3f3f74594a3306de9dfd43dcd25 <br>
+token ed25519 public key:              9e3df559ad0de8e5fa019b9ea46d1ee40879f3f3f74594a3306de9dfd43dcd25 <br>
+token ed25519 address:                 15664f85080415d9081840367d6cea31885f5d929366dffdf063f1c0856baed1 <br>
+token bech32 address with `tst` HRP:   tst1qq2kvnu9pqzptkggrpqrvltvagccsh6aj2fkdhla7p3lrsy9dwhdzu5l2ye
+
+## INX-Spammer
+
+token mnemonic:            reward addict anger tongue denial supply cattle lawn foot climb ask friend base spring ensure spike alien equal burst bitter crowd august ignore animal <br>
+token ed25519 private key: d50e772a711c3bf71ae676a8dc6a9726346c200d676a8fa7a6e254f341233115e073300fae90b10163e4b2b70c3fa8a93360992ed1a4cc2f6b386b5121c540a4 <br>
+token ed25519 public key:              e073300fae90b10163e4b2b70c3fa8a93360992ed1a4cc2f6b386b5121c540a4 <br>
+token ed25519 address:                 1d9e7a9f6849d9ce9282ee08775b7aee6aaf6034f12d70064d005f543b01a2f2 <br>
+token bech32 address with `tst` HRP:   tst1qqweu75ldpyann5jsthqsa6m0thx4tmqxncj6uqxf5q974pmqx30y5mcdp2
+
 ## P2P Identities
 
 ### Coordinator node
