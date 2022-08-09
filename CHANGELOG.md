@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-beta.5] - 09.08.2022
+
+### Changed
+    - Updated to Go 1.19 (#1659)
+    - Updated hive.go dependency to latest version used by GoShimmer (#1654)
+
+### Added
+    - Added hornet-nest docker for developers (#1655)
+    - Added genesis addresses to snap-gen tool (#1662)
+
+
 ## [2.0.0-beta.4] - 04.08.2022
 
 ### Changed
