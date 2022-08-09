@@ -409,12 +409,12 @@ github.com/hydrogen18/memlistener v0.0.0-20200120041712-dcc25e7acd91/go.mod h1:q
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/imkira/go-interpol v1.1.0/go.mod h1:z0h2/2T3XF8kyEPpRgJ3kmNv+C43p+I/CoI+jC3w2iA=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
-github.com/iotaledger/go-ds-kvstore v1.0.0-beta.1 h1:H+ottU8eyLbuiT3VcDD+eOSmNLgBmGM87PwWjK4P35Y=
-github.com/iotaledger/go-ds-kvstore v1.0.0-beta.1/go.mod h1:fknWsP6p/GYsZi1xL+O+aRcYuqxzX3Z8E5fbsIcnKWY=
+github.com/iotaledger/go-ds-kvstore v1.0.0-beta.2 h1:3uoB9bUnlWY2YW5I08aU+aAkMFNen3qICRazS9+ugGc=
+github.com/iotaledger/go-ds-kvstore v1.0.0-beta.2/go.mod h1:FmjyN5mfB5LciHw011+H359+hk7Y1IQK8MhGo4kY2oo=
 github.com/iotaledger/grocksdb v1.7.5-0.20220808142449-1dc0b8ac4d7d h1:KYc/EkMX3CXvsYyUC9EvToUeYc0c74ZwjRg/0Wd27LU=
 github.com/iotaledger/grocksdb v1.7.5-0.20220808142449-1dc0b8ac4d7d/go.mod h1:DuNKJ1G/vKugT7WGAoftMTu2aApNNxF4ADFMxLmKS2Y=
-github.com/iotaledger/hive.go/core v1.0.0-beta.1 h1:qLSVIiCE85GzZMzzKzj/z1aOFLhc1KbMwuuueyDTFz8=
-github.com/iotaledger/hive.go/core v1.0.0-beta.1/go.mod h1:OugZdA+vjL1OI+aGWkjud8w++PQZ3YJ3cdirvOgFeLA=
+github.com/iotaledger/hive.go/core v1.0.0-beta.2 h1:+d+lhK8TvbTWkJsHTpnRxsXSiyDzTaFn2oLRc+AIG2Q=
+github.com/iotaledger/hive.go/core v1.0.0-beta.2/go.mod h1:bYl+7/qkM+rWiw8F6JF7dF5/9MW3y8F7j7DxDnTqWeE=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-beta.1 h1:0NwAA/6N8/pUm7IQdd6rjmExfdwNZigYFhE31fOuQrU=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-beta.1/go.mod h1:beZKjVT4HPayWfwsmItNNI5E81rS783vGx5ZwRbZQgY=
 github.com/iotaledger/inx-app v1.0.0-beta.7 h1:LH5+DoMC5awrPL7SQR+BZvYAdUHH37a/0a4p02m/o6w=
