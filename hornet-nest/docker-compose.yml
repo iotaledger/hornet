@@ -4,6 +4,7 @@ services:
     build:
       dockerfile: Dockerfile
     image: hornet-nest:dev
+    stop_grace_period: 5m
     ports:
       - "14265:14265/tcp"
       - "8081:8081/tcp"
