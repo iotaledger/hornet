@@ -1,7 +1,7 @@
 package coreapi
 
 import (
-	"io/ioutil"
+	"io"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -156,7 +156,7 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 			// bad request
 		}
 
-		bytes, err := ioutil.ReadAll(c.Request().Body)
+		bytes, err := io.ReadAll(c.Request().Body)
 		if err != nil {
 			return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid block, error: %s", err)
 		}

@@ -3,7 +3,6 @@ package toolset
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"runtime"
@@ -53,7 +52,7 @@ func benchmarkIO(args []string) error {
 		return err
 	}
 
-	tempDir, err := ioutil.TempDir("", "benchmarkIO")
+	tempDir, err := os.MkdirTemp("", "benchmarkIO")
 	if err != nil {
 		return fmt.Errorf("can't create temp dir: %w", err)
 	}

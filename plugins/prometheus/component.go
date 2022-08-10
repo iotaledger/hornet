@@ -3,8 +3,8 @@ package prometheus
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -175,7 +175,7 @@ func writeFileServiceDiscoveryFile() {
 	}
 
 	// this truncates an existing file
-	if err := ioutil.WriteFile(path, j, 0666); err != nil {
+	if err := os.WriteFile(path, j, 0666); err != nil {
 		Plugin.LogPanic("unable to write file service discovery file:", err)
 	}
 
