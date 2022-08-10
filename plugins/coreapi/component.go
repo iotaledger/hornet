@@ -186,7 +186,7 @@ func configure() error {
 
 	// Check for features
 	if restapi.ParamsRestAPI.PoW.Enabled {
-		AddFeature("PoW")
+		AddFeature("Pow")
 		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, restapi.ParamsRestAPI.PoW.WorkerCount))
 	}
 
