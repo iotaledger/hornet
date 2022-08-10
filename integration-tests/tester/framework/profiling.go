@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -64,7 +64,7 @@ func (n *Profiler) query(path string) ([]byte, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	profileBytes, err := ioutil.ReadAll(resp.Body)
+	profileBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read profile from response: %w", err)
 	}
@@ -73,6 +73,6 @@ func (n *Profiler) query(path string) ([]byte, error) {
 
 // writeProfile writes the given profile data to the given file in the log directory.
 func (n *Profiler) writeProfile(fileName string, profileBytes []byte) error {
-	profileReader := ioutil.NopCloser(bytes.NewReader(profileBytes))
+	profileReader := io.NopCloser(bytes.NewReader(profileBytes))
 	return writeFileInLogDir(fileName, profileReader)
 }

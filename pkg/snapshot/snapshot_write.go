@@ -3,7 +3,6 @@ package snapshot
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -882,7 +881,7 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		return nil, err
 	}
 
-	tempDir, err := ioutil.TempDir("", "snapMerge")
+	tempDir, err := os.MkdirTemp("", "snapMerge")
 	if err != nil {
 		return nil, fmt.Errorf("can't create temp dir: %w", err)
 	}

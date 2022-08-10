@@ -51,7 +51,7 @@ RUN mkdir /app/hornet-coo/snapshots
 
 RUN /app/hornet-coo/hornet tool snap-gen \
 	--protocolParametersPath=/app/protocol_parameters.json \
-	--mintAddress=15664f85080415d9081840367d6cea31885f5d929366dffdf063f1c0856baed1 \
+	--mintAddress=tst1qq2kvnu9pqzptkggrpqrvltvagccsh6aj2fkdhla7p3lrsy9dwhdzu5l2ye \
 	--outputPath=/app/hornet-coo/snapshots/full_snapshot.bin
 
 RUN cp -R /app/hornet-coo/snapshots /app/hornet-2/

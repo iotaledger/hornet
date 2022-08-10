@@ -2,10 +2,11 @@ package toolset
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -47,17 +48,9 @@ func (g *GenesisAddresses) UnmarshalJSON(bytes []byte) error {
 	}
 
 	parseBalance := func(bech32Address string, balance uint64) error {
-		_, address, err := iotago.ParseBech32(bech32Address)
+		address, err := parseAddress(bech32Address)
 		if err != nil {
-			if len(bech32Address) != 64 {
-				return err
-			}
-
-			// try parsing as hex
-			address, err = iotago.ParseEd25519AddressFromHexString("0x" + bech32Address)
-			if err != nil {
-				return err
-			}
+			return err
 		}
 
 		g.Balances = append(g.Balances, &AddressWithBalance{
@@ -83,13 +76,32 @@ func (g *GenesisAddresses) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+func parseAddress(bech32Address string) (iotago.Address, error) {
+	_, address, err := iotago.ParseBech32(bech32Address)
+	if err != nil {
+		bech32Address = strings.TrimPrefix(bech32Address, "0x")
+
+		if len(bech32Address) != iotago.Ed25519AddressBytesLength*2 {
+			return nil, err
+		}
+
+		// try parsing as hex
+		address, err = iotago.ParseEd25519AddressFromHexString("0x" + bech32Address)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return address, nil
+}
+
 func snapshotGen(args []string) error {
 
 	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	protocolParametersPathFlag := fs.String(FlagToolProtocolParametersPath, "", "the path to the initial protocol parameters file")
-	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial ed25519 address all the tokens will be minted to")
+	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial bech32 address all the tokens will be minted to")
 	treasuryAllocationFlag := fs.Uint64(FlagToolSnapGenTreasuryAllocation, 0, "the amount of tokens to reside within the treasury, the delta from the supply will be allocated to 'mintAddress'")
-	genesisAddressesPathFlag := fs.String(FlagToolGenesisAddressesPath, "", "the file path to the genesis addresses file (optional)")
+	genesisAddressesPathFlag := fs.String(FlagToolGenesisAddressesPath, "", "the file path to the genesis bech32 addresses file (optional)")
+	genesisAddressesFlag := fs.String(FlagToolGenesisAddresses, "", "additional genesis bech32 addresses with balances (optional, format: addr1:balance1,addr2:balance2,...)")
 	outputFilePathFlag := fs.String(FlagToolOutputPath, "", "the file path to the generated snapshot file")
 
 	fs.Usage = func() {
@@ -144,15 +156,10 @@ func snapshotGen(args []string) error {
 	}
 
 	// check mint address
-	addressBytes, err := hex.DecodeString(*mintAddressFlag)
+	mintAddress, err := parseAddress(*mintAddressFlag)
 	if err != nil {
-		return fmt.Errorf("can't decode '%s': %w'", FlagToolSnapGenMintAddress, err)
+		return fmt.Errorf("failed to parse mint address: %w", err)
 	}
-	if len(addressBytes) != iotago.Ed25519AddressBytesLength {
-		return fmt.Errorf("incorrect '%s' length: %d != %d (%s)", FlagToolSnapGenMintAddress, len(addressBytes), iotago.Ed25519AddressBytesLength, *mintAddressFlag)
-	}
-	var address iotago.Ed25519Address
-	copy(address[:], addressBytes)
 
 	treasury := *treasuryAllocationFlag
 
@@ -163,9 +170,35 @@ func snapshotGen(args []string) error {
 			return fmt.Errorf("'%s' (%s) does not exist", FlagToolGenesisAddressesPath, genesisAddressesPath)
 		}
 
-		println("loading genesis addresses...")
+		println("loading genesis addresses from file...")
 		if err := ioutils.ReadJSONFromFile(genesisAddressesPath, genesisAddresses); err != nil {
 			return fmt.Errorf("failed to load genesis addresses: %w", err)
+		}
+	}
+	if len(*genesisAddressesFlag) > 0 {
+		println("loading genesis addresses from command line...")
+
+		addressesWithBalances := strings.Split(*genesisAddressesFlag, ",")
+		for i, addressWithBalance := range addressesWithBalances {
+			addressWithBalance := strings.Split(addressWithBalance, ":")
+			if len(addressWithBalance) != 2 {
+				return fmt.Errorf("'%s' invalid format for address at position %d: 'addr:balance' format not found", FlagToolGenesisAddresses, i)
+			}
+
+			address, err := parseAddress(addressWithBalance[0])
+			if err != nil {
+				return fmt.Errorf("'%s' invalid format for address at position %d: %w", FlagToolGenesisAddresses, i, err)
+			}
+
+			balance, err := strconv.ParseUint(addressWithBalance[1], 10, 64)
+			if err != nil {
+				return fmt.Errorf("'%s' invalid format for balance at position %d: %w", FlagToolGenesisAddresses, i, err)
+			}
+
+			genesisAddresses.Balances = append(genesisAddresses.Balances, &AddressWithBalance{
+				Address: address,
+				Balance: balance,
+			})
 		}
 	}
 
@@ -249,7 +282,7 @@ func snapshotGen(args []string) error {
 					&iotago.BasicOutput{
 						Amount: uint64(remainingAmount),
 						Conditions: iotago.UnlockConditions{
-							&iotago.AddressUnlockCondition{Address: &address},
+							&iotago.AddressUnlockCondition{Address: mintAddress},
 						},
 					}), nil
 			}

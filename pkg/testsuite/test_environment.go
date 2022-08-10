@@ -3,7 +3,6 @@ package testsuite
 import (
 	"crypto/ed25519"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"testing"
@@ -129,7 +128,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	cooPrvKey2, err := crypto.ParseEd25519PrivateKeyFromString("0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c")
 	require.NoError(te.TestInterface, err)
 
-	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", te.TestInterface.Name()))
+	tempDir, err := os.MkdirTemp("", fmt.Sprintf("test_%s", te.TestInterface.Name()))
 	require.NoError(te.TestInterface, err)
 	te.TempDir = tempDir
 
