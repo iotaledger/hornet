@@ -31,6 +31,7 @@ const (
 	FlagToolProtocolParametersPath = "protocolParametersPath"
 	FlagToolCoordinatorStatePath   = "cooStatePath"
 	FlagToolGenesisAddressesPath   = "genesisAddressesPath"
+	FlagToolGenesisAddresses       = "genesisAddresses"
 
 	FlagToolSnapshotPath       = "snapshotPath"
 	FlagToolSnapshotPathFull   = "fullSnapshotPath"

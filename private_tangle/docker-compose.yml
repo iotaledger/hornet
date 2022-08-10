@@ -10,14 +10,13 @@ services:
         ipv4_address: 172.18.211.11
     volumes:
       - ./protocol_parameters.json:/app/protocol_parameters.json:ro
-      - ./genesis_addresses.json:/app/genesis_addresses.json:ro
       - ./snapshots:/app/snapshots
     command:
       - "tool"
       - "snap-gen"
       - "--protocolParametersPath=/app/protocol_parameters.json"
       - "--mintAddress=15664f85080415d9081840367d6cea31885f5d929366dffdf063f1c0856baed1"
-      - "--genesisAddressesPath=/app/genesis_addresses.json"
+      - "--genesisAddresses=tst1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vlupxvxq2:1000000000000,tst1qqweu75ldpyann5jsthqsa6m0thx4tmqxncj6uqxf5q974pmqx30y5mcdp2:1000000000000"
       - "--outputPath=/app/snapshots/coo/full_snapshot.bin"
     profiles:
       - snapshots
