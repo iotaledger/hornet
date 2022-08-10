@@ -2,7 +2,6 @@ package toolset
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -82,7 +81,7 @@ func parseAddress(bech32Address string) (iotago.Address, error) {
 	if err != nil {
 		bech32Address = strings.TrimPrefix(bech32Address, "0x")
 
-		if len(bech32Address) != 64 {
+		if len(bech32Address) != iotago.Ed25519AddressBytesLength*2 {
 			return nil, err
 		}
 
@@ -99,10 +98,10 @@ func snapshotGen(args []string) error {
 
 	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	protocolParametersPathFlag := fs.String(FlagToolProtocolParametersPath, "", "the path to the initial protocol parameters file")
-	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial ed25519 address all the tokens will be minted to")
+	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial bech32 address all the tokens will be minted to")
 	treasuryAllocationFlag := fs.Uint64(FlagToolSnapGenTreasuryAllocation, 0, "the amount of tokens to reside within the treasury, the delta from the supply will be allocated to 'mintAddress'")
-	genesisAddressesPathFlag := fs.String(FlagToolGenesisAddressesPath, "", "the file path to the genesis addresses file (optional)")
-	genesisAddressesFlag := fs.String(FlagToolGenesisAddresses, "", "additional genesis addresses with balances (optional, format: addr1:balance1,addr2:balance2,...)")
+	genesisAddressesPathFlag := fs.String(FlagToolGenesisAddressesPath, "", "the file path to the genesis bech32 addresses file (optional)")
+	genesisAddressesFlag := fs.String(FlagToolGenesisAddresses, "", "additional genesis bech32 addresses with balances (optional, format: addr1:balance1,addr2:balance2,...)")
 	outputFilePathFlag := fs.String(FlagToolOutputPath, "", "the file path to the generated snapshot file")
 
 	fs.Usage = func() {
@@ -157,15 +156,10 @@ func snapshotGen(args []string) error {
 	}
 
 	// check mint address
-	addressBytes, err := hex.DecodeString(*mintAddressFlag)
+	mintAddress, err := parseAddress(*mintAddressFlag)
 	if err != nil {
-		return fmt.Errorf("can't decode '%s': %w'", FlagToolSnapGenMintAddress, err)
+		return fmt.Errorf("failed to parse mint address: %w", err)
 	}
-	if len(addressBytes) != iotago.Ed25519AddressBytesLength {
-		return fmt.Errorf("incorrect '%s' length: %d != %d (%s)", FlagToolSnapGenMintAddress, len(addressBytes), iotago.Ed25519AddressBytesLength, *mintAddressFlag)
-	}
-	var address iotago.Ed25519Address
-	copy(address[:], addressBytes)
 
 	treasury := *treasuryAllocationFlag
 
@@ -288,7 +282,7 @@ func snapshotGen(args []string) error {
 					&iotago.BasicOutput{
 						Amount: uint64(remainingAmount),
 						Conditions: iotago.UnlockConditions{
-							&iotago.AddressUnlockCondition{Address: &address},
+							&iotago.AddressUnlockCondition{Address: mintAddress},
 						},
 					}), nil
 			}
