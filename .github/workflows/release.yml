@@ -105,7 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -132,7 +132,7 @@ jobs:
       - name: Build and push to Dockerhub
         uses: docker/build-push-action@v2
         with:
-          file: ./hornet-nest/Dockerfile
+          context: ./hornet-nest
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
