@@ -213,6 +213,7 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 		outputGenRetriever            outputRetrieverFunc
 		outputConsumer                snapshot.OutputConsumerFunc
 		outputConRetriever            outputRetrieverFunc
+		milestoneDiffsFutureCone      iotago.MilestoneIndex
 		msDiffGenerator               snapshot.MilestoneDiffProducerFunc
 		msDiffGenRetriever            msDiffRetrieverFunc
 		msDiffConsumer                snapshot.MilestoneDiffConsumerFunc
@@ -226,13 +227,15 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 
 	testCases := []test{
 		func() test {
+			var milestoneDiffsFutureCone iotago.MilestoneIndex = 10
+
 			originFullHeader := randFullSnapshotHeader(1000000, 50, 150)
 
 			// create generators and consumers
 			outputIterFunc, outputGenRetriever := newOutputsGenerator(originFullHeader.OutputCount)
 			outputConsumerFunc, outputCollRetriever := newOutputCollector()
 
-			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(originFullHeader.TargetMilestoneIndex, originFullHeader.MilestoneDiffCount, snapshot.MsDiffDirectionOnwards)
+			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(originFullHeader.TargetMilestoneIndex+milestoneDiffsFutureCone, originFullHeader.MilestoneDiffCount, snapshot.MsDiffDirectionBackwards)
 			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
 
 			sepIterFunc, sepGenRetriever := newSEPGenerator(originFullHeader.SEPCount)
@@ -250,6 +253,7 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 				outputGenRetriever:            outputGenRetriever,
 				outputConsumer:                outputConsumerFunc,
 				outputConRetriever:            outputCollRetriever,
+				milestoneDiffsFutureCone:      milestoneDiffsFutureCone,
 				msDiffGenerator:               msDiffIterFunc,
 				msDiffGenRetriever:            msDiffGenRetriever,
 				msDiffConsumer:                msDiffConsumerFunc,
@@ -300,11 +304,17 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 
 			msDiffGen := tt.msDiffGenRetriever()
 			msDiffCon := tt.msDiffConRetriever()
+			require.Equal(t, len(msDiffGen), int(tt.originFullHeader.MilestoneDiffCount))
+			require.Equal(t, len(msDiffCon), int(tt.milestoneDiffsFutureCone))
+
+			// in a full snapshot we only consume the milestone diffs with indexes bigger than the target index.
 			for i := range msDiffGen {
 				gen := msDiffGen[i]
-				con := msDiffCon[i]
-				require.NotNil(t, con)
-				equalMilestoneDiff(t, gen, con)
+				if i < len(msDiffCon) {
+					con := msDiffCon[i]
+					require.NotNil(t, con)
+					equalMilestoneDiff(t, gen, con)
+				}
 			}
 			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
 		})
@@ -615,20 +625,18 @@ func newMsDiffGenerator(startIndex iotago.MilestoneIndex, count syncmanager.Mile
 	keyMapping := iotago.MilestonePublicKeyMapping{}
 	keyMapping[mappingPubKey] = prv
 
-	startCount := count
+	targetIndex := startIndex + count
+	if direction == snapshot.MsDiffDirectionBackwards {
+		targetIndex = startIndex - count
+	}
+
+	msIterator := snapshot.NewMsIndexIterator(direction, startIndex, targetIndex)
 
 	return func() (*snapshot.MilestoneDiff, error) {
-			if count == 0 {
-				return nil, nil
-			}
-			count--
 
-			milestoneIndex := startIndex
-			switch direction {
-			case snapshot.MsDiffDirectionOnwards:
-				milestoneIndex += startCount - count
-			case snapshot.MsDiffDirectionBackwards:
-				milestoneIndex -= startCount - count
+			milestoneIndex, done := msIterator()
+			if done {
+				return nil, nil
 			}
 
 			parents := iotago.BlockIDs{tpkg.RandBlockID()}
