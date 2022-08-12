@@ -179,4 +179,6 @@ services:
       - "--dashboard.auth.username=${DASHBOARD_USERNAME}"
       - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD}"
       - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT}"
+      - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=inx-dashboard:9312"
 
