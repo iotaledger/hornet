@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -40,8 +39,6 @@ func databaseMerge(args []string) error {
 	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, string(DefaultValueDatabaseEngine), "the engine of the target database (values: pebble, rocksdb)")
 	targetIndexFlag := fs.Uint32(FlagToolDatabaseTargetIndex, 0, "the target index (optional)")
 	nodeURLFlag := fs.String(FlagToolDatabaseMergeNodeURL, "", "URL of the node (optional)")
-	chronicleFlag := fs.Bool(FlagToolDatabaseMergeChronicle, false, "use chronicle compatibility mode for API sync")
-	chronicleKeyspaceFlag := fs.String(FlagToolDatabaseMergeChronicleKeyspace, "mainnet", "key space for chronicle compatibility mode")
 	apiParallelismFlag := fs.Uint("apiParallelism", 50, "the amount of concurrent API requests")
 
 	fs.Usage = func() {
@@ -82,14 +79,6 @@ func databaseMerge(args []string) error {
 	}
 	if len(*databaseEngineTargetFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolDatabaseEngineTarget)
-	}
-	if *chronicleFlag {
-		if len(*nodeURLFlag) == 0 {
-			return fmt.Errorf("'%s' not specified", FlagToolDatabaseMergeNodeURL)
-		}
-		if len(*chronicleKeyspaceFlag) == 0 {
-			return fmt.Errorf("'%s' not specified", FlagToolDatabaseMergeChronicleKeyspace)
-		}
 	}
 
 	// TODO: needs to be adapted for when protocol parameters struct changes
@@ -138,7 +127,7 @@ func databaseMerge(args []string) error {
 		return err
 	}
 
-	client := getNodeHTTPAPIClient(*nodeURLFlag, *chronicleFlag, *chronicleKeyspaceFlag)
+	client := getNodeHTTPAPIClient(*nodeURLFlag)
 
 	// mark the database as corrupted.
 	// this flag will be cleared after the operation finished successfully.
@@ -158,7 +147,6 @@ func databaseMerge(args []string) error {
 		client,
 		*targetIndexFlag,
 		*genesisSnapshotFilePathFlag,
-		*chronicleFlag,
 		int(*apiParallelismFlag),
 	)
 	if errMerge != nil && errors.Is(errMerge, ErrCritical) {
@@ -363,7 +351,6 @@ func mergeViaAPI(
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
 	client *nodeclient.Client,
-	chronicleMode bool,
 	apiParallelism int) error {
 
 	getBlockViaAPI := func(blockID iotago.BlockID) (*iotago.Block, error) {
@@ -513,7 +500,6 @@ func mergeDatabase(
 	client *nodeclient.Client,
 	targetIndex iotago.MilestoneIndex,
 	genesisSnapshotFilePath string,
-	chronicleMode bool,
 	apiParallelism int) error {
 
 	tangleStoreSourceAvailable := tangleStoreSource != nil
@@ -591,7 +577,6 @@ func mergeDatabase(
 				tangleStoreTarget,
 				milestoneManager,
 				client,
-				chronicleMode,
 				apiParallelism,
 			); err != nil {
 				return err
@@ -620,17 +605,11 @@ func mergeDatabase(
 // we don't need to check for the correct networkID,
 // because the node would be missing the history if the
 // network is not correct.
-func getNodeHTTPAPIClient(nodeURL string, chronicleMode bool, chronicleKeyspace string) *nodeclient.Client {
+func getNodeHTTPAPIClient(nodeURL string) *nodeclient.Client {
 
 	var client *nodeclient.Client
 	if nodeURL != "" {
-		var requestURLHook func(url string) string = nil
-		if chronicleMode {
-			requestURLHook = func(url string) string {
-				return strings.Replace(url, fmt.Sprintf("api/%s/api/v2/", chronicleKeyspace), fmt.Sprintf("api/%s/", chronicleKeyspace), 1)
-			}
-		}
-		client = nodeclient.New(nodeURL, nodeclient.WithRequestURLHook(requestURLHook))
+		client = nodeclient.New(nodeURL)
 	}
 
 	return client
