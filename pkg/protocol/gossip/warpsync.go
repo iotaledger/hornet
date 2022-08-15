@@ -39,18 +39,22 @@ func NewWarpSync(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpoin
 }
 
 func SyncStartCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(target iotago.MilestoneIndex, newCheckpoint iotago.MilestoneIndex, msRange syncmanager.MilestoneIndexDelta))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex), params[2].(syncmanager.MilestoneIndexDelta))
 }
 
 func SyncDoneCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(delta int, referencedBlocksTotal int, dur time.Duration))(params[0].(int), params[1].(int), params[2].(time.Duration))
 }
 
 func CheckpointCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(newCheckpoint iotago.MilestoneIndex, oldCheckpoint iotago.MilestoneIndex, msRange syncmanager.MilestoneIndexDelta, target iotago.MilestoneIndex))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex), params[2].(syncmanager.MilestoneIndexDelta), params[3].(iotago.MilestoneIndex))
 }
 
 func TargetCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(checkpoint iotago.MilestoneIndex, target iotago.MilestoneIndex))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex))
 }
 

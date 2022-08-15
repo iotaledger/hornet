@@ -57,6 +57,7 @@ func ShortenedTag(cachedBlock *storage.CachedBlock) string {
 // ShowDotFile creates a png file with dot and shows it in an external application.
 func ShowDotFile(testInterface testing.TB, dotCommand string, outFilePath string) {
 
+	//nolint:gosec // we control the input, no vulnerabilities here
 	cmd := exec.Command("dot", "-Tpng", "-o"+outFilePath)
 
 	stdin, err := cmd.StdinPipe()

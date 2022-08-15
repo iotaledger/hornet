@@ -11,22 +11,27 @@ import (
 )
 
 func BlockCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(cachedBlock *CachedBlock))(params[0].(*CachedBlock).Retain()) // block pass +1
 }
 
 func BlockMetadataCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(cachedBlockMeta *CachedMetadata))(params[0].(*CachedMetadata).Retain()) // block pass +1
 }
 
 func BlockIDCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(blockID iotago.BlockID))(params[0].(iotago.BlockID))
 }
 
 func NewBlockCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(cachedBlock *CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex))(params[0].(*CachedBlock).Retain(), params[1].(iotago.MilestoneIndex), params[2].(iotago.MilestoneIndex)) // block pass +1
 }
 
 func BlockReferencedCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(cachedBlockMeta *CachedMetadata, msIndex iotago.MilestoneIndex, confTime uint32))(params[0].(*CachedMetadata).Retain(), params[1].(iotago.MilestoneIndex), params[2].(uint32)) // block pass +1
 }
 
@@ -75,6 +80,7 @@ func (cachedBlocks CachedBlocks) Release(force ...bool) {
 
 // Block retrieves the block, that is cached in this container.
 func (c *CachedBlock) Block() *Block {
+	//nolint:forcetypeassert // we will replace that with generics anyway
 	return c.block.Get().(*Block)
 }
 
@@ -86,11 +92,13 @@ func (c *CachedBlock) CachedMetadata() *CachedMetadata {
 
 // Metadata retrieves the metadata, that is cached in this container.
 func (c *CachedBlock) Metadata() *BlockMetadata {
+	//nolint:forcetypeassert // we will replace that with generics anyway
 	return c.metadata.Get().(*BlockMetadata)
 }
 
 // Metadata retrieves the metadata, that is cached in this container.
 func (c *CachedMetadata) Metadata() *BlockMetadata {
+	//nolint:forcetypeassert // we will replace that with generics anyway
 	return c.Get().(*BlockMetadata)
 }
 
@@ -122,6 +130,7 @@ func (c *CachedBlock) ConsumeBlockAndMetadata(consumer func(*Block, *BlockMetada
 
 	c.block.Consume(func(txObject objectstorage.StorableObject) { // block -1
 		c.metadata.Consume(func(metadataObject objectstorage.StorableObject) { // meta -1
+			//nolint:forcetypeassert // we will replace that with generics anyway
 			consumer(txObject.(*Block), metadataObject.(*BlockMetadata))
 		}, true)
 	}, true)
@@ -133,6 +142,7 @@ func (c *CachedBlock) ConsumeBlockAndMetadata(consumer func(*Block, *BlockMetada
 func (c *CachedBlock) ConsumeBlock(consumer func(*Block)) {
 	defer c.metadata.Release(true)                              // meta -1
 	c.block.Consume(func(object objectstorage.StorableObject) { // block -1
+		//nolint:forcetypeassert // we will replace that with generics anyway
 		consumer(object.(*Block))
 	}, true)
 }
@@ -143,6 +153,7 @@ func (c *CachedBlock) ConsumeBlock(consumer func(*Block)) {
 func (c *CachedBlock) ConsumeMetadata(consumer func(*BlockMetadata)) {
 	defer c.block.Release(true)                                    // block -1
 	c.metadata.Consume(func(object objectstorage.StorableObject) { // meta -1
+		//nolint:forcetypeassert // we will replace that with generics anyway
 		consumer(object.(*BlockMetadata))
 	}, true)
 }
@@ -151,6 +162,7 @@ func (c *CachedBlock) ConsumeMetadata(consumer func(*BlockMetadata)) {
 // meta -1.
 func (c *CachedMetadata) ConsumeMetadata(consumer func(*BlockMetadata)) {
 	c.Consume(func(object objectstorage.StorableObject) { // meta -1
+		//nolint:forcetypeassert // we will replace that with generics anyway
 		consumer(object.(*BlockMetadata))
 	}, true)
 }
@@ -270,6 +282,7 @@ func (s *Storage) Block(blockID iotago.BlockID) (*iotago.Block, error) {
 	}
 
 	if cachedBlock == nil {
+		//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 		return nil, nil
 	}
 
@@ -304,6 +317,7 @@ func (s *Storage) StoredMetadataOrNil(blockID iotago.BlockID) *BlockMetadata {
 		return nil
 	}
 
+	//nolint:forcetypeassert // we will replace that with generics anyway
 	return storedMeta.(*BlockMetadata)
 }
 

@@ -1,3 +1,4 @@
+//nolint:gosec // we do not care about weak random numbers here
 package snapshot_test
 
 import (

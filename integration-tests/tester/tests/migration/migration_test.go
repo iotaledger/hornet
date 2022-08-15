@@ -1,3 +1,4 @@
+//nolint:forcetypeassert // we don't care about type assertions in tests
 package migration
 
 import (

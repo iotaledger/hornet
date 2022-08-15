@@ -131,6 +131,7 @@ func writeFullSnapshot() *snapshot.FullSnapshotHeader {
 	var currentOutput int
 	fullSnapOutputProd := func() (*utxo.Output, error) {
 		if currentOutput == len(fullSnapshotOutputs) {
+			//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 			return nil, nil
 		}
 		out := fullSnapshotOutputs[currentOutput]
@@ -142,6 +143,7 @@ func writeFullSnapshot() *snapshot.FullSnapshotHeader {
 	var currentMsDiff int
 	fullSnapMsDiffProd := func() (*snapshot.MilestoneDiff, error) {
 		if currentMsDiff == len(fullSnapshotMsDiffs) {
+			//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 			return nil, nil
 		}
 		msDiff := fullSnapshotMsDiffs[currentMsDiff]
@@ -250,6 +252,7 @@ func writeDeltaSnapshot(fullSnapshotHeader *snapshot.FullSnapshotHeader) {
 	var currentMsDiff int
 	deltaSnapMsDiffProd := func() (*snapshot.MilestoneDiff, error) {
 		if currentMsDiff == len(deltaSnapshotMsDiffs) {
+			//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 			return nil, nil
 		}
 		msDiff := deltaSnapshotMsDiffs[currentMsDiff]

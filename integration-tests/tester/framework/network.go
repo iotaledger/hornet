@@ -354,6 +354,7 @@ func (n *Network) Shutdown() error {
 
 // RandomNode returns a random peer out of the list of peers.
 func (n *Network) RandomNode() *Node {
+	//nolint:gosec // we do not care about weak random numbers here
 	return n.Nodes[rand.Intn(len(n.Nodes))]
 }
 

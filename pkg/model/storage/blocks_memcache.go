@@ -41,6 +41,7 @@ func (c *BlocksMemcache) CachedBlock(blockID iotago.BlockID) (*CachedBlock, erro
 			return nil, err
 		}
 		if cachedBlock == nil {
+			//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 			return nil, nil
 		}
 

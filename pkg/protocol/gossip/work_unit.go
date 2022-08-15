@@ -37,6 +37,7 @@ type CachedWorkUnit struct {
 
 // WorkUnit retrieves the work unit, that is cached in this container.
 func (c *CachedWorkUnit) WorkUnit() *WorkUnit {
+	//nolint:forcetypeassert // we will replace that with generics anyway
 	return c.Get().(*WorkUnit)
 }
 

@@ -172,6 +172,7 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 
 	switch outputType {
 	case iotago.OutputBasic:
+		//nolint:forcetypeassert // we already checked the type
 		iotaOutput = &iotago.BasicOutput{
 			Amount: amount,
 			Conditions: iotago.UnlockConditions{
@@ -181,6 +182,7 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 			},
 		}
 	case iotago.OutputAlias:
+		//nolint:forcetypeassert // we already checked the type
 		iotaOutput = &iotago.AliasOutput{
 			Amount:  amount,
 			AliasID: RandAliasID(),
@@ -198,6 +200,8 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 			panic("not an alias address")
 		}
 		supply := new(big.Int).SetUint64(RandAmount())
+
+		//nolint:forcetypeassert // we already checked the type
 		iotaOutput = &iotago.FoundryOutput{
 			Amount:       amount,
 			SerialNumber: 0,
@@ -213,6 +217,7 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 			},
 		}
 	case iotago.OutputNFT:
+		//nolint:forcetypeassert // we already checked the type
 		iotaOutput = &iotago.NFTOutput{
 			Amount: amount,
 			NFTID:  RandNFTID(),

@@ -175,5 +175,6 @@ func ParseHeartbeat(data []byte) *Heartbeat {
 }
 
 func heartbeatCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(heartbeat *Heartbeat))(params[0].(*Heartbeat))
 }

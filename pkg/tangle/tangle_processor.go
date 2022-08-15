@@ -23,11 +23,13 @@ const (
 func (t *Tangle) ConfigureTangleProcessor() {
 
 	t.receiveBlockWorkerPool = workerpool.New(func(task workerpool.Task) {
+		//nolint:forcetypeassert // we will replace that with generics anyway
 		t.processIncomingTx(task.Param(0).(*storage.Block), task.Param(1).(gossip.Requests), task.Param(2).(*gossip.Protocol))
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.receiveBlockWorkerCount), workerpool.QueueSize(t.receiveBlockQueueSize))
 
 	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
+		//nolint:forcetypeassert // we will replace that with generics anyway
 		if err := t.futureConeSolidifier.SolidifyBlockAndFutureCone(t.shutdownCtx, task.Param(0).(*storage.CachedMetadata)); err != nil {
 			t.LogDebugf("SolidifyBlockAndFutureCone failed: %s", err)
 		}
@@ -35,11 +37,13 @@ func (t *Tangle) ConfigureTangleProcessor() {
 	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	t.processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
+		//nolint:forcetypeassert // we will replace that with generics anyway
 		t.processValidMilestone(task.Param(0).(iotago.BlockID), task.Param(1).(*storage.CachedMilestone), task.Param(2).(bool)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.processValidMilestoneWorkerCount), workerpool.QueueSize(t.processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	t.milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
+		//nolint:forcetypeassert // we will replace that with generics anyway
 		t.solidifyMilestone(task.Param(0).(iotago.MilestoneIndex), task.Param(1).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.milestoneSolidifierWorkerCount), workerpool.QueueSize(t.milestoneSolidifierQueueSize))

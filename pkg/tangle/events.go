@@ -15,26 +15,32 @@ type BPSMetrics struct {
 
 // ConfirmationMetricsCaller is used to signal updated confirmation metrics.
 func ConfirmationMetricsCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(metrics *whiteflag.ConfirmationMetrics))(params[0].(*whiteflag.ConfirmationMetrics))
 }
 
 func BPSMetricsCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*BPSMetrics))(params[0].(*BPSMetrics))
 }
 
 func LedgerUpdatedCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(iotago.MilestoneIndex, utxo.Outputs, utxo.Spents))(params[0].(iotago.MilestoneIndex), params[1].(utxo.Outputs), params[2].(utxo.Spents))
 }
 
 func TreasuryMutationCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(iotago.MilestoneIndex, *utxo.TreasuryMutationTuple))(params[0].(iotago.MilestoneIndex), params[1].(*utxo.TreasuryMutationTuple))
 }
 
 func ReceiptCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*iotago.ReceiptMilestoneOpt))(params[0].(*iotago.ReceiptMilestoneOpt))
 }
 
 func ReferencedBlocksCountUpdatedCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(msIndex iotago.MilestoneIndex, referencedBlocksCount int))(params[0].(iotago.MilestoneIndex), params[1].(int))
 }
 

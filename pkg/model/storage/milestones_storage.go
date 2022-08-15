@@ -202,6 +202,7 @@ func (c *cachedMilestoneIndex) Retain() *cachedMilestoneIndex {
 
 // MilestoneIndex retrieves the milestone index, that is cached in this container.
 func (c *cachedMilestoneIndex) MilestoneIndex() *MilestoneIndex {
+	//nolint:forcetypeassert // we will replace that with generics anyway
 	return c.Get().(*MilestoneIndex)
 }
 
@@ -376,6 +377,7 @@ func (c *CachedMilestone) Retain() *CachedMilestone {
 
 // Milestone retrieves the milestone, that is cached in this container.
 func (c *CachedMilestone) Milestone() *Milestone {
+	//nolint:forcetypeassert // we will replace that with generics anyway
 	return c.Get().(*Milestone)
 }
 
@@ -522,7 +524,6 @@ func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blo
 }
 
 // DeleteMilestone deletes the milestone in the cache/persistence layer.
-// +-0.
 func (s *Storage) DeleteMilestone(milestoneIndex iotago.MilestoneIndex) {
 	cachedMilestoneIdx := s.cachedMilestoneIndexOrNil(milestoneIndex) // milestone index +1
 	if cachedMilestoneIdx == nil {

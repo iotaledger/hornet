@@ -706,6 +706,7 @@ func (s *ProxyStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.Cac
 		return nil, err
 	}
 	if cachedBlock == nil {
+		//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 		return nil, nil
 	}
 	defer cachedBlock.Release(true) // block -1

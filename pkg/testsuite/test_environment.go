@@ -1,3 +1,4 @@
+//nolint:forcetypeassert,gosec // we don't care about type assertions and weak random numbers in tests
 package testsuite
 
 import (

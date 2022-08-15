@@ -9,6 +9,7 @@ import (
 )
 
 func PoWCompletedCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(blockSize int, duration time.Duration))(params[0].(int), params[1].(time.Duration))
 }
 

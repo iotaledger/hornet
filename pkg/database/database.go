@@ -54,6 +54,7 @@ func (c *DatabaseCleanup) MarshalJSON() ([]byte, error) {
 }
 
 func DatabaseCleanupCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*DatabaseCleanup))(params[0].(*DatabaseCleanup))
 }
 

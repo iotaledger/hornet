@@ -51,6 +51,7 @@ func (s *Storage) readSnapshotInfo() (*SnapshotInfo, error) {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot info")
 		}
 
+		//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 		return nil, nil
 	}
 
@@ -82,6 +83,7 @@ func (s *Storage) readSolidEntryPoints() (*SolidEntryPoints, error) {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve solid entry points")
 		}
 
+		//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 		return nil, nil
 	}
 

@@ -142,7 +142,7 @@ func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine
 		if dbEngineSpecified {
 
 			if dbEngineFromInfoFile != dbEngine[0] {
-				//lint:ignore ST1005 this error message is shown to the user
+				//nolint:stylecheck // this error message is shown to the user
 				return EngineUnknown, fmt.Errorf(`database (%s) engine does not match the configuration: '%v' != '%v'
 
 If you want to use another database engine, you can use the tool './hornet tool db-migration' to convert the current database.`, dbPath, dbEngineFromInfoFile, dbEngine[0])

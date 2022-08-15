@@ -870,6 +870,7 @@ func CreateSnapshotFromStorage(
 
 	milestoneDiffProducer := func() (*MilestoneDiff, error) {
 		// we won't have any ms diffs within this merged full snapshot file
+		//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 		return nil, nil
 	}
 

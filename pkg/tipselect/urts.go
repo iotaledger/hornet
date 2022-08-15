@@ -32,11 +32,13 @@ type TipSelStats struct {
 
 // TipCaller is used to signal tip events.
 func TipCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*Tip))(params[0].(*Tip))
 }
 
 // WalkerStatsCaller is used to signal tip selection events.
 func WalkerStatsCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*TipSelStats))(params[0].(*TipSelStats))
 }
 
