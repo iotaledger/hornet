@@ -229,7 +229,6 @@ func verifyDatabase(
 	}
 
 	applyAndCompareLedgerStateChange := func(
-		ctx context.Context,
 		storeSource *storage.Storage,
 		utxoManagerTemp *utxo.Manager,
 		msIndex iotago.MilestoneIndex) error {
@@ -323,7 +322,6 @@ func verifyDatabase(
 		}
 
 		if err := applyAndCompareLedgerStateChange(
-			ctx,
 			tangleStoreSource,
 			tangleStoreTemp.UTXOManager(),
 			msIndex); err != nil {

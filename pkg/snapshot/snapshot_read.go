@@ -201,6 +201,7 @@ func loadFullSnapshotFileToStorage(
 	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
 
 	if err = StreamFullSnapshotDataFrom(
+		ctx,
 		lsFile,
 		fullHeaderConsumer,
 		treasuryOutputConsumer,
@@ -274,6 +275,7 @@ func loadDeltaSnapshotFileToStorage(
 	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
 
 	if err = StreamDeltaSnapshotDataFrom(
+		ctx,
 		lsFile,
 		protocolStorageGetter,
 		deltaHeaderConsumer,

@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -10,8 +11,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/core/contextutils"
 	"github.com/iotaledger/hive.go/core/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -1174,6 +1177,7 @@ func ReadSnapshotTypeFromFile(filePath string) (Type, error) {
 
 // StreamFullSnapshotDataFrom consumes a full snapshot from the given reader.
 func StreamFullSnapshotDataFrom(
+	ctx context.Context,
 	reader io.ReadSeeker,
 	headerConsumer FullHeaderConsumerFunc,
 	unspentTreasuryOutputConsumer UnspentTreasuryOutputConsumerFunc,
@@ -1214,6 +1218,10 @@ func StreamFullSnapshotDataFrom(
 	}
 
 	for i := uint64(0); i < fullHeader.OutputCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		output, err := ReadOutput(reader, fullHeaderProtoParams)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
@@ -1231,6 +1239,10 @@ func StreamFullSnapshotDataFrom(
 	// we need to parse the milestone diffs twice.
 	// first round is to get the upcoming protocol parameter changes.
 	for i := uint32(0); i < fullHeader.MilestoneDiffCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		msDiffLength, err := ReadMilestoneDiffProtocolParameters(reader, protocolStorage)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
@@ -1247,6 +1259,10 @@ func StreamFullSnapshotDataFrom(
 
 	// second round is to load the milestone diffs with correct protocol parameters.
 	for i := uint32(0); i < fullHeader.MilestoneDiffCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		// the milestone diffs in the full snapshot file are in backwards order.
 		msDiffLength, msDiff, err := ReadMilestoneDiff(reader, protocolStorage, false)
 		if err != nil {
@@ -1272,6 +1288,10 @@ func StreamFullSnapshotDataFrom(
 	}
 
 	for i := uint16(0); i < fullHeader.SEPCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		solidEntryPointBlockID := iotago.BlockID{}
 		if _, err := io.ReadFull(reader, solidEntryPointBlockID[:]); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
@@ -1303,6 +1323,7 @@ func StreamFullSnapshotDataFrom(
 
 // StreamDeltaSnapshotDataFrom consumes a delta snapshot from the given reader.
 func StreamDeltaSnapshotDataFrom(
+	ctx context.Context,
 	reader io.ReadSeeker,
 	protocolStorageGetter ProtocolStorageGetterFunc,
 	headerConsumer DeltaHeaderConsumerFunc,
@@ -1336,6 +1357,10 @@ func StreamDeltaSnapshotDataFrom(
 	}
 
 	for i := uint32(0); i < deltaHeader.MilestoneDiffCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		_, msDiff, err := ReadMilestoneDiff(reader, protocolStorage, true)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
@@ -1347,6 +1372,10 @@ func StreamDeltaSnapshotDataFrom(
 	}
 
 	for i := uint16(0); i < deltaHeader.SEPCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		solidEntryPointBlockID := iotago.BlockID{}
 		if _, err := io.ReadFull(reader, solidEntryPointBlockID[:]); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)

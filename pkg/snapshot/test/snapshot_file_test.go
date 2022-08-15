@@ -2,6 +2,7 @@
 package snapshot_test
 
 import (
+	"context"
 	"crypto/ed25519"
 	"fmt"
 	"math/rand"
@@ -284,6 +285,7 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 			require.NoError(t, err)
 
 			require.NoError(t, snapshot.StreamFullSnapshotDataFrom(
+				context.Background(),
 				snapshotFileRead,
 				tt.fullHeaderConsumer,
 				tt.unspentTreasuryOutputConsumer,
@@ -387,7 +389,7 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 				return getProtocolStorage(protoParams), nil
 			}
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(context.Background(), snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGen := tt.msDiffGenRetriever()
@@ -504,7 +506,7 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 				return getProtocolStorage(protoParams), nil
 			}
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(context.Background(), snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGenRetriever, sepGenRetriever := tt.snapshotExtensionGenRetriever()
