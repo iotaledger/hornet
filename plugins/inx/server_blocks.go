@@ -138,6 +138,8 @@ func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (
 func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		cachedBlock, ok := task.Param(0).(*storage.CachedBlock)
 		if !ok {
 			Plugin.LogInfof("send error: expected *storage.CachedBlock, got %T", task.Param(0))
@@ -152,7 +154,7 @@ func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksSe
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
-		task.Return(nil)
+
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex) {
 		wp.Submit(cachedBlock)
@@ -169,6 +171,8 @@ func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksSe
 func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		blockMeta, ok := task.Param(0).(*storage.CachedMetadata)
 		if !ok {
 			Plugin.LogInfof("send error: expected *storage.CachedMetadata, got %T", task.Param(0))
@@ -190,7 +194,7 @@ func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSol
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
-		task.Return(nil)
+
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata) {
 		wp.Submit(blockMeta)
@@ -207,6 +211,8 @@ func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSol
 func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToReferencedBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		blockMeta, ok := task.Param(0).(*storage.CachedMetadata)
 		if !ok {
 			Plugin.LogInfof("send error: expected *storage.CachedMetadata, got %T", task.Param(0))
@@ -227,7 +233,7 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
-		task.Return(nil)
+
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32) {
 		wp.Submit(blockMeta)
@@ -244,6 +250,8 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 func (s *INXServer) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTipScoreUpdatesServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		tip, ok := task.Param(0).(*tipselect.Tip)
 		if !ok {
 			Plugin.LogInfof("send error: expected *tipselect.Tip, got %T", task.Param(0))
@@ -269,7 +277,6 @@ func (s *INXServer) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenT
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
-		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	closure := events.NewClosure(func(tip *tipselect.Tip) { wp.Submit(tip) })

@@ -361,17 +361,18 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		done, err := handleRangedSend(&task, task.Param(0).(iotago.MilestoneIndex), stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
+			cancel()
 
-			fallthrough
 		case done:
 			cancel()
 		}
 
-		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	closure := events.NewClosure(func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
@@ -551,17 +552,18 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		done, err := handleRangedSend(&task, task.Param(0).(iotago.MilestoneIndex), stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
+			cancel()
 
-			fallthrough
 		case done:
 			cancel()
 		}
 
-		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	closure := events.NewClosure(func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) {
@@ -580,6 +582,8 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenToMigrationReceiptsServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		receipt, ok := task.Param(0).(*iotago.ReceiptMilestoneOpt)
 		if !ok {
 			Plugin.LogInfof("send error: expected *iotago.ReceiptMilestoneOpt, got %T", task.Param(0))
@@ -592,13 +596,15 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 		if err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
+
+			return
 		}
 
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
-		task.Return(nil)
+
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(receipt *iotago.ReceiptMilestoneOpt) {
 		wp.Submit(receipt)

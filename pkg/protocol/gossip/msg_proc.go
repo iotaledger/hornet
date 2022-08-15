@@ -152,6 +152,7 @@ func NewMessageProcessor(
 	)
 
 	proc.wp = workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
 
 		p, ok := task.Param(0).(*Protocol)
 		if !ok {
@@ -176,8 +177,6 @@ func NewMessageProcessor(
 		case MessageTypeMilestoneRequest:
 			proc.processMilestoneRequest(p, data)
 		}
-
-		task.Return(nil)
 	}, workerpool.WorkerCount(WorkerCount), workerpool.QueueSize(WorkerQueueSize))
 
 	return proc, nil

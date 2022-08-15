@@ -77,6 +77,8 @@ func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) 
 func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
 		if !ok {
 			Plugin.LogInfof("send error: expected *storage.CachedMilestone, got %T", task.Param(0))
@@ -97,7 +99,7 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
-		task.Return(nil)
+
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
 		wp.Submit(milestone)
@@ -254,6 +256,8 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
 		if !ok {
 			Plugin.LogInfof("send error: expected *storage.CachedMilestone, got %T", task.Param(0))
@@ -267,13 +271,12 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		switch {
 		case err != nil:
 			innerErr = err
+			cancel()
 
-			fallthrough
 		case done:
 			cancel()
 		}
 
-		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
