@@ -12,6 +12,15 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/profile"
 )
 
+const (
+	ProfileNameAuto  = "auto"
+	ProfileNameLight = "light"
+	ProfileName1GB   = "1gb"
+	ProfileName2GB   = "2gb"
+	ProfileName4GB   = "4gb"
+	ProfileName8GB   = "8gb"
+)
+
 var (
 	ErrNotEnoughMemory = errors.New("not enough system memory")
 )
@@ -81,13 +90,13 @@ func loadProfile(profilesConfig *configuration.Configuration) *profile.Profile {
 		}
 
 		if v.Total >= 8000000000*0.95 {
-			profileName = "8gb"
+			profileName = ProfileName8GB
 		} else if v.Total >= 4000000000*0.95 {
-			profileName = "4gb"
+			profileName = ProfileName4GB
 		} else if v.Total >= 2000000000*0.95 {
-			profileName = "2gb"
+			profileName = ProfileName2GB
 		} else if v.Total >= 1000000000*0.95 {
-			profileName = "1gb"
+			profileName = ProfileName1GB
 		} else {
 			CoreComponent.LogPanic(ErrNotEnoughMemory)
 		}
@@ -95,18 +104,18 @@ func loadProfile(profilesConfig *configuration.Configuration) *profile.Profile {
 
 	var p *profile.Profile
 	switch profileName {
-	case "8gb":
+	case ProfileName8GB:
 		p = Profile8GB
-		p.Name = "8gb"
-	case "4gb":
+		p.Name = ProfileName8GB
+	case ProfileName4GB:
 		p = Profile4GB
-		p.Name = "4gb"
-	case "2gb":
+		p.Name = ProfileName4GB
+	case ProfileName2GB:
 		p = Profile2GB
-		p.Name = "2gb"
-	case "1gb", "light":
+		p.Name = ProfileName2GB
+	case ProfileName1GB, ProfileNameLight:
 		p = Profile1GB
-		p.Name = "1gb"
+		p.Name = ProfileName1GB
 	default:
 		p = &profile.Profile{}
 		if !profilesConfig.Exists(profileName) {

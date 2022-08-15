@@ -10,9 +10,8 @@ import (
 )
 
 const (
-	cpuProfilePrefix   = "cpu_profile"
-	heapProfilePrefix  = "heap_profile"
-	metricsChartPrefix = "metrics_charts"
+	cpuProfilePrefix  = "cpu_profile"
+	heapProfilePrefix = "heap_profile"
 
 	timeoutProfilingQuery = 1 * time.Minute
 )
