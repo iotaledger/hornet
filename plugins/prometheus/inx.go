@@ -20,7 +20,7 @@ func configureINX() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "inx",
-			Name:      "pow_count",
+			Name:      "pow_requests",
 			Help:      "The amount of completed INX PoW requests.",
 		},
 	)

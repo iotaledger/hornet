@@ -22,7 +22,7 @@ func configureRestAPI() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "restapi",
-			Name:      "http_request_error_count",
+			Name:      "http_request_errors",
 			Help:      "The amount of encountered HTTP request errors.",
 		},
 	)
@@ -31,7 +31,7 @@ func configureRestAPI() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "restapi",
-			Name:      "pow_count",
+			Name:      "pow_requests",
 			Help:      "The amount of completed REST API PoW requests.",
 		},
 	)

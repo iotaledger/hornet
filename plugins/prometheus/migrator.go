@@ -17,7 +17,7 @@ func configureReceipts() {
 		prometheus.CounterOpts{
 			Namespace: "iota",
 			Subsystem: "migrator",
-			Name:      "receipt_count",
+			Name:      "receipt_count_total",
 			Help:      "The count of encountered receipts.",
 		},
 	)
@@ -26,7 +26,7 @@ func configureReceipts() {
 		prometheus.CounterOpts{
 			Namespace: "iota",
 			Subsystem: "migrator",
-			Name:      "receipt_entries_applied_count",
+			Name:      "receipt_entries_applied_count_total",
 			Help:      "The count of migration entries applied through receipts.",
 		},
 	)

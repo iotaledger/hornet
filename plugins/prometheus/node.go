@@ -74,7 +74,7 @@ func configureNode() {
 			prometheus.GaugeOpts{
 				Namespace: "iota",
 				Subsystem: "node",
-				Name:      "tip_count",
+				Name:      "tips",
 				Help:      "Number of tips.",
 			}, []string{"type"},
 		)
@@ -84,7 +84,7 @@ func configureNode() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "node",
-			Name:      "request_count",
+			Name:      "block_requests",
 			Help:      "Number of blocks to request.",
 		}, []string{"type"},
 	)

@@ -16,7 +16,7 @@ func configureGossipNode() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_node",
-			Name:      "block_count",
+			Name:      "blocks",
 			Help:      "Number of blocks.",
 		},
 		[]string{"type"},
@@ -26,7 +26,7 @@ func configureGossipNode() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_node",
-			Name:      "request_count",
+			Name:      "requests",
 			Help:      "Number of requests.",
 		},
 		[]string{"type"},
@@ -36,7 +36,7 @@ func configureGossipNode() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_node",
-			Name:      "heartbeat_count",
+			Name:      "heartbeats",
 			Help:      "Number of heartbeats.",
 		},
 		[]string{"type"},
@@ -46,7 +46,7 @@ func configureGossipNode() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_node",
-			Name:      "dropped_count",
+			Name:      "dropped_packets",
 			Help:      "Number of dropped packets.",
 		},
 		[]string{"type"},

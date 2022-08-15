@@ -34,7 +34,7 @@ func configureDebug() {
 		prometheus.HistogramOpts{
 			Namespace: "iota",
 			Subsystem: "debug",
-			Name:      "snapshot_duration_total",
+			Name:      "snapshot_duration",
 			Help:      "Total duration for snapshot creation [s].",
 			Buckets:   snapshotBuckets,
 		})
@@ -53,7 +53,7 @@ func configureDebug() {
 		prometheus.HistogramOpts{
 			Namespace: "iota",
 			Subsystem: "debug",
-			Name:      "pruning_duration_total",
+			Name:      "pruning_duration",
 			Help:      "Total duration for database pruning [s].",
 			Buckets:   pruningBuckets,
 		})
@@ -72,7 +72,7 @@ func configureDebug() {
 		prometheus.HistogramOpts{
 			Namespace: "iota",
 			Subsystem: "debug",
-			Name:      "confirmation_duration_total",
+			Name:      "confirmation_duration",
 			Help:      "Total duration for milestone confirmation [s].",
 			Buckets:   confirmationBuckets,
 		})

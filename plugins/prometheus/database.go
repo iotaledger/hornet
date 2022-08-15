@@ -39,7 +39,7 @@ func configureStorage(storage *storage.Storage, metrics *metrics.StorageMetrics)
 		prometheus.CounterOpts{
 			Namespace: "iota",
 			Subsystem: "database",
-			Name:      "pruning_count",
+			Name:      "pruning_count_total",
 			Help:      "The total amount of database prunings.",
 		},
 	)
@@ -90,7 +90,7 @@ func configureDatabase(name string, db *database.Database) {
 		prometheus.CounterOpts{
 			Namespace: "iota",
 			Subsystem: "database",
-			Name:      fmt.Sprintf("%s_compaction_count", name),
+			Name:      fmt.Sprintf("%s_compaction_count_total", name),
 			Help:      fmt.Sprintf("The total amount of %s database compactions.", name),
 		},
 	)
