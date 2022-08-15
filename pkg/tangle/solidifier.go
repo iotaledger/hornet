@@ -9,13 +9,12 @@ import (
 
 	"github.com/iotaledger/hive.go/core/contextutils"
 	"github.com/iotaledger/hive.go/core/math"
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (

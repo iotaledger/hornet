@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/core/crypto/ed25519"
-
 	"github.com/iotaledger/hive.go/core/identity"
 )
 

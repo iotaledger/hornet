@@ -4,11 +4,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/inx-app/httpserver"
-
-	"github.com/iotaledger/hive.go/core/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

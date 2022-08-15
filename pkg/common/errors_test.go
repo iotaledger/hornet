@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hornet/v2/pkg/common"

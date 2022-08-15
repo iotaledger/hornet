@@ -9,11 +9,10 @@ import (
 
 	"github.com/multiformats/go-multiaddr"
 
-	"github.com/iotaledger/hornet/v2/pkg/database"
-
 	"github.com/iotaledger/hive.go/core/autopeering/peer"
 	"github.com/iotaledger/hive.go/core/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hornet/v2/pkg/database"
 )
 
 // LocalPeerContainer defines the container for the local autopeering peer.

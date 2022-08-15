@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
-
 	"github.com/pkg/errors"
+	"go.uber.org/atomic"
 
 	iotago "github.com/iotaledger/iota.go/v3"
 )

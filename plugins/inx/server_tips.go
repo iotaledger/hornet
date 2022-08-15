@@ -4,14 +4,12 @@ import (
 	"context"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/iotaledger/hive.go/core/timeutil"
-
 	inx "github.com/iotaledger/inx/go"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func (s *INXServer) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx.TipsResponse, error) {
