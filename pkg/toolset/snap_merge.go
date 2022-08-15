@@ -92,13 +92,13 @@ func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.
 		GenesisMilestoneIndex    iotago.MilestoneIndex      `json:"genesisMilestoneIndex"`
 		TargetMilestoneIndex     iotago.MilestoneIndex      `json:"targetMilestoneIndex"`
 		TargetMilestoneTimestamp time.Time                  `json:"targetMilestoneTimestamp"`
-		TargetMilestoneID        string                     `json:"targetMilestoneID"`
+		TargetMilestoneID        string                     `json:"targetMilestoneId"`
 		LedgerMilestoneIndex     iotago.MilestoneIndex      `json:"ledgerMilestoneIndex"`
 		TreasuryOutput           *utxo.TreasuryOutput       `json:"treasuryOutput"`
 		ProtocolParameters       *iotago.ProtocolParameters `json:"protocolParameters"`
 		OutputCount              uint64                     `json:"outputCount"`
 		MilestoneDiffCount       uint32                     `json:"milestoneDiffCount"`
-		SEPCount                 uint16                     `json:"sepCount"`
+		SEPCount                 uint16                     `json:"solidEntryPointsCount"`
 	}{
 		SnapshotName:             name,
 		FilePath:                 path,
@@ -129,10 +129,10 @@ func printDeltaSnapshotHeaderInfo(name string, path string, deltaHeader *snapsho
 		Type                          string                `json:"type"`
 		TargetMilestoneIndex          iotago.MilestoneIndex `json:"targetMilestoneIndex"`
 		TargetMilestoneTimestamp      time.Time             `json:"targetMilestoneTimestamp"`
-		FullSnapshotTargetMilestoneID string                `json:"fullSnapshotTargetMilestoneID"`
-		SEPFileOffset                 int64                 `json:"sepFileOffset"`
+		FullSnapshotTargetMilestoneID string                `json:"fullSnapshotTargetMilestoneId"`
+		SEPFileOffset                 int64                 `json:"solidEntryPointsFileOffset"`
 		MilestoneDiffCount            uint32                `json:"milestoneDiffCount"`
-		SEPCount                      uint16                `json:"sepCount"`
+		SEPCount                      uint16                `json:"solidEntryPointsCount"`
 	}{
 		SnapshotName:                  name,
 		FilePath:                      path,
