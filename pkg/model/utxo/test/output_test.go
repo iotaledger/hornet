@@ -1,4 +1,4 @@
-//nolint:forcetypeassert // we don't care about type assertions in tests
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct // we don't care about these linters in test cases
 package utxo_test
 
 import (

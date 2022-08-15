@@ -1,4 +1,5 @@
-package value
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct // we don't care about these linters in test cases
+package value_test
 
 import (
 	"os"

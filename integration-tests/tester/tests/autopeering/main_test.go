@@ -1,4 +1,5 @@
-package autopeering
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct // we don't care about these linters in test cases
+package autopeering_test
 
 import (
 	"os"
