@@ -669,7 +669,7 @@ func NewProxyStorage(
 }
 
 // CachedBlock returns a cached block object.
-// block +1
+// block +1.
 func (s *ProxyStorage) CachedBlock(blockID iotago.BlockID) (*storage.CachedBlock, error) {
 	if !s.storeTarget.ContainsBlock(blockID) {
 		if !s.storeProxy.ContainsBlock(blockID) {
@@ -697,7 +697,7 @@ func (s *ProxyStorage) CachedBlock(blockID iotago.BlockID) (*storage.CachedBlock
 }
 
 // CachedBlockMetadata returns a cached block metadata object.
-// meta +1
+// meta +1.
 func (s *ProxyStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.CachedMetadata, error) {
 	cachedBlock, err := s.CachedBlock(blockID) // block +1
 	if err != nil {

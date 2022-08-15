@@ -114,7 +114,7 @@ type StoreBlockInterface interface {
 // storeBlock adds a new block to the storage,
 // including all additional information like
 // metadata, children, indexation and milestone entries.
-// block +1
+// block +1.
 func storeBlock(protoParams *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, blk *iotago.Block) (*storage.CachedBlock, error) {
 
 	block, err := storage.NewBlock(blk, serializer.DeSeriModePerformValidation, protoParams)

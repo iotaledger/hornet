@@ -14,7 +14,7 @@ const (
 	isNodeAlmostSyncedThreshold = 2
 )
 
-// MilestoneIndexDelta is a the type used to describe an amount of Milestones that should be used to offset a certain Index
+// MilestoneIndexDelta is a the type used to describe an amount of Milestones that should be used to offset a certain Index.
 type MilestoneIndexDelta = uint32
 
 type SyncManager struct {

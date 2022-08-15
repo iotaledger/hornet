@@ -102,7 +102,7 @@ func (s *SolidEntryPoints) SetModified(modified bool) {
 	s.modified = modified
 }
 
-// Sorted sorts the solid entry points lexicographically by their BlockID
+// Sorted sorts the solid entry points lexicographically by their BlockID.
 func (s *SolidEntryPoints) Sorted() []*SolidEntryPoint {
 
 	var sortedSolidEntryPoints LexicalOrderedSolidEntryPoints = s.copy()

@@ -120,7 +120,7 @@ func NewBlockIDRequest(blockID iotago.BlockID, msIndex iotago.MilestoneIndex) *R
 	return &Request{RequestType: RequestTypeBlockID, BlockID: blockID, MilestoneIndex: msIndex}
 }
 
-// NewMilestoneIndexRequest creates a new block request for a specific milestone index
+// NewMilestoneIndexRequest creates a new block request for a specific milestone index.
 func NewMilestoneIndexRequest(msIndex iotago.MilestoneIndex) *Request {
 	return &Request{RequestType: RequestTypeMilestoneIndex, MilestoneIndex: msIndex}
 }

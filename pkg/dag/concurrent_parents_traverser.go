@@ -133,7 +133,7 @@ func (t *ConcurrentParentsTraverser) traverseBlock(blockID iotago.BlockID) {
 // Traverse starts to traverse the parents (past cone) in a multihreaded but
 // unsorted way in direction of the parents.
 // the traversal stops due to no more blocks passing the given condition.
-// Caution: not in DFS order
+// Caution: not in DFS order.
 func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents iotago.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running

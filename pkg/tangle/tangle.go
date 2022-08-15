@@ -180,7 +180,7 @@ func New(
 	return t
 }
 
-// SetUpdateSyncedAtStartup sets the flag if the isNodeSynced status should be updated at startup
+// SetUpdateSyncedAtStartup sets the flag if the isNodeSynced status should be updated at startup.
 func (t *Tangle) SetUpdateSyncedAtStartup(updateSyncedAtStartup bool) {
 	t.updateSyncedAtStartup = updateSyncedAtStartup
 }

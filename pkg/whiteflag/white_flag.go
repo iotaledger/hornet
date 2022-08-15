@@ -15,7 +15,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/merklehasher"
 
-	// import implementation
+	// import implementation.
 	_ "golang.org/x/crypto/blake2b"
 )
 
@@ -25,7 +25,7 @@ var (
 
 	// DefaultWhiteFlagTraversalCondition is the default traversal condition used in WhiteFlag.
 	//The traversal stops if no more blocks pass the given condition
-	// Caution: condition func is not in DFS order
+	// Caution: condition func is not in DFS order.
 	DefaultWhiteFlagTraversalCondition = func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 		defer cachedBlockMeta.Release(true) // meta -1
 

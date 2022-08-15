@@ -20,7 +20,7 @@ type AutopeeredNetwork struct {
 	entryNodeIdentity *identity.Identity
 }
 
-// entryNodePublicKey returns the entry node's public key encoded as base58
+// entryNodePublicKey returns the entry node's public key encoded as base58.
 func (n *AutopeeredNetwork) entryNodePublicKey() string {
 	return n.entryNodeIdentity.PublicKey().String()
 }

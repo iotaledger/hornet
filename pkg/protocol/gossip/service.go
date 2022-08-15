@@ -626,7 +626,7 @@ func (s *Service) forEach(f ProtocolForEachFunc) {
 	}
 }
 
-// returns the protocol for the given peer or nil
+// returns the protocol for the given peer or nil.
 func (s *Service) proto(peerID peer.ID) *Protocol {
 	return s.streams[peerID]
 }
@@ -715,7 +715,7 @@ func (s *Service) detachEvents() {
 }
 
 // lets Service implement network.Notifiee in order to automatically
-// clean up ongoing reset streams
+// clean up ongoing reset streams.
 type netNotifiee Service
 
 func (m *netNotifiee) Listen(net network.Network, multiaddr multiaddr.Multiaddr)      {}

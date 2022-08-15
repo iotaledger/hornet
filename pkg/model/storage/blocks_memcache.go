@@ -29,7 +29,7 @@ func (c *BlocksMemcache) Cleanup(forceRelease bool) {
 }
 
 // CachedBlock returns a cached block object.
-// block +1
+// block +1.
 func (c *BlocksMemcache) CachedBlock(blockID iotago.BlockID) (*CachedBlock, error) {
 	var err error
 

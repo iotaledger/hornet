@@ -21,7 +21,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/merklehasher"
 
-	// import implementation
+	// import implementation.
 	_ "golang.org/x/crypto/blake2b"
 )
 

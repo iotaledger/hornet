@@ -48,7 +48,7 @@ const (
 var (
 	// GenesisSeed defines the seed on which the total supply resides on per default.
 	GenesisSeed ed25519.PrivateKey
-	// GenesisAddress defines the address computed from the GenesisSeed
+	// GenesisAddress defines the address computed from the GenesisSeed.
 	GenesisAddress iotago.Ed25519Address
 )
 

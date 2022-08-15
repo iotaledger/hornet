@@ -31,7 +31,7 @@ type ChildrenTraverser struct {
 	traverserLock sync.Mutex
 }
 
-// NewChildrenTraverser create a new traverser to traverse the children (future cone)
+// NewChildrenTraverser create a new traverser to traverse the children (future cone).
 func NewChildrenTraverser(childrenTraverserStorage ChildrenTraverserStorage) *ChildrenTraverser {
 
 	t := &ChildrenTraverser{

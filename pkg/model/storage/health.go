@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	// DBVersionNone is used to load an existing database without a version check (e.g. in the tools)
+	// DBVersionNone is used to load an existing database without a version check (e.g. in the tools).
 	DBVersionNone byte = 0
 )
 

@@ -39,7 +39,7 @@ type ParentsTraverser struct {
 	traverserLock sync.Mutex
 }
 
-// NewParentsTraverser create a new traverser to traverse the parents (past cone)
+// NewParentsTraverser create a new traverser to traverse the parents (past cone).
 func NewParentsTraverser(parentsTraverserStorage ParentsTraverserStorage) *ParentsTraverser {
 
 	t := &ParentsTraverser{
@@ -63,7 +63,7 @@ func (t *ParentsTraverser) reset() {
 // Traverse starts to traverse the parents (past cone) in the given order until
 // the traversal stops due to no more blocks passing the given condition.
 // It is a DFS of the paths of the parents one after another.
-// Caution: condition func is not in DFS order
+// Caution: condition func is not in DFS order.
 func (t *ParentsTraverser) Traverse(ctx context.Context, parents iotago.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running

@@ -125,7 +125,7 @@ func (wu *WorkUnit) broadcast() *Broadcast {
 }
 
 // increases the known block metric of all peers
-// except the given peer
+// except the given peer.
 func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *Protocol) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()

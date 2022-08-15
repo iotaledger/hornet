@@ -38,7 +38,7 @@ const (
 	// RouteBlock is the route for getting a block by its blockID.
 	// GET returns the block based on the given type in the request "Accept" header.
 	// MIMEApplicationJSON => json
-	// MIMEVendorIOTASerializer => bytes
+	// MIMEVendorIOTASerializer => bytes.
 	RouteBlock = "/blocks/:" + restapipkg.ParameterBlockID
 
 	// RouteBlockMetadata is the route for getting block metadata by its blockID.
@@ -49,19 +49,19 @@ const (
 	// POST creates a single new block and returns the new block ID.
 	// The block is parsed based on the given type in the request "Content-Type" header.
 	// MIMEApplicationJSON => json
-	// MIMEVendorIOTASerializer => bytes
+	// MIMEVendorIOTASerializer => bytes.
 	RouteBlocks = "/blocks"
 
 	// RouteTransactionsIncludedBlock is the route for getting the block that was included in the ledger for a given transaction ID.
 	// GET returns the block based on the given type in the request "Accept" header.
 	// MIMEApplicationJSON => json
-	// MIMEVendorIOTASerializer => bytes
+	// MIMEVendorIOTASerializer => bytes.
 	RouteTransactionsIncludedBlock = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-block"
 
 	// RouteMilestoneByID is the route for getting a milestone by its ID.
 	// GET returns the milestone.
 	// MIMEApplicationJSON => json
-	// MIMEVendorIOTASerializer => bytes
+	// MIMEVendorIOTASerializer => bytes.
 	RouteMilestoneByID = "/milestones/:" + restapipkg.ParameterMilestoneID
 
 	// RouteMilestoneByIDUTXOChanges is the route for getting all UTXO changes of a milestone by its ID.
@@ -71,7 +71,7 @@ const (
 	// RouteMilestoneByIndex is the route for getting a milestone by its milestoneIndex.
 	// GET returns the milestone.
 	// MIMEApplicationJSON => json
-	// MIMEVendorIOTASerializer => bytes
+	// MIMEVendorIOTASerializer => bytes.
 	RouteMilestoneByIndex = "/milestones/by-index/:" + restapipkg.ParameterMilestoneIndex
 
 	// RouteMilestoneByIndexUTXOChanges is the route for getting all UTXO changes of a milestone by its milestoneIndex.
@@ -81,7 +81,7 @@ const (
 	// RouteOutput is the route for getting an output by its outputID (transactionHash + outputIndex).
 	// GET returns the output based on the given type in the request "Accept" header.
 	// MIMEApplicationJSON => json
-	// MIMEVendorIOTASerializer => bytes
+	// MIMEVendorIOTASerializer => bytes.
 	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
 
 	// RouteOutputMetadata is the route for getting output metadata by its outputID (transactionHash + outputIndex) without getting the data again.

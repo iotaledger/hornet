@@ -167,7 +167,7 @@ func (ms *MilestoneDiff) sortedSpents() LexicalOrderedSpents {
 	return sortedSpents
 }
 
-// SHA256Sum computes the sha256 of the milestone diff byte representation
+// SHA256Sum computes the sha256 of the milestone diff byte representation.
 func (ms *MilestoneDiff) SHA256Sum() ([]byte, error) {
 
 	msDiffHash := sha256.New()

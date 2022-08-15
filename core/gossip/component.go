@@ -56,7 +56,7 @@ var (
 	CoreComponent *app.CoreComponent
 	deps          dependencies
 
-	// closures
+	// closures.
 	onGossipServiceProtocolStarted     *events.Closure
 	onGossipServiceProtocolTerminated  *events.Closure
 	onMessageProcessorBroadcastMessage *events.Closure

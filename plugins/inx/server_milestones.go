@@ -18,7 +18,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// milestone +1
+// milestone +1.
 func cachedMilestoneFromRequestOrNil(req *inx.MilestoneRequest) *storage.CachedMilestone {
 	msIndex := req.GetMilestoneIndex()
 	if msIndex == 0 {

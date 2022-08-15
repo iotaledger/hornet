@@ -40,7 +40,7 @@ var (
 	Plugin *app.Plugin
 	deps   dependencies
 
-	// closures
+	// closures.
 	onBlockSolid                     *events.Closure
 	onConfirmedMilestoneIndexChanged *events.Closure
 )

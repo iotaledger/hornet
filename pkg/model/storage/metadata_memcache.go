@@ -29,7 +29,7 @@ func (c *MetadataMemcache) Cleanup(forceRelease bool) {
 }
 
 // CachedBlockMetadata returns a cached metadata object.
-// meta +1
+// meta +1.
 func (c *MetadataMemcache) CachedBlockMetadata(blockID iotago.BlockID) (*CachedMetadata, error) {
 	var err error
 

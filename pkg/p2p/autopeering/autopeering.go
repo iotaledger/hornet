@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	// Version of the discovery protocol
+	// Version of the discovery protocol.
 	protocolVersion = 1
 	// ProtocolCode is the protocol code for autopeering within a multi address.
 	ProtocolCode = 1337

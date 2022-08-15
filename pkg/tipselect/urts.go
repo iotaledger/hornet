@@ -507,7 +507,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 	return count, nil
 }
 
-// calculateScore calculates the tip selection score of this block
+// calculateScore calculates the tip selection score of this block.
 func (ts *TipSelector) calculateScore(blockID iotago.BlockID, cmi iotago.MilestoneIndex) (Score, error) {
 
 	tipScore, err := ts.tipScoreCalculator.TipScore(ts.shutdownCtx, blockID, cmi)

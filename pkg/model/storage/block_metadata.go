@@ -30,7 +30,7 @@ const (
 	// ConflictInputUTXOAlreadySpent the referenced UTXO was already spent.
 	ConflictInputUTXOAlreadySpent = 1
 
-	// ConflictInputUTXOAlreadySpentInThisMilestone the referenced UTXO was already spent while confirming this milestone
+	// ConflictInputUTXOAlreadySpentInThisMilestone the referenced UTXO was already spent while confirming this milestone.
 	ConflictInputUTXOAlreadySpentInThisMilestone = 2
 
 	// ConflictInputUTXONotFound the referenced UTXO cannot be found.

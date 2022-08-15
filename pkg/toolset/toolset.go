@@ -98,7 +98,7 @@ const (
 const (
 	passwordEnvKey = "HORNET_TOOL_PASSWORD"
 
-	// printStatusInterval is the interval for printing status messages
+	// printStatusInterval is the interval for printing status messages.
 	printStatusInterval = 2 * time.Second
 )
 

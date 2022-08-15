@@ -55,7 +55,7 @@ func NewCachedMetadata(metadata objectstorage.CachedObject) *CachedMetadata {
 type CachedBlocks []*CachedBlock
 
 // Retain registers a new consumer for the cached blocks.
-// block +1
+// block +1.
 func (cachedBlocks CachedBlocks) Retain() CachedBlocks {
 	cachedResult := make(CachedBlocks, len(cachedBlocks))
 	for i, cachedBlock := range cachedBlocks {
@@ -65,7 +65,7 @@ func (cachedBlocks CachedBlocks) Retain() CachedBlocks {
 }
 
 // Release releases the cached blocks, to be picked up by the persistence layer (as soon as all consumers are done).
-// block -1
+// block -1.
 func (cachedBlocks CachedBlocks) Release(force ...bool) {
 	for _, cachedBlock := range cachedBlocks {
 		cachedBlock.Release(force...) // block -1
@@ -78,7 +78,7 @@ func (c *CachedBlock) Block() *Block {
 }
 
 // CachedMetadata returns the underlying cached metadata.
-// meta +1
+// meta +1.
 func (c *CachedBlock) CachedMetadata() *CachedMetadata {
 	return &CachedMetadata{c.metadata.Retain()} // meta +1
 }
@@ -94,7 +94,7 @@ func (c *CachedMetadata) Metadata() *BlockMetadata {
 }
 
 // Retain registers a new consumer for the cached block and metadata.
-// block +1
+// block +1.
 func (c *CachedBlock) Retain() *CachedBlock {
 	return &CachedBlock{
 		c.block.Retain(),    // block +1
@@ -103,7 +103,7 @@ func (c *CachedBlock) Retain() *CachedBlock {
 }
 
 // Retain registers a new consumer for the cached metadata.
-// meta +1
+// meta +1.
 func (c *CachedMetadata) Retain() *CachedMetadata {
 	return &CachedMetadata{c.CachedObject.Retain()} // meta +1
 }
@@ -116,7 +116,7 @@ func (c *CachedBlock) Exists() bool {
 
 // ConsumeBlockAndMetadata consumes the underlying block and metadata.
 // block -1
-// meta -1
+// meta -1.
 func (c *CachedBlock) ConsumeBlockAndMetadata(consumer func(*Block, *BlockMetadata)) {
 
 	c.block.Consume(func(txObject objectstorage.StorableObject) { // block -1
@@ -128,7 +128,7 @@ func (c *CachedBlock) ConsumeBlockAndMetadata(consumer func(*Block, *BlockMetada
 
 // ConsumeBlock consumes the underlying block.
 // block -1
-// meta -1
+// meta -1.
 func (c *CachedBlock) ConsumeBlock(consumer func(*Block)) {
 	defer c.metadata.Release(true)                              // meta -1
 	c.block.Consume(func(object objectstorage.StorableObject) { // block -1
@@ -138,7 +138,7 @@ func (c *CachedBlock) ConsumeBlock(consumer func(*Block)) {
 
 // ConsumeMetadata consumes the underlying metadata.
 // block -1
-// meta -1
+// meta -1.
 func (c *CachedBlock) ConsumeMetadata(consumer func(*BlockMetadata)) {
 	defer c.block.Release(true)                                    // block -1
 	c.metadata.Consume(func(object objectstorage.StorableObject) { // meta -1
@@ -147,7 +147,7 @@ func (c *CachedBlock) ConsumeMetadata(consumer func(*BlockMetadata)) {
 }
 
 // ConsumeMetadata consumes the metadata.
-// meta -1
+// meta -1.
 func (c *CachedMetadata) ConsumeMetadata(consumer func(*BlockMetadata)) {
 	c.Consume(func(object objectstorage.StorableObject) { // meta -1
 		consumer(object.(*BlockMetadata))
@@ -155,7 +155,7 @@ func (c *CachedMetadata) ConsumeMetadata(consumer func(*BlockMetadata)) {
 }
 
 // Release releases the cached block and metadata, to be picked up by the persistence layer (as soon as all consumers are done).
-// block -1
+// block -1.
 func (c *CachedBlock) Release(force ...bool) {
 	c.block.Release(force...)    // block -1
 	c.metadata.Release(force...) // meta -1
@@ -232,7 +232,7 @@ func (s *Storage) configureBlockStorage(store kvstore.KVStore, opts *profile.Cac
 }
 
 // CachedBlockOrNil returns a cached block object.
-// block +1
+// block +1.
 func (s *Storage) CachedBlockOrNil(blockID iotago.BlockID) *CachedBlock {
 	cachedBlock := s.blocksStorage.Load(blockID[:]) // block +1
 	if !cachedBlock.Exists() {
@@ -254,7 +254,7 @@ func (s *Storage) CachedBlockOrNil(blockID iotago.BlockID) *CachedBlock {
 }
 
 // CachedBlock returns a cached block object.
-// block +1
+// block +1.
 func (s *Storage) CachedBlock(blockID iotago.BlockID) (*CachedBlock, error) {
 	return s.CachedBlockOrNil(blockID), nil // block +1
 }
@@ -275,7 +275,7 @@ func (s *Storage) Block(blockID iotago.BlockID) (*iotago.Block, error) {
 }
 
 // CachedBlockMetadataOrNil returns a cached metadata object.
-// meta +1
+// meta +1.
 func (s *Storage) CachedBlockMetadataOrNil(blockID iotago.BlockID) *CachedMetadata {
 	cachedBlockMeta := s.metadataStorage.Load(blockID[:]) // meta +1
 	if !cachedBlockMeta.Exists() {
@@ -286,7 +286,7 @@ func (s *Storage) CachedBlockMetadataOrNil(blockID iotago.BlockID) *CachedMetada
 }
 
 // CachedBlockMetadata returns a cached metadata object.
-// meta +1
+// meta +1.
 func (s *Storage) CachedBlockMetadata(blockID iotago.BlockID) (*CachedMetadata, error) {
 	return s.CachedBlockMetadataOrNil(blockID), nil
 }
@@ -316,7 +316,7 @@ func (s *Storage) BlockMetadataExistsInStore(blockID iotago.BlockID) bool {
 }
 
 // StoreBlockIfAbsent returns a cached object and stores the block in the persistence layer if it was absent.
-// block +1
+// block +1.
 func (s *Storage) StoreBlockIfAbsent(block *Block) (cachedBlock *CachedBlock, newlyAdded bool) {
 
 	// Store block + metadata atomically in the same callback

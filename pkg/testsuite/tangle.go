@@ -15,7 +15,7 @@ import (
 )
 
 // StoreBlock adds the block to the storage layer and solidifies it.
-// block +1
+// block +1.
 func (te *TestEnvironment) StoreBlock(block *storage.Block) *storage.CachedBlock {
 
 	// Store block in the database

@@ -27,7 +27,7 @@ func (l LexicalOrderedSpents) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
 
-// Spent are already spent TXOs (transaction outputs)
+// Spent are already spent TXOs (transaction outputs).
 type Spent struct {
 	kvStorable
 
@@ -66,17 +66,17 @@ func (s *Spent) Deposit() uint64 {
 	return s.output.Deposit()
 }
 
-// TransactionIDSpent returns the ID of the transaction that spent the output
+// TransactionIDSpent returns the ID of the transaction that spent the output.
 func (s *Spent) TransactionIDSpent() iotago.TransactionID {
 	return s.transactionIDSpent
 }
 
-// MilestoneIndexSpent returns the index of the milestone that spent the output
+// MilestoneIndexSpent returns the index of the milestone that spent the output.
 func (s *Spent) MilestoneIndexSpent() iotago.MilestoneIndex {
 	return s.msIndexSpent
 }
 
-// MilestoneTimestampSpent returns the timestamp of the milestone that spent the output
+// MilestoneTimestampSpent returns the timestamp of the milestone that spent the output.
 func (s *Spent) MilestoneTimestampSpent() uint32 {
 	return s.msTimestampSpent
 }

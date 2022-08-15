@@ -164,7 +164,7 @@ func (t *Tangle) AbortMilestoneSolidification() {
 	}
 }
 
-// solidifyMilestone tries to solidify the next known non-solid milestone and requests missing block
+// solidifyMilestone tries to solidify the next known non-solid milestone and requests missing block.
 func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, force bool) {
 
 	/* How milestone solidification works:
@@ -522,7 +522,7 @@ func (t *Tangle) setSolidifierMilestoneIndex(index iotago.MilestoneIndex) {
 	t.solidifierMilestoneIndexLock.Unlock()
 }
 
-// searchMissingMilestones searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
+// searchMissingMilestones searches milestones in the cone that are not persisted in the DB yet by traversing the tangle.
 func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestoneIndex iotago.MilestoneIndex, startMilestoneIndex iotago.MilestoneIndex, milestoneParents iotago.BlockIDs) (found bool, err error) {
 
 	var milestoneFound bool

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	// printStatusInterval is the interval for printing status blocks
+	// printStatusInterval is the interval for printing status blocks.
 	printStatusInterval = 2 * time.Second
 )
 
@@ -483,7 +483,7 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 	return nil
 }
 
-// apply the ledger from the last snapshot to the database
+// apply the ledger from the last snapshot to the database.
 func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshotImporter *snapshot.Importer) error {
 
 	t.LogInfo("applying snapshot balances to the ledger state...")
