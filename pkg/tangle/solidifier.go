@@ -22,11 +22,11 @@ var (
 )
 
 type ConfirmedMilestoneMetric struct {
-	MilestoneIndex         iotago.MilestoneIndex `json:"ms_index"`
-	BPS                    float64               `json:"bps"`
-	RBPS                   float64               `json:"rbps"`
-	ReferencedRate         float64               `json:"referenced_rate"`
-	TimeSinceLastMilestone float64               `json:"time_since_last_ms"`
+	MilestoneIndex         iotago.MilestoneIndex
+	BPS                    float64
+	RBPS                   float64
+	ReferencedRate         float64
+	TimeSinceLastMilestone float64
 }
 
 // TriggerSolidifier can be used to manually trigger the solidifier from other plugins.
