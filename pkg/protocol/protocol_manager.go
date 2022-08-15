@@ -52,7 +52,7 @@ type Manager struct {
 	pending     []*iotago.ProtocolParamsMilestoneOpt
 }
 
-// init initialises the Manager by loading the last stored parameters and pending parameters.
+// init initializes the Manager by loading the last stored parameters and pending parameters.
 func (m *Manager) init(ledgerIndex iotago.MilestoneIndex) error {
 	m.currentLock.Lock()
 	defer m.currentLock.Unlock()
@@ -99,6 +99,7 @@ func (m *Manager) Current() *iotago.ProtocolParameters {
 func (m *Manager) Pending() []*iotago.ProtocolParamsMilestoneOpt {
 	m.pendingLock.RLock()
 	defer m.pendingLock.RUnlock()
+
 	cpy := make([]*iotago.ProtocolParamsMilestoneOpt, len(m.pending))
 	for i, ele := range m.pending {
 		cpy[i] = ele.Clone().(*iotago.ProtocolParamsMilestoneOpt)

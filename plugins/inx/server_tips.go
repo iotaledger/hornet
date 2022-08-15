@@ -42,23 +42,29 @@ func (s *INXServer) ListenToTipsMetrics(req *inx.TipsMetricRequest, srv inx.INX_
 	if req.GetIntervalInMilliseconds() == 0 {
 		return status.Error(codes.InvalidArgument, "interval must be > 0")
 	}
+
 	if deps.TipSelector == nil {
 		return status.Error(codes.Unavailable, "no tipselector available")
 	}
+
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	ticker := timeutil.NewTicker(func() {
 		nonLazy, semiLazy := deps.TipSelector.TipCount()
+
 		metrics := &inx.TipsMetric{
 			NonLazyPoolSize:  uint32(nonLazy),
 			SemiLazyPoolSize: uint32(semiLazy),
 		}
+
 		if err := srv.Send(metrics); err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			innerErr = err
 			cancel()
 		}
+
 	}, time.Duration(req.GetIntervalInMilliseconds())*time.Millisecond, ctx)
 	ticker.WaitForShutdown()
 

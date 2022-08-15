@@ -40,7 +40,7 @@ func TestBatch(t *testing.T) {
 		cfg.Receipts.Validate = true
 		cfg.Receipts.Validator.APIAddress = "http://wfmock_batch:14265"
 		cfg.Receipts.Validator.APITimeout = 5 * time.Second
-		cfg.Receipts.Validator.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
+		cfg.Receipts.Validator.CoordinatorAddress = CoordinatorAddress
 		cfg.Receipts.Validator.CoordinatorMerkleTreeDepth = 8
 
 		switch {
@@ -52,8 +52,8 @@ func TestBatch(t *testing.T) {
 			cfg.Receipts.Enabled = true
 		}
 
-		cfg.Snapshot.FullSnapshotFilePath = "/assets/migration_full_snapshot.bin"
-		cfg.Snapshot.DeltaSnapshotFilePath = "/assets/migration_delta_snapshot.bin" // doesn't exist so the node will only load the full one
+		cfg.Snapshot.FullSnapshotFilePath = FullSnapshotPath
+		cfg.Snapshot.DeltaSnapshotFilePath = DeltaSnapshotPath // doesn't exist so the node will only load the full one
 	})
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)

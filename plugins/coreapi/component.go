@@ -37,7 +37,7 @@ const (
 
 	// RouteBlock is the route for getting a block by its blockID.
 	// GET returns the block based on the given type in the request "Accept" header.
-	// MIMEApplicationJSON => json
+	// MIMEApplicationJSON => json.
 	// MIMEVendorIOTASerializer => bytes.
 	RouteBlock = "/blocks/:" + restapipkg.ParameterBlockID
 
@@ -48,19 +48,19 @@ const (
 	// RouteBlocks is the route for creating new blocks.
 	// POST creates a single new block and returns the new block ID.
 	// The block is parsed based on the given type in the request "Content-Type" header.
-	// MIMEApplicationJSON => json
+	// MIMEApplicationJSON => json.
 	// MIMEVendorIOTASerializer => bytes.
 	RouteBlocks = "/blocks"
 
 	// RouteTransactionsIncludedBlock is the route for getting the block that was included in the ledger for a given transaction ID.
 	// GET returns the block based on the given type in the request "Accept" header.
-	// MIMEApplicationJSON => json
+	// MIMEApplicationJSON => json.
 	// MIMEVendorIOTASerializer => bytes.
 	RouteTransactionsIncludedBlock = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-block"
 
 	// RouteMilestoneByID is the route for getting a milestone by its ID.
 	// GET returns the milestone.
-	// MIMEApplicationJSON => json
+	// MIMEApplicationJSON => json.
 	// MIMEVendorIOTASerializer => bytes.
 	RouteMilestoneByID = "/milestones/:" + restapipkg.ParameterMilestoneID
 
@@ -70,7 +70,7 @@ const (
 
 	// RouteMilestoneByIndex is the route for getting a milestone by its milestoneIndex.
 	// GET returns the milestone.
-	// MIMEApplicationJSON => json
+	// MIMEApplicationJSON => json.
 	// MIMEVendorIOTASerializer => bytes.
 	RouteMilestoneByIndex = "/milestones/by-index/:" + restapipkg.ParameterMilestoneIndex
 
@@ -80,7 +80,7 @@ const (
 
 	// RouteOutput is the route for getting an output by its outputID (transactionHash + outputIndex).
 	// GET returns the output based on the given type in the request "Accept" header.
-	// MIMEApplicationJSON => json
+	// MIMEApplicationJSON => json.
 	// MIMEVendorIOTASerializer => bytes.
 	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
 

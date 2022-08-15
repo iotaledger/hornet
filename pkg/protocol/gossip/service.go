@@ -179,13 +179,13 @@ type Service struct {
 	streamReqChan       chan *streamreqmsg
 	forEachChan         chan *foreachmsg
 
-	// closures
-	// peering manager
+	// closures.
+	// peering manager.
 	onPeeringManagerConnected       *events.Closure
 	onPeeringManagerDisconnected    *events.Closure
 	onPeeringManagerRelationUpdated *events.Closure
 
-	// logger
+	// logger.
 	onGossipServiceProtocolStarted       *events.Closure
 	onGossipServiceProtocolTerminated    *events.Closure
 	onGossipServiceInboundStreamCanceled *events.Closure
@@ -648,6 +648,7 @@ func (s *Service) configureEvents() {
 	// peering manager
 	s.peeringMngWP = workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
+
 		switch req := task.Param(0).(type) {
 		case *connectionmsg:
 			if req.conn == nil {

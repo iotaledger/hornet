@@ -155,8 +155,8 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 
 	case httpserver.MIMEApplicationVendorIOTASerializerV1:
 		if c.Request().Body == nil {
-			return nil, errors.WithMessage(httpserver.ErrInvalidParameter, "invalid block, error: request body missing")
 			// bad request
+			return nil, errors.WithMessage(httpserver.ErrInvalidParameter, "invalid block, error: request body missing")
 		}
 
 		bytes, err := io.ReadAll(c.Request().Body)

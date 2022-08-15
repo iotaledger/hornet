@@ -28,10 +28,10 @@ import (
 
 const (
 	WorkerQueueSize = 50000
+	WorkerCount     = 64
 )
 
 var (
-	workerCount           = 64
 	ErrBlockNotSolid      = errors.New("block is not solid")
 	ErrBlockBelowMaxDepth = errors.New("block is below max depth")
 )
@@ -163,7 +163,7 @@ func NewMessageProcessor(
 		}
 
 		task.Return(nil)
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(WorkerQueueSize))
+	}, workerpool.WorkerCount(WorkerCount), workerpool.QueueSize(WorkerQueueSize))
 
 	return proc, nil
 }

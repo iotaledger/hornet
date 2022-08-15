@@ -13,6 +13,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+const (
+	FullSnapshotPath   = "/assets/migration_full_snapshot.bin"
+	DeltaSnapshotPath  = "/assets/migration_delta_snapshot.bin"
+	CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
+)
+
 // TestMigration boots up a statically peered network which runs with a white-flag mock server
 // in order to validate an entire migration flow.
 // The migration full snapshot used to bootstrap the C2 network has 10000000000 allocated on the treasury.
@@ -45,7 +51,7 @@ func TestMigration(t *testing.T) {
 		cfg.Receipts.Validate = true
 		cfg.Receipts.Validator.APIAddress = "http://wfmock:14265"
 		cfg.Receipts.Validator.APITimeout = 5 * time.Second
-		cfg.Receipts.Validator.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
+		cfg.Receipts.Validator.CoordinatorAddress = CoordinatorAddress
 		cfg.Receipts.Validator.CoordinatorMerkleTreeDepth = 8
 
 		switch {
@@ -57,8 +63,8 @@ func TestMigration(t *testing.T) {
 			cfg.Receipts.Enabled = true
 		}
 
-		cfg.Snapshot.FullSnapshotFilePath = "/assets/migration_full_snapshot.bin"
-		cfg.Snapshot.DeltaSnapshotFilePath = "/assets/migration_delta_snapshot.bin" // doesn't exist so the node will only load the full one
+		cfg.Snapshot.FullSnapshotFilePath = FullSnapshotPath
+		cfg.Snapshot.DeltaSnapshotFilePath = DeltaSnapshotPath // doesn't exist so the node will only load the full one
 	})
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
@@ -128,7 +134,7 @@ func TestAPIError(t *testing.T) {
 			cfg.Receipts.Validate = true
 			cfg.Receipts.Validator.APIAddress = "http://localhost:14265"
 			cfg.Receipts.Validator.APITimeout = 5 * time.Second
-			cfg.Receipts.Validator.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
+			cfg.Receipts.Validator.CoordinatorAddress = CoordinatorAddress
 			cfg.Receipts.Validator.CoordinatorMerkleTreeDepth = 8
 
 			switch {
@@ -139,8 +145,8 @@ func TestAPIError(t *testing.T) {
 			default:
 				cfg.Receipts.Enabled = true
 			}
-			cfg.Snapshot.FullSnapshotFilePath = "/assets/migration_full_snapshot.bin"
-			cfg.Snapshot.DeltaSnapshotFilePath = "/assets/migration_delta_snapshot.bin" // doesn't exist so the node will only load the full one
+			cfg.Snapshot.FullSnapshotFilePath = FullSnapshotPath
+			cfg.Snapshot.DeltaSnapshotFilePath = DeltaSnapshotPath // doesn't exist so the node will only load the full one
 		})
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)

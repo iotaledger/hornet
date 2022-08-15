@@ -24,7 +24,6 @@ type OnSolidEntryPoint func(blockID iotago.BlockID) error
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order.
 func TraverseParents(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, parents iotago.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
-
 	t := NewParentsTraverser(parentsTraverserStorage)
 
 	return t.Traverse(ctx, parents, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints)
@@ -35,7 +34,6 @@ func TraverseParents(ctx context.Context, parentsTraverserStorage ParentsTravers
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order.
 func TraverseParentsOfBlock(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, startBlockID iotago.BlockID, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
-
 	t := NewParentsTraverser(parentsTraverserStorage)
 
 	return t.Traverse(ctx, iotago.BlockIDs{startBlockID}, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints)
@@ -45,7 +43,6 @@ func TraverseParentsOfBlock(ctx context.Context, parentsTraverserStorage Parents
 // the traversal stops due to no more blocks passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
 func TraverseChildren(ctx context.Context, childrenTraverserStorage ChildrenTraverserStorage, startBlockID iotago.BlockID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
-
 	t := NewChildrenTraverser(childrenTraverserStorage)
 
 	return t.Traverse(ctx, startBlockID, condition, consumer, walkAlreadyDiscovered)

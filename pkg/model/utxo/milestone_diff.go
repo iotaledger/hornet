@@ -188,7 +188,7 @@ func (ms *MilestoneDiff) SHA256Sum() ([]byte, error) {
 	return msDiffHash.Sum(nil), nil
 }
 
-//- DB helpers
+// DB helper functions.
 
 func storeDiff(diff *MilestoneDiff, mutations kvstore.BatchedMutations) error {
 	return mutations.Set(diff.KVStorableKey(), diff.KVStorableValue())
@@ -198,7 +198,7 @@ func deleteDiff(msIndex iotago.MilestoneIndex, mutations kvstore.BatchedMutation
 	return mutations.Delete(milestoneDiffKeyForIndex(msIndex))
 }
 
-//- Manager
+// Manager functions.
 
 func (u *Manager) MilestoneDiffWithoutLocking(msIndex iotago.MilestoneIndex) (*MilestoneDiff, error) {
 

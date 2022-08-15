@@ -120,27 +120,27 @@ type BlockMetadata struct {
 
 	blockID iotago.BlockID
 
-	// Metadata
+	// Metadata.
 	metadata bitmask.BitMask
 
-	// The index of the milestone which referenced this block
+	// The index of the milestone which referenced this block.
 	referencedIndex iotago.MilestoneIndex
 
-	// The index of this block inside the milestone given the whiteflag ordering
+	// The index of this block inside the milestone given the whiteflag ordering.
 	whiteFlagIndex uint32
 
 	conflict Conflict
 
-	// youngestConeRootIndex is the highest referenced index of the past cone of this block
+	// youngestConeRootIndex is the highest referenced index of the past cone of this block.
 	youngestConeRootIndex iotago.MilestoneIndex
 
-	// oldestConeRootIndex is the lowest referenced index of the past cone of this block
+	// oldestConeRootIndex is the lowest referenced index of the past cone of this block.
 	oldestConeRootIndex iotago.MilestoneIndex
 
-	// coneRootCalculationIndex is the confirmed milestone index ycri and ocri were calculated at
+	// coneRootCalculationIndex is the confirmed milestone index ycri and ocri were calculated at.
 	coneRootCalculationIndex iotago.MilestoneIndex
 
-	// parents are the parents of the block
+	// parents are the parents of the block.
 	parents iotago.BlockIDs
 }
 
@@ -307,7 +307,7 @@ func (m *BlockMetadata) Metadata() byte {
 	return byte(m.metadata)
 }
 
-// ObjectStorage interface
+// ObjectStorage interface.
 
 func (m *BlockMetadata) Update(_ objectstorage.StorableObject) {
 	panic(fmt.Sprintf("BlockMetadata should never be updated: %v", m.blockID.ToHex()))

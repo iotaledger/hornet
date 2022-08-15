@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Errors.
 var (
 	ErrJWTInvalidClaims = echo.NewHTTPError(http.StatusUnauthorized, "invalid jwt claims")
 )

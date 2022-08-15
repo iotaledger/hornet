@@ -116,7 +116,7 @@ func (c *CachedBlock) Exists() bool {
 }
 
 // ConsumeBlockAndMetadata consumes the underlying block and metadata.
-// block -1
+// block -1.
 // meta -1.
 func (c *CachedBlock) ConsumeBlockAndMetadata(consumer func(*Block, *BlockMetadata)) {
 
@@ -128,7 +128,7 @@ func (c *CachedBlock) ConsumeBlockAndMetadata(consumer func(*Block, *BlockMetada
 }
 
 // ConsumeBlock consumes the underlying block.
-// block -1
+// block -1.
 // meta -1.
 func (c *CachedBlock) ConsumeBlock(consumer func(*Block)) {
 	defer c.metadata.Release(true)                              // meta -1
@@ -138,7 +138,7 @@ func (c *CachedBlock) ConsumeBlock(consumer func(*Block)) {
 }
 
 // ConsumeMetadata consumes the underlying metadata.
-// block -1
+// block -1.
 // meta -1.
 func (c *CachedBlock) ConsumeMetadata(consumer func(*BlockMetadata)) {
 	defer c.block.Release(true)                                    // block -1

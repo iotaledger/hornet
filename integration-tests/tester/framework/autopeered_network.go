@@ -40,9 +40,11 @@ func (n *AutopeeredNetwork) createEntryNode(privKey ed25519.PrivateKey) error {
 	if err := n.entryNode.CreateNodeContainer(cfg); err != nil {
 		return err
 	}
+
 	if err := n.entryNode.ConnectToNetwork(n.ID); err != nil {
 		return err
 	}
+
 	if err := n.entryNode.Start(); err != nil {
 		return err
 	}
@@ -100,6 +102,7 @@ func (n *AutopeeredNetwork) CreatePeer(cfg *AppConfig) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	cfg.Autopeering.EntryNodes = []string{
 		fmt.Sprintf("/ip4/%s/udp/14626/autopeering/%s", ip, n.entryNodePublicKey()),
 	}
@@ -118,6 +121,7 @@ func (n *AutopeeredNetwork) Shutdown() error {
 	if err != nil {
 		return err
 	}
+
 	if err := createContainerLogFile(n.PrefixName(containerNameEntryNode), logs); err != nil {
 		return err
 	}

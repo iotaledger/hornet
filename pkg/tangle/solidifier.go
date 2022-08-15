@@ -22,11 +22,11 @@ var (
 )
 
 type ConfirmedMilestoneMetric struct {
-	MilestoneIndex         iotago.MilestoneIndex `json:"ms_index"`
-	BPS                    float64               `json:"bps"`
-	RBPS                   float64               `json:"rbps"`
-	ReferencedRate         float64               `json:"referenced_rate"`
-	TimeSinceLastMilestone float64               `json:"time_since_last_ms"`
+	MilestoneIndex         iotago.MilestoneIndex
+	BPS                    float64
+	RBPS                   float64
+	ReferencedRate         float64
+	TimeSinceLastMilestone float64
 }
 
 // TriggerSolidifier can be used to manually trigger the solidifier from other plugins.
@@ -322,7 +322,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		}
 		// rerun to solidify the older one
 		t.setSolidifierMilestoneIndex(0)
-
 		t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
 
 		return
@@ -577,7 +576,6 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 
 			// milestone found!
 			t.milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, false) // block pass +1
-
 			milestoneFound = true
 
 			return true, nil // we keep searching for all missing milestones
