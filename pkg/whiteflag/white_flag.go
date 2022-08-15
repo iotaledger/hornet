@@ -99,6 +99,8 @@ func (b ReferencedBlocks) NonTransactionBlockIDs() iotago.BlockIDs {
 }
 
 // WhiteFlagMutations contains the ledger mutations and referenced blocks applied to a cone under the "white-flag" approach.
+//
+//nolint:revive // better be explicit here
 type WhiteFlagMutations struct {
 	// The blocks which were referenced by the milestone
 	ReferencedBlocks ReferencedBlocks

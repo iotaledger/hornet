@@ -589,11 +589,12 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
 		false); err != nil {
+
 		if errors.Is(err, common.ErrOperationAborted) {
 			return false, nil
-		} else {
-			return false, err
 		}
+
+		return false, err
 	}
 
 	t.LogInfof("searchMissingMilestone finished, found: %v, took: %v", milestoneFound, time.Since(ts).Truncate(time.Millisecond))

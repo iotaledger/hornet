@@ -291,7 +291,7 @@ func (s *Manager) readLedgerIndex() (iotago.MilestoneIndex, error) {
 	}
 
 	if !s.storage.ContainsMilestoneIndex(ledgerMilestoneIndex) {
-		return 0, errors.Wrapf(common.ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
+		return 0, errors.Wrapf(common.ErrCritical, "milestone (%d) not found", ledgerMilestoneIndex)
 	}
 
 	return ledgerMilestoneIndex, nil
@@ -531,7 +531,7 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 
 	sepProducer := NewSEPsProducer(ctx, s.storage, targetIndex, s.solidEntryPointCheckThresholdPast)
 
-	var snapshotMetrics *SnapshotMetrics
+	var snapshotMetrics *Metrics
 	var snapshotFile *os.File
 	var tempFilePath string
 
@@ -927,7 +927,7 @@ func CreateSnapshotFromStorage(
 // applying the delta diffs onto it and then writing out the merged state.
 func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
 
-	targetEngine, err := database.DatabaseEngineAllowed(database.EnginePebble)
+	targetEngine, err := database.EngineAllowed(database.EnginePebble)
 	if err != nil {
 		return nil, err
 	}

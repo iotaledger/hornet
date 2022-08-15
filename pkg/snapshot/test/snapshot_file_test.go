@@ -485,8 +485,8 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 				snapshotFileWrite, err := fs.OpenFile(filePath, os.O_RDWR, 0666)
 				require.NoError(t, err)
 
-				tt.originDeltaHeader.TargetMilestoneIndex += 1
-				tt.originDeltaHeader.TargetMilestoneTimestamp += 1
+				tt.originDeltaHeader.TargetMilestoneIndex++
+				tt.originDeltaHeader.TargetMilestoneTimestamp++
 
 				// extend the existing delta snapshot file
 				_, err = snapshot.StreamDeltaSnapshotDataToExisting(snapshotFileWrite, tt.originDeltaHeader, msDiffGen, sepGen)

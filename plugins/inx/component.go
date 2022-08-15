@@ -60,7 +60,7 @@ type dependencies struct {
 	ProtocolManager         *protocol.Manager
 	BaseToken               *protocfg.BaseToken
 	PoWHandler              *pow.Handler
-	INXServer               *INXServer
+	INXServer               *Server
 	INXMetrics              *metrics.INXMetrics
 	Echo                    *echo.Echo                `optional:"true"`
 	RestRouteManager        *restapi.RestRouteManager `optional:"true"`
@@ -78,8 +78,8 @@ func provide(c *dig.Container) error {
 		Plugin.LogPanic(err)
 	}
 
-	if err := c.Provide(func() *INXServer {
-		return newINXServer()
+	if err := c.Provide(func() *Server {
+		return newServer()
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}

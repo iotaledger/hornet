@@ -26,10 +26,10 @@ type Tangle struct {
 	// the logger used to log events.
 	*logger.WrappedLogger
 
-	// used to access the global daemon.
-	daemon daemon.Daemon
 	// context that is done when the node is shutting down.
 	shutdownCtx context.Context
+	// used to access the global daemon.
+	daemon daemon.Daemon
 	// used to access the node storage.
 	storage *storage.Storage
 	// used to determine the sync status of the node.
@@ -109,9 +109,9 @@ type Tangle struct {
 }
 
 func New(
-	log *logger.Logger,
-	daemon daemon.Daemon,
 	shutdownCtx context.Context,
+	daemon daemon.Daemon,
+	log *logger.Logger,
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	milestoneManager *milestonemanager.MilestoneManager,
@@ -128,8 +128,8 @@ func New(
 
 	t := &Tangle{
 		WrappedLogger:                logger.NewWrappedLogger(log),
-		daemon:                       daemon,
 		shutdownCtx:                  shutdownCtx,
+		daemon:                       daemon,
 		storage:                      dbStorage,
 		syncManager:                  syncManager,
 		milestoneManager:             milestoneManager,

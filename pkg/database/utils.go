@@ -6,8 +6,8 @@ import (
 	"github.com/iotaledger/hive.go/core/ioutils"
 )
 
-// DatabaseExists checks if the database folder exists and is not empty.
-func DatabaseExists(dbPath string) (bool, error) {
+// Exists checks if the database folder exists and is not empty.
+func Exists(dbPath string) (bool, error) {
 
 	dirExists, err := ioutils.PathExists(dbPath)
 	if err != nil {

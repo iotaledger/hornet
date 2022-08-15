@@ -24,7 +24,7 @@ import (
 
 const protocolID = "/iota/abcdf/1.0.0"
 
-func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.ManagerOption, srvOpts []gossip.ServiceOption, privateKey crypto.PrivKey) (
+func newNode(ctx context.Context, name string, t *testing.T, mngOpts []p2p.ManagerOption, srvOpts []gossip.ServiceOption, privateKey crypto.PrivKey) (
 	host.Host, *p2p.Manager, *gossip.Service, peer.AddrInfo,
 ) {
 	connManager, err := connmgr.NewConnManager(
@@ -78,10 +78,10 @@ func TestServiceEvents(t *testing.T) {
 	require.NoError(t, err)
 
 	// node 1 <peer.ID 12*rd6tBe>
-	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, mngOpts, srvOpts, node1PrvKey)
+	node1, node1Manager, node1Service, node1AddrInfo := newNode(ctx, "node1", t, mngOpts, srvOpts, node1PrvKey)
 
 	// node 2 <peer.ID 12*g1issS>
-	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, mngOpts, srvOpts, node2PrvKey)
+	node2, node2Manager, node2Service, node2AddrInfo := newNode(ctx, "node2", t, mngOpts, srvOpts, node2PrvKey)
 
 	fmt.Println("node 1", node1.ID().ShortString())
 	fmt.Println("node 2", node2.ID().ShortString())
@@ -210,13 +210,13 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 	require.NoError(t, err)
 
 	// node 1 <peer.ID 12*rd6tBe>
-	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, mngOpts, srvOpts, node1PrvKey)
+	node1, node1Manager, node1Service, node1AddrInfo := newNode(ctx, "node1", t, mngOpts, srvOpts, node1PrvKey)
 
 	// node 2 <peer.ID 12*g1issS>
-	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, mngOpts, srvOpts, node2PrvKey)
+	node2, node2Manager, node2Service, node2AddrInfo := newNode(ctx, "node2", t, mngOpts, srvOpts, node2PrvKey)
 
 	// node 3 <peer.ID 12*e9jADP>
-	node3, node3Manager, node3Service, _ := newNode("node3", ctx, t, mngOpts, []gossip.ServiceOption{
+	node3, node3Manager, node3Service, _ := newNode(ctx, "node3", t, mngOpts, []gossip.ServiceOption{
 		gossip.WithUnknownPeersLimit(2),
 	}, node3PrvKey)
 

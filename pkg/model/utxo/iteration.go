@@ -5,21 +5,21 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-type UTXOIterateOptions struct {
+type IterateOptions struct {
 	readLockLedger bool
 	maxResultCount int
 }
 
-type UTXOIterateOption func(*UTXOIterateOptions)
+type IterateOption func(*IterateOptions)
 
-func ReadLockLedger(lockLedger bool) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
+func ReadLockLedger(lockLedger bool) IterateOption {
+	return func(args *IterateOptions) {
 		args.readLockLedger = lockLedger
 	}
 }
 
-func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
-	result := &UTXOIterateOptions{
+func iterateOptions(optionalOptions []IterateOption) *IterateOptions {
+	result := &IterateOptions{
 		readLockLedger: true,
 		maxResultCount: 0,
 	}
@@ -31,7 +31,7 @@ func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
 	return result
 }
 
-func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...IterateOption) error {
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
@@ -62,7 +62,7 @@ func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateO
 	return innerErr
 }
 
-func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...IterateOption) error {
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
@@ -101,7 +101,7 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIter
 	return innerErr
 }
 
-func (u *Manager) SpentOutputs(options ...UTXOIterateOption) (Spents, error) {
+func (u *Manager) SpentOutputs(options ...IterateOption) (Spents, error) {
 	var spents Spents
 	consumerFunc := func(spent *Spent) bool {
 		spents = append(spents, spent)
@@ -116,7 +116,7 @@ func (u *Manager) SpentOutputs(options ...UTXOIterateOption) (Spents, error) {
 	return spents, nil
 }
 
-func (u *Manager) ForEachUnspentOutputID(consumer OutputIDConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachUnspentOutputID(consumer OutputIDConsumer, options ...IterateOption) error {
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
@@ -147,7 +147,7 @@ func (u *Manager) ForEachUnspentOutputID(consumer OutputIDConsumer, options ...U
 	return innerErr
 }
 
-func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...IterateOption) error {
 
 	var innerErr error
 	if err := u.ForEachUnspentOutputID(func(outputID iotago.OutputID) bool {
@@ -175,7 +175,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 	return innerErr
 }
 
-func (u *Manager) UnspentOutputsIDs(options ...UTXOIterateOption) (iotago.OutputIDs, error) {
+func (u *Manager) UnspentOutputsIDs(options ...IterateOption) (iotago.OutputIDs, error) {
 	var outputIDs iotago.OutputIDs
 	consumerFunc := func(outputID iotago.OutputID) bool {
 		outputIDs = append(outputIDs, outputID)
@@ -190,7 +190,7 @@ func (u *Manager) UnspentOutputsIDs(options ...UTXOIterateOption) (iotago.Output
 	return outputIDs, nil
 }
 
-func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) (Outputs, error) {
+func (u *Manager) UnspentOutputs(options ...IterateOption) (Outputs, error) {
 	var outputs Outputs
 	consumerFunc := func(output *Output) bool {
 		outputs = append(outputs, output)
@@ -205,7 +205,7 @@ func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) (Outputs, error) 
 	return outputs, nil
 }
 
-func (u *Manager) ComputeLedgerBalance(options ...UTXOIterateOption) (balance uint64, count int, err error) {
+func (u *Manager) ComputeLedgerBalance(options ...IterateOption) (balance uint64, count int, err error) {
 	balance = 0
 	count = 0
 	consumerFunc := func(output *Output) bool {

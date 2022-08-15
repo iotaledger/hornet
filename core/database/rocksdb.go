@@ -10,8 +10,8 @@ import (
 func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Database {
 
 	dbEvents := &database.Events{
-		DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
-		DatabaseCompaction: events.NewEvent(events.BoolCaller),
+		Cleanup:    events.NewEvent(database.CleanupCaller),
+		Compaction: events.NewEvent(events.BoolCaller),
 	}
 
 	rocksDatabase, err := database.NewRocksDB(path)
@@ -35,7 +35,7 @@ func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Databas
 				if running && !runningBefore {
 					// we may miss some compactions, since this is only calculated if polled.
 					metrics.CompactionCount.Inc()
-					dbEvents.DatabaseCompaction.Trigger(running)
+					dbEvents.Compaction.Trigger(running)
 				}
 
 				return running

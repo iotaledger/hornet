@@ -71,7 +71,7 @@ func generateJWTApiToken(args []string) error {
 	}
 
 	// API tokens do not expire.
-	jwtAuth, err := jwt.NewJWTAuth(salt,
+	jwtAuth, err := jwt.NewAuth(salt,
 		0,
 		peerID.String(),
 		privKey,

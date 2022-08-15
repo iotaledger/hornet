@@ -153,13 +153,13 @@ func getTangleStorage(path string,
 	markTainted bool,
 	checkSnapInfo bool) (*storage.Storage, error) {
 
-	dbEngine, err := database.DatabaseEngineFromStringAllowed(dbEngineStr, database.EnginePebble, database.EngineRocksDB, database.EngineAuto)
+	dbEngine, err := database.EngineFromStringAllowed(dbEngineStr, database.EnginePebble, database.EngineRocksDB, database.EngineAuto)
 	if err != nil {
 		return nil, err
 	}
 
 	if checkExist {
-		databaseExists, err := database.DatabaseExists(path)
+		databaseExists, err := database.Exists(path)
 		if err != nil {
 			return nil, err
 		}

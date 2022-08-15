@@ -247,7 +247,7 @@ func (u *Manager) UnspentTreasuryOutputWithoutLocking() (*TreasuryOutput, error)
 type TreasuryOutputConsumer func(output *TreasuryOutput) bool
 
 // ForEachTreasuryOutput iterates over all stored treasury outputs.
-func (u *Manager) ForEachTreasuryOutput(consumer TreasuryOutputConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachTreasuryOutput(consumer TreasuryOutputConsumer, options ...IterateOption) error {
 
 	opt := iterateOptions(options)
 
@@ -281,7 +281,7 @@ func (u *Manager) ForEachTreasuryOutput(consumer TreasuryOutputConsumer, options
 	return innerErr
 }
 
-func (u *Manager) ForEachSpentTreasuryOutput(consumer TreasuryOutputConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachSpentTreasuryOutput(consumer TreasuryOutputConsumer, options ...IterateOption) error {
 
 	opt := iterateOptions(options)
 

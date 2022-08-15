@@ -109,7 +109,7 @@ func NewSnapshotManager(
 		Events: &Events{
 			SnapshotMilestoneIndexChanged:         events.NewEvent(storagepkg.MilestoneIndexCaller),
 			HandledConfirmedMilestoneIndexChanged: events.NewEvent(storagepkg.MilestoneIndexCaller),
-			SnapshotMetricsUpdated:                events.NewEvent(SnapshotMetricsCaller),
+			SnapshotMetricsUpdated:                events.NewEvent(MetricsCaller),
 		},
 	}
 }

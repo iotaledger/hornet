@@ -78,7 +78,7 @@ func ForEachSolidEntryPoint(
 		// get all parents of that milestone
 		milestoneParents, err := dbStorage.MilestoneParentsByIndex(milestoneIndex)
 		if err != nil {
-			return errors.Wrapf(common.ErrCritical, "milestone (%d) not found!", milestoneIndex)
+			return errors.Wrapf(common.ErrCritical, "milestone (%d) not found", milestoneIndex)
 		}
 
 		// traverse the milestone and collect all blocks that were referenced by this milestone or newer
@@ -117,7 +117,7 @@ func ForEachSolidEntryPoint(
 
 				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				if !referenced {
-					return errors.Wrapf(common.ErrCritical, "solid entry point (%v) not referenced!", blockID.ToHex())
+					return errors.Wrapf(common.ErrCritical, "solid entry point (%v) not referenced", blockID.ToHex())
 				}
 
 				if _, exists := solidEntryPoints[blockID]; !exists {

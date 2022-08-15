@@ -17,14 +17,14 @@ var (
 	ErrJWTInvalidClaims = echo.NewHTTPError(http.StatusUnauthorized, "invalid jwt claims")
 )
 
-type JWTAuth struct {
+type Auth struct {
 	subject        string
 	sessionTimeout time.Duration
 	nodeID         string
 	secret         []byte
 }
 
-func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeID string, secret crypto.PrivKey) (*JWTAuth, error) {
+func NewAuth(subject string, sessionTimeout time.Duration, nodeID string, secret crypto.PrivKey) (*Auth, error) {
 
 	if len(subject) == 0 {
 		return nil, errors.New("subject must not be empty")
@@ -35,7 +35,7 @@ func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeID string, sec
 		return nil, fmt.Errorf("unable to convert private key: %w", err)
 	}
 
-	return &JWTAuth{
+	return &Auth{
 		subject:        subject,
 		sessionTimeout: sessionTimeout,
 		nodeID:         nodeID,
@@ -62,7 +62,7 @@ func (c *AuthClaims) VerifySubject(expected string) bool {
 	return c.compare(c.Subject, expected)
 }
 
-func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Context, subject string, claims *AuthClaims) bool) echo.MiddlewareFunc {
+func (j *Auth) Middleware(skipper middleware.Skipper, allow func(c echo.Context, subject string, claims *AuthClaims) bool) echo.MiddlewareFunc {
 
 	config := middleware.JWTConfig{
 		ContextKey: "jwt",
@@ -118,7 +118,7 @@ func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Conte
 	}
 }
 
-func (j *JWTAuth) IssueJWT() (string, error) {
+func (j *Auth) IssueJWT() (string, error) {
 
 	now := time.Now()
 
@@ -147,7 +147,7 @@ func (j *JWTAuth) IssueJWT() (string, error) {
 	return token.SignedString(j.secret)
 }
 
-func (j *JWTAuth) VerifyJWT(token string, allow func(claims *AuthClaims) bool) bool {
+func (j *Auth) VerifyJWT(token string, allow func(claims *AuthClaims) bool) bool {
 
 	t, err := jwt.ParseWithClaims(token, &AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// validate the signing method we expect

@@ -106,7 +106,7 @@ func networkBootstrap(args []string) error {
 		return fmt.Errorf("'%s' (%s) already exists", FlagToolCoordinatorStatePath, cooStatePath)
 	}
 
-	dbEngine, err := database.DatabaseEngineFromStringAllowed(*databaseEngineFlag, database.EnginePebble, database.EngineRocksDB)
+	dbEngine, err := database.EngineFromStringAllowed(*databaseEngineFlag, database.EnginePebble, database.EngineRocksDB)
 	if err != nil {
 		return err
 	}

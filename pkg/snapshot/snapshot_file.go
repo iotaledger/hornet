@@ -733,7 +733,7 @@ func StreamFullSnapshotDataTo(
 	header *FullSnapshotHeader,
 	outputProd OutputProducerFunc,
 	msDiffProd MilestoneDiffProducerFunc,
-	sepProd SEPProducerFunc) (*SnapshotMetrics, error) {
+	sepProd SEPProducerFunc) (*Metrics, error) {
 
 	if outputProd == nil {
 		return nil, ErrOutputProducerNotProvided
@@ -848,7 +848,7 @@ func StreamFullSnapshotDataTo(
 	header.MilestoneDiffCount = msDiffCount
 	header.SEPCount = sepsCount
 
-	return &SnapshotMetrics{
+	return &Metrics{
 		DurationHeader:           timeHeader.Sub(timeStart),
 		DurationOutputs:          timeOutputs.Sub(timeHeader),
 		DurationMilestoneDiffs:   timeMilestoneDiffs.Sub(timeOutputs),
@@ -861,7 +861,7 @@ func StreamDeltaSnapshotDataTo(
 	writeSeeker io.WriteSeeker,
 	header *DeltaSnapshotHeader,
 	msDiffProd MilestoneDiffProducerFunc,
-	sepProd SEPProducerFunc) (*SnapshotMetrics, error) {
+	sepProd SEPProducerFunc) (*Metrics, error) {
 
 	if msDiffProd == nil {
 		return nil, ErrMilestoneDiffProducerNotProvided
@@ -954,7 +954,7 @@ func StreamDeltaSnapshotDataTo(
 	header.MilestoneDiffCount = msDiffCount
 	header.SEPCount = sepsCount
 
-	return &SnapshotMetrics{
+	return &Metrics{
 		DurationHeader:           timeHeader.Sub(timeStart),
 		DurationMilestoneDiffs:   timeMilestoneDiffs.Sub(timeHeader),
 		DurationSolidEntryPoints: timeSolidEntryPoints.Sub(timeMilestoneDiffs),
@@ -966,7 +966,7 @@ func StreamDeltaSnapshotDataToExisting(
 	fileHandle ReadWriteTruncateSeeker,
 	header *DeltaSnapshotHeader,
 	msDiffProd MilestoneDiffProducerFunc,
-	sepProd SEPProducerFunc) (*SnapshotMetrics, error) {
+	sepProd SEPProducerFunc) (*Metrics, error) {
 
 	if header.Type != Delta {
 		return nil, ErrWrongSnapshotType
@@ -1126,7 +1126,7 @@ func StreamDeltaSnapshotDataToExisting(
 	header.MilestoneDiffCount = msDiffCount
 	header.SEPCount = sepsCount
 
-	return &SnapshotMetrics{
+	return &Metrics{
 		DurationHeader:           timeHeader.Sub(timeStart),
 		DurationMilestoneDiffs:   timeMilestoneDiffs.Sub(timeHeader),
 		DurationSolidEntryPoints: timeSolidEntryPoints.Sub(timeMilestoneDiffs),

@@ -80,7 +80,7 @@ func initConfigPars(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func() cfgResult {
-		dbEngine, err := database.DatabaseEngineFromStringAllowed(ParamsDatabase.Engine)
+		dbEngine, err := database.EngineFromStringAllowed(ParamsDatabase.Engine)
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}
@@ -134,12 +134,12 @@ func provide(c *dig.Container) error {
 				}
 			}
 
-			tangleTargetEngine, err := database.CheckDatabaseEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine)
+			tangleTargetEngine, err := database.CheckEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine)
 			if err != nil {
 				CoreComponent.LogPanic(err)
 			}
 
-			utxoTargetEngine, err := database.CheckDatabaseEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine)
+			utxoTargetEngine, err := database.CheckEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine)
 			if err != nil {
 				CoreComponent.LogPanic(err)
 			}

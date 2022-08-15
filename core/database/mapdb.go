@@ -15,8 +15,8 @@ func newMapDB(metrics *metrics.DatabaseMetrics) *database.Database {
 		database.EngineMapDB,
 		metrics,
 		&database.Events{
-			DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
-			DatabaseCompaction: events.NewEvent(events.BoolCaller),
+			Cleanup:    events.NewEvent(database.CleanupCaller),
+			Compaction: events.NewEvent(events.BoolCaller),
 		},
 		false,
 		nil,

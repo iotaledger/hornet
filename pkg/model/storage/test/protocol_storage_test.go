@@ -1,4 +1,4 @@
-//nolint:stylecheck // we do not care about the underlines in the test
+//nolint:stylecheck,revive // we do not care about the underlines in the test
 package storage_test
 
 import (

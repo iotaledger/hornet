@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-// PruningMetrics holds metrics about a database pruning run.
-type PruningMetrics struct {
+// Metrics holds metrics about a database pruning run.
+type Metrics struct {
 	DurationPruneUnreferencedBlocks      time.Duration
 	DurationTraverseMilestoneCone        time.Duration
 	DurationPruneMilestone               time.Duration
