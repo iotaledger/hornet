@@ -18,7 +18,7 @@ func configureGossipPeers() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_peers",
-			Name:      "block_count",
+			Name:      "blocks",
 			Help:      "Number of blocks by peer.",
 		},
 		[]string{"address", "alias", "id", "type"},
@@ -28,7 +28,7 @@ func configureGossipPeers() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_peers",
-			Name:      "request_count",
+			Name:      "requests",
 			Help:      "Number of requests by peer.",
 		},
 		[]string{"address", "alias", "id", "type"},
@@ -38,7 +38,7 @@ func configureGossipPeers() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_peers",
-			Name:      "heartbeat_count",
+			Name:      "heartbeats",
 			Help:      "Number of heartbeats by peer.",
 		},
 		[]string{"address", "alias", "id", "type"},
@@ -48,7 +48,7 @@ func configureGossipPeers() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_peers",
-			Name:      "dropped_count",
+			Name:      "dropped_packets",
 			Help:      "Number of dropped packets by peer.",
 		},
 		[]string{"address", "alias", "id", "type"},
@@ -58,7 +58,7 @@ func configureGossipPeers() {
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_peers",
-			Name:      "connected_count",
+			Name:      "connected_peers",
 			Help:      "Are peers connected?",
 		},
 		[]string{"address", "alias", "id"},
