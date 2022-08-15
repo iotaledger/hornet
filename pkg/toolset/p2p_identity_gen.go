@@ -1,7 +1,6 @@
 package toolset
 
 import (
-	stded25519 "crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -68,12 +67,11 @@ func generateP2PIdentity(args []string) error {
 	var publicKey crypto.PubKey
 
 	if privateKeyFlag != nil && len(*privateKeyFlag) > 0 {
-		hivePrivKey, err := hivecrypto.ParseEd25519PrivateKeyFromString(*privateKeyFlag)
+		stdPrvKey, err := hivecrypto.ParseEd25519PrivateKeyFromString(*privateKeyFlag)
 		if err != nil {
 			return fmt.Errorf("invalid private key given '%s': %w", *privateKeyFlag, err)
 		}
 
-		stdPrvKey := stded25519.PrivateKey(hivePrivKey)
 		privateKey, publicKey, err = crypto.KeyPairFromStdKey(&stdPrvKey)
 		if err != nil {
 			return fmt.Errorf("unable to convert given private key '%s': %w", *privateKeyFlag, err)

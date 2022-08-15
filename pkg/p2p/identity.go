@@ -94,12 +94,11 @@ func ParseEd25519PrivateKeyFromString(identityPrivKey string) (crypto.PrivKey, e
 		return nil, ErrNoPrivKeyFound
 	}
 
-	hivePrivKey, err := hivecrypto.ParseEd25519PrivateKeyFromString(identityPrivKey)
+	stdPrvKey, err := hivecrypto.ParseEd25519PrivateKeyFromString(identityPrivKey)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse private key: %w", ErrPrivKeyInvalid)
 	}
 
-	stdPrvKey := stded25519.PrivateKey(hivePrivKey)
 	p2pPrvKey, _, err := crypto.KeyPairFromStdKey(&stdPrvKey)
 	if err != nil {
 		return nil, fmt.Errorf("unable to convert private key: %w", err)
