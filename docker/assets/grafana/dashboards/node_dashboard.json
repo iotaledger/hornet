@@ -835,7 +835,7 @@
                 "type": "prometheus",
                 "uid": "PBFA97CFB590B2093"
               },
-              "expr": "sum(iota_gossip_peers_connected_count)",
+              "expr": "sum(iota_gossip_peers_connected_peers)",
               "refId": "A"
             }
           ],
@@ -1506,7 +1506,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "irate(iota_gossip_peers_request_count{type=~\"$peer_request_type\"}[$__rate_interval])",
+              "expr": "irate(iota_gossip_peers_requests{type=~\"$peer_request_type\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{type}} from {{id}}",
               "range": true,
@@ -1599,7 +1599,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "rate(iota_gossip_node_heartbeat_count[$__rate_interval])",
+              "expr": "rate(iota_gossip_node_heartbeats[$__rate_interval])",
               "legendFormat": "{{type}}",
               "range": true,
               "refId": "A"
@@ -1667,7 +1667,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "iota_gossip_peers_heartbeat_count{type=\"sent\"}",
+              "expr": "iota_gossip_peers_heartbeats{type=\"sent\"}",
               "interval": "",
               "legendFormat": "{{id}}",
               "range": true,
@@ -1736,7 +1736,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "iota_gossip_peers_heartbeat_count{type=\"received\"}",
+              "expr": "iota_gossip_peers_heartbeats{type=\"received\"}",
               "legendFormat": "{{id}}",
               "range": true,
               "refId": "A"
@@ -1798,7 +1798,7 @@
                 "type": "prometheus",
                 "uid": "PBFA97CFB590B2093"
               },
-              "expr": "iota_gossip_node_dropped_count",
+              "expr": "iota_gossip_node_dropped_packets",
               "refId": "A"
             }
           ],
@@ -1863,7 +1863,7 @@
                 "type": "prometheus",
                 "uid": "PBFA97CFB590B2093"
               },
-              "expr": "iota_gossip_peers_dropped_count",
+              "expr": "iota_gossip_peers_dropped_packets",
               "refId": "A"
             }
           ],
@@ -2133,7 +2133,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "iota_database_tangle_compaction_count",
+              "expr": "iota_database_tangle_compaction_count_total",
               "legendFormat": "Compaction",
               "range": true,
               "refId": "A"
@@ -2144,7 +2144,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "iota_database_pruning_count",
+              "expr": "iota_database_pruning_count_total",
               "hide": false,
               "interval": "",
               "legendFormat": "Pruning",
@@ -2430,7 +2430,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "avg by() (increase(iota_restapi_pow_count[30s]))",
+              "expr": "avg by() (increase(iota_restapi_pow_requests[30s]))",
               "legendFormat": "{{label_name}}",
               "range": true,
               "refId": "A"
@@ -2506,7 +2506,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "rate(iota_gossip_peers_block_count{type=~\"$peer_block_type\", id=~\"$peers\"}[1m])",
+              "expr": "rate(iota_gossip_peers_blocks{type=~\"$peer_block_type\", id=~\"$peers\"}[1m])",
               "legendFormat": "{{id}} - {{type}}",
               "range": true,
               "refId": "A"
@@ -2597,7 +2597,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "rate(iota_gossip_peers_request_count{type=~\"$peer_request_type\", id=~\"$peers\"}[1m])",
+              "expr": "rate(iota_gossip_peers_requests{type=~\"$peer_request_type\", id=~\"$peers\"}[1m])",
               "legendFormat": "{{type}} from {{id}}",
               "range": true,
               "refId": "A"
@@ -2889,7 +2889,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "iota_migrator_receipt_count",
+              "expr": "iota_migrator_receipt_count_total",
               "interval": "",
               "legendFormat": "Receipt Count",
               "range": true,
@@ -2901,7 +2901,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "iota_migrator_receipt_entries_applied_count",
+              "expr": "iota_migrator_receipt_entries_applied_count_total",
               "hide": false,
               "interval": "",
               "legendFormat": "Receipt Entries Applied Count",
@@ -2981,7 +2981,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "rate(iota_node_tip_count[5m])",
+              "expr": "rate(iota_node_tips[5m])",
               "legendFormat": "{{type}}",
               "range": true,
               "refId": "A"
@@ -3028,7 +3028,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "description": "Messages to request per second",
+          "description": "Blocks to request per second",
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -3070,7 +3070,7 @@
                 "uid": "PBFA97CFB590B2093"
               },
               "editorMode": "code",
-              "expr": "rate(iota_node_request_count[$__rate_interval])",
+              "expr": "rate(iota_node_block_requests[$__rate_interval])",
               "legendFormat": "{{type}}",
               "range": true,
               "refId": "A"
@@ -3078,7 +3078,7 @@
           ],
           "thresholds": [],
           "timeRegions": [],
-          "title": "Messages To Request",
+          "title": "Blocks To Request",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -3161,7 +3161,7 @@
                 "type": "prometheus",
                 "uid": "PBFA97CFB590B2093"
               },
-              "expr": "iota_restapi_http_request_error_count",
+              "expr": "iota_restapi_http_request_errors",
               "refId": "A"
             }
           ],
@@ -3293,14 +3293,14 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "definition": "label_values(iota_gossip_node_block_count, type)",
+        "definition": "label_values(iota_gossip_node_blocks, type)",
         "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "block_type",
         "options": [],
         "query": {
-          "query": "label_values(iota_gossip_node_block_count, type)",
+          "query": "label_values(iota_gossip_node_blocks, type)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -3322,14 +3322,14 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "definition": "label_values(iota_gossip_peers_block_count, id)",
+        "definition": "label_values(iota_gossip_peers_blocks, id)",
         "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "peers",
         "options": [],
         "query": {
-          "query": "label_values(iota_gossip_peers_block_count, id)",
+          "query": "label_values(iota_gossip_peers_blocks, id)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -3355,14 +3355,14 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "definition": "label_values(iota_gossip_peers_block_count, type)",
+        "definition": "label_values(iota_gossip_peers_blocks, type)",
         "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "peer_block_type",
         "options": [],
         "query": {
-          "query": "label_values(iota_gossip_peers_block_count, type)",
+          "query": "label_values(iota_gossip_peers_blocks, type)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -3388,14 +3388,14 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "definition": "label_values(iota_gossip_peers_request_count, type)",
+        "definition": "label_values(iota_gossip_peers_requests, type)",
         "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "peer_request_type",
         "options": [],
         "query": {
-          "query": "label_values(iota_gossip_peers_request_count, type)",
+          "query": "label_values(iota_gossip_peers_requests, type)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
