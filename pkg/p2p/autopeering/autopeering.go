@@ -261,6 +261,7 @@ func ConvertLibP2PPrivateKeyToHive(key *crypto.Ed25519PrivateKey) (*ed25519.Priv
 // example: /ip4/127.0.0.1/udp/14626/autopeering/HmKTkSd9F6nnERBvVbr55FvL1hM5WfcLvsc9bc3hWxWc
 func parseEntryNode(entryNodeMultiAddrStr string, preferIPv6 bool) (entryNode *peer.Peer, err error) {
 	if entryNodeMultiAddrStr == "" {
+		//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 		return nil, nil
 	}
 
@@ -324,7 +325,6 @@ func NewAutopeeringManager(log *logger.Logger, bindAddress string, entryNodes []
 		discoveryProtocol:  nil,
 		selectionProtocol:  nil,
 	}
-
 }
 
 // P2PServiceKey is the peering service key.

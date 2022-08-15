@@ -6,6 +6,7 @@ import (
 
 // SnapshotMetricsCaller is used to signal updated snapshot metrics.
 func SnapshotMetricsCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(metrics *SnapshotMetrics))(params[0].(*SnapshotMetrics))
 }
 

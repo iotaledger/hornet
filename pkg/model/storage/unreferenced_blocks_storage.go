@@ -27,6 +27,7 @@ func (cachedUnreferencedBlocks CachedUnreferencedBlocks) Release(force ...bool) 
 
 // UnreferencedBlock retrieves the unreferenced block, that is cached in this container.
 func (c *CachedUnreferencedBlock) UnreferencedBlock() *UnreferencedBlock {
+	//nolint:forcetypeassert // we will replace that with generics anyway
 	return c.Get().(*UnreferencedBlock)
 }
 

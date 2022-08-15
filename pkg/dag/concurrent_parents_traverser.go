@@ -190,14 +190,12 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents iotag
 func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errChan chan error) {
 
 	wasProcessed := func(blockID iotago.BlockID) bool {
-
 		_, wasProcessed := t.processed.Load(blockID)
 
 		return wasProcessed
 	}
 
 	markAsProcessed := func(blockID iotago.BlockID) bool {
-
 		_, wasProcessed := t.processed.LoadOrStore(blockID, struct{}{})
 
 		return wasProcessed
@@ -313,7 +311,6 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 				if errors.Is(err, ErrTraversalDone) {
 					return
 				}
-
 				errChan <- err
 
 				return

@@ -181,6 +181,8 @@ func (s *Storage) SolidEntryPoints() *SolidEntryPoints {
 }
 
 // profileCachesDisabled returns a Caches profile with caching disabled.
+//
+//lint:ignore U1000 used for easier debugging
 func (s *Storage) profileCachesDisabled() *profile.Caches {
 	return &profile.Caches{
 		Addresses: &profile.CacheOpts{

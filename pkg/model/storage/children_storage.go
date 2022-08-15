@@ -43,6 +43,7 @@ func (c *CachedChild) Retain() *CachedChild {
 
 // Child retrieves the child, that is cached in this container.
 func (c *CachedChild) Child() *Child {
+	//nolint:forcetypeassert // we will replace that with generics anyway
 	return c.Get().(*Child)
 }
 

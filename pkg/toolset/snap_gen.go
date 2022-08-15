@@ -272,6 +272,7 @@ func snapshotGen(args []string) error {
 
 			case remainingAmount == 0:
 				// no genesis output needed, all balances distributed
+				//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 				return nil, nil
 
 			default:
@@ -308,12 +309,14 @@ func snapshotGen(args []string) error {
 		}
 
 		// all outputs added
+		//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 		return nil, nil
 	}
 
 	// milestone diffs
 	milestoneDiffProducerFunc := func() (*snapshot.MilestoneDiff, error) {
 		// no milestone diffs needed
+		//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 		return nil, nil
 	}
 

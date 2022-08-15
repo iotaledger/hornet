@@ -41,6 +41,7 @@ func (c *MetadataMemcache) CachedBlockMetadata(blockID iotago.BlockID) (*CachedM
 			return nil, err
 		}
 		if cachedBlockMeta == nil {
+			//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 			return nil, nil
 		}
 

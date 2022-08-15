@@ -37,6 +37,7 @@ var (
 )
 
 func BlockProcessedCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(block *storage.Block, requests Requests, proto *Protocol))(params[0].(*storage.Block), params[1].(Requests), params[2].(*Protocol))
 }
 
@@ -49,6 +50,7 @@ type Broadcast struct {
 }
 
 func BroadcastCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(b *Broadcast))(params[0].(*Broadcast))
 }
 

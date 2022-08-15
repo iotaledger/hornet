@@ -35,11 +35,13 @@ type ServiceEvents struct {
 
 // ProtocolCaller gets called with a Protocol.
 func ProtocolCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*Protocol))(params[0].(*Protocol))
 }
 
 // StreamCancelCaller gets called with a network.Stream and its cancel reason.
 func StreamCancelCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(network.Stream, StreamCancelReason))(params[0].(network.Stream), params[1].(StreamCancelReason))
 }
 

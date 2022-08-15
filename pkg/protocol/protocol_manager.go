@@ -11,6 +11,7 @@ import (
 )
 
 func protoParamsMsOptionCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt))(params[0].(*iotago.ProtocolParamsMilestoneOpt))
 }
 
@@ -102,6 +103,7 @@ func (m *Manager) Pending() []*iotago.ProtocolParamsMilestoneOpt {
 
 	cpy := make([]*iotago.ProtocolParamsMilestoneOpt, len(m.pending))
 	for i, ele := range m.pending {
+		//nolint:forcetypeassert // we will replace that with generics anyway
 		cpy[i] = ele.Clone().(*iotago.ProtocolParamsMilestoneOpt)
 	}
 

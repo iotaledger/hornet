@@ -100,11 +100,13 @@ type ManagerEvents struct {
 
 // PeerCaller gets called with a Peer.
 func PeerCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*Peer))(params[0].(*Peer))
 }
 
 // PeerIDCaller gets called with a peer.ID.
 func PeerIDCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(peer.ID))(params[0].(peer.ID))
 }
 
@@ -116,26 +118,31 @@ type PeerOptError struct {
 
 // PeerOptErrorCaller gets called with a Peer and an error.
 func PeerOptErrorCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*PeerOptError))(params[0].(*PeerOptError))
 }
 
 // ManagerStateCaller gets called with a ManagerState.
 func ManagerStateCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(ManagerState))(params[0].(ManagerState))
 }
 
 // PeerDurationCaller gets called with a Peer and a time.Duration.
 func PeerDurationCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*Peer, time.Duration))(params[0].(*Peer), params[1].(time.Duration))
 }
 
 // PeerConnCaller gets called with a Peer and its associated network.Conn.
 func PeerConnCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*Peer, network.Conn))(params[0].(*Peer), params[1].(network.Conn))
 }
 
 // PeerRelationCaller gets called with a Peer and its old PeerRelation.
 func PeerRelationCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(p *Peer, old PeerRelation))(params[0].(*Peer), params[1].(PeerRelation))
 }
 
@@ -184,6 +191,7 @@ func (mo *ManagerOptions) apply(opts ...ManagerOption) {
 func (mo *ManagerOptions) reconnectDelay() time.Duration {
 	recInter := mo.reconnectInterval
 	jitter := mo.reconnectIntervalJitter
+	//nolint:gosec // we do not care about weak random numbers here
 	delayJitter := rand.Int63n(int64(jitter))
 
 	return recInter + time.Duration(delayJitter)
