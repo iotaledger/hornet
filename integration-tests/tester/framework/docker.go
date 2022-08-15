@@ -103,6 +103,7 @@ func (d *DockerContainer) CreateWhiteFlagMockContainer(cfg *WhiteFlagMockServerC
 	}
 
 	hostCfg := &container.HostConfig{Binds: cfg.Binds}
+
 	return d.CreateContainer(cfg.Name, containerConfig, hostCfg)
 }
 
@@ -119,6 +120,7 @@ func (d *DockerContainer) CreateContainer(name string, containerConfig *containe
 	}
 
 	d.id = resp.ID
+
 	return nil
 }
 
@@ -149,6 +151,7 @@ func (d *DockerContainer) Stop(optionalTimeout ...time.Duration) error {
 	if optionalTimeout != nil {
 		duration = optionalTimeout[0]
 	}
+
 	return d.client.ContainerStop(context.Background(), d.id, &duration)
 }
 

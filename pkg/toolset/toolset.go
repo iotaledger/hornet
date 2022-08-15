@@ -98,7 +98,7 @@ const (
 const (
 	passwordEnvKey = "HORNET_TOOL_PASSWORD"
 
-	// printStatusInterval is the interval for printing status messages
+	// printStatusInterval is the interval for printing status messages.
 	printStatusInterval = 2 * time.Second
 )
 
@@ -111,6 +111,7 @@ func ShouldHandleTools() bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -191,6 +192,7 @@ func yesOrNo(value bool) string {
 	if value {
 		return "YES"
 	}
+
 	return "NO"
 }
 
@@ -204,6 +206,7 @@ func parseFlagSet(fs *flag.FlagSet, args []string, minArgsCount ...int) error {
 		// minimum amount of args must be checked
 		if len(args) < minArgsCount[0] {
 			fs.Usage()
+
 			return errors.New("not enough arguments")
 		}
 	}
@@ -223,6 +226,7 @@ func printJSON(obj interface{}) error {
 	}
 
 	fmt.Println(string(output))
+
 	return nil
 }
 

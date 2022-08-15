@@ -77,6 +77,7 @@ func (m *Manager) loadPending(ledgerIndex iotago.MilestoneIndex) {
 		if protoParamsMsOption.TargetMilestoneIndex > ledgerIndex {
 			m.pending = append(m.pending, protoParamsMsOption)
 		}
+
 		return true
 	})
 }
@@ -90,6 +91,7 @@ func (m *Manager) SupportedVersions() Versions {
 func (m *Manager) Current() *iotago.ProtocolParameters {
 	m.currentLock.RLock()
 	defer m.currentLock.RUnlock()
+
 	return m.current
 }
 
@@ -101,6 +103,7 @@ func (m *Manager) Pending() []*iotago.ProtocolParamsMilestoneOpt {
 	for i, ele := range m.pending {
 		cpy[i] = ele.Clone().(*iotago.ProtocolParamsMilestoneOpt)
 	}
+
 	return cpy
 }
 
@@ -111,6 +114,7 @@ func (m *Manager) NextPendingSupported() bool {
 	if len(m.pending) == 0 {
 		return true
 	}
+
 	return m.SupportedVersions().Supports(m.pending[0].ProtocolVersion)
 }
 
@@ -126,6 +130,7 @@ func (m *Manager) HandleConfirmedMilestone(cachedMilestone *storage.CachedMilest
 
 		if err := m.storage.StoreProtocolParametersMilestoneOption(protoParamsMsOption); err != nil {
 			m.Events.CriticalErrors.Trigger(fmt.Errorf("unable to persist new protocol parameters: %w", err))
+
 			return
 		}
 	}
@@ -136,6 +141,7 @@ func (m *Manager) HandleConfirmedMilestone(cachedMilestone *storage.CachedMilest
 
 	if err := m.updateCurrent(); err != nil {
 		m.Events.CriticalErrors.Trigger(err)
+
 		return
 	}
 }
@@ -155,6 +161,7 @@ func (m *Manager) currentShouldChange(milestone *storage.Milestone) bool {
 		if !m.SupportedVersions().Supports(next.ProtocolVersion) {
 			m.Events.NextMilestoneUnsupported.Trigger(next)
 		}
+
 		return false
 	case next.TargetMilestoneIndex > milestone.Milestone().Index:
 		return false

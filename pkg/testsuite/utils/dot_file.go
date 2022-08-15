@@ -15,6 +15,7 @@ import (
 // this is used for the dot file.
 func ShortenedHash(hash iotago.BlockID) string {
 	hexHash := hash.ToHex()
+
 	return hexHash[0:4] + "..." + hexHash[len(hexHash)-4:]
 }
 
@@ -46,6 +47,7 @@ func ShortenedTag(cachedBlock *storage.CachedBlock) string {
 
 	if cachedBlock.Metadata().IsConflictingTx() {
 		conflict := cachedBlock.Metadata().Conflict()
+
 		return fmt.Sprintf("%s (%d)", tagString, conflict)
 	}
 

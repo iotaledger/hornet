@@ -19,6 +19,7 @@ func compileRouteAsRegex(route string) *regexp.Regexp {
 	if err != nil {
 		return nil
 	}
+
 	return reg
 }
 
@@ -28,10 +29,12 @@ func compileRoutesAsRegexes(routes []string) []*regexp.Regexp {
 		reg := compileRouteAsRegex(route)
 		if reg == nil {
 			Plugin.LogErrorfAndExit("Invalid route in config: %s", route)
+
 			continue
 		}
 		regexes = append(regexes, reg)
 	}
+
 	return regexes
 }
 
@@ -48,6 +51,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 				return true
 			}
 		}
+
 		return false
 	}
 
@@ -59,6 +63,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 				return true
 			}
 		}
+
 		return false
 	}
 

@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
-
 	"github.com/pkg/errors"
+	"go.uber.org/atomic"
 
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -97,6 +96,7 @@ func NewRequestQueue(latencyResolution ...int32) RequestQueue {
 		q.latencyResolution = DefaultLatencyResolution
 	}
 	heap.Init(q)
+
 	return q
 }
 
@@ -121,7 +121,7 @@ func NewBlockIDRequest(blockID iotago.BlockID, msIndex iotago.MilestoneIndex) *R
 	return &Request{RequestType: RequestTypeBlockID, BlockID: blockID, MilestoneIndex: msIndex}
 }
 
-// NewMilestoneIndexRequest creates a new block request for a specific milestone index
+// NewMilestoneIndexRequest creates a new block request for a specific milestone index.
 func NewMilestoneIndexRequest(msIndex iotago.MilestoneIndex) *Request {
 	return &Request{RequestType: RequestTypeMilestoneIndex, MilestoneIndex: msIndex}
 }
@@ -202,6 +202,7 @@ func (pq *priorityqueue) Enqueue(r *Request) bool {
 	}
 	r.EnqueueTime = time.Now()
 	heap.Push(pq, r)
+
 	return true
 }
 
@@ -210,6 +211,7 @@ func (pq *priorityqueue) IsQueued(data interface{}) bool {
 	defer pq.RUnlock()
 
 	_, k := pq.queued[getRequestMapKey(data)]
+
 	return k
 }
 
@@ -218,6 +220,7 @@ func (pq *priorityqueue) IsPending(data interface{}) bool {
 	defer pq.RUnlock()
 
 	_, k := pq.pending[getRequestMapKey(data)]
+
 	return k
 }
 
@@ -226,6 +229,7 @@ func (pq *priorityqueue) IsProcessing(data interface{}) bool {
 	defer pq.RUnlock()
 
 	_, k := pq.processing[getRequestMapKey(data)]
+
 	return k
 }
 
@@ -278,6 +282,7 @@ func (pq *priorityqueue) Processed(data interface{}) *Request {
 	if wasProcessing {
 		delete(pq.processing, requestMapKey)
 	}
+
 	return req
 }
 
@@ -294,18 +299,21 @@ func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
 			// discard request from the queue, because it didn't match the filter
 			delete(pq.pending, k)
 			enqueued--
+
 			continue
 		}
 		if discardOlderThan == 0 || value.PreventDiscard || s.Sub(value.EnqueueTime) < discardOlderThan {
 			// no need to examine the queued set
 			// as addition and removal are synced over Push and Pops
 			heap.Push(pq, value)
+
 			continue
 		}
 		// discard request from the queue
 		delete(pq.pending, k)
 		enqueued--
 	}
+
 	return enqueued
 }
 
@@ -316,6 +324,7 @@ func (pq *priorityqueue) Size() (int, int, int) {
 	x := len(pq.queued)
 	y := len(pq.pending)
 	z := len(pq.processing)
+
 	return x, y, z
 }
 
@@ -324,6 +333,7 @@ func (pq *priorityqueue) Empty() bool {
 	defer pq.RUnlock()
 
 	empty := len(pq.queued) == 0 && len(pq.pending) == 0 && len(pq.processing) == 0
+
 	return empty
 }
 
@@ -356,6 +366,7 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request, proc
 		processing[k] = value
 		k++
 	}
+
 	return queued, pending, processing
 }
 
@@ -370,6 +381,7 @@ func (pq *priorityqueue) Filter(f FilterFunc) {
 			if !f(value) {
 				// discard request from the queue, because it didn't match the filter
 				delete(pq.queued, value.MapKey())
+
 				continue
 			}
 			filteredQueue.Push(value)
@@ -424,6 +436,7 @@ func (pq *priorityqueue) Pop() interface{} {
 		// mark as pending and remove from queued
 		delete(pq.queued, requestMapKey)
 		pq.pending[requestMapKey] = r
+
 		return r
 	}
 
@@ -470,6 +483,7 @@ func (rh *requestHeap) Pop() interface{} {
 	x := old[n-1]
 	old[n-1] = nil // avoid memory leak
 	*rh = old[0 : n-1]
+
 	return x
 }
 
@@ -477,5 +491,6 @@ func (rh *requestHeap) Peek() *Request {
 	if len(*rh) == 0 {
 		return nil
 	}
+
 	return (*rh)[0]
 }

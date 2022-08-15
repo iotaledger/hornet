@@ -149,6 +149,7 @@ func extractRequestedMilestoneIndex(source []byte) (iotago.MilestoneIndex, error
 	if len(source) != serializer.UInt32ByteSize {
 		return 0, ErrInvalidSourceLength
 	}
+
 	return binary.LittleEndian.Uint32(source), nil
 }
 

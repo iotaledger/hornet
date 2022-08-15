@@ -40,7 +40,7 @@ var (
 	Plugin *app.Plugin
 	deps   dependencies
 
-	// closures
+	// closures.
 	onBlockSolid                     *events.Closure
 	onConfirmedMilestoneIndexChanged *events.Closure
 )
@@ -80,11 +80,13 @@ func provide(c *dig.Container) error {
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
 	return nil
 }
 
 func configure() error {
 	configureEvents()
+
 	return nil
 }
 
@@ -112,6 +114,7 @@ func run() error {
 	}, daemon.PriorityTipselection); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
+
 	return nil
 }
 

@@ -48,7 +48,7 @@ const (
 var (
 	// GenesisSeed defines the seed on which the total supply resides on per default.
 	GenesisSeed ed25519.PrivateKey
-	// GenesisAddress defines the address computed from the GenesisSeed
+	// GenesisAddress defines the address computed from the GenesisSeed.
 	GenesisAddress iotago.Ed25519Address
 )
 
@@ -84,6 +84,7 @@ func DefaultConfig() *AppConfig {
 		"6060/tcp": {},
 		"8081/tcp": {},
 	}
+
 	return cfg
 }
 
@@ -157,6 +158,7 @@ func (cfg *INXCoordinatorConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Coordinator.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Migrator.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Validator.CLIFlags()...)
+
 	return cliFlags
 }
 
@@ -186,6 +188,7 @@ func (cfg *INXIndexerConfig) CLIFlags() []string {
 	var cliFlags []string
 	cliFlags = append(cliFlags, fmt.Sprintf("--inx.address=%s", cfg.INXAddress))
 	cliFlags = append(cliFlags, fmt.Sprintf("--indexer.bindAddress=%s", cfg.BindAddress))
+
 	return cliFlags
 }
 
@@ -243,6 +246,7 @@ func (cfg *AppConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Receipts.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Autopeering.CLIFlags()...)
+
 	return cliFlags
 }
 
@@ -478,6 +482,7 @@ func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
 		fmt.Sprintf("--%s=%v", "receipts.validator.ignoreSoftErrors", receiptsConfig.IgnoreSoftErrors),
 	}
 	flags = append(flags, receiptsConfig.Validator.CLIFlags()...)
+
 	return flags
 }
 

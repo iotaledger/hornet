@@ -39,7 +39,7 @@ type ParentsTraverser struct {
 	traverserLock sync.Mutex
 }
 
-// NewParentsTraverser create a new traverser to traverse the parents (past cone)
+// NewParentsTraverser create a new traverser to traverse the parents (past cone).
 func NewParentsTraverser(parentsTraverserStorage ParentsTraverserStorage) *ParentsTraverser {
 
 	t := &ParentsTraverser{
@@ -63,7 +63,7 @@ func (t *ParentsTraverser) reset() {
 // Traverse starts to traverse the parents (past cone) in the given order until
 // the traversal stops due to no more blocks passing the given condition.
 // It is a DFS of the paths of the parents one after another.
-// Caution: condition func is not in DFS order
+// Caution: condition func is not in DFS order.
 func (t *ParentsTraverser) Traverse(ctx context.Context, parents iotago.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
@@ -116,6 +116,7 @@ func (t *ParentsTraverser) processStackParents() error {
 		// block was already processed
 		// remove the block from the stack
 		t.stack.Remove(ele)
+
 		return nil
 	}
 
@@ -137,6 +138,7 @@ func (t *ParentsTraverser) processStackParents() error {
 			t.processed[currentBlockID] = struct{}{}
 			delete(t.checked, currentBlockID)
 			t.stack.Remove(ele)
+
 			return nil
 		}
 	}
@@ -183,6 +185,7 @@ func (t *ParentsTraverser) processStackParents() error {
 		t.processed[currentBlockID] = struct{}{}
 		delete(t.checked, currentBlockID)
 		t.stack.Remove(ele)
+
 		return nil
 	}
 
@@ -191,6 +194,7 @@ func (t *ParentsTraverser) processStackParents() error {
 			// parent was not processed yet
 			// traverse this block
 			t.stack.PushFront(parentBlockID)
+
 			return nil
 		}
 	}

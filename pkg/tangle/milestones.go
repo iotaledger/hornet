@@ -27,6 +27,7 @@ func (t *Tangle) processValidMilestone(blockID iotago.BlockID, cachedMilestone *
 		snapshotInfo := t.storage.SnapshotInfo()
 		if snapshotInfo == nil {
 			t.LogPanic(common.ErrSnapshotInfoNotFound)
+
 			return
 		}
 

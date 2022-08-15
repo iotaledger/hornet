@@ -119,6 +119,7 @@ func (s *Manager) MinimumMilestoneIndex() iotago.MilestoneIndex {
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		s.LogPanic(common.ErrSnapshotInfoNotFound)
+
 		return 0
 	}
 
@@ -132,6 +133,7 @@ func (s *Manager) MinimumMilestoneIndex() iotago.MilestoneIndex {
 func (s *Manager) IsSnapshotting() bool {
 	s.statusLock.RLock()
 	defer s.statusLock.RUnlock()
+
 	return s.statusIsSnapshotting
 }
 
@@ -140,6 +142,7 @@ func (s *Manager) shouldTakeSnapshot(confirmedMilestoneIndex iotago.MilestoneInd
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		s.LogPanic(common.ErrSnapshotInfoNotFound)
+
 		return false
 	}
 
@@ -197,6 +200,7 @@ func (s *Manager) setIsSnapshotting(value bool) {
 func (s *Manager) CreateFullSnapshot(ctx context.Context, targetIndex iotago.MilestoneIndex, filePath string, writeToDatabase bool) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
+
 	return s.createFullSnapshotWithoutLocking(ctx, targetIndex, filePath, writeToDatabase)
 }
 
@@ -275,6 +279,7 @@ func (s *Manager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirme
 		snapshotType, err := s.optimalSnapshotType()
 		if err != nil {
 			s.LogWarnf("%s: %s", ErrSnapshotCreationFailed, err)
+
 			return
 		}
 
@@ -301,5 +306,6 @@ func FormatSnapshotTimestamp(timestamp uint32) string {
 	if timestamp != 0 {
 		result = time.Unix(int64(timestamp), 0).Truncate(time.Second).String()
 	}
+
 	return result
 }

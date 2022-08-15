@@ -8,7 +8,6 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
-
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 )
@@ -45,6 +44,7 @@ func databaseHealth(args []string) error {
 
 		if !dbExists {
 			print(fmt.Sprintf("database %s does not exist (%s)!\n", name, path))
+
 			return nil
 		}
 

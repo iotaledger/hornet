@@ -36,6 +36,7 @@ func TestVisualizer(t *testing.T) {
 			// only one parent at the beginning
 			v.Parents = iotago.BlockIDs{iotago.EmptyBlockID()}.ToHex()
 			vertices = append(vertices, v)
+
 			continue
 		}
 

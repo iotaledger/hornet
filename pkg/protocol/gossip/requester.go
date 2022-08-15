@@ -114,6 +114,7 @@ func (r *Requester) RunRequestQueueDrainer(ctx context.Context) {
 
 					sendRequest(request, proto)
 					requested = true
+
 					return false
 				})
 
@@ -128,6 +129,7 @@ func (r *Requester) RunRequestQueueDrainer(ctx context.Context) {
 						}
 
 						sendRequest(request, proto)
+
 						return true
 					})
 				}
@@ -177,6 +179,7 @@ func (r *Requester) enqueueAndSignal(request *Request) bool {
 		// if the signal queue is full, there's no need to block until it becomes empty
 		// as the requester will drain everything present in the queue
 	}
+
 	return true
 }
 
@@ -187,6 +190,7 @@ func (r *Requester) checkBackPressureFunctions() bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -247,6 +251,7 @@ func (r *Requester) RequestMultiple(blockIDs iotago.BlockIDs, msIndex iotago.Mil
 			requested++
 		}
 	}
+
 	return requested
 }
 

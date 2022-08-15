@@ -15,6 +15,7 @@ func (s *Storage) configureSnapshotStore(snapshotStore kvstore.KVStore) error {
 	}
 
 	s.snapshotStore = snapshotStore
+
 	return nil
 }
 
@@ -25,6 +26,7 @@ func (s *Storage) configureProtocolStore(protocolStore kvstore.KVStore) error {
 	}
 
 	s.protocolStore = protocolStore
+
 	return nil
 }
 
@@ -48,6 +50,7 @@ func (s *Storage) readSnapshotInfo() (*SnapshotInfo, error) {
 		if !errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot info")
 		}
+
 		return nil, nil
 	}
 
@@ -78,6 +81,7 @@ func (s *Storage) readSolidEntryPoints() (*SolidEntryPoints, error) {
 		if !errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve solid entry points")
 		}
+
 		return nil, nil
 	}
 
@@ -85,5 +89,6 @@ func (s *Storage) readSolidEntryPoints() (*SolidEntryPoints, error) {
 	if err != nil {
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to convert solid entry points")
 	}
+
 	return points, nil
 }

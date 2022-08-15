@@ -36,6 +36,7 @@ func (p *RestRouteManager) AddRoute(route string) *echo.Group {
 	for _, r := range p.routes {
 		if r == route {
 			found = true
+
 			break
 		}
 	}
@@ -55,6 +56,7 @@ func (p *RestRouteManager) AddProxyRoute(route string, host string, port uint32)
 	for _, r := range p.routes {
 		if r == route {
 			found = true
+
 			break
 		}
 	}

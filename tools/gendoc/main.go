@@ -6,7 +6,6 @@ import (
 
 	"github.com/iotaledger/hive.go/apputils/config"
 	"github.com/iotaledger/hive.go/core/app"
-
 	hornetApp "github.com/iotaledger/hornet/v2/core/app"
 )
 

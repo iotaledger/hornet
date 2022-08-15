@@ -68,13 +68,16 @@ func TestBatch(t *testing.T) {
 		treasury, err := n.Coordinator().DebugNodeAPIClient.Treasury(context.Background())
 		if err != nil {
 			log.Printf("failed to get current treasury: %s", err)
+
 			return false
 		}
 		amount, err := iotago.DecodeUint64(treasury.Amount)
 		if err != nil {
 			log.Printf("failed to decode treasury amount: %s", err)
+
 			return false
 		}
+
 		return amount == initialTreasuryTokens-totalMigrationTokens
 	}, 2*time.Minute, time.Second)
 

@@ -285,6 +285,7 @@ func (proc *MessageProcessor) workUnitFor(receivedBlockBytes []byte) (cachedWork
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedBlockBytes, func(_ []byte) objectstorage.StorableObject { // cachedWorkUnit +1
 			newlyAdded = true
+
 			return newWorkUnit(receivedBlockBytes, proc)
 		}),
 	}, newlyAdded
@@ -298,6 +299,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 
 		// drop the connection to the peer
 		_ = proc.peeringManager.DisconnectPeer(p.PeerID, errors.WithMessage(err, "processMilestoneRequest failed"))
+
 		return
 	}
 
@@ -412,6 +414,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		}
 
 		wu.requested = requests.HasRequest()
+
 		return requests
 	}
 
@@ -420,6 +423,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	switch {
 	case wu.Is(Hashing):
 		wu.processingLock.Unlock()
+
 		return
 
 	case wu.Is(Invalid):
@@ -429,6 +433,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 		// drop the connection to the peer
 		_ = proc.peeringManager.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid block"))
+
 		return
 
 	case wu.Is(Hashed):
@@ -457,6 +462,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.WithMessagef(err, "peer sent an invalid block"))
+
 		return
 	}
 
@@ -464,6 +470,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	if block.ProtocolVersion() != proc.protocolManager.Current().Version {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a block with an invalid protocol version"))
+
 		return
 	}
 
@@ -479,6 +486,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		if !wu.requested && targetScore != 0 && pow.Score(wu.receivedBytes) < float64(targetScore) {
 			wu.UpdateState(Invalid)
 			wu.punish(errors.New("peer sent a block with insufficient PoW score"))
+
 			return
 		}
 	} else {

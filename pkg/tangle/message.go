@@ -9,7 +9,7 @@ import (
 // AddBlockToStorage adds a new block to the cache/persistence layer,
 // including all additional information like metadata, children,
 // unreferenced blocks and milestone entries.
-// block +1
+// block +1.
 func AddBlockToStorage(dbStorage *storage.Storage, milestoneManager *milestonemanager.MilestoneManager, block *storage.Block, latestMilestoneIndex iotago.MilestoneIndex, requested bool, forceRelease bool) (cachedBlock *storage.CachedBlock, alreadyAdded bool) {
 
 	cachedBlock, isNew := dbStorage.StoreBlockIfAbsent(block) // block +1
@@ -21,6 +21,7 @@ func AddBlockToStorage(dbStorage *storage.Storage, milestoneManager *milestonema
 				milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, requested) // block pass +1
 			}
 		}
+
 		return cachedBlock, true
 	}
 

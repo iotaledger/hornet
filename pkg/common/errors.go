@@ -29,6 +29,7 @@ func IsCriticalError(err error) error {
 	if errors.As(err, &critErr) {
 		return critErr.Unwrap()
 	}
+
 	return nil
 }
 
@@ -44,6 +45,7 @@ func IsSoftError(err error) error {
 	if errors.As(err, &softErr) {
 		return softErr.Unwrap()
 	}
+
 	return nil
 }
 

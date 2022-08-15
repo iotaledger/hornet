@@ -27,6 +27,7 @@ func newINXServer() *INXServer {
 	)
 	s := &INXServer{grpcServer: grpcServer}
 	inx.RegisterINXServer(grpcServer, s)
+
 	return s
 }
 
@@ -178,11 +179,11 @@ func (stream *streamRange) isBounded() bool {
 }
 
 // handles the sending of data within a streamRange.
-//	- sendFunc gets executed for the given index.
-// 	- if data wasn't sent between streamRange.lastSent and the given index, then the given catchUpFunc is executed
-//	 with the range from streamRange.lastSent + 1 up to index - 1.
-//	- it is the caller's job to call task.Return(...).
-//	- streamRange.lastSent is auto. updated
+//   - sendFunc gets executed for the given index.
+//   - if data wasn't sent between streamRange.lastSent and the given index, then the given catchUpFunc is executed
+//     with the range from streamRange.lastSent + 1 up to index - 1.
+//   - it is the caller's job to call task.Return(...).
+//   - streamRange.lastSent is auto. updated
 func handleRangedSend(task *workerpool.Task, index iotago.MilestoneIndex, streamRange *streamRange,
 	catchUpFunc func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error,
 	sendFunc func(task *workerpool.Task, index iotago.MilestoneIndex) error,

@@ -286,6 +286,7 @@ func (te *TestEnvironment) NewTestBlock(index int, parents iotago.BlockIDs) *sto
 	block := te.NewBlockBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
 	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(block.StoredBlockID()) // meta +1
 	defer cachedBlockMeta.Release(true)                                             // meta -1
+
 	return cachedBlockMeta.Metadata()
 }
 
@@ -321,6 +322,7 @@ func (te *TestEnvironment) BuildTangle(initBlocksCount int,
 			if len(milestoneBlocks) == 0 {
 				// use the last milestone block id
 				parents = append(parents, te.LastMilestoneBlockID())
+
 				continue
 			}
 			parents = append(parents, milestoneBlocks[rand.Intn(len(milestoneBlocks))])

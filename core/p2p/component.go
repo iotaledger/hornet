@@ -153,6 +153,7 @@ func provide(c *dig.Container) error {
 				p2p.WithManagerReconnectInterval(ParamsP2P.ReconnectInterval, 1*time.Second),
 			)
 		}
+
 		return nil
 	}); err != nil {
 		CoreComponent.LogPanic(err)

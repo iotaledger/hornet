@@ -33,6 +33,7 @@ func (n *Profiler) TakeCPUProfile(dur time.Duration) error {
 		return err
 	}
 	fileName := fmt.Sprintf("%s_%s_%d.profile", n.targetName, cpuProfilePrefix, time.Now().Unix())
+
 	return n.writeProfile(fileName, profileBytes)
 }
 
@@ -43,6 +44,7 @@ func (n *Profiler) TakeHeapSnapshot() error {
 		return err
 	}
 	fileName := fmt.Sprintf("%s_%s_%d.profile", n.targetName, heapProfilePrefix, time.Now().Unix())
+
 	return n.writeProfile(fileName, profileBytes)
 }
 
@@ -68,11 +70,13 @@ func (n *Profiler) query(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to read profile from response: %w", err)
 	}
+
 	return profileBytes, err
 }
 
 // writeProfile writes the given profile data to the given file in the log directory.
 func (n *Profiler) writeProfile(fileName string, profileBytes []byte) error {
 	profileReader := io.NopCloser(bytes.NewReader(profileBytes))
+
 	return writeFileInLogDir(fileName, profileReader)
 }

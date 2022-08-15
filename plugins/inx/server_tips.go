@@ -4,14 +4,12 @@ import (
 	"context"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/iotaledger/hive.go/core/timeutil"
-
 	inx "github.com/iotaledger/inx/go"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func (s *INXServer) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx.TipsResponse, error) {
@@ -34,6 +32,7 @@ func (s *INXServer) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "error selecting tips: %s", err.Error())
 	}
+
 	return &inx.TipsResponse{
 		Tips: inx.NewBlockIds(tips),
 	}, nil
@@ -62,5 +61,6 @@ func (s *INXServer) ListenToTipsMetrics(req *inx.TipsMetricRequest, srv inx.INX_
 		}
 	}, time.Duration(req.GetIntervalInMilliseconds())*time.Millisecond, ctx)
 	ticker.WaitForShutdown()
+
 	return innerErr
 }

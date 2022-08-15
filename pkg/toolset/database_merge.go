@@ -13,9 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/core/configuration"
 	"github.com/iotaledger/hive.go/core/contextutils"
 	"github.com/iotaledger/hive.go/core/kvstore"
-	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/nodeclient"
-
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/database"
@@ -23,6 +20,8 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
 var (
@@ -670,7 +669,7 @@ func NewProxyStorage(
 }
 
 // CachedBlock returns a cached block object.
-// block +1
+// block +1.
 func (s *ProxyStorage) CachedBlock(blockID iotago.BlockID) (*storage.CachedBlock, error) {
 	if !s.storeTarget.ContainsBlock(blockID) {
 		if !s.storeProxy.ContainsBlock(blockID) {
@@ -692,13 +691,15 @@ func (s *ProxyStorage) CachedBlock(blockID iotago.BlockID) (*storage.CachedBlock
 
 			return cachedBlock, nil
 		}
+
 		return s.storeProxy.CachedBlock(blockID) // block +1
 	}
+
 	return s.storeTarget.CachedBlock(blockID) // block +1
 }
 
 // CachedBlockMetadata returns a cached block metadata object.
-// meta +1
+// meta +1.
 func (s *ProxyStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.CachedMetadata, error) {
 	cachedBlock, err := s.CachedBlock(blockID) // block +1
 	if err != nil {
@@ -707,7 +708,8 @@ func (s *ProxyStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.Cac
 	if cachedBlock == nil {
 		return nil, nil
 	}
-	defer cachedBlock.Release(true)          // block -1
+	defer cachedBlock.Release(true) // block -1
+
 	return cachedBlock.CachedMetadata(), nil // meta +1
 }
 

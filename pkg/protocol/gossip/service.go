@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -230,6 +229,7 @@ func NewService(
 	}
 	gossipService.WrappedLogger = logger.NewWrappedLogger(gossipService.opts.logger)
 	gossipService.configureEvents()
+
 	return gossipService
 }
 
@@ -241,6 +241,7 @@ func (s *Service) Protocol(peerID peer.ID) *Protocol {
 
 	back := make(chan *Protocol)
 	s.streamReqChan <- &streamreqmsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -268,8 +269,10 @@ func (s *Service) SynchronizedCount(latestMilestoneIndex iotago.MilestoneIndex) 
 		if proto.IsSynced(latestMilestoneIndex) {
 			count++
 		}
+
 		return true
 	})
+
 	return count
 }
 
@@ -281,6 +284,7 @@ func (s *Service) CloseStream(peerID peer.ID) error {
 
 	back := make(chan error)
 	s.closeStreamChan <- &closestreammsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -384,6 +388,7 @@ func (s *Service) eventLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			s.shutdown()
+
 			return
 
 		case inboundStream := <-s.inboundStreamChan:
@@ -429,6 +434,7 @@ func (s *Service) handleInboundStream(stream network.Stream) {
 	if _, ongoing := s.streams[remotePeerID]; ongoing {
 		s.Events.InboundStreamCanceled.Trigger(stream, StreamCancelReasonDuplicated)
 		s.closeUnwantedStream(stream)
+
 		return
 	}
 
@@ -456,6 +462,7 @@ func (s *Service) handleInboundStream(stream network.Stream) {
 	if len(cancelReason) > 0 {
 		s.Events.InboundStreamCanceled.Trigger(stream, cancelReason)
 		s.closeUnwantedStreamAndClosePeer(stream)
+
 		return
 	}
 
@@ -514,10 +521,12 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
 		if err != nil {
 			// close the connection to the peer
 			_ = conn.Close()
+
 			return err
 		}
 
 		s.registerProtocol(peer.ID, stream)
+
 		return nil
 	}
 
@@ -538,6 +547,7 @@ func (s *Service) openStream(peerID peer.ID) (network.Stream, error) {
 	// now some special sauce to trigger the remote peer's SetStreamHandler
 	// https://github.com/libp2p/go-libp2p/issues/729
 	_, _ = stream.Read(make([]byte, 0))
+
 	return stream, nil
 }
 
@@ -586,6 +596,7 @@ func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation)
 			if len(s.unknownPeers) >= s.opts.unknownPeersLimit {
 				// close the stream if no more unknown peer slots are available
 				err := s.deregisterProtocol(peer.ID)
+
 				return err
 			}
 			s.unknownPeers[peer.ID] = struct{}{}
@@ -627,7 +638,7 @@ func (s *Service) forEach(f ProtocolForEachFunc) {
 	}
 }
 
-// returns the protocol for the given peer or nil
+// returns the protocol for the given peer or nil.
 func (s *Service) proto(peerID peer.ID) *Protocol {
 	return s.streams[peerID]
 }
@@ -641,6 +652,7 @@ func (s *Service) configureEvents() {
 		case *connectionmsg:
 			if req.conn == nil {
 				s.disconnectedChan <- req
+
 				return
 			}
 			s.connectedChan <- req
@@ -716,7 +728,7 @@ func (s *Service) detachEvents() {
 }
 
 // lets Service implement network.Notifiee in order to automatically
-// clean up ongoing reset streams
+// clean up ongoing reset streams.
 type netNotifiee Service
 
 func (m *netNotifiee) Listen(net network.Network, multiaddr multiaddr.Multiaddr)      {}

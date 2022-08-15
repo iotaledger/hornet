@@ -27,6 +27,7 @@ func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage 
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -76,6 +77,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 			// first check if the block was referenced => update ycri and ocri with the confirmation index
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 				updateIndexes(at, at)
+
 				return false, nil
 			}
 
@@ -89,6 +91,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 			ycri, ocri, ci := cachedBlockMeta.Metadata().ConeRootIndexes()
 			if ci == cmi {
 				updateIndexes(ycri, ocri)
+
 				return false, nil
 			}
 
@@ -104,6 +107,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 			}
 
 			outdatedBlockIDs = append(outdatedBlockIDs, cachedBlockMeta.Metadata().BlockID())
+
 			return nil
 		},
 		// called on missing parents
@@ -117,6 +121,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 				return err
 			}
 			updateIndexes(entryPointIndex, entryPointIndex)
+
 			return nil
 		}, false); err != nil {
 		if errors.Is(err, common.ErrBlockNotFound) {
@@ -187,5 +192,6 @@ func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorag
 			return err
 		}
 	}
+
 	return nil
 }

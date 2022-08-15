@@ -71,6 +71,7 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 				// promote is false
 				// reattach is false
 			}
+
 			return m, nil
 		}
 
@@ -82,6 +83,7 @@ func INXNewBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, status.Errorf(codes.Unavailable, err.Error())
 			}
+
 			return nil, status.Errorf(codes.Internal, err.Error())
 		}
 
@@ -110,6 +112,7 @@ func (s *INXServer) ReadBlock(_ context.Context, blockID *inx.BlockId) (*inx.Raw
 		return nil, status.Errorf(codes.NotFound, "block %s not found", blkID.ToHex())
 	}
 	defer cachedBlock.Release(true) // block -1
+
 	return inx.WrapBlock(cachedBlock.Block().Block())
 }
 
@@ -124,9 +127,11 @@ func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (
 				Solid:   true,
 			}, nil
 		}
+
 		return nil, status.Errorf(codes.NotFound, "block metadata %s not found", blkID.ToHex())
 	}
 	defer cachedBlockMeta.Release(true) // meta -1
+
 	return INXNewBlockMetadata(cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
 }
 
@@ -151,6 +156,7 @@ func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksSe
 	<-ctx.Done()
 	deps.Tangle.Events.ReceivedNewBlock.Detach(closure)
 	wp.Stop()
+
 	return ctx.Err()
 }
 
@@ -164,6 +170,7 @@ func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSol
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
+
 			return
 		}
 		if err := srv.Send(payload); err != nil {
@@ -180,6 +187,7 @@ func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSol
 	<-ctx.Done()
 	deps.Tangle.Events.BlockSolid.Detach(closure)
 	wp.Stop()
+
 	return ctx.Err()
 }
 
@@ -193,6 +201,7 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
+
 			return
 		}
 		if err := srv.Send(payload); err != nil {
@@ -209,6 +218,7 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 	<-ctx.Done()
 	deps.Tangle.Events.BlockReferenced.Detach(closure)
 	wp.Stop()
+
 	return ctx.Err()
 }
 
@@ -227,6 +237,7 @@ func (s *INXServer) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenT
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
+
 			return
 		}
 		if err := srv.Send(payload); err != nil {
@@ -244,6 +255,7 @@ func (s *INXServer) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenT
 	deps.TipSelector.Events.TipAdded.Detach(closure)
 	deps.TipSelector.Events.TipRemoved.Detach(closure)
 	wp.Stop()
+
 	return ctx.Err()
 }
 
@@ -260,5 +272,6 @@ func (s *INXServer) SubmitBlock(context context.Context, rawBlock *inx.RawBlock)
 	if err != nil {
 		return nil, err
 	}
+
 	return inx.NewBlockId(blockID), nil
 }

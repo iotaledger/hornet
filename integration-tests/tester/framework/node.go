@@ -112,6 +112,7 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 				nodeInfo, err := p.DebugNodeAPIClient.Info(context.Background())
 				if err != nil {
 					spamErr = err
+
 					return
 				}
 				protoParams := &nodeInfo.Protocol
@@ -127,6 +128,7 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 
 				if _, err := p.DebugNodeAPIClient.SubmitBlock(context.Background(), iotaBlock, protoParams); err != nil {
 					spamErr = err
+
 					return
 				}
 			}

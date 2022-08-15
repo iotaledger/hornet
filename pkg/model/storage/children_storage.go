@@ -18,12 +18,13 @@ type CachedChild struct {
 type CachedChildren []*CachedChild
 
 // Retain registers a new consumer for the cached children.
-// child +1
+// child +1.
 func (cachedChildren CachedChildren) Retain() CachedChildren {
 	cachedResult := make(CachedChildren, len(cachedChildren))
 	for i, cachedChild := range cachedChildren {
 		cachedResult[i] = cachedChild.Retain() // child +1
 	}
+
 	return cachedResult
 }
 
@@ -35,7 +36,7 @@ func (cachedChildren CachedChildren) Release(force ...bool) {
 }
 
 // Retain registers a new consumer for the cached child.
-// child +1
+// child +1.
 func (c *CachedChild) Retain() *CachedChild {
 	return &CachedChild{c.CachedObject.Retain()} // child +1
 }
@@ -51,6 +52,7 @@ func childrenFactory(key []byte, _ []byte) (objectstorage.StorableObject, error)
 	childBlockID := iotago.BlockID{}
 	copy(childBlockID[:], key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength])
 	child := NewChild(parentBlockID, childBlockID)
+
 	return child, nil
 }
 
@@ -95,7 +97,7 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 }
 
 // ChildrenBlockIDs returns the block IDs of the children of the given block.
-// children +-0
+// children +-0.
 func (s *Storage) ChildrenBlockIDs(blockID iotago.BlockID, iteratorOptions ...IteratorOption) (iotago.BlockIDs, error) {
 	var childrenBlockIDs iotago.BlockIDs
 
@@ -103,6 +105,7 @@ func (s *Storage) ChildrenBlockIDs(blockID iotago.BlockID, iteratorOptions ...It
 		childBlockID := iotago.BlockID{}
 		copy(childBlockID[:], key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength])
 		childrenBlockIDs = append(childrenBlockIDs, childBlockID)
+
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(blockID[:]))...)
 
@@ -115,14 +118,16 @@ func (s *Storage) ContainsChild(blockID iotago.BlockID, childBlockID iotago.Bloc
 }
 
 // CachedChildrenOfBlockID returns the cached children of a block.
-// children +1
+// children +1.
 func (s *Storage) CachedChildrenOfBlockID(blockID iotago.BlockID, iteratorOptions ...IteratorOption) CachedChildren {
 
 	cachedChildren := make(CachedChildren, 0)
 	s.childrenStorage.ForEach(func(_ []byte, cachedObject objectstorage.CachedObject) bool {
 		cachedChildren = append(cachedChildren, &CachedChild{CachedObject: cachedObject})
+
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(blockID[:]))...)
+
 	return cachedChildren
 }
 
@@ -138,6 +143,7 @@ func (s *Storage) ForEachChild(consumer ChildConsumer, iteratorOptions ...Iterat
 		copy(blockID[:], key[:iotago.BlockIDLength])
 		childBlockID := iotago.BlockID{}
 		copy(childBlockID[:], key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength])
+
 		return consumer(blockID, childBlockID)
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
@@ -150,32 +156,35 @@ func (ns *NonCachedStorage) ForEachChild(consumer ChildConsumer, iteratorOptions
 		copy(blockID[:], key[:iotago.BlockIDLength])
 		childBlockID := iotago.BlockID{}
 		copy(childBlockID[:], key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength])
+
 		return consumer(blockID, childBlockID)
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // StoreChild stores the child in the persistence layer and returns a cached object.
-// child +1
+// child +1.
 func (s *Storage) StoreChild(parentBlockID iotago.BlockID, childBlockID iotago.BlockID) *CachedChild {
 	child := NewChild(parentBlockID, childBlockID)
+
 	return &CachedChild{CachedObject: s.childrenStorage.Store(child)}
 }
 
 // DeleteChild deletes the child in the cache/persistence layer.
-// child +-0
+// child +-0.
 func (s *Storage) DeleteChild(blockID iotago.BlockID, childBlockID iotago.BlockID) {
 	child := NewChild(blockID, childBlockID)
 	s.childrenStorage.Delete(child.ObjectStorageKey())
 }
 
 // DeleteChildren deletes the children of the given block in the cache/persistence layer.
-// child +-0
+// child +-0.
 func (s *Storage) DeleteChildren(blockID iotago.BlockID, iteratorOptions ...IteratorOption) {
 
 	var keysToDelete [][]byte
 
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
+
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(blockID[:]))...)
 

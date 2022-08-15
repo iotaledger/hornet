@@ -78,6 +78,7 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 			}
+
 			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
@@ -125,6 +126,7 @@ func blockByID(c echo.Context) (*iotago.Block, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return block.Block(), nil
 }
 
@@ -133,6 +135,7 @@ func blockBytesByID(c echo.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return block.Data(), nil
 }
 
@@ -193,6 +196,7 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 		if errors.Is(err, tangle.ErrBlockAttacherInvalidBlock) {
 			return nil, errors.WithMessage(httpserver.ErrInvalidParameter, err.Error())
 		}
+
 		return nil, err
 	}
 

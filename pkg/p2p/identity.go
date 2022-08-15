@@ -230,6 +230,7 @@ func LoadOrCreateIdentityPrivateKey(p2pStorePath string, identityPrivKey string)
 		if err := WriteEd25519PrivateKeyToPEMFile(privKeyFilePath, privKey); err != nil {
 			return nil, false, fmt.Errorf("unable to store private key file for peer identity: %w", err)
 		}
+
 		return privKey, true, nil
 
 	default:

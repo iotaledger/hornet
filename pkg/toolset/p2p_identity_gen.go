@@ -7,16 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mr-tron/base58"
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
-
-	"github.com/libp2p/go-libp2p-core/crypto"
-
 	hivecrypto "github.com/iotaledger/hive.go/core/crypto"
-
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
 
@@ -135,5 +132,6 @@ func printP2PIdentity(privateKey crypto.PrivKey, publicKey crypto.PubKey, output
 	fmt.Println("Your p2p public key (hex):    ", identity.PublicKey)
 	fmt.Println("Your p2p public key (base58): ", identity.PublicKeyBase58)
 	fmt.Println("Your p2p PeerID:              ", identity.PeerID)
+
 	return nil
 }

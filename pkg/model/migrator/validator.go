@@ -21,7 +21,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/merklehasher"
 
-	// import implementation
+	// import implementation.
 	_ "golang.org/x/crypto/blake2b"
 )
 
@@ -103,6 +103,7 @@ func (m *Validator) QueryNextMigratedFunds(startIndex iotago.MilestoneIndex) (io
 			return index, migrated, nil
 		}
 	}
+
 	return latestIndex, nil, nil
 }
 
@@ -117,6 +118,7 @@ func (m *Validator) queryLatestMilestoneIndex() (iotago.MilestoneIndex, error) {
 	if index < 0 || index >= math.MaxUint32 {
 		return 0, fmt.Errorf("invalid milestone index in response: %d", index)
 	}
+
 	return iotago.MilestoneIndex(index), nil
 }
 
@@ -143,6 +145,7 @@ func (m *Validator) validateMilestoneBundle(ms bundle.Bundle, msIndex iotago.Mil
 	if head.CurrentIndex != lastIndex || head.LastIndex != lastIndex {
 		return legacy.ErrInvalidIndex
 	}
+
 	return nil
 }
 
@@ -169,6 +172,7 @@ func (m *Validator) validateMilestoneSignature(ms bundle.Bundle) error {
 	if !valid {
 		return legacy.ErrInvalidSignature
 	}
+
 	return nil
 }
 
@@ -181,6 +185,7 @@ func (m *Validator) whiteFlagMerkleTreeHash(ms bundle.Bundle) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return hash, nil
 }
 
@@ -202,6 +207,7 @@ func asBundle(rawTrytes []trinary.Trytes) (bundle.Bundle, error) {
 	if err := bundle.ValidBundle(txs, false); err != nil {
 		return nil, err
 	}
+
 	return txs, nil
 }
 
@@ -243,5 +249,6 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 	if !bytes.Equal(msMerkleHash, merkleHash) {
 		return nil, fmt.Errorf("invalid MerkleTreeHash %s", merkleHash)
 	}
+
 	return includedBundles, nil
 }

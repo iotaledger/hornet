@@ -21,14 +21,14 @@ import (
 )
 
 const (
-	// CfgTangleDeleteDatabase defines whether to delete the database at startup
+	// CfgTangleDeleteDatabase defines whether to delete the database at startup.
 	CfgTangleDeleteDatabase = "deleteDatabase"
-	// CfgTangleDeleteAll defines whether to delete the database and snapshots at startup
+	// CfgTangleDeleteAll defines whether to delete the database and snapshots at startup.
 	CfgTangleDeleteAll = "deleteAll"
 
-	// TangleDatabaseDirectoryName defines the subfolder for the tangle database
+	// TangleDatabaseDirectoryName defines the subfolder for the tangle database.
 	TangleDatabaseDirectoryName = "tangle"
-	// UTXODatabaseDirectoryName defines the subfolder for the UTXO database
+	// UTXODatabaseDirectoryName defines the subfolder for the UTXO database.
 	UTXODatabaseDirectoryName = "utxo"
 )
 
@@ -53,7 +53,7 @@ var (
 	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
 	deleteAll      = flag.Bool(CfgTangleDeleteAll, false, "whether to delete the database and snapshots at startup")
 
-	// closures
+	// closures.
 	onPruningStateChanged *events.Closure
 )
 
@@ -184,6 +184,7 @@ func provide(c *dig.Container) error {
 
 		default:
 			CoreComponent.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", targetEngine)
+
 			return databaseOut{}
 		}
 	}); err != nil {
@@ -236,6 +237,7 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
 		}
+
 		return sync
 	}); err != nil {
 		CoreComponent.LogPanic(err)

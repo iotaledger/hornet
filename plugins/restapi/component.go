@@ -122,6 +122,7 @@ func provide(c *dig.Container) error {
 func configure() error {
 	deps.Echo.Use(apiMiddleware())
 	setupRoutes()
+
 	return nil
 }
 

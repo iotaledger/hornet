@@ -59,11 +59,13 @@ func EqualOutputs(t *testing.T, expected utxo.Outputs, actual utxo.Outputs) {
 	sort.Slice(expected, func(i, j int) bool {
 		iOutputID := expected[i].OutputID()
 		jOutputID := expected[j].OutputID()
+
 		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
 	})
 	sort.Slice(actual, func(i, j int) bool {
 		iOutputID := actual[i].OutputID()
 		jOutputID := actual[j].OutputID()
+
 		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
 	})
 
@@ -79,11 +81,13 @@ func EqualSpents(t *testing.T, expected utxo.Spents, actual utxo.Spents) {
 	sort.Slice(expected, func(i, j int) bool {
 		iOutputID := expected[i].OutputID()
 		jOutputID := expected[j].OutputID()
+
 		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
 	})
 	sort.Slice(actual, func(i, j int) bool {
 		iOutputID := actual[i].OutputID()
 		jOutputID := actual[j].OutputID()
+
 		return bytes.Compare(iOutputID[:], jOutputID[:]) == -1
 	})
 

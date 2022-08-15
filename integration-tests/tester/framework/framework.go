@@ -125,6 +125,7 @@ func (f *Framework) CreateStaticNetwork(name string, intNetCfg *IntegrationNetwo
 	if err := staticNet.ConnectNodes(); err != nil {
 		return nil, err
 	}
+
 	return staticNet, nil
 }
 
@@ -198,5 +199,6 @@ func setupINX(network *Network, cfg *AppConfig) error {
 			return err
 		}
 	}
+
 	return nil
 }

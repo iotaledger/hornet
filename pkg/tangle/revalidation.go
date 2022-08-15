@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	// printStatusInterval is the interval for printing status blocks
+	// printStatusInterval is the interval for printing status blocks.
 	printStatusInterval = 2 * time.Second
 )
 
@@ -36,21 +36,21 @@ var (
 // This way HORNET should be able to re-solidify the existing tangle in the database.
 //
 // Object Storages:
-//		- Milestone							=> will be removed and added again if missing by receiving the block
-//		- Block							=> will be removed and added again by requesting the block at solidification
-//		- BlockMetadata   				=> will be removed and added again if missing by receiving the block
-//		- Children							=> will be removed and added again if missing by receiving the block
-//		- Indexation						=> will be removed and added again if missing by receiving the block
-//		- UnreferencedBlock 				=> will be removed at pruning anyway
+//   - Milestone							=> will be removed and added again if missing by receiving the block
+//   - Block							=> will be removed and added again by requesting the block at solidification
+//   - BlockMetadata   				=> will be removed and added again if missing by receiving the block
+//   - Children							=> will be removed and added again if missing by receiving the block
+//   - Indexation						=> will be removed and added again if missing by receiving the block
+//   - UnreferencedBlock 				=> will be removed at pruning anyway
 //
 // Database:
-// 		- LedgerState
-//			- Unspent						=> will be removed and loaded again from last snapshot
-//			- Spent							=> will be removed and loaded again from last snapshot
-//			- Balances						=> will be removed and loaded again from last snapshot
-//			- Diffs							=> will be removed and loaded again from last snapshot
-//			- Treasury						=> will be removed and loaded again from last snapshot
-//			- Receipts						=> will be removed and loaded again from last snapshot (if pruneReceipts is enabled)
+//   - LedgerState
+//   - Unspent						=> will be removed and loaded again from last snapshot
+//   - Spent							=> will be removed and loaded again from last snapshot
+//   - Balances						=> will be removed and loaded again from last snapshot
+//   - Diffs							=> will be removed and loaded again from last snapshot
+//   - Treasury						=> will be removed and loaded again from last snapshot
+//   - Receipts						=> will be removed and loaded again from last snapshot (if pruneReceipts is enabled)
 func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.Importer, pruneReceipts bool) error {
 
 	// mark the database as tainted forever.
@@ -235,18 +235,21 @@ func (t *Tangle) cleanupBlocks(info *storage.SnapshotInfo) error {
 		// delete block if metadata doesn't exist
 		if storedTxMeta == nil {
 			blocksToDelete[blockID] = struct{}{}
+
 			return true
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
 			blocksToDelete[blockID] = struct{}{}
+
 			return true
 		}
 
 		// not referenced or above snapshot index
 		if referenced, by := storedTxMeta.ReferencedWithIndex(); !referenced || by > info.SnapshotIndex() {
 			blocksToDelete[blockID] = struct{}{}
+
 			return true
 		}
 
@@ -483,7 +486,7 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 	return nil
 }
 
-// apply the ledger from the last snapshot to the database
+// apply the ledger from the last snapshot to the database.
 func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshotImporter *snapshot.Importer) error {
 
 	t.LogInfo("applying snapshot balances to the ledger state...")

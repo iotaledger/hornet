@@ -51,6 +51,7 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	}
 
 	wc.PrintProgress()
+
 	return n, nil
 }
 
@@ -129,10 +130,12 @@ func (s *Importer) filterTargets(targetNetworkID uint64, targets []*DownloadTarg
 			}
 
 			fullHeader = fullSnapshotHeader
+
 			return nil
 		}); err != nil {
 			// as the full snapshot URL failed to download, we commence further with our targets
 			s.LogDebugf("downloading full snapshot header from %s failed: %s", target.Full, err)
+
 			continue
 		}
 
@@ -146,6 +149,7 @@ func (s *Importer) filterTargets(targetNetworkID uint64, targets []*DownloadTarg
 				}
 
 				deltaHeader = deltaSnapshotHeader
+
 				return nil
 			}); err != nil {
 				// it is valid that no delta snapshot file is available on the target.
@@ -157,6 +161,7 @@ func (s *Importer) filterTargets(targetNetworkID uint64, targets []*DownloadTarg
 			// the snapshots on the target do not seem to be consistent
 			if !errors.Is(err, ErrDeltaSnapshotIncompatible) {
 				s.LogInfof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
+
 				continue
 			}
 
@@ -204,6 +209,7 @@ func (s *Importer) DownloadSnapshotFiles(ctx context.Context, targetNetworkID ui
 				s.LogWarn(err)
 			}
 		}
+
 		return nil
 	}
 
@@ -271,6 +277,7 @@ func (s *Importer) downloadFile(ctx context.Context, path string, url string) er
 	counter := NewWriteCounter(ctx, uint64(resp.ContentLength))
 	if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
 		_ = out.Close()
+
 		return fmt.Errorf("download failed: %w", err)
 	}
 
@@ -286,5 +293,6 @@ func (s *Importer) downloadFile(ctx context.Context, path string, url string) er
 	}
 
 	ok = true
+
 	return nil
 }

@@ -51,6 +51,7 @@ func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.Manag
 
 	service := gossip.NewService(protocolID, n, nManager, serverMetrics, append(srvOpts, gossip.WithLogger(nLogger))...)
 	go service.Start(ctx)
+
 	return n, nManager, service, peer.AddrInfo{ID: n.ID(), Addrs: n.Addrs()}
 }
 

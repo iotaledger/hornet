@@ -118,6 +118,7 @@ func (s *Storage) loadSnapshotInfo() error {
 	}
 
 	s.snapshot = info
+
 	return nil
 }
 

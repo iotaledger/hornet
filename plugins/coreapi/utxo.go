@@ -31,6 +31,7 @@ func rawMessageForOutput(output *utxo.Output) (*json.RawMessage, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "marshaling output failed: %s, error: %s", output.OutputID().ToHex(), err)
 	}
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
+
 	return &rawRawOutputJSON, nil
 }
 
@@ -40,6 +41,7 @@ func NewSpentMetadataResponse(spent *utxo.Spent, ledgerIndex iotago.MilestoneInd
 	metadata.MilestoneTimestampSpent = spent.MilestoneTimestampSpent()
 	metadata.TransactionIDSpent = spent.TransactionIDSpent().ToHex()
 	metadata.MilestoneIndexSpent = spent.MilestoneIndexSpent()
+
 	return metadata
 }
 
@@ -48,6 +50,7 @@ func NewOutputResponse(output *utxo.Output, ledgerIndex iotago.MilestoneIndex) (
 	if err != nil {
 		return nil, err
 	}
+
 	return &OutputResponse{
 		Metadata:  NewOutputMetadataResponse(output, ledgerIndex),
 		RawOutput: rawOutput,
@@ -59,6 +62,7 @@ func NewSpentResponse(spent *utxo.Spent, ledgerIndex iotago.MilestoneIndex) (*Ou
 	if err != nil {
 		return nil, err
 	}
+
 	return &OutputResponse{
 		Metadata:  NewSpentMetadataResponse(spent, ledgerIndex),
 		RawOutput: rawOutput,
@@ -91,8 +95,10 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 			if errors.Is(err, kvstore.ErrKeyNotFound) {
 				return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
 			}
+
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputID.ToHex(), err)
 		}
+
 		return NewOutputResponse(output, ledgerIndex)
 	}
 
@@ -101,8 +107,10 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
 		}
+
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputID.ToHex(), err)
 	}
+
 	return NewSpentResponse(spent, ledgerIndex)
 }
 
@@ -132,8 +140,10 @@ func outputMetadataByID(c echo.Context) (*OutputMetadataResponse, error) {
 			if errors.Is(err, kvstore.ErrKeyNotFound) {
 				return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
 			}
+
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputID.ToHex(), err)
 		}
+
 		return NewOutputMetadataResponse(output, ledgerIndex), nil
 	}
 
@@ -142,8 +152,10 @@ func outputMetadataByID(c echo.Context) (*OutputMetadataResponse, error) {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
 		}
+
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputID.ToHex(), err)
 	}
+
 	return NewSpentMetadataResponse(spent, ledgerIndex), nil
 }
 
@@ -158,6 +170,7 @@ func rawOutputByID(c echo.Context) ([]byte, error) {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
 		}
+
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading raw output failed: %s, error: %s", outputID.ToHex(), err)
 	}
 

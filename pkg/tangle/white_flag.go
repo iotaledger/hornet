@@ -57,6 +57,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 				// deregister the event, because the parent is already solid (this also fires the event)
 				t.DeregisterBlockSolidEvent(parent)
 			}
+
 			continue
 		}
 

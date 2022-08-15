@@ -103,17 +103,20 @@ func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex iotago.MilestoneInde
 	for _, spent := range diff.Spents {
 		if err := deleteOutput(spent.output, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 
 		if err := deleteSpent(spent, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 	}
 
 	if err := deleteDiff(msIndex, mutations); err != nil {
 		mutations.Cancel()
+
 		return err
 	}
 
@@ -122,6 +125,7 @@ func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex iotago.MilestoneInde
 			placeHolder := &ReceiptTuple{Receipt: &iotago.ReceiptMilestoneOpt{MigratedAt: receiptMigratedAtIndex[0]}, MilestoneIndex: msIndex}
 			if err := deleteReceipt(placeHolder, mutations); err != nil {
 				mutations.Cancel()
+
 				return err
 			}
 		}
@@ -161,6 +165,7 @@ func (u *Manager) ReadLedgerIndexWithoutLocking() (iotago.MilestoneIndex, error)
 			// there is no ledger milestone yet => return 0
 			return 0, nil
 		}
+
 		return 0, fmt.Errorf("failed to load ledger milestone index: %w", err)
 	}
 
@@ -192,10 +197,12 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex iotago.MilestoneIndex,
 	for _, output := range newOutputs {
 		if err := storeOutput(output, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 		if err := markAsUnspent(output, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 	}
@@ -203,6 +210,7 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex iotago.MilestoneIndex,
 	for _, spent := range newSpents {
 		if err := storeSpentAndMarkOutputAsSpent(spent, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 	}
@@ -216,6 +224,7 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex iotago.MilestoneIndex,
 	if rt != nil {
 		if err := storeReceipt(rt, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 	}
@@ -223,6 +232,7 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex iotago.MilestoneIndex,
 	if tm != nil {
 		if err := storeTreasuryOutput(tm.NewOutput, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 
@@ -231,6 +241,7 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex iotago.MilestoneIndex,
 		// this simply re-keys the output
 		if err := markTreasuryOutputAsSpent(tm.SpentOutput, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 		msDiff.SpentTreasuryOutput = tm.SpentOutput
@@ -238,11 +249,13 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex iotago.MilestoneIndex,
 
 	if err := storeDiff(msDiff, mutations); err != nil {
 		mutations.Cancel()
+
 		return err
 	}
 
 	if err := storeLedgerIndex(msIndex, mutations); err != nil {
 		mutations.Cancel()
+
 		return err
 	}
 
@@ -267,11 +280,13 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex iotago.MilestoneInd
 	for _, spent := range newSpents {
 		if err := storeOutput(spent.output, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 
 		if err := deleteSpentAndMarkOutputAsUnspent(spent, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 	}
@@ -280,10 +295,12 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex iotago.MilestoneInd
 	for _, output := range newOutputs {
 		if err := deleteOutput(output, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 		if err := deleteOutputLookups(output, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 	}
@@ -291,6 +308,7 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex iotago.MilestoneInd
 	if rt != nil {
 		if err := deleteReceipt(rt, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 	}
@@ -298,22 +316,26 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex iotago.MilestoneInd
 	if tm != nil {
 		if err := deleteTreasuryOutput(tm.NewOutput, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 
 		if err := markTreasuryOutputAsUnspent(tm.SpentOutput, mutations); err != nil {
 			mutations.Cancel()
+
 			return err
 		}
 	}
 
 	if err := deleteDiff(msIndex, mutations); err != nil {
 		mutations.Cancel()
+
 		return err
 	}
 
 	if err := storeLedgerIndex(msIndex-1, mutations); err != nil {
 		mutations.Cancel()
+
 		return err
 	}
 
@@ -359,11 +381,13 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 
 	if err := storeOutput(unspentOutput, mutations); err != nil {
 		mutations.Cancel()
+
 		return err
 	}
 
 	if err := markAsUnspent(unspentOutput, mutations); err != nil {
 		mutations.Cancel()
+
 		return err
 	}
 

@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	// contains the definition for gossip messages
+	// contains the definition for gossip messages.
 	gossipMessageRegistry *hiveproto.Registry
 )
 

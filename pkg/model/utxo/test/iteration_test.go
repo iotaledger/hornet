@@ -101,6 +101,7 @@ func TestUTXOIteration(t *testing.T) {
 		_, has := outputByID[output.MapKey()]
 		require.True(t, has)
 		delete(outputByID, output.MapKey())
+
 		return true
 	}))
 
@@ -110,6 +111,7 @@ func TestUTXOIteration(t *testing.T) {
 		_, has := unspentByID[output.MapKey()]
 		require.True(t, has)
 		delete(unspentByID, output.MapKey())
+
 		return true
 	}))
 	require.Empty(t, unspentByID)
@@ -118,6 +120,7 @@ func TestUTXOIteration(t *testing.T) {
 		_, has := spentByID[spent.MapKey()]
 		require.True(t, has)
 		delete(spentByID, spent.MapKey())
+
 		return true
 	}))
 

@@ -21,7 +21,7 @@ import (
 
 const (
 	// AdditionalPruningThreshold is the additional threshold (to BMD), which is needed, because the blocks in the getMilestoneParents call in solidEntryPoints
-	// can reference older blocks as well
+	// can reference older blocks as well.
 	AdditionalPruningThreshold = 5
 )
 
@@ -112,6 +112,7 @@ func (p *Manager) setIsPruning(value bool) {
 func (p *Manager) IsPruning() bool {
 	p.statusLock.RLock()
 	defer p.statusLock.RUnlock()
+
 	return p.isPruning
 }
 
@@ -169,7 +170,7 @@ func (p *Manager) calcTargetIndexBySize(targetSizeBytes ...int64) (iotago.Milest
 	return p.syncManager.ConfirmedMilestoneIndex() - milestoneDiff, nil
 }
 
-// pruneUnreferencedBlocks prunes all unreferenced blocks from the database for the given milestone
+// pruneUnreferencedBlocks prunes all unreferenced blocks from the database for the given milestone.
 func (p *Manager) pruneUnreferencedBlocks(targetIndex iotago.MilestoneIndex) (blocksCountDeleted int, blocksCountChecked int) {
 
 	blockIDsToDeleteMap := make(map[iotago.BlockID]struct{})
@@ -189,6 +190,7 @@ func (p *Manager) pruneUnreferencedBlocks(targetIndex iotago.MilestoneIndex) (bl
 		if cachedBlockMeta.Metadata().IsReferenced() {
 			// block was already referenced
 			cachedBlockMeta.Release(true) // meta -1
+
 			continue
 		}
 
@@ -202,7 +204,7 @@ func (p *Manager) pruneUnreferencedBlocks(targetIndex iotago.MilestoneIndex) (bl
 	return blocksCountDeleted, len(blockIDsToDeleteMap)
 }
 
-// pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
+// pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone.
 func (p *Manager) pruneMilestone(milestoneIndex iotago.MilestoneIndex, receiptMigratedAtIndex ...iotago.MilestoneIndex) error {
 
 	if err := p.storage.UTXOManager().PruneMilestoneIndexWithoutLocking(milestoneIndex, p.pruneReceipts, receiptMigratedAtIndex...); err != nil {
@@ -214,7 +216,7 @@ func (p *Manager) pruneMilestone(milestoneIndex iotago.MilestoneIndex, receiptMi
 	return nil
 }
 
-// pruneBlocks removes all the associated data of the given block IDs from the database
+// pruneBlocks removes all the associated data of the given block IDs from the database.
 func (p *Manager) pruneBlocks(blockIDsToDeleteMap map[iotago.BlockID]struct{}) int {
 
 	for blockID := range blockIDsToDeleteMap {
@@ -296,12 +298,14 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 		15,
 		func(sep *storagepkg.SolidEntryPoint) bool {
 			solidEntryPoints = append(solidEntryPoints, sep)
+
 			return true
 		})
 	if err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return 0, ErrPruningAborted
 		}
+
 		return 0, err
 	}
 
@@ -343,6 +347,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 		if cachedMilestone == nil {
 			// Milestone not found, pruning impossible
 			p.LogWarnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
+
 			continue
 		}
 
@@ -363,6 +368,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 			func(cachedBlockMeta *storagepkg.CachedMetadata) error { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 				blockIDsToDeleteMap[cachedBlockMeta.Metadata().BlockID()] = struct{}{}
+
 				return nil
 			},
 			// called on missing parents
@@ -374,6 +380,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 			true); err != nil {
 			cachedMilestone.Release(true) // milestone -1
 			p.LogWarnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
+
 			continue
 		}
 		timeTraverseMilestoneCone := time.Now()

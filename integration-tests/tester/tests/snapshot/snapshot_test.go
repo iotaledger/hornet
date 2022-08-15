@@ -50,6 +50,7 @@ func TestSnapshot(t *testing.T) {
 			if err != nil {
 				return false
 			}
+
 			return output.(*iotago.BasicOutput).Amount == finalOutputAmount
 		}, 30*time.Second, 100*time.Millisecond)
 	}
@@ -60,13 +61,16 @@ func TestSnapshot(t *testing.T) {
 			treasury, err := node.DebugNodeAPIClient.Treasury(context.Background())
 			if err != nil {
 				log.Println(err)
+
 				return false
 			}
 			amount, err := iotago.DecodeUint64(treasury.Amount)
 			if err != nil {
 				log.Printf("failed to decode treasury amount: %s", err)
+
 				return false
 			}
+
 			return amount == consts.TotalSupply-40_000_000
 		}, 30*time.Second, 100*time.Millisecond)
 	}

@@ -31,6 +31,7 @@ func (rt *ReceiptTuple) kvStorableValue() (value []byte) {
 	if err != nil {
 		panic(err)
 	}
+
 	return receiptBytes
 }
 
@@ -80,10 +81,12 @@ func (u *Manager) SearchHighestReceiptMigratedAtIndex(options ...UTXOIterateOpti
 		if rt.Receipt.MigratedAt > highestMigratedAtIndex {
 			highestMigratedAtIndex = rt.Receipt.MigratedAt
 		}
+
 		return true
 	}, options...); err != nil {
 		return 0, err
 	}
+
 	return highestMigratedAtIndex, nil
 }
 
@@ -113,6 +116,7 @@ func (u *Manager) ForEachReceiptTuple(consumer ReceiptTupleConsumer, options ...
 		rt := &ReceiptTuple{}
 		if err := rt.kvStorableLoad(u, key, value); err != nil {
 			innerErr = err
+
 			return false
 		}
 
@@ -150,6 +154,7 @@ func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex iotago.Milestone
 		rt := &ReceiptTuple{}
 		if err := rt.kvStorableLoad(u, key, value); err != nil {
 			innerErr = err
+
 			return false
 		}
 
@@ -179,6 +184,7 @@ func ReceiptToOutputs(r *iotago.ReceiptMilestoneOpt, milestoneID iotago.Mileston
 		// outputs created by milestone receipts are identified by EmptyBlockID
 		outputs[outputIndex] = CreateOutput(outputID, iotago.EmptyBlockID(), msIndex, msTimestamp, output)
 	}
+
 	return outputs, nil
 }
 
@@ -188,6 +194,7 @@ func OutputIDForMigratedFunds(milestoneHash iotago.MilestoneID, outputIndex uint
 	var outputID iotago.OutputID
 	copy(outputID[:], milestoneHash[:])
 	binary.LittleEndian.PutUint16(outputID[len(outputID)-2:], outputIndex)
+
 	return outputID
 }
 

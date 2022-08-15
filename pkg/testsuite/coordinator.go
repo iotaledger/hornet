@@ -169,6 +169,7 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 		// Hint: Ledger is not locked
 		nil,
 	)
+
 	return wfConf, confirmedMilestoneStats, err
 }
 
@@ -213,6 +214,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips iotago.BlockIDs, 
 
 	ms, _, err := te.coo.issueMilestoneOnTips(tips, true)
 	require.NoError(te.TestInterface, err)
+
 	return te.ConfirmMilestone(ms, createConfirmationGraph)
 }
 
@@ -227,6 +229,7 @@ func (te *TestEnvironment) UnspentNFTOutputsInLedger() utxo.Outputs {
 			result = append(result, output)
 		}
 	}
+
 	return result
 }
 
@@ -241,6 +244,7 @@ func (te *TestEnvironment) UnspentAliasOutputsInLedger() utxo.Outputs {
 			result = append(result, output)
 		}
 	}
+
 	return result
 }
 
@@ -255,6 +259,7 @@ func (te *TestEnvironment) UnspentFoundryOutputsInLedger() utxo.Outputs {
 			result = append(result, output)
 		}
 	}
+
 	return result
 }
 

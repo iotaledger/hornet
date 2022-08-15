@@ -12,6 +12,7 @@ func ParseOutputID(ms *marshalutil.MarshalUtil) (iotago.OutputID, error) {
 		return o, err
 	}
 	copy(o[:], bytes)
+
 	return o, nil
 }
 
@@ -22,6 +23,7 @@ func parseTransactionID(ms *marshalutil.MarshalUtil) (iotago.TransactionID, erro
 		return t, err
 	}
 	copy(t[:], bytes)
+
 	return t, nil
 }
 
@@ -32,5 +34,6 @@ func ParseBlockID(ms *marshalutil.MarshalUtil) (iotago.BlockID, error) {
 	}
 	blockID := iotago.BlockID{}
 	copy(blockID[:], bytes)
+
 	return blockID, nil
 }

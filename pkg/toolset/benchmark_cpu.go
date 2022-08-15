@@ -49,5 +49,6 @@ func cpuBenchmarkWorker(powDigest []byte, startNonce uint64, done *uint32, count
 		c.CopyState(l[:], h[:]) // the first 243 entries of the state correspond to the resulting hashes
 		atomic.AddUint64(counter, bct.MaxBatchSize)
 	}
+
 	return nil
 }

@@ -25,6 +25,7 @@ func (b *balancer) AddTarget(target *middleware.ProxyTarget) bool {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	b.targets[target.Name] = target
+
 	return false
 }
 
@@ -32,6 +33,7 @@ func (b *balancer) RemoveTarget(prefix string) bool {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	delete(b.targets, prefix)
+
 	return true
 }
 
@@ -47,6 +49,7 @@ func (b *balancer) Next(c echo.Context) *middleware.ProxyTarget {
 			return v
 		}
 	}
+
 	return nil
 }
 
@@ -66,6 +69,7 @@ func (b *balancer) uriFromRequest(c echo.Context) string {
 		}
 	}
 	rawURI = strings.TrimPrefix(rawURI, b.prefix)
+
 	return rawURI
 }
 
@@ -82,6 +86,7 @@ func (b *balancer) AddTargetHostAndPort(prefix string, host string, port uint32)
 		Name: prefix,
 		URL:  apiURL,
 	})
+
 	return nil
 }
 
@@ -95,6 +100,7 @@ func NewDynamicProxy(e *echo.Echo, prefix string) *DynamicProxy {
 		group:    e.Group(prefix),
 		balancer: balancer,
 	}
+
 	return proxy
 }
 
@@ -105,6 +111,7 @@ func (p *DynamicProxy) middleware(prefix string) echo.MiddlewareFunc {
 	config.Rewrite = map[string]string{
 		fmt.Sprintf("^%s/%s/*", p.balancer.prefix, prefix): "/$1",
 	}
+
 	return middleware.ProxyWithConfig(config)
 }
 
@@ -117,6 +124,7 @@ func (p *DynamicProxy) AddReverseProxy(prefix string, host string, port uint32) 
 		return err
 	}
 	p.AddGroup(prefix).Use(p.middleware(prefix))
+
 	return nil
 }
 

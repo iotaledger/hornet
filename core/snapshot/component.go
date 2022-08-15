@@ -23,19 +23,19 @@ import (
 )
 
 const (
-	// SolidEntryPointCheckAdditionalThresholdPast is the additional past cone (to BMD) that is walked to calculate the solid entry points
+	// SolidEntryPointCheckAdditionalThresholdPast is the additional past cone (to BMD) that is walked to calculate the solid entry points.
 	SolidEntryPointCheckAdditionalThresholdPast = 5
 
-	// SolidEntryPointCheckAdditionalThresholdFuture is the additional future cone (to BMD) that is needed to calculate solid entry points correctly
+	// SolidEntryPointCheckAdditionalThresholdFuture is the additional future cone (to BMD) that is needed to calculate solid entry points correctly.
 	SolidEntryPointCheckAdditionalThresholdFuture = 5
 
 	// AdditionalPruningThreshold is the additional threshold (to BMD), which is needed, because the blocks in the getMilestoneParents call in solidEntryPoints
-	// can reference older blocks as well
+	// can reference older blocks as well.
 	AdditionalPruningThreshold = 5
 )
 
 const (
-	// CfgSnapshotsForceLoadingSnapshot defines the force loading of a snapshot, even if a database already exists
+	// CfgSnapshotsForceLoadingSnapshot defines the force loading of a snapshot, even if a database already exists.
 	CfgSnapshotsForceLoadingSnapshot = "forceLoadingSnapshot"
 )
 
@@ -211,6 +211,7 @@ func run() error {
 			case <-ctx.Done():
 				CoreComponent.LogInfo("Stopping snapshot background worker...")
 				CoreComponent.LogInfo("Stopping snapshot background worker... done")
+
 				return
 
 			case confirmedMilestoneIndex := <-newConfirmedMilestoneSignal:

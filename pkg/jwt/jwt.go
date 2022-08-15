@@ -6,15 +6,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/pkg/errors"
 )
 
-// Errors
+// Errors.
 var (
 	ErrJWTInvalidClaims = echo.NewHTTPError(http.StatusUnauthorized, "invalid jwt claims")
 )
@@ -170,5 +169,6 @@ func (j *JWTAuth) VerifyJWT(token string, allow func(claims *AuthClaims) bool) b
 
 		return true
 	}
+
 	return false
 }

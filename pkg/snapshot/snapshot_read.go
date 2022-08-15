@@ -25,8 +25,10 @@ func newProtocolStorageGetterFunc(dbStorage *storage.Storage) ProtocolStorageGet
 		if err := dbStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
 			if err := protocolStorage.StoreProtocolParametersMilestoneOption(protoParamsMsOption); err != nil {
 				innerErr = err
+
 				return false
 			}
+
 			return true
 		}); err != nil {
 			return nil, fmt.Errorf("failed to iterate over protocol parameters milestone options: %w", err)
@@ -100,6 +102,7 @@ func newSEPsConsumer(dbStorage *storage.Storage) SEPConsumerFunc {
 	// but has been deemed unnecessary for the reason mentioned above.
 	return func(solidEntryPointBlockID iotago.BlockID, targetMilestoneIndex iotago.MilestoneIndex) error {
 		dbStorage.SolidEntryPointsAddWithoutLocking(solidEntryPointBlockID, targetMilestoneIndex)
+
 		return nil
 	}
 }

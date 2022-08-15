@@ -15,7 +15,7 @@ import (
 )
 
 // StoreBlock adds the block to the storage layer and solidifies it.
-// block +1
+// block +1.
 func (te *TestEnvironment) StoreBlock(block *storage.Block) *storage.CachedBlock {
 
 	// Store block in the database
@@ -118,6 +118,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		// Caution: condition func is not in DFS order
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
+
 			return true, nil
 		},
 		// consumer
@@ -163,6 +164,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			}
 			if contains {
 				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedHash(parent), i+1)
+
 				continue
 			}
 
@@ -206,5 +208,6 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 	}
 
 	dotFile += "}\n"
+
 	return dotFile
 }

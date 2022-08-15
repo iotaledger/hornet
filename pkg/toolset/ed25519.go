@@ -7,7 +7,6 @@ import (
 	"os"
 
 	flag "github.com/spf13/pflag"
-
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/bip39"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"

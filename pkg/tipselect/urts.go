@@ -259,8 +259,10 @@ func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[iotago.BlockID]*Tip, 
 	if tip, exists := tipsMap[blockID]; exists {
 		delete(tipsMap, blockID)
 		ts.Events.TipRemoved.Trigger(tip)
+
 		return true
 	}
+
 	return false
 }
 
@@ -326,6 +328,7 @@ func (ts *TipSelector) selectTips(tipsMap map[iotago.BlockID]*Tip) (iotago.Block
 				// in case the first tip selection failed => return the error
 				break
 			}
+
 			return nil, err
 		}
 
@@ -341,6 +344,7 @@ func (ts *TipSelector) selectTips(tipsMap map[iotago.BlockID]*Tip) (iotago.Block
 			break
 		}
 	}
+
 	return tips.RemoveDupsAndSort(), nil
 }
 
@@ -389,6 +393,7 @@ func (ts *TipSelector) SelectTipsWithSemiLazyAllowed() (tips iotago.BlockIDs, er
 	if err != nil {
 		return tips, fmt.Errorf("couldn't select non-lazy tips: %w", err)
 	}
+
 	return tips, nil
 }
 
@@ -455,6 +460,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 				count++
 				ts.serverMetrics.TipsNonLazy.Sub(1)
 			}
+
 			continue
 		}
 
@@ -487,6 +493,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 				count++
 				ts.serverMetrics.TipsSemiLazy.Sub(1)
 			}
+
 			continue
 		}
 
@@ -507,7 +514,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 	return count, nil
 }
 
-// calculateScore calculates the tip selection score of this block
+// calculateScore calculates the tip selection score of this block.
 func (ts *TipSelector) calculateScore(blockID iotago.BlockID, cmi iotago.MilestoneIndex) (Score, error) {
 
 	tipScore, err := ts.tipScoreCalculator.TipScore(ts.shutdownCtx, blockID, cmi)

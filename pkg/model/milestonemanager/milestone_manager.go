@@ -45,6 +45,7 @@ func New(
 			ReceivedValidMilestone: events.NewEvent(storage.MilestoneWithBlockIDAndRequestedCaller),
 		},
 	}
+
 	return t
 }
 

@@ -20,6 +20,7 @@ func lookupKeyUnspentOutput(outputID iotago.OutputID) lookupKey {
 	ms := marshalutil.New(35)
 	ms.WriteByte(UTXOStoreKeyPrefixOutputUnspent) // 1 byte
 	ms.WriteBytes(outputID[:])                    // 34 bytes
+
 	return ms.Bytes()
 }
 
@@ -61,6 +62,7 @@ func storeSpentAndMarkOutputAsSpent(spent *Spent, mutations kvstore.BatchedMutat
 	if err := storeSpent(spent, mutations); err != nil {
 		return err
 	}
+
 	return markAsSpent(spent.output, mutations)
 }
 
@@ -68,5 +70,6 @@ func deleteSpentAndMarkOutputAsUnspent(spent *Spent, mutations kvstore.BatchedMu
 	if err := deleteSpent(spent, mutations); err != nil {
 		return err
 	}
+
 	return markAsUnspent(spent.output, mutations)
 }

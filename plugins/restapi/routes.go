@@ -25,6 +25,7 @@ func setupRoutes() {
 		if deps.Tangle != nil && !deps.Tangle.IsNodeHealthy() {
 			return c.NoContent(http.StatusServiceUnavailable)
 		}
+
 		return c.NoContent(http.StatusOK)
 	})
 
@@ -34,6 +35,7 @@ func setupRoutes() {
 			resp := &RoutesResponse{
 				Routes: deps.RestRouteManager.Routes(),
 			}
+
 			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		})
 	}

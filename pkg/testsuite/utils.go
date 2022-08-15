@@ -48,6 +48,7 @@ func (te *TestEnvironment) NewBlockBuilder(optionalTag ...string) *BlockBuilder 
 	if len(optionalTag) > 0 {
 		tag = optionalTag[0]
 	}
+
 	return &BlockBuilder{
 		te:  te,
 		tag: tag,
@@ -60,36 +61,43 @@ func (b *BlockBuilder) LatestMilestoneAsParents() *BlockBuilder {
 
 func (b *BlockBuilder) Parents(parents iotago.BlockIDs) *BlockBuilder {
 	b.parents = parents
+
 	return b
 }
 
 func (b *BlockBuilder) FromWallet(wallet *utils.HDWallet) *BlockBuilder {
 	b.fromWallet = wallet
+
 	return b
 }
 
 func (b *BlockBuilder) ToWallet(wallet *utils.HDWallet) *BlockBuilder {
 	b.toWallet = wallet
+
 	return b
 }
 
 func (b *BlockBuilder) Amount(amount uint64) *BlockBuilder {
 	b.amount = amount
+
 	return b
 }
 
 func (b *BlockBuilder) FakeInputs() *BlockBuilder {
 	b.fakeInputs = true
+
 	return b
 }
 
 func (b *BlockBuilder) UsingOutput(output *utxo.Output) *BlockBuilder {
 	b.outputToUse = output
+
 	return b
 }
 
 func (b *BlockBuilder) TagData(data []byte) *BlockBuilder {
 	b.tagData = data
+
 	return b
 }
 
@@ -97,6 +105,7 @@ func (b *BlockBuilder) fromWalletSigner() iotago.AddressSigner {
 	require.NotNil(b.te.TestInterface, b.fromWallet)
 
 	inputPrivateKey, _ := b.fromWallet.KeyPair()
+
 	return iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: b.fromWallet.Address(), Keys: inputPrivateKey})
 }
 
@@ -198,6 +207,7 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 
 func (b *BlockBuilder) BuildTransactionSendingOutputsAndCalculateRemainder(outputs ...iotago.Output) *Block {
 	txBuilder, consumedInputs := b.txBuilderFromWalletSendingOutputs(outputs...)
+
 	return b.buildTransactionWithBuilderAndSigned(txBuilder, consumedInputs, b.fromWalletSigner())
 }
 
@@ -339,12 +349,14 @@ func (b *BlockBuilder) BuildTransactionToWallet(wallet *utils.HDWallet) *Block {
 	require.Nil(b.te.TestInterface, b.toWallet)
 	b.toWallet = wallet
 	output := &iotago.BasicOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: b.toWallet.Address()}}, Amount: b.amount}
+
 	return b.BuildTransactionSendingOutputsAndCalculateRemainder(output)
 }
 
 func (m *Block) Store() *Block {
 	require.True(m.builder.te.TestInterface, m.storedBlockID.Empty())
 	m.storedBlockID = m.builder.te.StoreBlock(m.block).Block().BlockID()
+
 	return m
 }
 
@@ -365,6 +377,7 @@ func (m *Block) BookOnWallets() *Block {
 			if m.builder.toWallet != nil {
 				if output.UnlockConditionSet().Address().Address.Equal(m.builder.toWallet.Address()) {
 					m.builder.toWallet.BookOutput(sentOutput)
+
 					continue
 				}
 			}
@@ -395,6 +408,7 @@ func (m *Block) BookOnWallets() *Block {
 
 func (m *Block) GeneratedUTXO() *utxo.Output {
 	require.Greater(m.builder.te.TestInterface, len(m.createdOutputs), 0)
+
 	return m.createdOutputs[0]
 }
 
@@ -408,5 +422,6 @@ func (m *Block) StoredBlock() *storage.Block {
 
 func (m *Block) StoredBlockID() iotago.BlockID {
 	require.NotNil(m.builder.te.TestInterface, m.storedBlockID)
+
 	return m.storedBlockID
 }

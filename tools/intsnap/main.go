@@ -135,6 +135,7 @@ func writeFullSnapshot() *snapshot.FullSnapshotHeader {
 		}
 		out := fullSnapshotOutputs[currentOutput]
 		currentOutput++
+
 		return out, nil
 	}
 
@@ -145,6 +146,7 @@ func writeFullSnapshot() *snapshot.FullSnapshotHeader {
 		}
 		msDiff := fullSnapshotMsDiffs[currentMsDiff]
 		currentMsDiff++
+
 		return msDiff, nil
 	}
 
@@ -157,6 +159,7 @@ func writeFullSnapshot() *snapshot.FullSnapshotHeader {
 		if seps > sepsMax {
 			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 		}
+
 		return tpkg.RandBlockID(), nil
 	}
 
@@ -209,6 +212,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 				panic(err)
 			}
 			ms.Opts = iotago.MilestoneOpts{receipt}
+
 			return ms
 		}(),
 		Created: utxo.Outputs{
@@ -250,6 +254,7 @@ func writeDeltaSnapshot(fullSnapshotHeader *snapshot.FullSnapshotHeader) {
 		}
 		msDiff := deltaSnapshotMsDiffs[currentMsDiff]
 		currentMsDiff++
+
 		return msDiff, nil
 	}
 
@@ -259,6 +264,7 @@ func writeDeltaSnapshot(fullSnapshotHeader *snapshot.FullSnapshotHeader) {
 		if seps > sepsMax {
 			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 		}
+
 		return tpkg.RandBlockID(), nil
 	}
 
@@ -282,6 +288,7 @@ func static64ByteID(fill byte) [64]byte {
 	for i := 0; i < len(b); i++ {
 		b[i] = fill
 	}
+
 	return b
 }
 
@@ -290,6 +297,7 @@ func static32ByteID(fill byte) [32]byte {
 	for i := 0; i < len(b); i++ {
 		b[i] = fill
 	}
+
 	return b
 }
 
@@ -297,6 +305,7 @@ func staticBlockID(fill byte) iotago.BlockID {
 	bytes := static32ByteID(fill)
 	blockID := iotago.BlockID{}
 	copy(blockID[:], bytes[:])
+
 	return blockID
 }
 
@@ -305,6 +314,7 @@ func staticOutputID(fill byte) iotago.OutputID {
 	for i := 0; i < len(b); i++ {
 		b[i] = fill
 	}
+
 	return b
 }
 
@@ -312,6 +322,7 @@ func staticEd25519Address(fill byte) iotago.Address {
 	b := static32ByteID(fill)
 	var addr iotago.Ed25519Address
 	copy(addr[:], b[:])
+
 	return &addr
 }
 
@@ -336,5 +347,6 @@ func utxoSpent(fill byte, amount uint64, msIndexBooked iotago.MilestoneIndex, ms
 	r := static32ByteID(fill)
 	txIDSpent := iotago.TransactionID{}
 	copy(txIDSpent[:], r[:])
+
 	return utxo.NewSpent(utxoOutput(fill, amount, msIndexBooked), txIDSpent, msIndexSpent, 0)
 }
