@@ -268,7 +268,7 @@ type Manager struct {
 	forEachChan            chan *foreachmsg
 	callChan               chan *callmsg
 
-	// closures
+	// closures.
 	onP2PManagerConnect            *events.Closure
 	onP2PManagerConnected          *events.Closure
 	onP2PManagerDisconnect         *events.Closure
@@ -876,15 +876,19 @@ func (m *Manager) updateRelation(peerID peer.ID, newRelation PeerRelation) {
 	}
 	oldRelation := p.Relation
 	p.Relation = newRelation
+
 	switch newRelation {
 	case PeerRelationUnknown:
 		p.reconnectTimer.Stop()
 		p.reconnectTimer = nil
+
 	case PeerRelationAutopeered:
 		fallthrough
+
 	case PeerRelationKnown:
 		m.host.ConnManager().Protect(peerID, PeerConnectivityProtectionTag)
 	}
+
 	m.Events.RelationUpdated.Trigger(p, oldRelation)
 }
 

@@ -99,6 +99,7 @@ func (m *Validator) QueryNextMigratedFunds(startIndex iotago.MilestoneIndex) (io
 		if err != nil {
 			return 0, nil, fmt.Errorf("failed to query migration funds: %w", err)
 		}
+
 		if len(migrated) > 0 {
 			return index, migrated, nil
 		}
@@ -113,6 +114,7 @@ func (m *Validator) queryLatestMilestoneIndex() (iotago.MilestoneIndex, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	index := info.LatestSolidSubtangleMilestoneIndex
 	// do some sanity checks
 	if index < 0 || index >= math.MaxUint32 {
@@ -133,14 +135,17 @@ func (m *Validator) validateMilestoneBundle(ms bundle.Bundle, msIndex iotago.Mil
 	if head.Address != m.coordinatorAddress {
 		return legacy.ErrInvalidAddress
 	}
+
 	// the milestone must be a 0-value transaction
 	if head.Value != 0 {
 		return legacy.ErrInvalidValue
 	}
+
 	// the tag must match the milestone index
 	if head.ObsoleteTag != tag || head.Tag != tag {
 		return legacy.ErrInvalidTag
 	}
+
 	// the head transaction must indeed be the last transaction in the bundle
 	if head.CurrentIndex != lastIndex || head.LastIndex != lastIndex {
 		return legacy.ErrInvalidIndex
@@ -169,6 +174,7 @@ func (m *Validator) validateMilestoneSignature(ms bundle.Bundle) error {
 	if err != nil {
 		return fmt.Errorf("failed to validate signature: %w", err)
 	}
+
 	if !valid {
 		return legacy.ErrInvalidSignature
 	}
@@ -181,6 +187,7 @@ func (m *Validator) whiteFlagMerkleTreeHash(ms bundle.Bundle) ([]byte, error) {
 	head := ms[len(ms)-1]
 	data := head.SignatureMessageFragment[m.coordinatorMerkleTreeDepth*legacy.HashTrytesSize:]
 	trytesLen := b1t6.EncodedLen(hasher.Size()) / legacy.TritsPerTryte
+
 	hash, err := b1t6.DecodeTrytes(data[:trytesLen])
 	if err != nil {
 		return nil, err
@@ -199,10 +206,12 @@ func asBundle(rawTrytes []trinary.Trytes) (bundle.Bundle, error) {
 	if len(rawTrytes) == 0 {
 		return nil, ErrEmptyBundle
 	}
+
 	txs, err := transaction.AsTransactionObjects(rawTrytes, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	// validate the bundle, but also accept non-migration milestone bundles
 	if err := bundle.ValidBundle(txs, false); err != nil {
 		return nil, err
@@ -230,6 +239,7 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse included bundle %d: %w", i, err)
 		}
+
 		if err := bundle.ValidBundle(bndl, true); err != nil {
 			return nil, fmt.Errorf("invalid included bundle %d: %w", i, err)
 		}
@@ -245,6 +255,7 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Merkle tree hash: %w", err)
 	}
+
 	merkleHash := hasher.Hash(includedTails)
 	if !bytes.Equal(msMerkleHash, merkleHash) {
 		return nil, fmt.Errorf("invalid MerkleTreeHash %s", merkleHash)

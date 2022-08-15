@@ -322,7 +322,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		}
 		// rerun to solidify the older one
 		t.setSolidifierMilestoneIndex(0)
-
 		t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
 
 		return
@@ -577,7 +576,6 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 
 			// milestone found!
 			t.milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, false) // block pass +1
-
 			milestoneFound = true
 
 			return true, nil // we keep searching for all missing milestones

@@ -35,6 +35,7 @@ func NewLedgerSpent(s *utxo.Spent) (*inx.LedgerSpent, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	l := &inx.LedgerSpent{
 		Output:                  output,
 		TransactionIdSpent:      inx.NewTransactionId(s.TransactionIDSpent()),
@@ -105,6 +106,7 @@ func NewTreasuryUpdate(index iotago.MilestoneIndex, created *utxo.TreasuryOutput
 			Amount:      created.Amount,
 		},
 	}
+
 	if consumed != nil {
 		u.Consumed = &inx.TreasuryOutput{
 			MilestoneId: inx.NewMilestoneId(consumed.MilestoneID),
@@ -137,6 +139,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 		if err != nil {
 			return nil, err
 		}
+
 		ledgerOutput, err := NewLedgerOutput(output)
 		if err != nil {
 			return nil, err
@@ -154,6 +157,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 	if err != nil {
 		return nil, err
 	}
+
 	ledgerSpent, err := NewLedgerSpent(spent)
 	if err != nil {
 		return nil, err
@@ -185,10 +189,12 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 
 			return false
 		}
+
 		payload := &inx.UnspentOutput{
 			LedgerIndex: ledgerIndex,
 			Output:      ledgerOutput,
 		}
+
 		if err := srv.Send(payload); err != nil {
 			innerErr = fmt.Errorf("send error: %w", err)
 
@@ -224,6 +230,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 			if err != nil {
 				return err
 			}
+
 			if err := srv.Send(payload); err != nil {
 				return fmt.Errorf("send error: %w", err)
 			}
@@ -235,6 +242,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 			if err != nil {
 				return err
 			}
+
 			if err := srv.Send(payload); err != nil {
 				return fmt.Errorf("send error: %w", err)
 			}
@@ -381,9 +389,11 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 			if err != nil {
 				return err
 			}
+
 			if err := srv.Send(payload); err != nil {
 				return fmt.Errorf("send error: %w", err)
 			}
+
 			treasuryUpdateSent = true
 		}
 
@@ -489,6 +499,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		if err != nil {
 			return err
 		}
+
 		stream.lastSent = ledgerIndex
 	}
 
@@ -555,6 +566,7 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
+
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
@@ -564,6 +576,7 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 	closure := events.NewClosure(func(receipt *iotago.ReceiptMilestoneOpt) {
 		wp.Submit(receipt)
 	})
+
 	wp.Start()
 	deps.Tangle.Events.NewReceipt.Hook(closure)
 	<-ctx.Done()

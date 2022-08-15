@@ -135,10 +135,13 @@ func RandAddress(addressType iotago.AddressType) iotago.Address {
 		copy(address[:], addressBytes)
 
 		return address
+
 	case iotago.AddressNFT:
 		return RandNFTID().ToAddress()
+
 	case iotago.AddressAlias:
 		return RandAliasID().ToAddress()
+
 	default:
 		panic("unknown address type")
 	}

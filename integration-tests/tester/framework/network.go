@@ -57,6 +57,7 @@ func (n *Network) AwaitOnline(ctx context.Context) error {
 			if err := returnErrIfCtxDone(ctx, ErrNodesNotOnlineInTime); err != nil {
 				return err
 			}
+
 			if _, err := node.DebugNodeAPIClient.Info(context.Background()); err != nil {
 				continue
 			}
@@ -76,10 +77,12 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 			if err := returnErrIfCtxDone(ctx, ErrNodesDidNotSyncInTime); err != nil {
 				return err
 			}
+
 			info, err := node.DebugNodeAPIClient.Info(context.Background())
 			if err != nil {
 				continue
 			}
+
 			if info.Status.IsHealthy {
 				break
 			}
@@ -114,6 +117,7 @@ func generatePrivateKey(optPrvKey ...crypto.PrivKey) (crypto.PrivKey, error) {
 	if len(optPrvKey) > 0 && optPrvKey[0] != nil {
 		return optPrvKey[0], nil
 	}
+
 	privateKey, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
 	if err != nil {
 		return nil, err
@@ -144,9 +148,11 @@ func (n *Network) CreateNode(cfg *AppConfig, optPrvKey ...crypto.PrivKey) (*Node
 	if err := container.CreateNodeContainer(cfg); err != nil {
 		return nil, err
 	}
+
 	if err := container.ConnectToNetwork(n.ID); err != nil {
 		return nil, err
 	}
+
 	if err := container.Start(); err != nil {
 		return nil, err
 	}
@@ -161,6 +167,7 @@ func (n *Network) CreateNode(cfg *AppConfig, optPrvKey ...crypto.PrivKey) (*Node
 	if err != nil {
 		return nil, err
 	}
+
 	n.Nodes = append(n.Nodes, node)
 
 	return node, nil
@@ -177,9 +184,11 @@ func (n *Network) CreateCoordinator(cfg *INXCoordinatorConfig) (*INXExtension, e
 	if err := container.CreateCoordinatorContainer(cfg); err != nil {
 		return nil, err
 	}
+
 	if err := container.ConnectToNetwork(n.ID); err != nil {
 		return nil, err
 	}
+
 	if err := container.Start(); err != nil {
 		return nil, err
 	}
@@ -211,9 +220,11 @@ func (n *Network) CreateIndexer(cfg *INXIndexerConfig) (*INXExtension, error) {
 	if err := container.CreateIndexerContainer(cfg); err != nil {
 		return nil, err
 	}
+
 	if err := container.ConnectToNetwork(n.ID); err != nil {
 		return nil, err
 	}
+
 	if err := container.Start(); err != nil {
 		return nil, err
 	}
@@ -268,6 +279,7 @@ func (n *Network) Shutdown() error {
 		if err != nil {
 			return err
 		}
+
 		if err = createContainerLogFile(p.Name, logs); err != nil {
 			return err
 		}
@@ -278,6 +290,7 @@ func (n *Network) Shutdown() error {
 		if err != nil {
 			return err
 		}
+
 		if err = createContainerLogFile(p.Name, logs); err != nil {
 			return err
 		}
@@ -352,8 +365,10 @@ func (n *Network) Coordinator() *Node {
 // TakeCPUProfiles takes a CPU profile on all nodes within the network.
 func (n *Network) TakeCPUProfiles(dur time.Duration) error {
 	log.Printf("taking CPU profile (%v) on all nodes", dur)
+
 	var wg sync.WaitGroup
 	wg.Add(len(n.Nodes))
+
 	var profErr error
 	for _, n := range n.Nodes {
 		go func(node *Node) {
@@ -362,6 +377,7 @@ func (n *Network) TakeCPUProfiles(dur time.Duration) error {
 					fmt.Println(r)
 				}
 			}()
+
 			defer wg.Done()
 			if err := node.TakeCPUProfile(dur); err != nil {
 				profErr = err
@@ -376,8 +392,10 @@ func (n *Network) TakeCPUProfiles(dur time.Duration) error {
 // TakeHeapSnapshots takes a heap snapshot on all nodes within the network.
 func (n *Network) TakeHeapSnapshots() error {
 	log.Printf("taking heap snapshot on all nodes")
+
 	var wg sync.WaitGroup
 	wg.Add(len(n.Nodes))
+
 	var profErr error
 	for _, n := range n.Nodes {
 		go func(n *Node) {

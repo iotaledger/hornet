@@ -43,6 +43,7 @@ func (p *RestRouteManager) AddRoute(route string) *echo.Group {
 	if !found {
 		p.routes = append(p.routes, route)
 	}
+
 	// existing groups get overwritten (necessary if last plugin was not cleaned up properly)
 	return p.proxy.AddGroup(route)
 }
@@ -63,6 +64,7 @@ func (p *RestRouteManager) AddProxyRoute(route string, host string, port uint32)
 	if !found {
 		p.routes = append(p.routes, route)
 	}
+
 	// existing proxies get overwritten (necessary if last plugin was not cleaned up properly)
 	return p.proxy.AddReverseProxy(route, host, port)
 }

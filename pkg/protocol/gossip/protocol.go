@@ -235,7 +235,7 @@ func (p *Protocol) IsSynced(cmi iotago.MilestoneIndex) bool {
 	return true
 }
 
-// Info returns.
+// Info returns the info about the protocol.
 func (p *Protocol) Info() *Info {
 	return &Info{
 		Heartbeat: p.LatestHeartbeat,
