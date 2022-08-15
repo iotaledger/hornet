@@ -22,7 +22,7 @@ var (
 	lastGossipMetricsLock = &sync.RWMutex{}
 )
 
-func nodeInfoExtended(c echo.Context) *NodeInfoExtended {
+func nodeInfoExtended() *NodeInfoExtended {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
@@ -38,7 +38,7 @@ func nodeInfoExtended(c echo.Context) *NodeInfoExtended {
 	return status
 }
 
-func databaseSizesMetrics(c echo.Context) (*DatabaseSizesMetric, error) {
+func databaseSizesMetrics() (*DatabaseSizesMetric, error) {
 
 	tangleDatabaseSize, err := deps.TangleDatabase.Size()
 	if err != nil {
@@ -58,7 +58,7 @@ func databaseSizesMetrics(c echo.Context) (*DatabaseSizesMetric, error) {
 	}, nil
 }
 
-func gossipMetrics(c echo.Context) *tangle.BPSMetrics {
+func gossipMetrics() *tangle.BPSMetrics {
 	lastGossipMetricsLock.RLock()
 	defer lastGossipMetricsLock.RUnlock()
 

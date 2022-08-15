@@ -231,7 +231,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		return err
 	}
 
-	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
+	sendFunc := func(task *workerpool.Task, _ iotago.MilestoneIndex) error {
 		// no release needed
 
 		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)

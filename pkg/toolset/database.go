@@ -27,10 +27,9 @@ var (
 
 func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.MilestoneManager, error) {
 
-	_, err := loadConfigFile(filePath, map[string]any{
+	if err := loadConfigFile(filePath, map[string]any{
 		"protocol": protocfg.ParamsProtocol,
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
 

@@ -164,10 +164,9 @@ func networkBootstrap(args []string) error {
 
 func getKeyManagerAndMilestonePublicKeyCountFromConfigFile(filePath string) (*keymanager.KeyManager, int, error) {
 
-	_, err := loadConfigFile(filePath, map[string]any{
+	if err := loadConfigFile(filePath, map[string]any{
 		"protocol": protocfg.ParamsProtocol,
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, 0, err
 	}
 

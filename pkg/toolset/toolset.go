@@ -194,19 +194,10 @@ func yesOrNo(value bool) string {
 	return "NO"
 }
 
-func parseFlagSet(fs *flag.FlagSet, args []string, minArgsCount ...int) error {
+func parseFlagSet(fs *flag.FlagSet, args []string) error {
 
 	if err := fs.Parse(args); err != nil {
 		return err
-	}
-
-	if len(minArgsCount) > 0 {
-		// minimum amount of args must be checked
-		if len(args) < minArgsCount[0] {
-			fs.Usage()
-
-			return errors.New("not enough arguments")
-		}
 	}
 
 	// Check if all parameters were parsed
@@ -228,7 +219,7 @@ func printJSON(obj interface{}) error {
 	return nil
 }
 
-func loadConfigFile(filePath string, parameters map[string]any) (*configuration.Configuration, error) {
+func loadConfigFile(filePath string, parameters map[string]any) error {
 	config := configuration.New()
 	flagset := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 
@@ -237,12 +228,12 @@ func loadConfigFile(filePath string, parameters map[string]any) (*configuration.
 	}
 
 	if err := config.LoadFile(filePath); err != nil {
-		return nil, fmt.Errorf("loading config file failed: %w", err)
+		return fmt.Errorf("loading config file failed: %w", err)
 	}
 
 	config.UpdateBoundParameters()
 
-	return config, nil
+	return nil
 }
 
 func getGracefulStopContext() context.Context {
