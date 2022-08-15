@@ -84,6 +84,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 				if len(inboundQueue) == 0 {
 					return nil
 				}
+
 				return inboundQueue[0]
 			}
 
@@ -93,6 +94,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 				if len(inboundQueue) == 0 {
 					return nil
 				}
+
 				return outbound
 			}
 
@@ -172,12 +174,14 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents iotag
 	case <-doneChan:
 		// traverser finished successfully
 		close(t.stackChanIn)
+
 		return nil
 
 	case err := <-errChan:
 		// traverser encountered an error
 		close(doneChan)
 		close(t.stackChanIn)
+
 		return err
 	}
 }
@@ -188,12 +192,14 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 	wasProcessed := func(blockID iotago.BlockID) bool {
 
 		_, wasProcessed := t.processed.Load(blockID)
+
 		return wasProcessed
 	}
 
 	markAsProcessed := func(blockID iotago.BlockID) bool {
 
 		_, wasProcessed := t.processed.LoadOrStore(blockID, struct{}{})
+
 		return wasProcessed
 	}
 
@@ -309,11 +315,13 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 				}
 
 				errChan <- err
+
 				return
 			}
 
 			if traversalFinishedSignal() {
 				close(doneChan)
+
 				return
 			}
 		}

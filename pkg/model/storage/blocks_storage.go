@@ -61,6 +61,7 @@ func (cachedBlocks CachedBlocks) Retain() CachedBlocks {
 	for i, cachedBlock := range cachedBlocks {
 		cachedResult[i] = cachedBlock.Retain() // block +1
 	}
+
 	return cachedResult
 }
 
@@ -237,6 +238,7 @@ func (s *Storage) CachedBlockOrNil(blockID iotago.BlockID) *CachedBlock {
 	cachedBlock := s.blocksStorage.Load(blockID[:]) // block +1
 	if !cachedBlock.Exists() {
 		cachedBlock.Release(true) // block -1
+
 		return nil
 	}
 
@@ -244,6 +246,7 @@ func (s *Storage) CachedBlockOrNil(blockID iotago.BlockID) *CachedBlock {
 	if !cachedBlockMeta.Exists() {
 		cachedBlock.Release(true)     // block -1
 		cachedBlockMeta.Release(true) // meta -1
+
 		return nil
 	}
 
@@ -271,6 +274,7 @@ func (s *Storage) Block(blockID iotago.BlockID) (*iotago.Block, error) {
 	}
 
 	defer cachedBlock.Release(true)
+
 	return cachedBlock.Block().Block(), nil
 }
 
@@ -280,8 +284,10 @@ func (s *Storage) CachedBlockMetadataOrNil(blockID iotago.BlockID) *CachedMetada
 	cachedBlockMeta := s.metadataStorage.Load(blockID[:]) // meta +1
 	if !cachedBlockMeta.Exists() {
 		cachedBlockMeta.Release(true) // meta -1
+
 		return nil
 	}
+
 	return &CachedMetadata{CachedObject: cachedBlockMeta}
 }
 
@@ -297,6 +303,7 @@ func (s *Storage) StoredMetadataOrNil(blockID iotago.BlockID) *BlockMetadata {
 	if storedMeta == nil {
 		return nil
 	}
+
 	return storedMeta.(*BlockMetadata)
 }
 
@@ -334,6 +341,7 @@ func (s *Storage) StoreBlockIfAbsent(block *Block) (cachedBlock *CachedBlock, ne
 
 		block.Persist(true)
 		block.SetModified(true)
+
 		return block
 	})
 
@@ -355,6 +363,7 @@ func (s *Storage) ForEachBlockID(consumer BlockIDConsumer, iteratorOptions ...It
 	s.blocksStorage.ForEachKeyOnly(func(key []byte) bool {
 		blockID := iotago.BlockID{}
 		copy(blockID[:], key)
+
 		return consumer(blockID)
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
@@ -365,6 +374,7 @@ func (ns *NonCachedStorage) ForEachBlockID(consumer BlockIDConsumer, iteratorOpt
 	ns.storage.blocksStorage.ForEachKeyOnly(func(key []byte) bool {
 		blockID := iotago.BlockID{}
 		copy(blockID[:], key)
+
 		return consumer(blockID)
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
@@ -375,6 +385,7 @@ func (s *Storage) ForEachBlockMetadataBlockID(consumer BlockIDConsumer, iterator
 	s.metadataStorage.ForEachKeyOnly(func(key []byte) bool {
 		blockID := iotago.BlockID{}
 		copy(blockID[:], key)
+
 		return consumer(blockID)
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
@@ -385,6 +396,7 @@ func (ns *NonCachedStorage) ForEachBlockMetadataBlockID(consumer BlockIDConsumer
 	ns.storage.metadataStorage.ForEachKeyOnly(func(key []byte) bool {
 		blockID := iotago.BlockID{}
 		copy(blockID[:], key)
+
 		return consumer(blockID)
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }

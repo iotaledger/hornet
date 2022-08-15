@@ -86,6 +86,7 @@ func tips(c echo.Context) (*tipsResponse, error) {
 	for query := range c.QueryParams() {
 		if strings.ToLower(query) == "allowsemilazy" {
 			allowSemiLazy = true
+
 			break
 		}
 	}
@@ -103,6 +104,7 @@ func tips(c echo.Context) (*tipsResponse, error) {
 		if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
 			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 		}
+
 		return nil, err
 	}
 

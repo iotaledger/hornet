@@ -92,6 +92,7 @@ func (t *Tangle) RunTangleProcessor() {
 		if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 			// do not process the milestone if the node was shut down
 			cachedMilestone.Release(true) // milestone -1
+
 			return
 		}
 

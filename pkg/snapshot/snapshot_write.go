@@ -61,11 +61,13 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 			if !ok {
 				return nil, nil
 			}
+
 			return nil, err
 		case obj, ok := <-prodChan:
 			if !ok {
 				return nil, nil
 			}
+
 			return obj, nil
 		}
 	}
@@ -90,6 +92,7 @@ func NewSEPsProducer(
 			solidEntryPointCheckThresholdPast,
 			func(sep *storage.SolidEntryPoint) bool {
 				prodChan <- sep.BlockID
+
 				return true
 			}); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
@@ -104,6 +107,7 @@ func NewSEPsProducer(
 	}()
 
 	binder := producerFromChannels(prodChan, errChan)
+
 	return func() (iotago.BlockID, error) {
 		obj, err := binder()
 		if err != nil {
@@ -112,6 +116,7 @@ func NewSEPsProducer(
 		if obj == nil {
 			return iotago.EmptyBlockID(), ErrNoMoreSEPToProduce
 		}
+
 		return obj.(iotago.BlockID), nil
 	}
 }
@@ -124,6 +129,7 @@ func NewCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	go func() {
 		if err := utxoManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
 			prodChan <- output
+
 			return true
 		}, utxo.ReadLockLedger(false)); err != nil {
 			errChan <- err
@@ -134,11 +140,13 @@ func NewCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	}()
 
 	binder := producerFromChannels(prodChan, errChan)
+
 	return func() (*utxo.Output, error) {
 		obj, err := binder()
 		if obj == nil || err != nil {
 			return nil, err
 		}
+
 		return obj.(*utxo.Output), nil
 	}
 }
@@ -150,6 +158,7 @@ func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex iotago.MilestoneI
 	case MsDiffDirectionOnwards:
 		// we skip the diff of the ledger milestone
 		msIndex := ledgerIndex + 1
+
 		return func() (iotago.MilestoneIndex, bool) {
 			if firstPassDone {
 				msIndex++
@@ -158,6 +167,7 @@ func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex iotago.MilestoneI
 				return 0, true
 			}
 			firstPassDone = true
+
 			return msIndex, false
 		}
 
@@ -165,6 +175,7 @@ func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex iotago.MilestoneI
 		// targetIndex is not included, since we only need the diff of targetIndex+1 to
 		// calculate the ledger index of targetIndex
 		msIndex := ledgerIndex
+
 		return func() (iotago.MilestoneIndex, bool) {
 			if firstPassDone {
 				msIndex--
@@ -173,6 +184,7 @@ func NewMsIndexIterator(direction MsDiffDirection, ledgerIndex iotago.MilestoneI
 				return 0, true
 			}
 			firstPassDone = true
+
 			return msIndex, false
 		}
 
@@ -190,6 +202,7 @@ func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieve
 			return nil, fmt.Errorf("block for milestone with index %d is not stored in the database", index)
 		}
 		defer cachedMilestone.Release(true) // milestone -1
+
 		return cachedMilestone.Milestone().Milestone(), nil
 	}
 }
@@ -211,6 +224,7 @@ func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 				errChan <- err
 				close(prodChan)
 				close(errChan)
+
 				return
 			}
 
@@ -219,12 +233,14 @@ func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 				errChan <- fmt.Errorf("block for milestone with index %d could not be retrieved: %w", msIndex, err)
 				close(prodChan)
 				close(errChan)
+
 				return
 			}
 			if milestonePayload == nil {
 				errChan <- fmt.Errorf("block for milestone with index %d could not be retrieved", msIndex)
 				close(prodChan)
 				close(errChan)
+
 				return
 			}
 
@@ -241,11 +257,13 @@ func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 	}()
 
 	binder := producerFromChannels(prodChan, errChan)
+
 	return func() (*MilestoneDiff, error) {
 		obj, err := binder()
 		if obj == nil || err != nil {
 			return nil, err
 		}
+
 		return obj.(*MilestoneDiff), nil
 	}
 }
@@ -377,6 +395,7 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 	snapshotMetrics, err := StreamFullSnapshotDataTo(snapshotFile, fullHeader, utxoProducer, milestoneDiffProducer, sepProducer)
 	if err != nil {
 		_ = snapshotFile.Close()
+
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[Full], err)
 	}
 
@@ -423,6 +442,7 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 	s.Events.SnapshotMetricsUpdated.Trigger(snapshotMetrics)
 
 	s.LogInfof("created %s snapshot for target index %d, took %v", snapshotNames[Full], targetIndex, time.Since(ts).Truncate(time.Millisecond))
+
 	return nil
 }
 
@@ -538,6 +558,7 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 
 	if err != nil {
 		_ = snapshotFile.Close()
+
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[Delta], err)
 	}
 
@@ -574,6 +595,7 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 	s.Events.SnapshotMetricsUpdated.Trigger(snapshotMetrics)
 
 	s.LogInfof("created %s snapshot for target index %d, took %v", snapshotNames[Delta], targetIndex, time.Since(ts).Truncate(time.Millisecond))
+
 	return nil
 }
 
@@ -649,12 +671,14 @@ func createFullSnapshotFromMergedSnapshotStorageState(dbStorage *storage.Storage
 		go func() {
 			dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
 				prodChan <- sep.BlockID
+
 				return true
 			})
 			close(prodChan)
 		}()
 
 		binder := producerFromChannels(prodChan, nil)
+
 		return func() (iotago.BlockID, error) {
 			obj, err := binder()
 			if err != nil {
@@ -664,6 +688,7 @@ func createFullSnapshotFromMergedSnapshotStorageState(dbStorage *storage.Storage
 				return iotago.EmptyBlockID(), ErrNoMoreSEPToProduce
 			}
 			sepsCount++
+
 			return obj.(iotago.BlockID), nil
 		}
 	}()
@@ -676,6 +701,7 @@ func createFullSnapshotFromMergedSnapshotStorageState(dbStorage *storage.Storage
 		if output != nil {
 			unspentOutputsCount++
 		}
+
 		return output, err
 	}
 
@@ -696,6 +722,7 @@ func createFullSnapshotFromMergedSnapshotStorageState(dbStorage *storage.Storage
 		milestoneDiffProducer,
 		sepProducer); err != nil {
 		_ = snapshotFile.Close()
+
 		return nil, fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[Full], err)
 	}
 
@@ -825,6 +852,7 @@ func CreateSnapshotFromStorage(
 		if err != nil {
 			sepsCount++
 		}
+
 		return sep, err
 	}
 
@@ -836,6 +864,7 @@ func CreateSnapshotFromStorage(
 		if output != nil {
 			unspentOutputsCount++
 		}
+
 		return output, err
 	}
 
@@ -857,6 +886,7 @@ func CreateSnapshotFromStorage(
 		milestoneDiffProducer,
 		countingSepProducer); err != nil {
 		_ = snapshotFile.Close()
+
 		return nil, fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[Full], err)
 	}
 
@@ -900,6 +930,7 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 	if err != nil {
 		// clean up temp db
 		_ = os.RemoveAll(tempDir)
+
 		return nil, err
 	}
 

@@ -28,9 +28,11 @@ func (s *INXServer) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest
 	}
 	if err := deps.RestRouteManager.AddProxyRoute(req.GetRoute(), req.GetHost(), req.GetPort()); err != nil {
 		Plugin.LogErrorf("Error registering proxy %s", req.GetRoute())
+
 		return nil, status.Errorf(codes.Internal, "error adding route to proxy: %s", err.Error())
 	}
 	Plugin.LogInfof("Registered proxy %s => %s:%d", req.GetRoute(), req.GetHost(), req.GetPort())
+
 	return &inx.NoParams{}, nil
 }
 
@@ -44,6 +46,7 @@ func (s *INXServer) UnregisterAPIRoute(_ context.Context, req *inx.APIRouteReque
 	}
 	deps.RestRouteManager.RemoveRoute(req.GetRoute())
 	Plugin.LogInfof("Removed proxy %s", req.GetRoute())
+
 	return &inx.NoParams{}, nil
 }
 

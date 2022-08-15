@@ -105,6 +105,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	var solidEntryPoints iotago.BlockIDs
 	dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
 		solidEntryPoints = append(solidEntryPoints, sep.BlockID)
+
 		return true
 	})
 
@@ -197,6 +198,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			if treasuryOutput == nil {
 				return "no treasury output found"
 			}
+
 			return fmt.Sprintf("milestone ID %s, tokens %d", iotago.EncodeHex(treasuryOutput.MilestoneID[:]), treasuryOutput.Amount)
 		}(),
 		ledgerIndex,

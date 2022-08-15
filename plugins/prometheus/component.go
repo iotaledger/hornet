@@ -99,6 +99,7 @@ func provide(c *dig.Container) error {
 		e := echo.New()
 		e.HideBanner = true
 		e.Use(middleware.Recover())
+
 		return depsOut{
 			PrometheusEcho: e,
 		}
@@ -171,6 +172,7 @@ func writeFileServiceDiscoveryFile() {
 	j, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
 		Plugin.LogPanic("unable to marshal file service discovery JSON:", err)
+
 		return
 	}
 
@@ -209,6 +211,7 @@ func run() error {
 			}
 
 			handler.ServeHTTP(c.Response().Writer, c.Request())
+
 			return nil
 		})
 

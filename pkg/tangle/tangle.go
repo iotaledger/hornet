@@ -177,6 +177,7 @@ func New(
 	}
 	t.futureConeSolidifier = NewFutureConeSolidifier(t.storage, t.markBlockAsSolid)
 	t.ResetMilestoneTimeoutTicker()
+
 	return t
 }
 

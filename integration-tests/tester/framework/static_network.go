@@ -15,10 +15,10 @@ type connected bool
 type StaticPeeringLayout map[int]map[int]connected
 
 // Validate validates whether the static peering layout is valid by checking:
-//	- the layout isn't empty
-//	- keys must be continuous numbers reflecting the ID of the node
-//	- a node must hold nodes to peer to and they must exist in the map
-//	- a node doesn't peer to itself
+//   - the layout isn't empty
+//   - keys must be continuous numbers reflecting the ID of the node
+//   - a node must hold nodes to peer to and they must exist in the map
+//   - a node doesn't peer to itself
 func (spl StaticPeeringLayout) Validate() error {
 	if len(spl) == 0 {
 		return ErrLayoutEmpty
@@ -99,6 +99,7 @@ func (n *StaticNetwork) ConnectNodes() error {
 		return err
 	}
 	log.Printf("static peering took %v", time.Since(s).Truncate(time.Millisecond))
+
 	return nil
 }
 
@@ -119,6 +120,7 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 			peers, err := node.DebugNodeAPIClient.Peers(context.Background())
 			if err != nil {
 				log.Printf("node %s, peering: %s\n", node.ID.String(), err)
+
 				continue
 			}
 
@@ -134,6 +136,7 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 				for _, peer := range peers {
 					if peer.ID == layoutNode.ID.String() && peer.Connected {
 						peered++
+
 						continue layoutLoop
 					}
 				}
@@ -144,5 +147,6 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 			}
 		}
 	}
+
 	return nil
 }

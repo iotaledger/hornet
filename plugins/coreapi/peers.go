@@ -74,6 +74,7 @@ func listPeers(_ echo.Context) ([]*PeerResponse, error) {
 	for i, info := range peerInfos {
 		results[i] = WrapInfoSnapshot(info)
 	}
+
 	return results, nil
 }
 

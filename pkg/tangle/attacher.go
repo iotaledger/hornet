@@ -44,6 +44,7 @@ func attacherOptions(opts []BlockAttacherOption) *BlockAttacherOptions {
 	for _, opt := range opts {
 		opt(result)
 	}
+
 	return result
 }
 
@@ -150,6 +151,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 
 	if err := a.tangle.messageProcessor.Emit(block); err != nil {
 		a.tangle.DeregisterBlockProcessedEvent(block.BlockID())
+
 		return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
 	}
 

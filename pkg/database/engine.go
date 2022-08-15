@@ -197,6 +197,7 @@ func StoreWithDefaultSettings(path string, createDatabaseIfNotExists bool, dbEng
 		if err != nil {
 			return nil, err
 		}
+
 		return pebble.New(db), nil
 
 	case EngineRocksDB:
@@ -204,6 +205,7 @@ func StoreWithDefaultSettings(path string, createDatabaseIfNotExists bool, dbEng
 		if err != nil {
 			return nil, err
 		}
+
 		return rocksdb.New(db), nil
 
 	case EngineMapDB:

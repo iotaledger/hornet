@@ -129,6 +129,7 @@ func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex iotago.Milest
 		s.isNodeSynced = false
 		s.isNodeAlmostSynced = false
 		s.isNodeSyncedWithinBelowMaxDepth = false
+
 		return
 	}
 
@@ -153,6 +154,7 @@ func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex iotago.Milest
 	if latestIndex < isNodeAlmostSyncedThreshold {
 		s.isNodeAlmostSynced = true
 		s.isNodeSyncedWithinBelowMaxDepth = true
+
 		return
 	}
 	s.isNodeAlmostSynced = confirmedIndex >= (latestIndex - isNodeAlmostSyncedThreshold)
@@ -160,6 +162,7 @@ func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex iotago.Milest
 	// catch overflow
 	if latestIndex < iotago.MilestoneIndex(s.protocolManager.Current().BelowMaxDepth) {
 		s.isNodeSyncedWithinBelowMaxDepth = true
+
 		return
 	}
 	s.isNodeSyncedWithinBelowMaxDepth = confirmedIndex >= (latestIndex - MilestoneIndexDelta(s.protocolManager.Current().BelowMaxDepth))
@@ -180,6 +183,7 @@ func (s *SyncManager) SetConfirmedMilestoneIndex(index iotago.MilestoneIndex, up
 	}
 
 	s.updateNodeSynced(index, s.LatestMilestoneIndex())
+
 	return nil
 }
 
@@ -210,6 +214,7 @@ func (s *SyncManager) SetLatestMilestoneIndex(index iotago.MilestoneIndex, updat
 	if s.latestMilestoneIndex >= index {
 		// current LMI is bigger than new LMI => abort
 		s.latestMilestoneLock.Unlock()
+
 		return false
 	}
 

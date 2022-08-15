@@ -146,11 +146,13 @@ func (p *Protocol) Send(message []byte) error {
 
 	if err := sendMessage(message); err != nil {
 		p.Events.Errors.Trigger(err)
+
 		return err
 	}
 
 	// fire event handler for sent message
 	p.Events.Sent[message[0]].Trigger()
+
 	return nil
 }
 
@@ -201,6 +203,7 @@ func (p *Protocol) HasDataForMilestone(index iotago.MilestoneIndex) bool {
 	if p.LatestHeartbeat == nil {
 		return false
 	}
+
 	return p.LatestHeartbeat.PrunedMilestoneIndex < index && p.LatestHeartbeat.SolidMilestoneIndex >= index
 }
 
@@ -210,6 +213,7 @@ func (p *Protocol) CouldHaveDataForMilestone(index iotago.MilestoneIndex) bool {
 	if p.LatestHeartbeat == nil {
 		return false
 	}
+
 	return p.LatestHeartbeat.PrunedMilestoneIndex < index && p.LatestHeartbeat.LatestMilestoneIndex >= index
 }
 

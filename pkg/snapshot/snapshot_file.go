@@ -116,6 +116,7 @@ func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
 	}
 	utxoTo := &utxo.TreasuryOutput{Amount: to.Amount}
 	copy(utxoTo.MilestoneID[:], msID[:])
+
 	return utxoTo
 }
 
@@ -805,6 +806,7 @@ func StreamFullSnapshotDataTo(
 			if errors.Is(err, ErrNoMoreSEPToProduce) {
 				break
 			}
+
 			return nil, fmt.Errorf("unable to get next LS SEP #%d: %w", sepsCount+1, err)
 		}
 
@@ -910,6 +912,7 @@ func StreamDeltaSnapshotDataTo(
 			if errors.Is(err, ErrNoMoreSEPToProduce) {
 				break
 			}
+
 			return nil, fmt.Errorf("unable to get next LS SEP #%d: %w", sepsCount+1, err)
 		}
 
@@ -1073,6 +1076,7 @@ func StreamDeltaSnapshotDataToExisting(
 			if errors.Is(err, ErrNoMoreSEPToProduce) {
 				break
 			}
+
 			return nil, fmt.Errorf("unable to get next LS SEP #%d: %w", sepsCount+1, err)
 		}
 
@@ -1244,6 +1248,7 @@ func StreamFullSnapshotDataFrom(
 			// we can break the loop here since we are walking backwards.
 			// we also need to jump to the end of the milestone diffs.
 			reader.Seek(msDiffsLength-msDiffsParsedLength, io.SeekCurrent)
+
 			break
 		}
 
@@ -1267,8 +1272,10 @@ func StreamFullSnapshotDataFrom(
 	if err := protocolStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
 		if err := protoParamsMsOptionsConsumer(protoParamsMsOption); err != nil {
 			innerErr = err
+
 			return false
 		}
+
 		return true
 	}); err != nil {
 		return fmt.Errorf("failed to iterate over LS protocol parameters milestone options: %w", err)
@@ -1308,6 +1315,7 @@ func StreamDeltaSnapshotDataFrom(
 	existingProtoParamsMsOpts := make(map[iotago.MilestoneIndex]struct{})
 	if err := protocolStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
 		existingProtoParamsMsOpts[protoParamsMsOption.TargetMilestoneIndex] = struct{}{}
+
 		return true
 	}); err != nil {
 		return fmt.Errorf("failed to iterate over LS protocol parameters milestone options: %w", err)
@@ -1344,8 +1352,10 @@ func StreamDeltaSnapshotDataFrom(
 
 		if err := protoParamsMsOptionsConsumer(protoParamsMsOption); err != nil {
 			innerErr = err
+
 			return false
 		}
+
 		return true
 	}); err != nil {
 		return fmt.Errorf("failed to iterate over LS protocol parameters milestone options: %w", err)
@@ -1388,10 +1398,12 @@ func ReadFullSnapshotHeaderFromFile(filePath string) (*FullSnapshotHeader, error
 		}
 
 		fullSnapshotHeader = fullHeader
+
 		return nil
 	}); err != nil {
 		return nil, err
 	}
+
 	return fullSnapshotHeader, nil
 }
 
@@ -1405,9 +1417,11 @@ func ReadDeltaSnapshotHeaderFromFile(filePath string) (*DeltaSnapshotHeader, err
 		}
 
 		deltaSnapshotHeader = deltaHeader
+
 		return nil
 	}); err != nil {
 		return nil, err
 	}
+
 	return deltaSnapshotHeader, nil
 }

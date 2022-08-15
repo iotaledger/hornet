@@ -117,6 +117,7 @@ func solidifyFutureCone(
 						// parent is not solid => block is not solid
 						// do not walk the future cone if the current block is not solid
 						cachedBlockMetaParent.Release(true) // meta -1
+
 						return false, nil
 					}
 					cachedBlockMetaParent.Release(true) // meta -1
@@ -135,5 +136,6 @@ func solidifyFutureCone(
 			return err
 		}
 	}
+
 	return nil
 }

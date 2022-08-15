@@ -32,6 +32,7 @@ func (s *INXServer) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "error selecting tips: %s", err.Error())
 	}
+
 	return &inx.TipsResponse{
 		Tips: inx.NewBlockIds(tips),
 	}, nil
@@ -60,5 +61,6 @@ func (s *INXServer) ListenToTipsMetrics(req *inx.TipsMetricRequest, srv inx.INX_
 		}
 	}, time.Duration(req.GetIntervalInMilliseconds())*time.Millisecond, ctx)
 	ticker.WaitForShutdown()
+
 	return innerErr
 }

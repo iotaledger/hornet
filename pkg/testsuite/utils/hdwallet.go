@@ -42,6 +42,7 @@ func (hd *HDWallet) BookSpent(spentOutput *utxo.Output) {
 	for _, u := range hd.utxo {
 		if u.OutputID() == spentOutput.OutputID() {
 			fmt.Printf("%s spent %s\n", hd.name, u.OutputID().ToHex())
+
 			continue
 		}
 		newUtxo = append(newUtxo, u)
@@ -58,6 +59,7 @@ func (hd *HDWallet) Balance() uint64 {
 	for _, u := range hd.utxo {
 		balance += u.Deposit()
 	}
+
 	return balance
 }
 
@@ -83,12 +85,14 @@ func (hd *HDWallet) KeyPair() (ed25519.PrivateKey, ed25519.PublicKey) {
 	}
 
 	pubKey, privKey := slip10.Ed25519Key(key)
+
 	return ed25519.PrivateKey(privKey), ed25519.PublicKey(pubKey)
 }
 
 func (hd *HDWallet) AddressSigner() iotago.AddressSigner {
 	privKey, pubKey := hd.KeyPair()
 	address := iotago.Ed25519AddressFromPubKey(pubKey)
+
 	return iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&address, privKey))
 }
 
@@ -100,6 +104,7 @@ func (hd *HDWallet) Outputs() []*utxo.Output {
 func (hd *HDWallet) Address() *iotago.Ed25519Address {
 	_, pubKey := hd.KeyPair()
 	addr := iotago.Ed25519AddressFromPubKey(pubKey)
+
 	return &addr
 }
 

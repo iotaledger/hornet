@@ -23,6 +23,7 @@ func readPasswordFromEnv() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return []byte(passwordEnv), nil
 }
 
@@ -62,6 +63,7 @@ func readPasswordFromStdin() ([]byte, error) {
 		return nil, errors.New("re-entered password doesn't match")
 	}
 	fmt.Println()
+
 	return password, nil
 }
 

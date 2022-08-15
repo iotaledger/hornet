@@ -125,6 +125,7 @@ func ConfirmMilestone(
 		}
 		do(cachedBlockMeta)
 		cachedBlockMeta.Release(true) // meta -1
+
 		return nil
 	}
 

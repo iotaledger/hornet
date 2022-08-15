@@ -21,6 +21,7 @@ func AddBlockToStorage(dbStorage *storage.Storage, milestoneManager *milestonema
 				milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, requested) // block pass +1
 			}
 		}
+
 		return cachedBlock, true
 	}
 

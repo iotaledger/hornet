@@ -8,6 +8,7 @@ func (s *Storage) MarkDatabasesCorrupted() error {
 			markingErr = err
 		}
 	}
+
 	return markingErr
 }
 
@@ -19,6 +20,7 @@ func (s *Storage) MarkDatabasesTainted() error {
 			markingErr = err
 		}
 	}
+
 	return markingErr
 }
 
@@ -29,6 +31,7 @@ func (s *Storage) MarkDatabasesHealthy() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -43,6 +46,7 @@ func (s *Storage) AreDatabasesCorrupted() (bool, error) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 
@@ -57,6 +61,7 @@ func (s *Storage) AreDatabasesTainted() (bool, error) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 

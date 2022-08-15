@@ -60,9 +60,11 @@ func (n *Network) AwaitOnline(ctx context.Context) error {
 			if _, err := node.DebugNodeAPIClient.Info(context.Background()); err != nil {
 				continue
 			}
+
 			break
 		}
 	}
+
 	return nil
 }
 
@@ -83,6 +85,7 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -115,6 +118,7 @@ func generatePrivateKey(optPrvKey ...crypto.PrivKey) (crypto.PrivKey, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return privateKey, nil
 }
 
@@ -158,6 +162,7 @@ func (n *Network) CreateNode(cfg *AppConfig, optPrvKey ...crypto.PrivKey) (*Node
 		return nil, err
 	}
 	n.Nodes = append(n.Nodes, node)
+
 	return node, nil
 }
 
@@ -190,6 +195,7 @@ func (n *Network) CreateCoordinator(cfg *INXCoordinatorConfig) (*INXExtension, e
 		DockerContainer: container,
 	}
 	n.INXExtensions = append(n.INXExtensions, ext)
+
 	return ext, nil
 }
 
@@ -223,6 +229,7 @@ func (n *Network) CreateIndexer(cfg *INXIndexerConfig) (*INXExtension, error) {
 		DockerContainer: container,
 	}
 	n.INXExtensions = append(n.INXExtensions, ext)
+
 	return ext, nil
 }
 
@@ -362,6 +369,7 @@ func (n *Network) TakeCPUProfiles(dur time.Duration) error {
 		}(n)
 	}
 	wg.Wait()
+
 	return profErr
 }
 
@@ -379,6 +387,7 @@ func (n *Network) TakeHeapSnapshots() error {
 			}
 		}(n)
 	}
+
 	return profErr
 }
 
@@ -399,5 +408,6 @@ func (n *Network) SpamZeroVal(dur time.Duration, parallelism int) error {
 		}(n)
 	}
 	wg.Wait()
+
 	return spamErr
 }

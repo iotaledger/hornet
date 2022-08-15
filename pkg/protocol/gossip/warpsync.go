@@ -34,6 +34,7 @@ func NewWarpSync(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpoin
 	} else {
 		ws.advCheckpointCriteria = AdvanceAtPercentageReached(DefaultAdvancementThreshold)
 	}
+
 	return ws
 }
 
@@ -84,6 +85,7 @@ func AdvanceAtPercentageReached(threshold float64) AdvanceCheckpointCriteria {
 		}
 		checkpointDelta := currentCheckpoint - previousCheckpoint
 		progress := currentConfirmed - previousCheckpoint
+
 		return float64(progress)/float64(checkpointDelta) >= threshold
 	}
 }
@@ -134,6 +136,7 @@ func (ws *WarpSync) UpdateCurrentConfirmedMilestone(current iotago.MilestoneInde
 	if ws.TargetMilestone != 0 && ws.CurrentConfirmedMilestone >= ws.TargetMilestone {
 		ws.Events.Done.Trigger(int(ws.TargetMilestone-ws.InitMilestone), ws.referencedBlocksTotal, time.Since(ws.StartTime))
 		ws.reset()
+
 		return
 	}
 
@@ -176,6 +179,7 @@ func (ws *WarpSync) UpdateTargetMilestone(target iotago.MilestoneIndex) {
 	if ws.CurrentCheckpoint != 0 {
 		// if synchronization was already started, only update the target
 		ws.Events.TargetUpdated.Trigger(ws.CurrentCheckpoint, ws.TargetMilestone)
+
 		return
 	}
 
@@ -217,16 +221,19 @@ func (ws *WarpSync) advanceCheckpoint() syncmanager.MilestoneIndexDelta {
 			deltaRange = ws.TargetMilestone - ws.CurrentConfirmedMilestone
 		}
 		ws.CurrentCheckpoint = ws.TargetMilestone
+
 		return deltaRange
 	}
 
 	// at start simply advance from the current confirmed
 	if ws.CurrentCheckpoint == 0 {
 		ws.CurrentCheckpoint = ws.CurrentConfirmedMilestone + advRange
+
 		return advRange
 	}
 
 	ws.CurrentCheckpoint = ws.CurrentCheckpoint + advRange
+
 	return advRange
 }
 
@@ -315,6 +322,7 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 		// called on missing parents
 		func(parentBlockID iotago.BlockID) error {
 			w.requester.Request(parentBlockID, msIndex, w.preventDiscard)
+
 			return nil
 		},
 		// called on solid entry points
@@ -349,6 +357,7 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 			// only request if we do not have the milestone
 			requested++
 			msIndexes = append(msIndexes, msIndexToRequest)
+
 			continue
 		}
 

@@ -55,6 +55,7 @@ func checkDatabaseHealth(storage *storage.Storage, markTainted bool) error {
 				return err
 			}
 		}
+
 		return errors.New("database is corrupted")
 	}
 
@@ -94,6 +95,7 @@ func getStorageMilestoneRange(tangleStore *storage.Storage) (iotago.MilestoneInd
 		if msIndexEnd < msIndex {
 			msIndexEnd = msIndex
 		}
+
 		return true
 	})
 
@@ -197,6 +199,7 @@ func checkSnapshotInfo(dbStorage *storage.Storage) error {
 	if dbStorage.SnapshotInfo() == nil {
 		return common.ErrSnapshotInfoNotFound
 	}
+
 	return nil
 }
 

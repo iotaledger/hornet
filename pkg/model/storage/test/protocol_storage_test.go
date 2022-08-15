@@ -104,6 +104,7 @@ func TestProtocolStorage_ForEachActiveProtocolParameterMilestoneOption(t *testin
 			require.Fail(t, "unexpected target milestone index", protoParamsMsOption.TargetMilestoneIndex)
 		}
 		delete(allowedTargetIndexes, protoParamsMsOption.TargetMilestoneIndex)
+
 		return true
 	})
 
@@ -152,6 +153,7 @@ func checkProtoParamsMsOptionCount(t *testing.T, protoStorage *storage.ProtocolS
 	// loop over all existing protocol parameters milestone options
 	err := protoStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
 		collectedProtoParamsMsOptions = append(collectedProtoParamsMsOptions, protoParamsMsOption)
+
 		return true
 	})
 	require.NoError(t, err)
@@ -165,6 +167,7 @@ func checkProtoParamsMsOptionIndexes(t *testing.T, protoStorage *storage.Protoco
 			require.Fail(t, "unexpected target milestone index", protoParamsMsOption.TargetMilestoneIndex)
 		}
 		delete(allowedTargetIndexes, protoParamsMsOption.TargetMilestoneIndex)
+
 		return true
 	})
 	require.NoError(t, err)

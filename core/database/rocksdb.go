@@ -37,8 +37,10 @@ func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Databas
 					metrics.CompactionCount.Inc()
 					dbEvents.DatabaseCompaction.Trigger(running)
 				}
+
 				return running
 			}
+
 			return false
 		},
 	)

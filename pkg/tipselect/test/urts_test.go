@@ -98,6 +98,7 @@ func TestTipSelect(t *testing.T) {
 					// first check if the block was referenced => update ycri and ocri with the confirmation index
 					if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 						updateIndexes(at, at)
+
 						return false, nil
 					}
 
@@ -116,6 +117,7 @@ func TestTipSelect(t *testing.T) {
 						return err
 					}
 					updateIndexes(at, at)
+
 					return nil
 				}, false)
 			require.NoError(te.TestInterface, err)

@@ -26,6 +26,7 @@ func newWorkUnit(key []byte, messageProcessor *MessageProcessor) *WorkUnit {
 		messageProcessor: messageProcessor,
 	}
 	copy(wu.receivedBytes, key)
+
 	return wu
 }
 
@@ -86,6 +87,7 @@ func (wu *WorkUnit) UpdateState(state WorkUnitState) {
 func (wu *WorkUnit) Is(state WorkUnitState) bool {
 	wu.stateLock.Lock()
 	defer wu.stateLock.Unlock()
+
 	return wu.state&state > 0
 }
 
@@ -118,6 +120,7 @@ func (wu *WorkUnit) broadcast() *Broadcast {
 	for _, p := range wu.receivedFrom {
 		exclude[p.PeerID] = struct{}{}
 	}
+
 	return &Broadcast{
 		Data:         wu.receivedBytes,
 		ExcludePeers: exclude,

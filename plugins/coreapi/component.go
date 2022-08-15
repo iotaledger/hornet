@@ -197,6 +197,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -207,6 +208,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}, checkNodeAlmostSynced(), checkUpcomingUnsupportedProtocolVersion())
 	}
@@ -216,6 +218,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	}, checkNodeAlmostSynced())
 
@@ -231,6 +234,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
@@ -239,6 +243,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
@@ -249,6 +254,7 @@ func configure() error {
 			return err
 		}
 		c.Response().Header().Set(echo.HeaderLocation, resp.BlockID)
+
 		return httpserver.JSONResponse(c, http.StatusCreated, resp)
 	}, checkNodeAlmostSynced(), checkUpcomingUnsupportedProtocolVersion())
 
@@ -264,6 +270,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
@@ -272,6 +279,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
@@ -288,6 +296,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
@@ -296,6 +305,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
@@ -305,6 +315,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -320,6 +331,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
@@ -328,6 +340,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
@@ -337,6 +350,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -352,6 +366,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return c.Blob(http.StatusOK, httpserver.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
@@ -360,6 +375,7 @@ func configure() error {
 			if err != nil {
 				return err
 			}
+
 			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
@@ -369,6 +385,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -377,6 +394,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -385,6 +403,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -393,6 +412,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -401,6 +421,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -408,6 +429,7 @@ func configure() error {
 		if err := removePeer(c); err != nil {
 			return err
 		}
+
 		return c.NoContent(http.StatusNoContent)
 	})
 
@@ -416,6 +438,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -424,6 +447,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -432,6 +456,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	}, checkNodeAlmostSynced(), checkUpcomingUnsupportedProtocolVersion())
 
@@ -440,6 +465,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -448,6 +474,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
+
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -465,6 +492,7 @@ func checkNodeAlmostSynced() echo.MiddlewareFunc {
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 			}
+
 			return next(c)
 		}
 	}
@@ -476,6 +504,7 @@ func checkUpcomingUnsupportedProtocolVersion() echo.MiddlewareFunc {
 			if !deps.ProtocolManager.NextPendingSupported() {
 				return errors.WithMessage(echo.ErrServiceUnavailable, "node does not support the upcoming protocol upgrade")
 			}
+
 			return next(c)
 		}
 	}

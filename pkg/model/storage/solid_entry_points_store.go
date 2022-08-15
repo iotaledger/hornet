@@ -46,10 +46,12 @@ func (s *Storage) loadSolidEntryPoints() error {
 
 	if points == nil {
 		s.solidEntryPoints = NewSolidEntryPoints()
+
 		return nil
 	}
 
 	s.solidEntryPoints = points
+
 	return nil
 }
 
@@ -61,6 +63,7 @@ func (s *Storage) SolidEntryPointsContain(blockID iotago.BlockID) (bool, error) 
 		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
+
 	return s.solidEntryPoints.Contains(blockID), nil
 }
 
@@ -75,6 +78,7 @@ func (s *Storage) SolidEntryPointsIndex(blockID iotago.BlockID) (iotago.Mileston
 	}
 
 	index, contains := s.solidEntryPoints.Index(blockID)
+
 	return index, contains, nil
 }
 
@@ -105,6 +109,7 @@ func (s *Storage) StoreSolidEntryPointsWithoutLocking() error {
 		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
+
 	return s.storeSolidEntryPoints(s.solidEntryPoints)
 }
 

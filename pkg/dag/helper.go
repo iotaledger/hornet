@@ -26,6 +26,7 @@ type OnSolidEntryPoint func(blockID iotago.BlockID) error
 func TraverseParents(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, parents iotago.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	t := NewParentsTraverser(parentsTraverserStorage)
+
 	return t.Traverse(ctx, parents, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints)
 }
 
@@ -36,6 +37,7 @@ func TraverseParents(ctx context.Context, parentsTraverserStorage ParentsTravers
 func TraverseParentsOfBlock(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, startBlockID iotago.BlockID, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	t := NewParentsTraverser(parentsTraverserStorage)
+
 	return t.Traverse(ctx, iotago.BlockIDs{startBlockID}, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints)
 }
 
@@ -45,5 +47,6 @@ func TraverseParentsOfBlock(ctx context.Context, parentsTraverserStorage Parents
 func TraverseChildren(ctx context.Context, childrenTraverserStorage ChildrenTraverserStorage, startBlockID iotago.BlockID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
 
 	t := NewChildrenTraverser(childrenTraverserStorage)
+
 	return t.Traverse(ctx, startBlockID, condition, consumer, walkAlreadyDiscovered)
 }

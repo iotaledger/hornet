@@ -72,6 +72,7 @@ func (s *Importer) ImportSnapshots(ctx context.Context) error {
 
 	if err = s.LoadFullSnapshotFromFile(ctx, s.snapshotFullPath, targetNetworkID); err != nil {
 		_ = s.storage.MarkDatabasesCorrupted()
+
 		return err
 	}
 
@@ -81,6 +82,7 @@ func (s *Importer) ImportSnapshots(ctx context.Context) error {
 
 	if err = s.LoadDeltaSnapshotFromFile(ctx, s.snapshotDeltaPath); err != nil {
 		_ = s.storage.MarkDatabasesCorrupted()
+
 		return err
 	}
 
@@ -99,6 +101,7 @@ func (s *Importer) checkSnapshotFilesAvailability(fullPath string, deltaPath str
 		if os.IsNotExist(fullSnapshotStatErr) {
 			return snapshotAvailNone, nil
 		}
+
 		return snapshotAvailOnlyFull, nil
 	}
 
@@ -147,6 +150,7 @@ func (s *Importer) downloadSnapshotFiles(ctx context.Context, targetNetworkID ui
 	}
 
 	s.LogInfo("snapshot download finished")
+
 	return nil
 }
 

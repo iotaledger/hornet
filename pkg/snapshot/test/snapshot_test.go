@@ -56,6 +56,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		default:
 			require.Fail(t, "invalid output type")
 		}
+
 		return true
 	})
 	require.NoError(t, err)
@@ -116,6 +117,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		default:
 			require.Fail(t, "invalid output type")
 		}
+
 		return true
 	})
 	require.NoError(t, err)

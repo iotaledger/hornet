@@ -47,6 +47,7 @@ func (s *StoreHealthTracker) MarkCorrupted() error {
 	if err := s.store.Set([]byte("dbCorrupted"), []byte{}); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to set database healthTrackers status")
 	}
+
 	return s.store.Flush()
 }
 
@@ -55,6 +56,7 @@ func (s *StoreHealthTracker) MarkTainted() error {
 	if err := s.store.Set([]byte("dbTainted"), []byte{}); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to set database healthTrackers status")
 	}
+
 	return s.store.Flush()
 }
 
@@ -73,6 +75,7 @@ func (s *StoreHealthTracker) IsCorrupted() (bool, error) {
 	if err != nil {
 		return true, errors.Wrap(NewDatabaseError(err), "failed to read database healthTrackers status")
 	}
+
 	return contains, nil
 }
 
@@ -82,6 +85,7 @@ func (s *StoreHealthTracker) IsTainted() (bool, error) {
 	if err != nil {
 		return true, errors.Wrap(NewDatabaseError(err), "failed to read database healthTrackers status")
 	}
+
 	return contains, nil
 }
 
@@ -109,6 +113,7 @@ func (s *StoreHealthTracker) setDatabaseVersion(version byte) error {
 			return errors.Wrap(NewDatabaseError(err), "failed to set database version")
 		}
 	}
+
 	return nil
 }
 

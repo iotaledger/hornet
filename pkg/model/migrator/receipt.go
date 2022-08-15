@@ -63,6 +63,7 @@ func (rs *ReceiptService) Init() error {
 	if err := os.MkdirAll(rs.backupFolder, os.ModePerm); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -80,6 +81,7 @@ func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
 	if err := os.WriteFile(receiptFileName, receiptJSON, os.ModePerm); err != nil {
 		return common.CriticalError(fmt.Errorf("unable to persist receipt onto disk: %w", err))
 	}
+
 	return nil
 }
 
@@ -160,6 +162,7 @@ func addReceiptEntriesToMap(r *iotago.ReceiptMilestoneOpt, m map[string]*iotago.
 		}
 		m[k] = migFundEntry
 	}
+
 	return nil
 }
 
@@ -171,6 +174,7 @@ func (rs *ReceiptService) validateCompleteReceiptBatch(finalReceipt *iotago.Rece
 	receiptsWithSameIndex := make([]*iotago.ReceiptMilestoneOpt, 0)
 	if err := rs.utxoManager.ForEachReceiptTupleMigratedAt(finalReceipt.MigratedAt, func(rt *utxo.ReceiptTuple) bool {
 		receiptsWithSameIndex = append(receiptsWithSameIndex, rt.Receipt)
+
 		return true
 	}, utxo.ReadLockLedger(false)); err != nil {
 		return err
@@ -223,6 +227,7 @@ func compareAgainstEntries(entries map[string]*iotago.MigratedFundsEntry, target
 		if err != nil {
 			return fmt.Errorf("%w: non T5B1 tail tx hash within entry", ErrInvalidReceiptServiceState)
 		}
+
 		return fmt.Errorf("%w: target entry %s not in entries set", ErrInvalidReceiptServiceState, trytes)
 	}
 

@@ -240,8 +240,9 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 	}
 }
 
-//lint:ignore U1000 used for easier debugging
 // profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
+//
+//lint:ignore U1000 used for easier debugging
 func (s *Storage) profileCacheEnabled() *profile.Caches {
 	return &profile.Caches{
 		Addresses: &profile.CacheOpts{
@@ -301,8 +302,9 @@ func (s *Storage) profileCacheEnabled() *profile.Caches {
 	}
 }
 
-//lint:ignore U1000 used for easier debugging
 // profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
+//
+//lint:ignore U1000 used for easier debugging
 func (s *Storage) profileLeakDetectionEnabled() *profile.Caches {
 	return &profile.Caches{
 		Addresses: &profile.CacheOpts{
@@ -424,6 +426,7 @@ func (s *Storage) FlushAndCloseStores() error {
 	if err := s.utxoStore.Close(); err != nil {
 		flushAndCloseError = err
 	}
+
 	return flushAndCloseError
 }
 
@@ -448,6 +451,7 @@ func (s *Storage) ShutdownStorages() {
 func (s *Storage) Shutdown() error {
 	s.FlushStorages()
 	s.ShutdownStorages()
+
 	return s.FlushAndCloseStores()
 }
 

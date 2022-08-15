@@ -38,5 +38,6 @@ func ParsePeerIDParam(c echo.Context) (peer.ID, error) {
 	if err != nil {
 		return "", errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
+
 	return peerID, nil
 }

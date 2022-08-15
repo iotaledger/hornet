@@ -185,6 +185,7 @@ func (mo *ManagerOptions) reconnectDelay() time.Duration {
 	recInter := mo.reconnectInterval
 	jitter := mo.reconnectIntervalJitter
 	delayJitter := rand.Int63n(int64(jitter))
+
 	return recInter + time.Duration(delayJitter)
 }
 
@@ -230,6 +231,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 	}
 	peeringManager.WrappedLogger = logger.NewWrappedLogger(peeringManager.opts.logger)
 	peeringManager.configureEvents()
+
 	return peeringManager
 }
 
@@ -372,6 +374,7 @@ func (m *Manager) ConnectPeer(addrInfo *peer.AddrInfo, peerRelation PeerRelation
 	}
 	back := make(chan error)
 	m.connectPeerChan <- &connectpeermsg{addrInfo: addrInfo, peerRelation: peerRelation, back: back, alias: al}
+
 	return <-back
 }
 
@@ -388,6 +391,7 @@ func (m *Manager) DisconnectPeer(peerID peer.ID, disconnectReason ...error) erro
 		reason = disconnectReason[0]
 	}
 	m.disconnectPeerChan <- &disconnectpeermsg{peerID: peerID, reason: reason, back: back}
+
 	return <-back
 }
 
@@ -399,6 +403,7 @@ func (m *Manager) IsConnected(peerID peer.ID) bool {
 
 	back := make(chan bool)
 	m.isConnectedReqChan <- &isconnectedrequestmsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -410,6 +415,7 @@ func (m *Manager) AllowPeer(peerID peer.ID) error {
 
 	back := make(chan error)
 	m.allowPeerChan <- &allowpeermsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -421,6 +427,7 @@ func (m *Manager) DisallowPeer(peerID peer.ID) error {
 
 	back := make(chan error)
 	m.disallowPeerChan <- &disallowpeermsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -432,6 +439,7 @@ func (m *Manager) IsAllowed(peerID peer.ID) bool {
 
 	back := make(chan bool)
 	m.isAllowedReqChan <- &isallowedrequestmsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -460,8 +468,10 @@ func (m *Manager) ConnectedCount(relation ...PeerRelation) int {
 		if m.host.Network().Connectedness(p.ID) == network.Connected {
 			count++
 		}
+
 		return true
 	}, relation...)
+
 	return count
 }
 
@@ -473,6 +483,7 @@ func (m *Manager) PeerInfoSnapshot(id peer.ID) *PeerInfoSnapshot {
 		info = p.InfoSnapshot()
 		info.Connected = m.host.Network().Connectedness(p.ID) == network.Connected
 	})
+
 	return info
 }
 
@@ -483,8 +494,10 @@ func (m *Manager) PeerInfoSnapshots() []*PeerInfoSnapshot {
 		info := p.InfoSnapshot()
 		info.Connected = m.host.Network().Connectedness(p.ID) == network.Connected
 		infos = append(infos, info)
+
 		return true
 	})
+
 	return infos
 }
 
@@ -587,6 +600,7 @@ func (m *Manager) eventLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			m.shutdown()
+
 			return
 
 		case connectPeerMsg := <-m.connectPeerChan:
@@ -623,6 +637,7 @@ func (m *Manager) eventLoop(ctx context.Context) {
 				m.scheduleReconnectIfKnown(reconnectAttemptMsg.peerID)
 
 				m.Events.Error.Trigger(fmt.Errorf("error reconnect %s: %w", reconnectAttemptMsg.peerID.ShortString(), reconnectAttemptMsg.connectErr))
+
 				continue
 			}
 			if !reconnectAttemptMsg.reconnect {
@@ -711,6 +726,7 @@ func (m *Manager) connectPeer(connectPeerMsg *connectpeermsg) {
 			connect:    false,
 			connectErr: ErrPeerInManagerAlready,
 		}
+
 		return
 	}
 
@@ -724,6 +740,7 @@ func (m *Manager) connectPeer(connectPeerMsg *connectpeermsg) {
 			connect:    false,
 			connectErr: ErrCantConnectToItself,
 		}
+
 		return
 	}
 
@@ -767,6 +784,7 @@ func (m *Manager) reconnectPeer(peerID peer.ID) {
 			reconnect:  false,
 			connectErr: nil,
 		}
+
 		return
 	}
 
@@ -777,6 +795,7 @@ func (m *Manager) reconnectPeer(peerID peer.ID) {
 			reconnect:  false,
 			connectErr: nil,
 		}
+
 		return
 	}
 
@@ -811,6 +830,7 @@ func (m *Manager) disconnectPeer(peerID peer.ID) (bool, error) {
 	m.host.ConnManager().Unprotect(peerID, PeerConnectivityProtectionTag)
 	delete(m.peers, peerID)
 	m.Events.Disconnect.Trigger(p)
+
 	return true, m.host.Network().ClosePeer(peerID)
 }
 
@@ -843,6 +863,7 @@ func (m *Manager) disallowPeer(peerID peer.ID) {
 // checks whether the given peer is allowed to connect (autopeering).
 func (m *Manager) isAllowed(peerID peer.ID) bool {
 	_, has := m.allowedPeers[peerID]
+
 	return has
 }
 
@@ -954,6 +975,7 @@ func (m *Manager) isConnected(peerID peer.ID) bool {
 	if _, has := m.peers[peerID]; !has {
 		return false
 	}
+
 	return m.host.Network().Connectedness(peerID) == network.Connected
 }
 

@@ -112,6 +112,7 @@ func (p *Manager) setIsPruning(value bool) {
 func (p *Manager) IsPruning() bool {
 	p.statusLock.RLock()
 	defer p.statusLock.RUnlock()
+
 	return p.isPruning
 }
 
@@ -189,6 +190,7 @@ func (p *Manager) pruneUnreferencedBlocks(targetIndex iotago.MilestoneIndex) (bl
 		if cachedBlockMeta.Metadata().IsReferenced() {
 			// block was already referenced
 			cachedBlockMeta.Release(true) // meta -1
+
 			continue
 		}
 
@@ -296,12 +298,14 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 		15,
 		func(sep *storagepkg.SolidEntryPoint) bool {
 			solidEntryPoints = append(solidEntryPoints, sep)
+
 			return true
 		})
 	if err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return 0, ErrPruningAborted
 		}
+
 		return 0, err
 	}
 
@@ -343,6 +347,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 		if cachedMilestone == nil {
 			// Milestone not found, pruning impossible
 			p.LogWarnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
+
 			continue
 		}
 
@@ -363,6 +368,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 			func(cachedBlockMeta *storagepkg.CachedMetadata) error { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 				blockIDsToDeleteMap[cachedBlockMeta.Metadata().BlockID()] = struct{}{}
+
 				return nil
 			},
 			// called on missing parents
@@ -374,6 +380,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 			true); err != nil {
 			cachedMilestone.Release(true) // milestone -1
 			p.LogWarnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
+
 			continue
 		}
 		timeTraverseMilestoneCone := time.Now()

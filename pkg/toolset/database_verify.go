@@ -258,12 +258,14 @@ func verifyDatabase(
 
 				// collect all blocks that were referenced by that milestone
 				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
+
 				return referenced && at == msIndex, nil
 			},
 			func(meta *storage.BlockMetadata) bool {
 				referenced, at := meta.ReferencedWithIndex()
 				if referenced && at == msIndex {
 					_, exists := referencedBlocks[meta.BlockID()]
+
 					return exists
 				}
 

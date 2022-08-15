@@ -81,6 +81,7 @@ func (blk *Block) Block() *iotago.Block {
 
 		blk.block = iotaBlock
 	})
+
 	return blk.block
 }
 
@@ -145,6 +146,7 @@ func (blk *Block) TransactionEssence() *iotago.TransactionEssence {
 	if transaction := blk.Transaction(); transaction != nil {
 		return transaction.Essence
 	}
+
 	return nil
 }
 
@@ -158,6 +160,7 @@ func (blk *Block) TransactionEssenceTaggedData() *iotago.TaggedData {
 			return nil
 		}
 	}
+
 	return nil
 }
 
@@ -175,6 +178,7 @@ func (blk *Block) TransactionEssenceUTXOInputs() iotago.OutputIDs {
 			}
 		}
 	}
+
 	return inputs
 }
 

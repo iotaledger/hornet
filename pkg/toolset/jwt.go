@@ -97,5 +97,6 @@ func generateJWTApiToken(args []string) error {
 	}
 
 	fmt.Println("Your API JWT token: ", jwtToken)
+
 	return nil
 }

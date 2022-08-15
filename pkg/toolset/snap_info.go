@@ -45,6 +45,7 @@ func snapshotInfo(args []string) error {
 		if err != nil {
 			return err
 		}
+
 		return printFullSnapshotHeaderInfo("", filePath, fullHeader)
 
 	case snapshot.Delta:
@@ -52,6 +53,7 @@ func snapshotInfo(args []string) error {
 		if err != nil {
 			return err
 		}
+
 		return printDeltaSnapshotHeaderInfo("", filePath, deltaHeader)
 
 	default:

@@ -132,5 +132,6 @@ func printP2PIdentity(privateKey crypto.PrivKey, publicKey crypto.PubKey, output
 	fmt.Println("Your p2p public key (hex):    ", identity.PublicKey)
 	fmt.Println("Your p2p public key (base58): ", identity.PublicKeyBase58)
 	fmt.Println("Your p2p PeerID:              ", identity.PeerID)
+
 	return nil
 }

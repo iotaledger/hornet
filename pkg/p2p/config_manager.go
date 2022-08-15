@@ -33,6 +33,7 @@ func (pm *ConfigManager) Peers() []*PeerConfig {
 
 	peers := make([]*PeerConfig, len(pm.peers))
 	copy(peers, pm.peers)
+
 	return peers
 }
 
@@ -96,6 +97,7 @@ func (pm *ConfigManager) RemovePeer(peerID peer.ID) error {
 			pm.peers[i] = pm.peers[len(pm.peers)-1]
 			pm.peers[len(pm.peers)-1] = nil // avoid potential memory leak
 			pm.peers = pm.peers[:len(pm.peers)-1]
+
 			return pm.store()
 		}
 	}

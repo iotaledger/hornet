@@ -37,6 +37,7 @@ func (t *UnreferencedBlock) Update(_ objectstorage.StorableObject) {
 func (t *UnreferencedBlock) ObjectStorageKey() []byte {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, t.latestMilestoneIndex)
+
 	return append(key, t.blockID[:]...)
 }
 

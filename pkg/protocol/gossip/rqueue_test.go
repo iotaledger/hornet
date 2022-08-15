@@ -64,6 +64,7 @@ func TestRequestQueue(t *testing.T) {
 		// should return nil when empty
 		if i == -1 {
 			assert.Nil(t, r)
+
 			continue
 		}
 		// since we have two request under the same milestone/priority

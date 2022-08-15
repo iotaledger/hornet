@@ -38,6 +38,7 @@ func newNode(t require.TestingT) host.Host {
 		libp2p.ConnectionManager(connManager),
 	)
 	require.NoError(t, err)
+
 	return h
 }
 
@@ -172,10 +173,12 @@ func TestManager(t *testing.T) {
 
 	node2Manager.ForEach(func(peer *p2p.Peer) bool {
 		require.Equal(t, node1.ID(), peer.ID)
+
 		return true
 	}, p2p.PeerRelationKnown)
 	node2Manager.ForEach(func(peer *p2p.Peer) bool {
 		require.True(t, peer.ID == node3.ID() || peer.ID == node4.ID())
+
 		return true
 	}, p2p.PeerRelationUnknown)
 }

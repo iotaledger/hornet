@@ -81,6 +81,7 @@ func (mockAPI) GetWhiteFlagConfirmation(msIndex iotago.MilestoneIndex) (*api.Whi
 	if msIndex >= iotago.MilestoneIndex(len(validatorTests.confirmations)) {
 		return nil, errInvalidIndex
 	}
+
 	return &validatorTests.confirmations[msIndex], nil
 }
 

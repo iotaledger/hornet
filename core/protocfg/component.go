@@ -97,6 +97,7 @@ func initConfigPars(c *dig.Container) error {
 			CoreComponent.LogPanicf("can't load public key ranges: %s", err)
 		}
 		res.KeyManager = keyManager
+
 		return res
 	}); err != nil {
 		CoreComponent.LogPanic(err)
@@ -127,6 +128,7 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}
+
 		return protocolManager
 	}); err != nil {
 		CoreComponent.LogPanic(err)

@@ -116,6 +116,7 @@ func (db *Database) CompactionRunning() bool {
 	if db.compactionRunningFunc == nil {
 		return false
 	}
+
 	return db.compactionRunningFunc()
 }
 
@@ -125,5 +126,6 @@ func (db *Database) Size() (int64, error) {
 		// in-memory database does not support this method.
 		return 0, nil
 	}
+
 	return ioutils.FolderSize(db.databaseDir)
 }

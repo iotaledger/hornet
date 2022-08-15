@@ -52,6 +52,7 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 				msDiffGenerator:    msDiffIterFunc,
 				msDiffGenRetriever: msDiffGenRetriever,
 			}
+
 			return t
 		}(),
 	}
@@ -128,6 +129,7 @@ func TestMilestoneDiffReadProtocolParameters(t *testing.T) {
 				msDiffGenerator:    msDiffIterFunc,
 				msDiffGenRetriever: msDiffGenRetriever,
 			}
+
 			return t
 		}(),
 	}
@@ -182,6 +184,7 @@ func TestMilestoneDiffReadProtocolParameters(t *testing.T) {
 			readProtoParamsMsOptions := []*iotago.ProtocolParamsMilestoneOpt{}
 			err = protocolStorage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
 				readProtoParamsMsOptions = append(readProtoParamsMsOptions, protoParamsMsOption)
+
 				return true
 			})
 			require.NoError(t, err)
@@ -255,6 +258,7 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 				sepConRetriever:               sepsCollRetriever,
 				protoParamsMsOptionsConsumer:  protoParamsMsOptionsConsumerFunc,
 			}
+
 			return t
 		}(),
 	}
@@ -354,6 +358,7 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 				sepConRetriever:              sepsCollRetriever,
 				protoParamsMsOptionsConsumer: protoParamsMsOptionsConsumerFunc,
 			}
+
 			return t
 		}(),
 	}
@@ -442,6 +447,7 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 				sepConRetriever:               sepsCollRetriever,
 				protoParamsMsOptionsConsumer:  protoParamsMsOptionsConsumerFunc,
 			}
+
 			return t
 		}(),
 	}
@@ -469,6 +475,7 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 					require.NoError(t, snapshotFileWrite.Close())
 
 					snapshotFileCreated = true
+
 					continue
 				}
 
@@ -518,6 +525,7 @@ type sepRetrieverFunc func() iotago.BlockIDs
 
 func newSEPGenerator(count uint16) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 	var generatedSEPs iotago.BlockIDs
+
 	return func() (iotago.BlockID, error) {
 			if count == 0 {
 				return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
@@ -525,6 +533,7 @@ func newSEPGenerator(count uint16) (snapshot.SEPProducerFunc, sepRetrieverFunc) 
 			count--
 			blockID := tpkg.RandBlockID()
 			generatedSEPs = append(generatedSEPs, blockID)
+
 			return blockID, nil
 		}, func() iotago.BlockIDs {
 			return generatedSEPs
@@ -533,8 +542,10 @@ func newSEPGenerator(count uint16) (snapshot.SEPProducerFunc, sepRetrieverFunc) 
 
 func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
 	var generatedSEPs iotago.BlockIDs
+
 	return func(sep iotago.BlockID, targetMilestoneIndex iotago.MilestoneIndex) error {
 			generatedSEPs = append(generatedSEPs, sep)
+
 			return nil
 		}, func() iotago.BlockIDs {
 			return generatedSEPs
@@ -549,6 +560,7 @@ func newProtocolParamsMilestoneOptConsumerFunc() snapshot.ProtocolParamsMileston
 		if _, exists := existingProtoParamsMsOpts[protoParamsMsOption.TargetMilestoneIndex]; exists {
 			return storage.ErrProtocolParamsMilestoneOptAlreadyExists
 		}
+
 		return nil
 	}
 }
@@ -557,6 +569,7 @@ type outputRetrieverFunc func() utxo.Outputs
 
 func newOutputsGenerator(count uint64) (snapshot.OutputProducerFunc, outputRetrieverFunc) {
 	var generatedOutputs utxo.Outputs
+
 	return func() (*utxo.Output, error) {
 			if count == 0 {
 				return nil, nil
@@ -564,6 +577,7 @@ func newOutputsGenerator(count uint64) (snapshot.OutputProducerFunc, outputRetri
 			count--
 			output := tpkg.RandUTXOOutput()
 			generatedOutputs = append(generatedOutputs, output)
+
 			return output, nil
 		}, func() utxo.Outputs {
 			return generatedOutputs
@@ -572,8 +586,10 @@ func newOutputsGenerator(count uint64) (snapshot.OutputProducerFunc, outputRetri
 
 func newOutputCollector() (snapshot.OutputConsumerFunc, outputRetrieverFunc) {
 	var generatedOutputs utxo.Outputs
+
 	return func(o *utxo.Output) error {
 			generatedOutputs = append(generatedOutputs, o)
+
 			return nil
 		}, func() utxo.Outputs {
 			return generatedOutputs
@@ -658,6 +674,7 @@ func newMsDiffGenerator(startIndex iotago.MilestoneIndex, count syncmanager.Mile
 			}
 
 			generatedMsDiffs = append(generatedMsDiffs, msDiff)
+
 			return msDiff, nil
 		}, func() []*snapshot.MilestoneDiff {
 			return generatedMsDiffs
@@ -666,8 +683,10 @@ func newMsDiffGenerator(startIndex iotago.MilestoneIndex, count syncmanager.Mile
 
 func newMsDiffCollector() (snapshot.MilestoneDiffConsumerFunc, msDiffRetrieverFunc) {
 	var generatedMsDiffs []*snapshot.MilestoneDiff
+
 	return func(msDiff *snapshot.MilestoneDiff) error {
 			generatedMsDiffs = append(generatedMsDiffs, msDiff)
+
 			return nil
 		}, func() []*snapshot.MilestoneDiff {
 			return generatedMsDiffs
@@ -705,6 +724,7 @@ func newDeltaSnapshotExtensionGenerator(deltaHeader *snapshot.DeltaSnapshotHeade
 					}
 					startMilestoneIndex++
 					generatedMsDiffs = append(generatedMsDiffs, msDiff)
+
 					return msDiff, nil
 				}, func() (iotago.BlockID, error) {
 
@@ -713,6 +733,7 @@ func newDeltaSnapshotExtensionGenerator(deltaHeader *snapshot.DeltaSnapshotHeade
 						return iotago.EmptyBlockID(), err
 					}
 					generatedSEPs = append(generatedSEPs, sep)
+
 					return sep, nil
 				}
 		}, func() (msDiffRetrieverFunc, sepRetrieverFunc) {
@@ -738,6 +759,7 @@ func fullHeaderEqualFunc(t *testing.T, expected *snapshot.FullSnapshotHeader) sn
 		require.EqualValues(t, expected.OutputCount, actual.OutputCount)
 		require.EqualValues(t, expected.MilestoneDiffCount, actual.MilestoneDiffCount)
 		require.EqualValues(t, expected.SEPCount, actual.SEPCount)
+
 		return nil
 	}
 }
@@ -752,6 +774,7 @@ func deltaHeaderEqualFunc(t *testing.T, expected *snapshot.DeltaSnapshotHeader) 
 		require.EqualValues(t, expected.SEPFileOffset, actual.SEPFileOffset)
 		require.EqualValues(t, expected.MilestoneDiffCount, actual.MilestoneDiffCount)
 		require.EqualValues(t, expected.SEPCount, actual.SEPCount)
+
 		return nil
 	}
 }
@@ -759,6 +782,7 @@ func deltaHeaderEqualFunc(t *testing.T, expected *snapshot.DeltaSnapshotHeader) 
 func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *utxo.TreasuryOutput) snapshot.UnspentTreasuryOutputConsumerFunc {
 	return func(readUnspentTreasuryOutput *utxo.TreasuryOutput) error {
 		require.EqualValues(t, *originUnspentTreasuryOutput, *readUnspentTreasuryOutput)
+
 		return nil
 	}
 }

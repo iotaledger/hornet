@@ -184,6 +184,7 @@ func provide(c *dig.Container) error {
 
 		default:
 			CoreComponent.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", targetEngine)
+
 			return databaseOut{}
 		}
 	}); err != nil {
@@ -236,6 +237,7 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
 		}
+
 		return sync
 	}); err != nil {
 		CoreComponent.LogPanic(err)

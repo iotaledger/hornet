@@ -61,6 +61,7 @@ func (b ReferencedBlocks) BlockIDs() iotago.BlockIDs {
 	for _, rb := range b {
 		blockIDs = append(blockIDs, rb.BlockID)
 	}
+
 	return blockIDs
 }
 
@@ -71,6 +72,7 @@ func (b ReferencedBlocks) IncludedTransactionBlockIDs() iotago.BlockIDs {
 			blockIDs = append(blockIDs, rb.BlockID)
 		}
 	}
+
 	return blockIDs
 }
 
@@ -81,6 +83,7 @@ func (b ReferencedBlocks) ConflictingTransactionBlockIDs() iotago.BlockIDs {
 			blockIDs = append(blockIDs, rb.BlockID)
 		}
 	}
+
 	return blockIDs
 }
 
@@ -91,6 +94,7 @@ func (b ReferencedBlocks) NonTransactionBlockIDs() iotago.BlockIDs {
 			blockIDs = append(blockIDs, rb.BlockID)
 		}
 	}
+
 	return blockIDs
 }
 
@@ -183,6 +187,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				}
 			}
 		}
+
 		return traversalCondition(cachedBlockMeta) // meta pass +1
 	}
 
@@ -211,6 +216,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				IsTransaction: false,
 				Conflict:      storage.ConflictNone,
 			})
+
 			return nil
 		}
 
@@ -233,6 +239,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				if hasSpent {
 					// UTXO already spent, so mark as conflict
 					conflict = storage.ConflictInputUTXOAlreadySpentInThisMilestone
+
 					break
 				}
 
@@ -241,6 +248,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				if hasOutput {
 					// UTXO is in the current ledger mutation, so use it
 					inputOutputs = append(inputOutputs, output)
+
 					continue
 				}
 
@@ -250,8 +258,10 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 					if errors.Is(err, kvstore.ErrKeyNotFound) {
 						// input not found, so mark as invalid tx
 						conflict = storage.ConflictInputUTXONotFound
+
 						break
 					}
+
 					return err
 				}
 
@@ -264,6 +274,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				if !unspent {
 					// output is already spent, so mark as conflict
 					conflict = storage.ConflictInputUTXOAlreadySpent
+
 					break
 				}
 

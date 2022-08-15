@@ -65,6 +65,7 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumPeers int) error {
 			peersResponse, err := p.DebugNodeAPIClient.Peers(context.Background())
 			if err != nil {
 				log.Printf("request error: %s\n", err)
+
 				continue
 			}
 			p.SetPeers(peersResponse)
@@ -82,6 +83,7 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumPeers int) error {
 
 		if min >= minimumPeers {
 			log.Printf("peers: min=%d avg=%.2f\n", min, float64(total)/float64(len(n.Nodes)))
+
 			return nil
 		}
 
@@ -101,6 +103,7 @@ func (n *AutopeeredNetwork) CreatePeer(cfg *AppConfig) (*Node, error) {
 	cfg.Autopeering.EntryNodes = []string{
 		fmt.Sprintf("/ip4/%s/udp/14626/autopeering/%s", ip, n.entryNodePublicKey()),
 	}
+
 	return n.Network.CreateNode(cfg)
 }
 

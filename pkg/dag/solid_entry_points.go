@@ -58,10 +58,12 @@ func ForEachSolidEntryPoint(
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
 				// referenced by a later milestone than targetIndex => solidEntryPoint
 				cachedBlockMeta.Release(true) // meta -1
+
 				return true, nil
 			}
 			cachedBlockMeta.Release(true) // meta -1
 		}
+
 		return false, nil
 	}
 
@@ -90,6 +92,7 @@ func ForEachSolidEntryPoint(
 
 				// collect all blocks that were referenced by that milestone or newer
 				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
+
 				return referenced && at >= milestoneIndex, nil
 			},
 			// consumer

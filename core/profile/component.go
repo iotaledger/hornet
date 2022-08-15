@@ -117,6 +117,7 @@ func loadProfile(profilesConfig *configuration.Configuration) *profile.Profile {
 		}
 		p.Name = profileName
 	}
+
 	return p
 }
 

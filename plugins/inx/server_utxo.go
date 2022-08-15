@@ -20,6 +20,7 @@ func NewLedgerOutput(o *utxo.Output) (*inx.LedgerOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &inx.LedgerOutput{
 		OutputId:                 inx.NewOutputId(o.OutputID()),
 		BlockId:                  inx.NewBlockId(o.BlockID()),
@@ -75,6 +76,7 @@ func NewLedgerUpdateBatchOperationCreated(output *utxo.Output) (*inx.LedgerUpdat
 	if err != nil {
 		return nil, err
 	}
+
 	return &inx.LedgerUpdate{
 		Op: &inx.LedgerUpdate_Created{
 			Created: o,
@@ -87,6 +89,7 @@ func NewLedgerUpdateBatchOperationConsumed(spent *utxo.Spent) (*inx.LedgerUpdate
 	if err != nil {
 		return nil, err
 	}
+
 	return &inx.LedgerUpdate{
 		Op: &inx.LedgerUpdate_Consumed{
 			Consumed: s,
@@ -108,6 +111,7 @@ func NewTreasuryUpdate(index iotago.MilestoneIndex, created *utxo.TreasuryOutput
 			Amount:      consumed.Amount,
 		}
 	}
+
 	return u, nil
 }
 
@@ -137,6 +141,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 		if err != nil {
 			return nil, err
 		}
+
 		return &inx.OutputResponse{
 			LedgerIndex: ledgerIndex,
 			Payload: &inx.OutputResponse_Output{
@@ -153,6 +158,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 	if err != nil {
 		return nil, err
 	}
+
 	return &inx.OutputResponse{
 		LedgerIndex: ledgerIndex,
 		Payload: &inx.OutputResponse_Spent{
@@ -176,6 +182,7 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 		ledgerOutput, err := NewLedgerOutput(output)
 		if err != nil {
 			innerErr = err
+
 			return false
 		}
 		payload := &inx.UnspentOutput{
@@ -184,13 +191,16 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 		}
 		if err := srv.Send(payload); err != nil {
 			innerErr = fmt.Errorf("send error: %w", err)
+
 			return false
 		}
+
 		return true
 	}, utxo.ReadLockLedger(false))
 	if innerErr != nil {
 		return innerErr
 	}
+
 	return err
 }
 
@@ -234,6 +244,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		if err := srv.Send(NewLedgerUpdateBatchEnd(msIndex, len(outputs), len(spents))); err != nil {
 			return fmt.Errorf("send error: %w", err)
 		}
+
 		return nil
 	}
 
@@ -248,6 +259,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 				return err
 			}
 		}
+
 		return nil
 	}
 
@@ -308,6 +320,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		if err != nil {
 			Plugin.LogInfof("sendMilestoneDiffsRange error: %v", err)
 		}
+
 		return err
 	}
 
@@ -317,6 +330,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 
 		if err := createLedgerUpdatePayloadAndSend(index, newOutputs, newSpents); err != nil {
 			Plugin.LogInfof("send error: %v", err)
+
 			return err
 		}
 
@@ -330,6 +344,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 		switch {
 		case err != nil:
 			innerErr = err
+
 			fallthrough
 		case done:
 			cancel()
@@ -371,6 +386,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 			}
 			treasuryUpdateSent = true
 		}
+
 		return nil
 	}
 
@@ -385,6 +401,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 				return err
 			}
 		}
+
 		return nil
 	}
 
@@ -485,6 +502,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		if err != nil {
 			Plugin.LogInfof("sendTreasuryUpdatesRange error: %v", err)
 		}
+
 		return err
 	}
 
@@ -492,6 +510,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		tm := task.Param(1).(*utxo.TreasuryMutationTuple)
 		if err := createTreasuryUpdatePayloadAndSend(index, tm.NewOutput, tm.SpentOutput); err != nil {
 			Plugin.LogInfof("send error: %v", err)
+
 			return err
 		}
 
@@ -505,6 +524,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 		switch {
 		case err != nil:
 			innerErr = err
+
 			fallthrough
 		case done:
 			cancel()
@@ -549,5 +569,6 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 	<-ctx.Done()
 	deps.Tangle.Events.NewReceipt.Detach(closure)
 	wp.Stop()
+
 	return ctx.Err()
 }

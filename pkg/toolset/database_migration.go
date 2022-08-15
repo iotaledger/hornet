@@ -80,6 +80,7 @@ func databaseMigration(args []string) error {
 	copyBytes := func(source []byte) []byte {
 		cpy := make([]byte, len(source))
 		copy(cpy, source)
+
 		return cpy
 	}
 

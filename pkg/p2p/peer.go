@@ -47,6 +47,7 @@ func (p *Peer) InfoSnapshot() *PeerInfoSnapshot {
 		Alias:     p.Alias,
 		Relation:  string(p.Relation),
 	}
+
 	return info
 }
 

@@ -34,6 +34,7 @@ func unreferencedBlockFactory(key []byte, _ []byte) (objectstorage.StorableObjec
 	blockID := iotago.BlockID{}
 	copy(blockID[:], key[4:36])
 	unreferencedBlock := NewUnreferencedBlock(binary.LittleEndian.Uint32(key[:4]), blockID)
+
 	return unreferencedBlock, nil
 }
 
@@ -89,6 +90,7 @@ func (s *Storage) UnreferencedBlockIDs(msIndex iotago.MilestoneIndex, iteratorOp
 		blockID := iotago.BlockID{}
 		copy(blockID[:], key[4:36])
 		unreferencedBlockIDs = append(unreferencedBlockIDs, blockID)
+
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(key))...)
 
@@ -104,6 +106,7 @@ func (s *Storage) ForEachUnreferencedBlock(consumer UnreferencedBlockConsumer, i
 	s.unreferencedBlocksStorage.ForEachKeyOnly(func(key []byte) bool {
 		blockID := iotago.BlockID{}
 		copy(blockID[:], key[4:36])
+
 		return consumer(binary.LittleEndian.Uint32(key[:4]), blockID)
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
@@ -113,6 +116,7 @@ func (ns *NonCachedStorage) ForEachUnreferencedBlock(consumer UnreferencedBlockC
 	ns.storage.unreferencedBlocksStorage.ForEachKeyOnly(func(key []byte) bool {
 		blockID := iotago.BlockID{}
 		copy(blockID[:], key[4:36])
+
 		return consumer(binary.LittleEndian.Uint32(key[:4]), blockID)
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
@@ -121,6 +125,7 @@ func (ns *NonCachedStorage) ForEachUnreferencedBlock(consumer UnreferencedBlockC
 // unreferencedBlock +1.
 func (s *Storage) StoreUnreferencedBlock(msIndex iotago.MilestoneIndex, blockID iotago.BlockID) *CachedUnreferencedBlock {
 	unreferencedBlock := NewUnreferencedBlock(msIndex, blockID)
+
 	return &CachedUnreferencedBlock{CachedObject: s.unreferencedBlocksStorage.Store(unreferencedBlock)}
 }
 
@@ -134,6 +139,7 @@ func (s *Storage) DeleteUnreferencedBlocks(msIndex iotago.MilestoneIndex, iterat
 
 	s.unreferencedBlocksStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
+
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(msIndexBytes))...)
 

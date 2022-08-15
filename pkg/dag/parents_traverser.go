@@ -116,6 +116,7 @@ func (t *ParentsTraverser) processStackParents() error {
 		// block was already processed
 		// remove the block from the stack
 		t.stack.Remove(ele)
+
 		return nil
 	}
 
@@ -137,6 +138,7 @@ func (t *ParentsTraverser) processStackParents() error {
 			t.processed[currentBlockID] = struct{}{}
 			delete(t.checked, currentBlockID)
 			t.stack.Remove(ele)
+
 			return nil
 		}
 	}
@@ -183,6 +185,7 @@ func (t *ParentsTraverser) processStackParents() error {
 		t.processed[currentBlockID] = struct{}{}
 		delete(t.checked, currentBlockID)
 		t.stack.Remove(ele)
+
 		return nil
 	}
 
@@ -191,6 +194,7 @@ func (t *ParentsTraverser) processStackParents() error {
 			// parent was not processed yet
 			// traverse this block
 			t.stack.PushFront(parentBlockID)
+
 			return nil
 		}
 	}

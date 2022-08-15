@@ -91,6 +91,7 @@ func parseAddress(bech32Address string) (iotago.Address, error) {
 			return nil, err
 		}
 	}
+
 	return address, nil
 }
 
@@ -245,6 +246,7 @@ func snapshotGen(args []string) error {
 			return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 		}
 		nullHashAdded = true
+
 		return iotago.EmptyBlockID(), nil
 	}
 
@@ -323,6 +325,7 @@ func snapshotGen(args []string) error {
 		solidEntryPointProducerFunc,
 	); err != nil {
 		_ = fileHandle.Close()
+
 		return fmt.Errorf("couldn't generate snapshot file: %w", err)
 	}
 
@@ -336,6 +339,7 @@ func snapshotGen(args []string) error {
 	}
 
 	fmt.Println("Snapshot creation successful!")
+
 	return nil
 }
 

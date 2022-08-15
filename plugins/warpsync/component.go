@@ -62,6 +62,7 @@ func configure() error {
 	warpSync = gossip.NewWarpSync(ParamsWarpSync.AdvancementRange)
 	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.SyncManager, deps.Requester, true)
 	configureEvents()
+
 	return nil
 }
 
@@ -73,6 +74,7 @@ func run() error {
 	}, daemon.PriorityWarpSync); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
+
 	return nil
 }
 

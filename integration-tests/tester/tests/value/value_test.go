@@ -93,6 +93,7 @@ func TestValue(t *testing.T) {
 		if err != nil {
 			return false
 		}
+
 		return blockMeta.LedgerInclusionState == "included"
 	}, 30*time.Second, 100*time.Millisecond)
 

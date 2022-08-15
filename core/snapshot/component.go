@@ -211,6 +211,7 @@ func run() error {
 			case <-ctx.Done():
 				CoreComponent.LogInfo("Stopping snapshot background worker...")
 				CoreComponent.LogInfo("Stopping snapshot background worker... done")
+
 				return
 
 			case confirmedMilestoneIndex := <-newConfirmedMilestoneSignal:

@@ -36,6 +36,7 @@ func (coo *MockCoo) LastMilestoneIndex() iotago.MilestoneIndex {
 	if lastMilestonePayload == nil {
 		return 0
 	}
+
 	return lastMilestonePayload.Index
 }
 
@@ -76,6 +77,7 @@ func (coo *MockCoo) LastMilestoneParents() iotago.BlockIDs {
 		// return genesis hash
 		return iotago.BlockIDs{iotago.EmptyBlockID()}
 	}
+
 	return lastMilestonePayload.Parents
 }
 
@@ -89,6 +91,7 @@ func (coo *MockCoo) storeBlock(iotaBlock *iotago.Block) iotago.BlockID {
 		// iotaBlock is a milestone
 		coo.te.syncManager.SetLatestMilestoneIndex(milestonePayload.Index)
 	}
+
 	return block.BlockID()
 }
 

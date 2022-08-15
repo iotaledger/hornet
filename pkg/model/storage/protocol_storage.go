@@ -101,6 +101,7 @@ func (s *ProtocolStorage) ProtocolParametersMilestoneOption(msIndex iotago.Miles
 		if !errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve protocol parameters milestone option")
 		}
+
 		return nil, errors.Wrap(NewDatabaseError(err), "protocol parameters milestone option not found in database")
 	}
 
@@ -138,6 +139,7 @@ func (s *ProtocolStorage) ForEachProtocolParameterMilestoneOption(consumer Proto
 		protoParamsMsOption := &iotago.ProtocolParamsMilestoneOpt{}
 		if _, err := protoParamsMsOption.Deserialize(value, serializer.DeSeriModeNoValidation, nil); err != nil {
 			innerErr = errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters milestone option")
+
 			return false
 		}
 
@@ -163,6 +165,7 @@ func (s *ProtocolStorage) ForEachActiveProtocolParameterMilestoneOption(msIndex 
 		protoParamsMsOption := &iotago.ProtocolParamsMilestoneOpt{}
 		if _, err := protoParamsMsOption.Deserialize(value, serializer.DeSeriModeNoValidation, nil); err != nil {
 			innerErr = errors.Wrap(NewDatabaseError(err), "failed to deserialize protocol parameters milestone option")
+
 			return false
 		}
 
@@ -212,6 +215,7 @@ func (s *ProtocolStorage) PruneProtocolParameterMilestoneOptions(pruningIndex io
 		if activationIndex < biggestIndexBeforePruningIndex {
 			if err := s.protocolStore.Delete(key); err != nil {
 				innerErr = err
+
 				return false
 			}
 		}
@@ -232,6 +236,7 @@ func (s *ProtocolStorage) ActiveProtocolParameterMilestoneOptionsHash(msIndex io
 	activeProtoParamsMsOpts := []*iotago.ProtocolParamsMilestoneOpt{}
 	if err := s.ForEachActiveProtocolParameterMilestoneOption(msIndex, func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
 		activeProtoParamsMsOpts = append(activeProtoParamsMsOpts, protoParamsMsOption)
+
 		return true
 	}); err != nil {
 		return nil, fmt.Errorf("failed to iterate over protocol parameters milestone options: %w", err)

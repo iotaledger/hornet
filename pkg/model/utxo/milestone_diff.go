@@ -30,6 +30,7 @@ func milestoneDiffKeyForIndex(msIndex iotago.MilestoneIndex) []byte {
 	m := marshalutil.New(5)
 	m.WriteByte(UTXOStoreKeyPrefixMilestoneDiffs)
 	m.WriteUint32(msIndex)
+
 	return m.Bytes()
 }
 
@@ -56,6 +57,7 @@ func (ms *MilestoneDiff) KVStorableValue() []byte {
 		m.WriteBool(true)
 		m.WriteBytes(ms.TreasuryOutput.MilestoneID[:])
 		m.WriteBytes(ms.SpentTreasuryOutput.MilestoneID[:])
+
 		return m.Bytes()
 	}
 
@@ -156,6 +158,7 @@ func (ms *MilestoneDiff) sortedOutputs() LexicalOrderedOutputs {
 	sortedOutputs := make(LexicalOrderedOutputs, len(ms.Outputs))
 	copy(sortedOutputs, ms.Outputs)
 	sort.Sort(sortedOutputs)
+
 	return sortedOutputs
 }
 
@@ -164,6 +167,7 @@ func (ms *MilestoneDiff) sortedSpents() LexicalOrderedSpents {
 	sortedSpents := make(LexicalOrderedSpents, len(ms.Spents))
 	copy(sortedSpents, ms.Spents)
 	sort.Sort(sortedSpents)
+
 	return sortedSpents
 }
 

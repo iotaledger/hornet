@@ -24,5 +24,6 @@ func (v Versions) Supports(ver byte) bool {
 			return true
 		}
 	}
+
 	return false
 }

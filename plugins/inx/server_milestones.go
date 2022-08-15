@@ -24,6 +24,7 @@ func cachedMilestoneFromRequestOrNil(req *inx.MilestoneRequest) *storage.CachedM
 	if msIndex == 0 {
 		return deps.Storage.CachedMilestoneOrNil(req.GetMilestoneId().Unwrap())
 	}
+
 	return deps.Storage.CachedMilestoneByIndexOrNil(msIndex)
 }
 
@@ -56,6 +57,7 @@ func rawProtocolParametersForIndex(msIndex iotago.MilestoneIndex) (*inx.RawProto
 	if err != nil {
 		return nil, err
 	}
+
 	return &inx.RawProtocolParameters{
 		ProtocolVersion: uint32(milestoneOpt.ProtocolVersion),
 		Params:          milestoneOpt.Params,
@@ -67,7 +69,8 @@ func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) 
 	if cachedMilestone == nil {
 		return nil, status.Error(codes.NotFound, "milestone not found")
 	}
-	defer cachedMilestone.Release(true)                          // milestone -1
+	defer cachedMilestone.Release(true) // milestone -1
+
 	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
 }
 
@@ -81,6 +84,7 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 		if err != nil {
 			Plugin.LogInfof("error creating milestone: %v", err)
 			cancel()
+
 			return
 		}
 		if err := srv.Send(payload); err != nil {
@@ -97,6 +101,7 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 	<-ctx.Done()
 	deps.Tangle.Events.LatestMilestoneChanged.Detach(closure)
 	wp.Stop()
+
 	return ctx.Err()
 }
 
@@ -126,6 +131,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		if err := srv.Send(payload); err != nil {
 			return fmt.Errorf("send error: %w", err)
 		}
+
 		return nil
 	}
 
@@ -147,6 +153,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		if err := srv.Send(payload); err != nil {
 			return fmt.Errorf("send error: %w", err)
 		}
+
 		return nil
 	}
 
@@ -156,6 +163,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 				return err
 			}
 		}
+
 		return nil
 	}
 
@@ -213,6 +221,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		if err != nil {
 			Plugin.LogInfof("sendMilestonesRange error: %v", err)
 		}
+
 		return err
 	}
 
@@ -221,6 +230,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
 		if err := createMilestonePayloadForCachedMilestoneAndSend(cachedMilestone.Retain()); err != nil { // milestone +1
 			Plugin.LogInfof("send error: %v", err)
+
 			return err
 		}
 
@@ -237,6 +247,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		switch {
 		case err != nil:
 			innerErr = err
+
 			fallthrough
 		case done:
 			cancel()
@@ -314,6 +325,7 @@ func (s *INXServer) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_Rea
 			},
 		}
 		copy(payload.Block.Data[:], data[:])
+
 		return srv.Send(payload)
 	})
 }
@@ -330,6 +342,7 @@ func (s *INXServer) ReadMilestoneConeMetadata(req *inx.MilestoneRequest, srv inx
 		if err != nil {
 			return err
 		}
+
 		return srv.Send(payload)
 	})
 }
@@ -356,11 +369,13 @@ func milestoneCone(index iotago.MilestoneIndex, parents iotago.BlockIDs, consume
 					return false, nil
 				}
 			}
+
 			return true, nil
 		},
 		// consumer
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 			defer cachedBlockMeta.Release(true)
+
 			return consumer(cachedBlockMeta.Metadata())
 		},
 		// called on missing parents
@@ -373,7 +388,9 @@ func milestoneCone(index iotago.MilestoneIndex, parents iotago.BlockIDs, consume
 		if errors.Is(err, common.ErrOperationAborted) {
 			return status.Errorf(codes.Unavailable, "traverse parents failed, error: %s", err)
 		}
+
 		return status.Errorf(codes.Internal, "traverse parents failed, error: %s", err)
 	}
+
 	return nil
 }

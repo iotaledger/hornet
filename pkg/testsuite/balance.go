@@ -18,6 +18,7 @@ func ouputOwnerAddress(output *utxo.Output) iotago.Address {
 
 func outputHasSpendingConstraint(output *utxo.Output) bool {
 	conditions := output.Output().UnlockConditionSet()
+
 	return conditions.HasStorageDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
 }
 
@@ -28,11 +29,13 @@ func (te *TestEnvironment) UnspentAddressOutputsWithoutConstraints(address iotag
 		if ownerAddress != nil && address.Equal(ownerAddress) && !outputHasSpendingConstraint(output) {
 			outputs = append(outputs, output)
 		}
+
 		return true
 	}
 	if err := te.UTXOManager().ForEachUnspentOutput(consumerFunc, options...); err != nil {
 		return nil, err
 	}
+
 	return outputs, nil
 }
 
@@ -46,10 +49,12 @@ func (te *TestEnvironment) ComputeAddressBalanceWithoutConstraints(address iotag
 			count++
 			balance += output.Deposit()
 		}
+
 		return true
 	}
 	if err := te.UTXOManager().ForEachUnspentOutput(consumerFunc, options...); err != nil {
 		return 0, 0, err
 	}
+
 	return balance, count, err
 }

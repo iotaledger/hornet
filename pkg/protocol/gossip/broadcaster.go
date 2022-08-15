@@ -53,6 +53,7 @@ exit:
 				}
 
 				proto.SendBlock(broadcast.Data)
+
 				return true
 			})
 		}
@@ -86,6 +87,7 @@ func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
 			return true
 		}
 		proto.Enqueue(heartbeatMsg)
+
 		return true
 	})
 }

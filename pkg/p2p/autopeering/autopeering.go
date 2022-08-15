@@ -68,6 +68,7 @@ func protoStringToBytes(s string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to base58 decode autopeering public key: %w", err)
 	}
+
 	return base58PubKey, nil
 }
 
@@ -75,6 +76,7 @@ func protoBytesToString(bytes []byte) (string, error) {
 	if len(bytes) != ed25519.PublicKeySize {
 		return "", fmt.Errorf("%w: wrong length (bytes to str), is %d (wanted %d)", ErrInvalidMultiAddrPubKeyAutopeering, len(bytes), ed25519.PublicKeySize)
 	}
+
 	return base58.Encode(bytes), nil
 }
 
@@ -82,6 +84,7 @@ func protoValidBytes(bytes []byte) error {
 	if len(bytes) != ed25519.PublicKeySize {
 		return fmt.Errorf("%w: wrong length (bytes to str), is %d (wanted %d)", ErrInvalidMultiAddrPubKeyAutopeering, len(bytes), ed25519.PublicKeySize)
 	}
+
 	return nil
 }
 
@@ -154,6 +157,7 @@ func MultiAddrFromPeeringService(peer *peer.Peer, serviceKey service.Key) (multi
 	if err != nil {
 		return nil, fmt.Errorf("unable to build multi string from hive peer data: %w", err)
 	}
+
 	return ma, nil
 }
 
@@ -190,8 +194,10 @@ func ConvertHivePubKeyToPeerIDOrLog(hivePubKey ed25519.PublicKey, log LogF) *pee
 	peerID, err := ConvertHivePubKeyToPeerID(hivePubKey)
 	if err != nil {
 		log(err.Error())
+
 		return nil
 	}
+
 	return &peerID
 }
 
@@ -201,6 +207,7 @@ func ConvertHivePubKeyToPeerID(hivePubKey ed25519.PublicKey) (peer2.ID, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return peer2.IDFromPublicKey(libp2pPubKey)
 }
 
@@ -210,8 +217,10 @@ func ConvertPeerIDToHiveIdentityOrLog(peer *p2p.Peer, log LogF) *identity.Identi
 	id, err := ConvertPeerIDToHiveIdentity(peer)
 	if err != nil {
 		log(err.Error())
+
 		return nil
 	}
+
 	return id
 }
 
@@ -229,6 +238,7 @@ func ConvertPeerIDToHiveIdentity(peer *p2p.Peer) (*identity.Identity, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to convert raw public key bytes to hive public key: %w", err)
 	}
+
 	return identity.New(hivePubKey), nil
 }
 
@@ -278,6 +288,7 @@ func parseEntryNode(entryNodeMultiAddrStr string, preferIPv6 bool) (entryNode *p
 	services.Update(service.PeeringKey, "udp", port)
 
 	ip := ipAddresses.GetPreferredAddress(preferIPv6)
+
 	return peer.NewPeer(identity.New(*pubKey), ip, services), nil
 }
 
@@ -343,6 +354,7 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 			entryNode, err := parseEntryNode(entryNodeDefinition, preferIPv6)
 			if err != nil {
 				a.LogWarnf("invalid entry node; ignoring: %s, error: %s", entryNodeDefinition, err)
+
 				continue
 			}
 			result = append(result, entryNode)
@@ -381,6 +393,7 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 		if p2pPeering.Network() != "tcp" || !netutil.IsValidPort(p2pPeering.Port()) {
 			return false
 		}
+
 		return true
 	}
 

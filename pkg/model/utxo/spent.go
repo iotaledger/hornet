@@ -97,6 +97,7 @@ func spentStorageKeyForOutputID(outputID iotago.OutputID) []byte {
 	ms := marshalutil.New(35)
 	ms.WriteByte(UTXOStoreKeyPrefixOutputSpent) // 1 byte
 	ms.WriteBytes(outputID[:])                  // 34 bytes
+
 	return ms.Bytes()
 }
 
@@ -109,6 +110,7 @@ func (s *Spent) KVStorableValue() (value []byte) {
 	ms.WriteBytes(s.transactionIDSpent[:]) // 32 bytes
 	ms.WriteUint32(s.msIndexSpent)         // 4 bytes
 	ms.WriteUint32(s.msTimestampSpent)     // 4 bytes
+
 	return ms.Bytes()
 }
 
@@ -156,6 +158,7 @@ func (u *Manager) loadOutputOfSpent(s *Spent) error {
 		return err
 	}
 	s.output = output
+
 	return nil
 }
 
@@ -177,6 +180,7 @@ func (u *Manager) ReadSpentForOutputIDWithoutLocking(outputID iotago.OutputID) (
 	}
 
 	spent.output = output
+
 	return spent, nil
 }
 

@@ -158,6 +158,7 @@ func networkBootstrap(args []string) error {
 	}
 
 	fmt.Println("network bootstrap successful!")
+
 	return nil
 }
 

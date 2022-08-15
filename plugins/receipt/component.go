@@ -52,6 +52,7 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			Plugin.LogPanicf("failed to initialize API: %s", err)
 		}
+
 		return migrator.NewValidator(
 			iotaAPI,
 			ParamsReceipts.Validator.Coordinator.Address,

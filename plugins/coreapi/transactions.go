@@ -27,6 +27,7 @@ func storageBlockByTransactionID(c echo.Context) (*storage.Block, error) {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "output for transaction not found: %s", transactionID.ToHex())
 		}
+
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", transactionID.ToHex())
 	}
 
@@ -44,6 +45,7 @@ func blockByTransactionID(c echo.Context) (*iotago.Block, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return block.Block(), nil
 }
 
@@ -52,5 +54,6 @@ func blockBytesByTransactionID(c echo.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return block.Data(), nil
 }

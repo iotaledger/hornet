@@ -691,8 +691,10 @@ func (s *ProxyStorage) CachedBlock(blockID iotago.BlockID) (*storage.CachedBlock
 
 			return cachedBlock, nil
 		}
+
 		return s.storeProxy.CachedBlock(blockID) // block +1
 	}
+
 	return s.storeTarget.CachedBlock(blockID) // block +1
 }
 
@@ -706,7 +708,8 @@ func (s *ProxyStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.Cac
 	if cachedBlock == nil {
 		return nil, nil
 	}
-	defer cachedBlock.Release(true)          // block -1
+	defer cachedBlock.Release(true) // block -1
+
 	return cachedBlock.CachedMetadata(), nil // meta +1
 }
 

@@ -221,6 +221,7 @@ func configureEvents() {
 		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 		if err != nil {
 			Plugin.LogWarnf("unable to convert discovered autopeering peer to peerID: %s", err)
+
 			return
 		}
 
@@ -231,6 +232,7 @@ func configureEvents() {
 		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 		if err != nil {
 			Plugin.LogWarnf("unable to convert deleted autopeering peer to peerID: %s", err)
+
 			return
 		}
 
@@ -320,6 +322,7 @@ func configureEvents() {
 		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
 		if err != nil {
 			Plugin.LogWarnf("unable to convert outgoing selection autopeering peer to addr info: %s", err)
+
 			return
 		}
 
@@ -341,6 +344,7 @@ func configureEvents() {
 		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
 		if err != nil {
 			Plugin.LogWarnf("unable to convert incoming selection autopeering peer to addr info: %s", err)
+
 			return
 		}
 
@@ -357,6 +361,7 @@ func configureEvents() {
 		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 		if err != nil {
 			Plugin.LogWarnf("unable to convert dropped autopeering peer to peerID: %s", err)
+
 			return
 		}
 
@@ -373,11 +378,13 @@ func configureEvents() {
 
 		if len(peerRelation) == 0 {
 			Plugin.LogWarnf("didn't find autopeered peer %s for disconnecting", peerID.ShortString())
+
 			return
 		}
 
 		if peerRelation != p2p.PeerRelationAutopeered {
 			Plugin.LogWarnf("won't disconnect %s as its relation is not '%s' but '%s'", peerID.ShortString(), p2p.PeerRelationAutopeered, peerRelation)
+
 			return
 		}
 
@@ -421,6 +428,7 @@ func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
 	peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 	if err != nil {
 		Plugin.LogWarnf("unable to convert selection autopeering peer to peerID: %s", err)
+
 		return
 	}
 

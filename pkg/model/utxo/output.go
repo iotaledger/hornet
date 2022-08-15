@@ -76,6 +76,7 @@ func (o Outputs) ToOutputSet() iotago.OutputSet {
 	for _, output := range o {
 		outputSet[output.outputID] = output.output
 	}
+
 	return outputSet
 }
 
@@ -112,6 +113,7 @@ func outputStorageKeyForOutputID(outputID iotago.OutputID) []byte {
 	ms := marshalutil.New(35)
 	ms.WriteByte(UTXOStoreKeyPrefixOutput) // 1 byte
 	ms.WriteBytes(outputID[:])             // 34 bytes
+
 	return ms.Bytes()
 }
 
@@ -208,6 +210,7 @@ func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID iotago.OutputID) (
 	if err := output.kvStorableLoad(u, key, value); err != nil {
 		return nil, err
 	}
+
 	return output, nil
 }
 
@@ -223,6 +226,7 @@ func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID iotago.Out
 	if len(value) <= offset {
 		return nil, errors.New("invalid UTXO output length")
 	}
+
 	return value[offset:], nil
 }
 

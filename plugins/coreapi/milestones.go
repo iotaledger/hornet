@@ -48,6 +48,7 @@ func milestoneByIndex(c echo.Context) (*iotago.Milestone, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return ms.Milestone(), nil
 }
 
@@ -56,6 +57,7 @@ func milestoneByID(c echo.Context) (*iotago.Milestone, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return ms.Milestone(), nil
 }
 
@@ -64,6 +66,7 @@ func milestoneBytesByIndex(c echo.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return ms.Data(), nil
 }
 
@@ -72,6 +75,7 @@ func milestoneBytesByID(c echo.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return ms.Data(), nil
 }
 
@@ -81,6 +85,7 @@ func milestoneUTXOChanges(msIndex iotago.MilestoneIndex) (*milestoneUTXOChangesR
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 		}
+
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 	}
 

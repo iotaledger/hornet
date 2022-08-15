@@ -89,6 +89,7 @@ func (t *Tangle) SolidQueueCheck(
 		func(parentBlockID iotago.BlockID) error {
 			// block does not exist => request missing block
 			blockIDsToRequest[parentBlockID] = struct{}{}
+
 			return nil
 		},
 		// called on solid entry points
@@ -110,6 +111,7 @@ func (t *Tangle) SolidQueueCheck(
 		}
 		requested := t.requester.RequestMultiple(blockIDs, milestoneIndex, true)
 		t.LogWarnf("Stopped solidifier due to missing block -> Requested missing blocks (%d/%d), collect: %v", requested, len(blockIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
+
 		return false, false
 	}
 
@@ -119,10 +121,12 @@ func (t *Tangle) SolidQueueCheck(
 		cachedBlockMeta, err := memcachedTraverserStorage.CachedBlockMetadata(blockID)
 		if err != nil {
 			t.LogPanicf("solidQueueCheck: Get block metadata failed: %v, Error: %w", blockID.ToHex(), err)
+
 			return
 		}
 		if cachedBlockMeta == nil {
 			t.LogPanicf("solidQueueCheck: Block metadata not found: %v", blockID.ToHex())
+
 			return
 		}
 
@@ -140,6 +144,7 @@ func (t *Tangle) SolidQueueCheck(
 	}
 
 	t.LogInfof("Solidifier finished: blocks: %d, collect: %v, solidity %v, propagation: %v, total: %v", blocksChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
+
 	return true, false
 }
 
@@ -150,6 +155,7 @@ func (t *Tangle) newMilestoneSolidificationCtx() (context.Context, context.Cance
 	// milestone solidification can be canceled by node shutdown or external signal
 	ctx, ctxCancel := context.WithCancel(t.shutdownCtx)
 	t.milestoneSolidificationCancelFunc = ctxCancel
+
 	return ctx, ctxCancel
 }
 
@@ -200,6 +206,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		if !(triggerSignal || nextMilestoneSignal || olderMilestoneDetected || newMilestoneReqQueueEmptySignal) {
 			// Do not run solidifier
 			t.solidifierMilestoneIndexLock.RUnlock()
+
 			return
 		}
 		t.solidifierMilestoneIndexLock.RUnlock()
@@ -230,6 +237,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 	if err != nil {
 		// Milestone not found
 		t.LogPanic(storage.ErrMilestoneNotFound)
+
 		return
 	}
 
@@ -237,6 +245,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 	if cachedMilestoneToSolidify == nil {
 		// Milestone not found
 		t.LogPanic(storage.ErrMilestoneNotFound)
+
 		return
 	}
 
@@ -281,6 +290,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 			t.LogInfof("Milestone couldn't be solidified! %d", milestoneIndexToSolidify)
 		}
 		t.setSolidifierMilestoneIndex(0)
+
 		return
 	}
 
@@ -314,6 +324,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		t.setSolidifierMilestoneIndex(0)
 
 		t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
+
 		return
 	}
 
@@ -333,6 +344,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 	snapshotInfo := t.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		t.LogPanic(common.ErrSnapshotInfoNotFound)
+
 		return
 	}
 
@@ -357,8 +369,10 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 					if err := t.receiptService.ValidateWithoutLocking(rt.Receipt); err != nil {
 						if err := common.IsSoftError(err); err != nil && t.receiptService.IgnoreSoftErrors {
 							t.LogWarnf("soft error encountered during receipt validation: %s", err)
+
 							return nil
 						}
+
 						return err
 					}
 				}
@@ -368,6 +382,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 					}
 				}
 			}
+
 			return nil
 		},
 		// Hint: Ledger is write locked
@@ -564,6 +579,7 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 			t.milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, false) // block pass +1
 
 			milestoneFound = true
+
 			return true, nil // we keep searching for all missing milestones
 		},
 		// consumer
@@ -583,5 +599,6 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 	}
 
 	t.LogInfof("searchMissingMilestone finished, found: %v, took: %v", milestoneFound, time.Since(ts).Truncate(time.Millisecond))
+
 	return milestoneFound, nil
 }

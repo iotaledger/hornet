@@ -24,6 +24,7 @@ func RandBytes(length int) []byte {
 	for i := 0; i < length; i++ {
 		b = append(b, byte(rand.Intn(256)))
 	}
+
 	return b
 }
 
@@ -59,6 +60,7 @@ func RandFloat64(max float64) float64 {
 func Rand32ByteHash() [32]byte {
 	var h [32]byte
 	copy(h[:], RandBytes(32))
+
 	return h
 }
 
@@ -74,30 +76,35 @@ func RandOutputID(index ...uint16) iotago.OutputID {
 		panic(err)
 	}
 	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], idx)
+
 	return outputID
 }
 
 func RandBlockID() iotago.BlockID {
 	blockID := iotago.BlockID{}
 	copy(blockID[:], RandBytes(iotago.BlockIDLength))
+
 	return blockID
 }
 
 func RandTransactionID() iotago.TransactionID {
 	transactionID := iotago.TransactionID{}
 	copy(transactionID[:], RandBytes(iotago.TransactionIDLength))
+
 	return transactionID
 }
 
 func RandNFTID() iotago.NFTID {
 	nft := iotago.NFTID{}
 	copy(nft[:], RandBytes(iotago.NFTIDLength))
+
 	return nft
 }
 
 func RandAliasID() iotago.AliasID {
 	alias := iotago.AliasID{}
 	copy(alias[:], RandBytes(iotago.AliasIDLength))
+
 	return alias
 }
 
@@ -116,6 +123,7 @@ func RandAmount() uint64 {
 func RandMilestoneID() iotago.MilestoneID {
 	id := iotago.MilestoneID{}
 	copy(id[:], RandBytes(iotago.MilestoneIDLength))
+
 	return id
 }
 
@@ -125,6 +133,7 @@ func RandAddress(addressType iotago.AddressType) iotago.Address {
 		address := &iotago.Ed25519Address{}
 		addressBytes := RandBytes(32)
 		copy(address[:], addressBytes)
+
 		return address
 	case iotago.AddressNFT:
 		return RandNFTID().ToAddress()
@@ -146,6 +155,7 @@ func RandOutput(outputType iotago.OutputType) iotago.Output {
 	} else {
 		addr = RandAddress(iotago.AddressEd25519)
 	}
+
 	return RandOutputOnAddress(outputType, addr)
 }
 
@@ -250,6 +260,7 @@ func RandReceipt(msIndex iotago.MilestoneIndex, protoParams *iotago.ProtocolPara
 	ed25519Addr := RandAddress(iotago.AddressEd25519)
 	migratedFundsEntry := &iotago.MigratedFundsEntry{Address: ed25519Addr, Deposit: RandAmount()}
 	copy(migratedFundsEntry.TailTransactionHash[:], RandBytes(49))
+
 	return iotago.NewReceiptBuilder(msIndex).
 		AddTreasuryTransaction(&iotago.TreasuryTransaction{
 			Input:  treasuryInput,
@@ -310,5 +321,6 @@ func RandSeed() []byte {
 	if err != nil {
 		panic(err)
 	}
+
 	return b[:]
 }

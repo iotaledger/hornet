@@ -42,6 +42,7 @@ func parseOutputTypeQueryParam(c echo.Context) (*iotago.OutputType, error) {
 		}
 		filteredType = &outputType
 	}
+
 	return filteredType, nil
 }
 
@@ -54,6 +55,7 @@ func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	outputIDs := []string{}
 	appendConsumerFunc := func(output *utxo.Output) bool {
 		outputIDs = append(outputIDs, output.OutputID().ToHex())
+
 		return true
 	}
 
@@ -64,6 +66,7 @@ func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 			if output.OutputType() == *filterType {
 				return appendConsumerFunc(output)
 			}
+
 			return true
 		}
 	}
@@ -87,6 +90,7 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	outputIDs := []string{}
 	appendConsumerFunc := func(output *utxo.Output) bool {
 		outputIDs = append(outputIDs, output.OutputID().ToHex())
+
 		return true
 	}
 
@@ -97,6 +101,7 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 			if output.OutputType() == *filterType {
 				return appendConsumerFunc(output)
 			}
+
 			return true
 		}
 	}
@@ -120,6 +125,7 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	outputIDs := []string{}
 	appendConsumerFunc := func(spent *utxo.Spent) bool {
 		outputIDs = append(outputIDs, spent.OutputID().ToHex())
+
 		return true
 	}
 
@@ -130,6 +136,7 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 			if spent.OutputType() == *filterType {
 				return appendConsumerFunc(spent)
 			}
+
 			return true
 		}
 	}
@@ -156,6 +163,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 		}
+
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 	}
 
@@ -266,6 +274,7 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 				if !startBlockReferenced || (at < startBlockReferencedAt) {
 					entryPoints = append(entryPoints, &entryPoint{BlockID: cachedBlockMeta.Metadata().BlockID().ToHex(), ReferencedByMilestone: at})
+
 					return false, nil
 				}
 			}
@@ -292,12 +301,14 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 		// called on solid entry points
 		func(blockID iotago.BlockID) error {
 			entryPoints = append(entryPoints, &entryPoint{BlockID: blockID.ToHex(), ReferencedByMilestone: entryPointIndex})
+
 			return nil
 		},
 		false); err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "traverse parents failed, error: %s", err)
 		}
+
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "traverse parents failed, error: %s", err)
 	}
 

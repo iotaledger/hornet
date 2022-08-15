@@ -285,6 +285,7 @@ func checkHeartbeats() {
 		// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
 		CoreComponent.LogInfof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
 		peersToReconnect[proto.PeerID] = struct{}{}
+
 		return true
 	})
 

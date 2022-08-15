@@ -44,6 +44,7 @@ func databaseHealth(args []string) error {
 
 		if !dbExists {
 			print(fmt.Sprintf("database %s does not exist (%s)!\n", name, path))
+
 			return nil
 		}
 

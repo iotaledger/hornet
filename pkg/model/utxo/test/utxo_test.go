@@ -38,6 +38,7 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	var outputCount int
 	require.NoError(t, manager.ForEachOutput(func(_ *utxo.Output) bool {
 		outputCount++
+
 		return true
 	}))
 	require.Equal(t, 7, outputCount)
@@ -45,6 +46,7 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	var unspentCount int
 	require.NoError(t, manager.ForEachUnspentOutput(func(_ *utxo.Output) bool {
 		unspentCount++
+
 		return true
 	}))
 	require.Equal(t, 5, unspentCount)
@@ -52,6 +54,7 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	var spentCount int
 	require.NoError(t, manager.ForEachSpentOutput(func(_ *utxo.Spent) bool {
 		spentCount++
+
 		return true
 	}))
 	require.Equal(t, 2, spentCount)
@@ -60,16 +63,19 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 
 	require.NoError(t, manager.ForEachOutput(func(_ *utxo.Output) bool {
 		require.Fail(t, "should not be called")
+
 		return true
 	}))
 
 	require.NoError(t, manager.ForEachUnspentOutput(func(_ *utxo.Output) bool {
 		require.Fail(t, "should not be called")
+
 		return true
 	}))
 
 	require.NoError(t, manager.ForEachSpentOutput(func(_ *utxo.Spent) bool {
 		require.Fail(t, "should not be called")
+
 		return true
 	}))
 }
@@ -141,6 +147,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		_, has := outputByOutputID[output.MapKey()]
 		require.True(t, has)
 		delete(outputByOutputID, output.MapKey())
+
 		return true
 	}))
 	require.Empty(t, outputByOutputID)
@@ -152,6 +159,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		_, has := unspentByOutputID[output.MapKey()]
 		require.True(t, has)
 		delete(unspentByOutputID, output.MapKey())
+
 		return true
 	}))
 	require.Equal(t, 4, unspentCount)
@@ -163,6 +171,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		_, has := spentByOutputID[spent.MapKey()]
 		require.True(t, has)
 		delete(spentByOutputID, spent.MapKey())
+
 		return true
 	}))
 	require.Empty(t, spentByOutputID)
@@ -193,6 +202,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		_, has := outputByOutputID[output.MapKey()]
 		require.True(t, has)
 		delete(outputByOutputID, output.MapKey())
+
 		return true
 	}))
 	require.Empty(t, outputByOutputID)
@@ -201,6 +211,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		_, has := unspentByOutputID[output.MapKey()]
 		require.True(t, has)
 		delete(unspentByOutputID, output.MapKey())
+
 		return true
 	}))
 	require.Empty(t, unspentByOutputID)
@@ -209,6 +220,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		_, has := spentByOutputID[spent.MapKey()]
 		require.True(t, has)
 		delete(spentByOutputID, spent.MapKey())
+
 		return true
 	}))
 	require.Empty(t, spentByOutputID)
