@@ -77,7 +77,13 @@ func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) 
 func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
+		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
+		if !ok {
+			Plugin.LogInfof("send error: expected *storage.CachedMilestone, got %T", task.Param(0))
+			cancel()
+
+			return
+		}
 		defer cachedMilestone.Release(true) // milestone -1
 
 		payload, err := milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
@@ -227,7 +233,15 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 
 	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
 		// no release needed
-		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
+
+		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
+		if !ok {
+			err := fmt.Errorf("expected *storage.CachedMilestone, got %T", task.Param(0))
+			Plugin.LogInfof("send error: %w", err)
+
+			return err
+		}
+
 		if err := createMilestonePayloadForCachedMilestoneAndSend(cachedMilestone.Retain()); err != nil { // milestone +1
 			Plugin.LogInfof("send error: %v", err)
 
@@ -240,7 +254,13 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
+		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
+		if !ok {
+			Plugin.LogInfof("send error: expected *storage.CachedMilestone, got %T", task.Param(0))
+			cancel()
+
+			return
+		}
 		defer cachedMilestone.Release(true) // milestone -1
 
 		done, err := handleRangedSend(&task, cachedMilestone.Milestone().Index(), stream, catchUpFunc, sendFunc)

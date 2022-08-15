@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"container/heap"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -80,7 +81,7 @@ type RequestQueue interface {
 }
 
 // FilterFunc is a function which determines whether a request should be enqueued or not.
-type FilterFunc func(r *Request) bool
+type FilterFunc func(request *Request) bool
 
 const DefaultLatencyResolution = 100
 
@@ -161,7 +162,7 @@ type priorityqueue struct {
 	sync.RWMutex
 }
 
-func (pq *priorityqueue) Next() (r *Request) {
+func (pq *priorityqueue) Next() (request *Request) {
 	pq.Lock()
 	defer pq.Unlock()
 
@@ -175,14 +176,19 @@ func (pq *priorityqueue) Next() (r *Request) {
 		return nil
 	}
 
-	return next.(*Request)
+	nextRequest, ok := next.(*Request)
+	if !ok {
+		panic(fmt.Sprintf("invalid type: expected *Request, got %T", next))
+	}
+
+	return nextRequest
 }
 
-func (pq *priorityqueue) Enqueue(r *Request) bool {
+func (pq *priorityqueue) Enqueue(request *Request) bool {
 	pq.Lock()
 	defer pq.Unlock()
 
-	requestMapKey := r.MapKey()
+	requestMapKey := request.MapKey()
 
 	if _, queued := pq.queued[requestMapKey]; queued {
 		// do not enqueue because it was already queued.
@@ -196,12 +202,12 @@ func (pq *priorityqueue) Enqueue(r *Request) bool {
 		// do not enqueue because it was already processing.
 		return false
 	}
-	if pq.filter != nil && !pq.filter(r) {
+	if pq.filter != nil && !pq.filter(request) {
 		// do not enqueue because it doesn't match the filter.
 		return false
 	}
-	r.EnqueueTime = time.Now()
-	heap.Push(pq, r)
+	request.EnqueueTime = time.Now()
+	heap.Push(pq, request)
 
 	return true
 }
@@ -414,19 +420,29 @@ func (pq *priorityqueue) Swap(i, j int) {
 func (pq *priorityqueue) Push(x interface{}) {
 	pq.queue.Push(x)
 
-	r := x.(*Request)
-	requestMapKey := r.MapKey()
+	request, ok := x.(*Request)
+	if !ok {
+		panic(fmt.Sprintf("invalid type: expected *Request, got %T", x))
+	}
+
+	requestMapKey := request.MapKey()
 
 	// mark as queued and remove from pending
 	delete(pq.pending, requestMapKey)
-	pq.queued[requestMapKey] = r
+	pq.queued[requestMapKey] = request
 }
 
 func (pq *priorityqueue) Pop() interface{} {
 
 	for pq.queue.Len() > 0 {
-		r := pq.queue.Pop().(*Request)
-		requestMapKey := r.MapKey()
+		x := pq.queue.Pop()
+
+		request, ok := x.(*Request)
+		if !ok {
+			panic(fmt.Sprintf("invalid type: expected *Request, got %T", x))
+		}
+
+		requestMapKey := request.MapKey()
 		if _, queued := pq.queued[requestMapKey]; !queued {
 			// the request is not queued anymore
 			// => remove it from the heap and jump to the next entry
@@ -435,9 +451,9 @@ func (pq *priorityqueue) Pop() interface{} {
 
 		// mark as pending and remove from queued
 		delete(pq.queued, requestMapKey)
-		pq.pending[requestMapKey] = r
+		pq.pending[requestMapKey] = request
 
-		return r
+		return request
 	}
 
 	return nil
@@ -468,7 +484,13 @@ func (rh requestHeap) Swap(i, j int) {
 func (rh *requestHeap) Push(x any) {
 	// Push uses pointer receivers because it modifies the slice's length,
 	// not just its contents.
-	*rh = append(*rh, x.(*Request))
+
+	request, ok := x.(*Request)
+	if !ok {
+		panic(fmt.Sprintf("invalid type: expected *Request, got %T", x))
+	}
+
+	*rh = append(*rh, request)
 }
 
 func (rh *requestHeap) Pop() interface{} {

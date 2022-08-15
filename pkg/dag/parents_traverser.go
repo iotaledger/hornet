@@ -110,7 +110,10 @@ func (t *ParentsTraverser) processStackParents() error {
 
 	// load candidate block
 	ele := t.stack.Front()
-	currentBlockID := ele.Value.(iotago.BlockID)
+	currentBlockID, ok := ele.Value.(iotago.BlockID)
+	if !ok {
+		return fmt.Errorf("expected iotago.BlockID, got %T", ele.Value)
+	}
 
 	if _, wasProcessed := t.processed[currentBlockID]; wasProcessed {
 		// block was already processed

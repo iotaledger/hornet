@@ -138,12 +138,18 @@ func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (
 func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		cachedBlock := task.Param(0).(*storage.CachedBlock)
+		cachedBlock, ok := task.Param(0).(*storage.CachedBlock)
+		if !ok {
+			Plugin.LogInfof("send error: expected *storage.CachedBlock, got %T", task.Param(0))
+			cancel()
+
+			return
+		}
 		defer cachedBlock.Release(true) // block -1
 
 		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID(), cachedBlock.Block().Data())
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)
@@ -163,19 +169,25 @@ func (s *INXServer) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksSe
 func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		blockMeta := task.Param(0).(*storage.CachedMetadata)
+		blockMeta, ok := task.Param(0).(*storage.CachedMetadata)
+		if !ok {
+			Plugin.LogInfof("send error: expected *storage.CachedMetadata, got %T", task.Param(0))
+			cancel()
+
+			return
+		}
 		defer blockMeta.Release(true) // meta -1
 
 		payload, err := INXNewBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)
@@ -195,18 +207,24 @@ func (s *INXServer) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSol
 func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToReferencedBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		blockMeta := task.Param(0).(*storage.CachedMetadata)
+		blockMeta, ok := task.Param(0).(*storage.CachedMetadata)
+		if !ok {
+			Plugin.LogInfof("send error: expected *storage.CachedMetadata, got %T", task.Param(0))
+			cancel()
+
+			return
+		}
 		defer blockMeta.Release(true) // meta -1
 
 		payload, err := INXNewBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 
 			return
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)
@@ -226,7 +244,13 @@ func (s *INXServer) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_Listen
 func (s *INXServer) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTipScoreUpdatesServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		tip := task.Param(0).(*tipselect.Tip)
+		tip, ok := task.Param(0).(*tipselect.Tip)
+		if !ok {
+			Plugin.LogInfof("send error: expected *tipselect.Tip, got %T", task.Param(0))
+			cancel()
+
+			return
+		}
 
 		blockMeta := deps.Storage.CachedBlockMetadataOrNil(tip.BlockID)
 		if blockMeta == nil {
@@ -236,13 +260,13 @@ func (s *INXServer) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenT
 
 		payload, err := INXNewBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata(), tip)
 		if err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 
 			return
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)

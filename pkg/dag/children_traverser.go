@@ -3,6 +3,7 @@ package dag
 import (
 	"container/list"
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -93,7 +94,10 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	// load candidate block
 	ele := t.stack.Front()
-	currentBlockID := ele.Value.(iotago.BlockID)
+	currentBlockID, ok := ele.Value.(iotago.BlockID)
+	if !ok {
+		return fmt.Errorf("expected iotago.BlockID, got %T", ele.Value)
+	}
 
 	// remove the block from the stack
 	t.stack.Remove(ele)
