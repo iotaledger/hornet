@@ -713,7 +713,7 @@ func (s *ProxyStorage) MergeStorages() error {
 
 // Cleanup shuts down, flushes and closes the proxy store.
 func (s *ProxyStorage) Cleanup() {
-	s.storeProxy.Shutdown()
+	_ = s.storeProxy.Shutdown()
 }
 
 // StoreBlockInterface

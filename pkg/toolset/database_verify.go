@@ -150,7 +150,7 @@ func verifyDatabase(
 
 	// compare solid entry points in source database and genesis snapshot
 	if err := compareSolidEntryPoints(tangleStoreSource, tangleStoreTemp); err != nil {
-		return nil
+		return err
 	}
 
 	// checkMilestoneCone checks if all blocks in the current milestone cone are found.

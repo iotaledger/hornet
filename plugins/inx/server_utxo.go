@@ -324,12 +324,13 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	}
 
 	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
-		err := sendMilestoneDiffsRange(start, end)
-		if err != nil {
+		if err := sendMilestoneDiffsRange(start, end); err != nil {
 			Plugin.LogInfof("sendMilestoneDiffsRange error: %v", err)
+
+			return err
 		}
 
-		return err
+		return nil
 	}
 
 	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {

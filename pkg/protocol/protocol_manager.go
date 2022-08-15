@@ -74,13 +74,15 @@ func (m *Manager) loadPending(ledgerIndex iotago.MilestoneIndex) {
 	m.pendingLock.Lock()
 	defer m.pendingLock.Unlock()
 
-	m.storage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
+	if err := m.storage.ForEachProtocolParameterMilestoneOption(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) bool {
 		if protoParamsMsOption.TargetMilestoneIndex > ledgerIndex {
 			m.pending = append(m.pending, protoParamsMsOption)
 		}
 
 		return true
-	})
+	}); err != nil {
+		panic(err)
+	}
 }
 
 // SupportedVersions returns a slice of supported protocol versions.

@@ -490,7 +490,7 @@ func (s *Service) closeUnwantedStreamAndClosePeer(stream network.Stream) {
 	// "ClosedStream" notifiee handler fire: this is important, because
 	// we want the remote peer to deregister the stream
 	_ = stream.Reset()
-	s.host.Network().ClosePeer(stream.Conn().RemotePeer())
+	_ = s.host.Network().ClosePeer(stream.Conn().RemotePeer())
 }
 
 // handles the automatic creation of a protocol instance if the given peer
