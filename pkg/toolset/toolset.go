@@ -60,10 +60,8 @@ const (
 	FlagToolSnapGenMintAddress        = "mintAddress"
 	FlagToolSnapGenTreasuryAllocation = "treasuryAllocation"
 
-	FlagToolDatabaseTargetIndex            = "targetIndex"
-	FlagToolDatabaseMergeNodeURL           = "nodeURL"
-	FlagToolDatabaseMergeChronicle         = "chronicleMode"
-	FlagToolDatabaseMergeChronicleKeyspace = "chronicleKeySpace"
+	FlagToolDatabaseTargetIndex  = "targetIndex"
+	FlagToolDatabaseMergeNodeURL = "nodeURL"
 )
 
 const (
