@@ -209,6 +209,10 @@ func verifyDatabase(
 			return err
 		}
 
+		if milestoneManager.VerifyMilestonePayload(milestonePayload) == nil {
+			return fmt.Errorf("milestone payload verification failed: %d", msIndex)
+		}
+
 		// traverse the milestone and collect all blocks that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
 			ctx,
