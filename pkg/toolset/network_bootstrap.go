@@ -191,14 +191,15 @@ func loadEd25519PrivateKeysFromEnvironment(name string) ([]ed25519.PrivateKey, e
 		return nil, fmt.Errorf("environment variable '%s' not set", name)
 	}
 
-	var privateKeys []ed25519.PrivateKey
-	for _, key := range strings.Split(keys, ",") {
+	privateKeysSplitted := strings.Split(keys, ",")
+	privateKeys := make([]ed25519.PrivateKey, len(privateKeysSplitted))
+	for i, key := range privateKeysSplitted {
 		privateKey, err := crypto.ParseEd25519PrivateKeyFromString(key)
 		if err != nil {
 			return nil, fmt.Errorf("environment variable '%s' contains an invalid private key '%s'", name, key)
 
 		}
-		privateKeys = append(privateKeys, privateKey)
+		privateKeys[i] = privateKey
 	}
 
 	return privateKeys, nil

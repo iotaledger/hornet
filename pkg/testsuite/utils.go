@@ -214,10 +214,10 @@ func (b *BlockBuilder) BuildTransactionSendingOutputsAndCalculateRemainder(outpu
 
 func (b *BlockBuilder) BuildTransactionWithInputsAndOutputs(consumedInputs utxo.Outputs, outputs iotago.Outputs, signingWallets []*utils.HDWallet) *Block {
 
-	var walletKeys []iotago.AddressKeys
-	for _, wallet := range signingWallets {
+	walletKeys := make([]iotago.AddressKeys, len(signingWallets))
+	for i, wallet := range signingWallets {
 		inputPrivateKey, _ := wallet.KeyPair()
-		walletKeys = append(walletKeys, iotago.AddressKeys{Address: wallet.Address(), Keys: inputPrivateKey})
+		walletKeys[i] = iotago.AddressKeys{Address: wallet.Address(), Keys: inputPrivateKey}
 	}
 
 	txBuilder := builder.NewTransactionBuilder(b.te.protoParams.NetworkID())

@@ -24,15 +24,13 @@ func compileRouteAsRegex(route string) *regexp.Regexp {
 }
 
 func compileRoutesAsRegexes(routes []string) []*regexp.Regexp {
-	var regexes []*regexp.Regexp
-	for _, route := range routes {
+	regexes := make([]*regexp.Regexp, len(routes))
+	for i, route := range routes {
 		reg := compileRouteAsRegex(route)
 		if reg == nil {
 			Plugin.LogErrorfAndExit("Invalid route in config: %s", route)
-
-			continue
 		}
-		regexes = append(regexes, reg)
+		regexes[i] = reg
 	}
 
 	return regexes
