@@ -232,8 +232,8 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 		return nil, fmt.Errorf("invalid milestone signature: %w", err)
 	}
 
-	var includedTails [][]byte
-	var includedBundles []bundle.Bundle
+	includedTails := make([][]byte, len(confirmation.IncludedBundles))
+	includedBundles := make([]bundle.Bundle, len(confirmation.IncludedBundles))
 	for i, rawTrytes := range confirmation.IncludedBundles {
 		bndl, err := asBundle(rawTrytes)
 		if err != nil {
@@ -243,12 +243,13 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 		if err := bundle.ValidBundle(bndl, true); err != nil {
 			return nil, fmt.Errorf("invalid included bundle %d: %w", i, err)
 		}
-		includedBundles = append(includedBundles, bndl)
+		includedBundles[i] = bndl
+
 		tailBytes, err := trinaryHash(bundle.TailTransactionHash(bndl)).MarshalBinary()
 		if err != nil {
 			return nil, err
 		}
-		includedTails = append(includedTails, tailBytes)
+		includedTails[i] = tailBytes
 	}
 
 	msMerkleHash, err := m.whiteFlagMerkleTreeHash(ms)

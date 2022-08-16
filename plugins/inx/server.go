@@ -116,18 +116,19 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 }
 
 func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.NodeConfiguration, error) {
-	var keyRanges []*inx.MilestoneKeyRange
-	for _, r := range deps.KeyManager.KeyRanges() {
-		keyRanges = append(keyRanges, &inx.MilestoneKeyRange{
+	keyRanges := deps.KeyManager.KeyRanges()
+	inxKeyRanges := make([]*inx.MilestoneKeyRange, len(keyRanges))
+	for i, r := range keyRanges {
+		inxKeyRanges[i] = &inx.MilestoneKeyRange{
 			PublicKey:  r.PublicKey[:],
 			StartIndex: r.StartIndex,
 			EndIndex:   r.EndIndex,
-		})
+		}
 	}
 
 	return &inx.NodeConfiguration{
 		MilestonePublicKeyCount: uint32(deps.MilestonePublicKeyCount),
-		MilestoneKeyRanges:      keyRanges,
+		MilestoneKeyRanges:      inxKeyRanges,
 		BaseToken: &inx.BaseToken{
 			Name:            deps.BaseToken.Name,
 			TickerSymbol:    deps.BaseToken.TickerSymbol,
