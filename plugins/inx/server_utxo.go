@@ -333,8 +333,21 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	}
 
 	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
-		newOutputs := task.Param(1).(utxo.Outputs)
-		newSpents := task.Param(2).(utxo.Spents)
+		newOutputs, ok := task.Param(1).(utxo.Outputs)
+		if !ok {
+			err := fmt.Errorf("expected utxo.Outputs, got %T", task.Param(1))
+			Plugin.LogInfof("send error: %w", err)
+
+			return err
+		}
+
+		newSpents, ok := task.Param(2).(utxo.Spents)
+		if !ok {
+			err := fmt.Errorf("expected utxo.Spents, got %T", task.Param(2))
+			Plugin.LogInfof("send error: %w", err)
+
+			return err
+		}
 
 		if err := createLedgerUpdatePayloadAndSend(index, newOutputs, newSpents); err != nil {
 			Plugin.LogInfof("send error: %v", err)
@@ -518,7 +531,14 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 	}
 
 	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
-		tm := task.Param(1).(*utxo.TreasuryMutationTuple)
+		tm, ok := task.Param(1).(*utxo.TreasuryMutationTuple)
+		if !ok {
+			err := fmt.Errorf("expected *utxo.TreasuryMutationTuple, got %T", task.Param(1))
+			Plugin.LogInfof("send error: %w", err)
+
+			return err
+		}
+
 		if err := createTreasuryUpdatePayloadAndSend(index, tm.NewOutput, tm.SpentOutput); err != nil {
 			Plugin.LogInfof("send error: %v", err)
 
@@ -560,7 +580,14 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenToMigrationReceiptsServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		receipt := task.Param(0).(*iotago.ReceiptMilestoneOpt)
+		receipt, ok := task.Param(0).(*iotago.ReceiptMilestoneOpt)
+		if !ok {
+			Plugin.LogInfof("send error: expected *iotago.ReceiptMilestoneOpt, got %T", task.Param(0))
+			cancel()
+
+			return
+		}
+
 		payload, err := inx.WrapReceipt(receipt)
 		if err != nil {
 			Plugin.LogInfof("send error: %v", err)

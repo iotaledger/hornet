@@ -303,7 +303,10 @@ func createInitialMilestone(dbStorage *storage.Storage, signer signingprovider.M
 		return nil, fmt.Errorf("failed to create milestone: %w", err)
 	}
 
-	milestonePayload := milestoneBlock.Payload.(*iotago.Milestone)
+	milestonePayload, ok := milestoneBlock.Payload.(*iotago.Milestone)
+	if !ok {
+		return nil, fmt.Errorf("wrong milestone payload type: (expected *iotago.Milestone, got %T)", milestoneBlock.Payload)
+	}
 
 	milestoneID, err := milestonePayload.ID()
 	if err != nil {

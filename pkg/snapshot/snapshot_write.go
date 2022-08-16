@@ -117,7 +117,12 @@ func NewSEPsProducer(
 			return iotago.EmptyBlockID(), ErrNoMoreSEPToProduce
 		}
 
-		return obj.(iotago.BlockID), nil
+		blockID, ok := obj.(iotago.BlockID)
+		if !ok {
+			return iotago.EmptyBlockID(), fmt.Errorf("expected iotago.BlockID, got %T", obj)
+		}
+
+		return blockID, nil
 	}
 }
 
@@ -147,7 +152,12 @@ func NewCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 			return nil, err
 		}
 
-		return obj.(*utxo.Output), nil
+		output, ok := obj.(*utxo.Output)
+		if !ok {
+			return nil, fmt.Errorf("expected *utxo.Output, got %T", obj)
+		}
+
+		return output, nil
 	}
 }
 
@@ -264,7 +274,12 @@ func NewMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 			return nil, err
 		}
 
-		return obj.(*MilestoneDiff), nil
+		msdiff, ok := obj.(*MilestoneDiff)
+		if !ok {
+			return nil, fmt.Errorf("expected *MilestoneDiff, got %T", obj)
+		}
+
+		return msdiff, nil
 	}
 }
 
@@ -689,7 +704,12 @@ func createFullSnapshotFromMergedSnapshotStorageState(dbStorage *storage.Storage
 			}
 			sepsCount++
 
-			return obj.(iotago.BlockID), nil
+			blockID, ok := obj.(iotago.BlockID)
+			if !ok {
+				return iotago.EmptyBlockID(), fmt.Errorf("expected iotago.BlockID, got %T", obj)
+			}
+
+			return blockID, nil
 		}
 	}()
 

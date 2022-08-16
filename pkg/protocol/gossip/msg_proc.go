@@ -152,10 +152,23 @@ func NewMessageProcessor(
 	)
 
 	proc.wp = workerpool.New(func(task workerpool.Task) {
-		p := task.Param(0).(*Protocol)
-		data := task.Param(2).([]byte)
 
-		switch task.Param(1).(message.Type) {
+		p, ok := task.Param(0).(*Protocol)
+		if !ok {
+			panic(fmt.Sprintf("invalid type: expected *Protocol, got %T", task.Param(0)))
+		}
+
+		data, ok := task.Param(2).([]byte)
+		if !ok {
+			panic(fmt.Sprintf("invalid type: expected []byte, got %T", task.Param(2)))
+		}
+
+		msgType, ok := task.Param(1).(message.Type)
+		if !ok {
+			panic(fmt.Sprintf("invalid type: expected message.Type, got %T", task.Param(1)))
+		}
+
+		switch msgType {
 		case MessageTypeBlock:
 			proc.processBlockData(p, data)
 		case MessageTypeBlockRequest:

@@ -89,7 +89,10 @@ func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Conte
 				return err
 			}
 
-			token := c.Get("jwt").(*jwt.Token)
+			token, ok := c.Get("jwt").(*jwt.Token)
+			if !ok {
+				return fmt.Errorf("expected *jwt.Token, got %T", c.Get("jwt"))
+			}
 
 			// validate the signing method we expect
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
