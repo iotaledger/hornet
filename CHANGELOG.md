@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-beta.6] - 16.08.2022
+
+## Removed
+    - Remove chronicle compatibility mode in toolset (#1678) 
+
+### Changed
+    - Fix for the hornet-nest release pipeline
+    - Enable prometheus for inx-dashboard in the docker setup
+    - Fix formatting linter warnings (#1675) 
+    - Fix linter warnings and improve code readability (#1676) 
+    - Add linter ignore rules in the code (#1677) 
+    - Rename prometheus topics to fix linter warnings (#1679) 
+    - Fix forcetypeassert linter warnings (#1680) 
+    - Preallocate slices (#1684) 
+    - Remove unused parameters (#1685) 
+    - Add Grafana dashboard (#1674)
+    - Fix hornet-nest not properly exposing the 9029 INX port
+    - Fix protocol params being loaded twice for the same index in full snapshots (#1672)
+    - Allow targetScore to be zero in attacher (#1689) 
+    - Configuring reviewdog to nag more (#1638)
+
+### Added
+    - Add additional genesisAddresses parameter to snap-gen (#1666)
+
+
 ## [2.0.0-beta.5] - 09.08.2022
 
 ### Changed

@@ -53,8 +53,8 @@ Once you have completed all the installation [requirements](#requirements), you 
 ```sh
 mkdir hornet
 cd hornet
-curl -L -O "https://github.com/iotaledger/hornet/releases/download/v2.0.0-beta.5/HORNET-2.0.0-beta.5-docker.tar.gz"
-tar -zxf HORNET-2.0.0-beta.5-docker.tar.gz
+curl -L -O "https://github.com/iotaledger/hornet/releases/download/v2.0.0-beta.6/HORNET-2.0.0-beta.6-docker.tar.gz"
+tar -zxf HORNET-2.0.0-beta.6-docker.tar.gz
 ```
 
 ## Prepare
