@@ -87,13 +87,15 @@ func (t *Tangle) BlockAttacher(opts ...BlockAttacherOption) *BlockAttacher {
 
 func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block) (iotago.BlockID, error) {
 
+	targetScore := a.tangle.protocolManager.Current().MinPoWScore
+
 	var tipSelFunc inxpow.RefreshTipsFunc
 
 	if len(iotaBlock.Parents) == 0 {
 		if a.opts.tipSelFunc == nil {
 			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents given and node tipselection disabled")
 		}
-		if a.opts.powHandler == nil {
+		if a.opts.powHandler == nil && targetScore != 0 {
 			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents given and node PoW is disabled")
 		}
 		tipSelFunc = a.opts.tipSelFunc
@@ -111,13 +113,13 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 		iotaBlock.Nonce = 0
 
 	default:
-		if iotaBlock.Nonce == 0 {
+		if iotaBlock.Nonce == 0 && targetScore != 0 {
 			score, err := iotaBlock.POW()
 			if err != nil {
 				return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
 			}
 
-			if score < float64(a.tangle.protocolManager.Current().MinPoWScore) {
+			if score < float64(targetScore) {
 				if a.opts.powHandler == nil {
 					return iotago.EmptyBlockID(), ErrBlockAttacherPoWNotAvailable
 				}
@@ -131,7 +133,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 				}
 
 				ts := time.Now()
-				blockSize, err := a.opts.powHandler.DoPoW(powCtx, iotaBlock, a.tangle.protocolManager.Current().MinPoWScore, powWorkerCount, tipSelFunc)
+				blockSize, err := a.opts.powHandler.DoPoW(powCtx, iotaBlock, targetScore, powWorkerCount, tipSelFunc)
 				if err != nil {
 					return iotago.EmptyBlockID(), err
 				}
