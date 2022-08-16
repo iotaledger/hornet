@@ -98,7 +98,7 @@ func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.
 		ProtocolParameters       *iotago.ProtocolParameters `json:"protocolParameters"`
 		OutputCount              uint64                     `json:"outputCount"`
 		MilestoneDiffCount       uint32                     `json:"milestoneDiffCount"`
-		SEPCount                 uint16                     `json:"solidEntryPointsCount"`
+		SolidEntryPointsCount    uint16                     `json:"solidEntryPointsCount"`
 	}{
 		SnapshotName:             name,
 		FilePath:                 path,
@@ -113,7 +113,7 @@ func printFullSnapshotHeaderInfo(name string, path string, fullHeader *snapshot.
 		ProtocolParameters:       fullHeaderProtoParams,
 		OutputCount:              fullHeader.OutputCount,
 		MilestoneDiffCount:       fullHeader.MilestoneDiffCount,
-		SEPCount:                 fullHeader.SEPCount,
+		SolidEntryPointsCount:    fullHeader.SEPCount,
 	}
 
 	return printJSON(result)
@@ -130,9 +130,9 @@ func printDeltaSnapshotHeaderInfo(name string, path string, deltaHeader *snapsho
 		TargetMilestoneIndex          iotago.MilestoneIndex `json:"targetMilestoneIndex"`
 		TargetMilestoneTimestamp      time.Time             `json:"targetMilestoneTimestamp"`
 		FullSnapshotTargetMilestoneID string                `json:"fullSnapshotTargetMilestoneId"`
-		SEPFileOffset                 int64                 `json:"solidEntryPointsFileOffset"`
+		SolidEntryPointsFileOffset    int64                 `json:"solidEntryPointsFileOffset"`
 		MilestoneDiffCount            uint32                `json:"milestoneDiffCount"`
-		SEPCount                      uint16                `json:"solidEntryPointsCount"`
+		SolidEntryPointsCount         uint16                `json:"solidEntryPointsCount"`
 	}{
 		SnapshotName:                  name,
 		FilePath:                      path,
@@ -141,9 +141,9 @@ func printDeltaSnapshotHeaderInfo(name string, path string, deltaHeader *snapsho
 		TargetMilestoneIndex:          deltaHeader.TargetMilestoneIndex,
 		TargetMilestoneTimestamp:      time.Unix(int64(deltaHeader.TargetMilestoneTimestamp), 0),
 		FullSnapshotTargetMilestoneID: deltaHeader.FullSnapshotTargetMilestoneID.ToHex(),
-		SEPFileOffset:                 deltaHeader.SEPFileOffset,
+		SolidEntryPointsFileOffset:    deltaHeader.SEPFileOffset,
 		MilestoneDiffCount:            deltaHeader.MilestoneDiffCount,
-		SEPCount:                      deltaHeader.SEPCount,
+		SolidEntryPointsCount:         deltaHeader.SEPCount,
 	}
 
 	return printJSON(result)
