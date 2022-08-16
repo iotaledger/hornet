@@ -58,6 +58,8 @@ var (
 	syncedAtStartup    = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
 	revalidateDatabase = flag.Bool(CfgTangleRevalidateDatabase, false, "revalidate the database on startup if corrupted")
 
+	// ErrDatabaseRevalidationFailed is return when the database revalidation failed.
+	//
 	//nolint:revive // this error message is shown to the user
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new snapshot.")
 

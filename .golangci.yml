@@ -14,14 +14,96 @@ linters-settings:
         check-shadowing: false
     misspell:
         locale: US
+    staticcheck:
+        checks: ["all"]
+    stylecheck:
+        initialisms: ["ACL", "API", "ASCII", "CPU", "CSS", "DNS", "EOF", "GUID", "HTML", "HTTP", "HTTPS", "ID", "IP", "JSON", "QPS", "RAM", "RPC", "SLA", "SMTP", "SQL", "SSH", "TCP", "TLS", "TTL", "UDP", "UI", "GID", "UID", "UUID", "URI", "URL", "UTF8", "VM", "XML", "XMPP", "XSRF", "XSS", "SIP", "RTP", "AMQP", "DB", "TS"]
 
 linters:
     enable:
-        - misspell
-        - gofmt
-        - goimports
-        - govet
-    disable:
+        - deadcode
         - errcheck
-        - gochecknoglobals
+        - gosimple
+        - govet
+        - ineffassign
+        - staticcheck
+        - typecheck
+        - unused
+        - varcheck
+        - asasalint
+        - asciicheck
+        - bidichk
+        - bodyclose
+        #- containedctx
+        - contextcheck
+        - decorder
+        - depguard
+        - dogsled
+        #- dupl
+        - durationcheck
+        - errchkjson
+        - errname
+        #- errorlint
+        - execinquery
+        #- exhaustive
+        #- exhaustruct
+        - exportloopref
+        - forcetypeassert
+        - goconst
+        #- gocritic
+        - godot
+        #- godox
+        #- goerr113
+        - gofmt
+        - goheader
+        - goimports
         - golint
+        #- gomnd
+        - gomoddirectives
+        - gomodguard
+        - goprintffuncname
+        - gosec
+        - grouper
+        - ifshort
+        - importas
+        #- interfacer
+        #- makezero
+        #- maligned
+        - misspell
+        #- nakedret
+        - nilerr
+        - nilnil
+        - nlreturn
+        - noctx
+        #- nonamedreturns
+        #- nosnakecase
+        #- nosprintfhostport
+        - prealloc
+        - predeclared
+        - promlinter
+        - revive
+        - rowserrcheck
+        #- scopelint
+        - sqlclosecheck
+        - structcheck
+        - stylecheck
+        - tagliatelle
+        - tenv
+        #- testpackage
+        #- thelper
+        - tparallel
+        - unconvert
+        - unparam
+        - usestdlibvars
+        #- varnamelen
+        - wastedassign
+
+issues:
+    # Maximum issues count per one linter.
+    # Set to 0 to disable.
+    # Default: 50
+    max-issues-per-linter: 0
+    # Maximum count of issues with the same text.
+    # Set to 0 to disable.
+    # Default: 3
+    max-same-issues: 0

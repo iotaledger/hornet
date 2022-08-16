@@ -177,7 +177,8 @@ func writeFileServiceDiscoveryFile() {
 	}
 
 	// this truncates an existing file
-	if err := os.WriteFile(path, j, 0666); err != nil {
+	//nolint:gosec // users should be able to read the file
+	if err := os.WriteFile(path, j, 0o640); err != nil {
 		Plugin.LogPanic("unable to write file service discovery file:", err)
 	}
 
