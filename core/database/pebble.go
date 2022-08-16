@@ -10,8 +10,8 @@ import (
 func newPebble(path string, metrics *metrics.DatabaseMetrics) *database.Database {
 
 	dbEvents := &database.Events{
-		DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
-		DatabaseCompaction: events.NewEvent(events.BoolCaller),
+		Cleanup:    events.NewEvent(database.CleanupCaller),
+		Compaction: events.NewEvent(events.BoolCaller),
 	}
 
 	reportCompactionRunning := func(running bool) {
@@ -19,7 +19,7 @@ func newPebble(path string, metrics *metrics.DatabaseMetrics) *database.Database
 		if running {
 			metrics.CompactionCount.Inc()
 		}
-		dbEvents.DatabaseCompaction.Trigger(running)
+		dbEvents.Compaction.Trigger(running)
 	}
 
 	db, err := database.NewPebbleDB(path, reportCompactionRunning, true)

@@ -41,7 +41,7 @@ func init() {
 var (
 	Plugin  *app.Plugin
 	deps    dependencies
-	jwtAuth *jwt.JWTAuth
+	jwtAuth *jwt.Auth
 )
 
 type dependencies struct {

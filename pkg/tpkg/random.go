@@ -7,22 +7,70 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"sync"
+	"time"
 
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+var (
+	//nolint:gosec // we do not care about weak random numbers here
+	seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	randLock   = &sync.Mutex{}
+)
+
+func RandomRead(p []byte) (n int, err error) {
+	// Rand needs to be locked: https://github.com/golang/go/issues/3611
+	randLock.Lock()
+	defer randLock.Unlock()
+
+	return seededRand.Read(p)
+}
+
+func RandomIntn(n int) int {
+	// Rand needs to be locked: https://github.com/golang/go/issues/3611
+	randLock.Lock()
+	defer randLock.Unlock()
+
+	return seededRand.Intn(n)
+}
+
+func RandomInt31n(n int32) int32 {
+	// Rand needs to be locked: https://github.com/golang/go/issues/3611
+	randLock.Lock()
+	defer randLock.Unlock()
+
+	return seededRand.Int31n(n)
+}
+
+func RandomInt63n(n int64) int64 {
+	// Rand needs to be locked: https://github.com/golang/go/issues/3611
+	randLock.Lock()
+	defer randLock.Unlock()
+
+	return seededRand.Int63n(n)
+}
+
+func RandomFloat64() float64 {
+	// Rand needs to be locked: https://github.com/golang/go/issues/3611
+	randLock.Lock()
+	defer randLock.Unlock()
+
+	return seededRand.Float64()
+}
+
 // RandByte returns a random byte.
 func RandByte() byte {
-	return byte(rand.Intn(256))
+	return byte(RandomIntn(256))
 }
 
 // RandBytes returns length amount random bytes.
 func RandBytes(length int) []byte {
 	var b []byte
 	for i := 0; i < length; i++ {
-		b = append(b, byte(rand.Intn(256)))
+		b = append(b, byte(RandomIntn(256)))
 	}
 
 	return b
@@ -34,27 +82,27 @@ func RandString(length int) string {
 
 // RandUint8 returns a random uint8.
 func RandUint8(max uint8) uint8 {
-	return uint8(rand.Int31n(int32(max)))
+	return uint8(RandomInt31n(int32(max)))
 }
 
 // RandUint16 returns a random uint16.
 func RandUint16(max uint16) uint16 {
-	return uint16(rand.Int31n(int32(max)))
+	return uint16(RandomInt31n(int32(max)))
 }
 
 // RandUint32 returns a random uint32.
 func RandUint32(max uint32) uint32 {
-	return uint32(rand.Int63n(int64(max)))
+	return uint32(RandomInt63n(int64(max)))
 }
 
 // RandUint64 returns a random uint64.
 func RandUint64(max uint64) uint64 {
-	return uint64(rand.Int63n(int64(uint32(max))))
+	return uint64(RandomInt63n(int64(uint32(max))))
 }
 
 // RandFloat64 returns a random float64.
 func RandFloat64(max float64) float64 {
-	return rand.Float64() * max
+	return RandomFloat64() * max
 }
 
 func Rand32ByteHash() [32]byte {
@@ -71,7 +119,7 @@ func RandOutputID(index ...uint16) iotago.OutputID {
 	}
 
 	var outputID iotago.OutputID
-	_, err := rand.Read(outputID[:iotago.TransactionIDLength])
+	_, err := RandomRead(outputID[:iotago.TransactionIDLength])
 	if err != nil {
 		panic(err)
 	}
@@ -148,7 +196,7 @@ func RandAddress(addressType iotago.AddressType) iotago.Address {
 }
 
 func RandOutputType() iotago.OutputType {
-	return iotago.OutputType(byte(rand.Intn(3) + 3))
+	return iotago.OutputType(byte(RandomIntn(3) + 3))
 }
 
 func RandOutput(outputType iotago.OutputType) iotago.Output {
@@ -325,8 +373,7 @@ const seedLength = ed25519.SeedSize
 
 func RandSeed() []byte {
 	var b [seedLength]byte
-	_, err := rand.Read(b[:])
-	if err != nil {
+	if _, err := RandomRead(b[:]); err != nil {
 		panic(err)
 	}
 

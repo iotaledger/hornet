@@ -80,7 +80,7 @@ type dependencies struct {
 	DatabaseEngine            database.Engine `name:"databaseEngine"`
 	AutopeeringRunAsEntryNode bool            `name:"autopeeringRunAsEntryNode"`
 	PeeringManager            *p2p.Manager    `optional:"true"`
-	AutopeeringManager        *autopeering.AutopeeringManager
+	AutopeeringManager        *autopeering.Manager
 }
 
 func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error {
@@ -139,8 +139,8 @@ func provide(c *dig.Container) error {
 		TargetNetworkName string `name:"targetNetworkName"`
 	}
 
-	if err := c.Provide(func(deps autopeeringDeps) *autopeering.AutopeeringManager {
-		return autopeering.NewAutopeeringManager(
+	if err := c.Provide(func(deps autopeeringDeps) *autopeering.Manager {
+		return autopeering.NewManager(
 			Plugin.Logger(),
 			ParamsAutopeering.BindAddress,
 			ParamsAutopeering.EntryNodes,

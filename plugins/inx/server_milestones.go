@@ -64,7 +64,7 @@ func rawProtocolParametersForIndex(msIndex iotago.MilestoneIndex) (*inx.RawProto
 	}, nil
 }
 
-func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*inx.Milestone, error) {
+func (s *Server) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*inx.Milestone, error) {
 	cachedMilestone := cachedMilestoneFromRequestOrNil(req) // milestone +1
 	if cachedMilestone == nil {
 		return nil, status.Error(codes.NotFound, "milestone not found")
@@ -74,9 +74,11 @@ func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) 
 	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
 }
 
-func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
+func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
 		if !ok {
 			Plugin.LogInfof("send error: expected *storage.CachedMilestone, got %T", task.Param(0))
@@ -97,7 +99,7 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
-		task.Return(nil)
+
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
 		wp.Submit(milestone)
@@ -111,7 +113,7 @@ func (s *INXServer) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_Listen
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
+func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo == nil {
@@ -231,7 +233,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		return err
 	}
 
-	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
+	sendFunc := func(task *workerpool.Task, _ iotago.MilestoneIndex) error {
 		// no release needed
 
 		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
@@ -254,6 +256,8 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
 		if !ok {
 			Plugin.LogInfof("send error: expected *storage.CachedMilestone, got %T", task.Param(0))
@@ -267,13 +271,12 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 		switch {
 		case err != nil:
 			innerErr = err
+			cancel()
 
-			fallthrough
 		case done:
 			cancel()
 		}
 
-		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
@@ -289,7 +292,7 @@ func (s *INXServer) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, 
 	return innerErr
 }
 
-func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequest) (*inx.WhiteFlagResponse, error) {
+func (s *Server) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequest) (*inx.WhiteFlagResponse, error) {
 
 	requestedIndex := req.GetMilestoneIndex()
 	requestedTimestamp := req.GetMilestoneTimestamp()
@@ -318,7 +321,7 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 	}, nil
 }
 
-func (s *INXServer) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_ReadMilestoneConeServer) error {
+func (s *Server) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_ReadMilestoneConeServer) error {
 	cachedMilestone := cachedMilestoneFromRequestOrNil(req) // milestone +1
 	if cachedMilestone == nil {
 		return status.Error(codes.NotFound, "milestone not found")
@@ -332,7 +335,7 @@ func (s *INXServer) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_Rea
 		}
 		defer cachedBlock.Release(true)
 
-		meta, err := INXNewBlockMetadata(metadata.BlockID(), metadata)
+		meta, err := NewINXBlockMetadata(metadata.BlockID(), metadata)
 		if err != nil {
 			return err
 		}
@@ -350,7 +353,7 @@ func (s *INXServer) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_Rea
 	})
 }
 
-func (s *INXServer) ReadMilestoneConeMetadata(req *inx.MilestoneRequest, srv inx.INX_ReadMilestoneConeMetadataServer) error {
+func (s *Server) ReadMilestoneConeMetadata(req *inx.MilestoneRequest, srv inx.INX_ReadMilestoneConeMetadataServer) error {
 	cachedMilestone := cachedMilestoneFromRequestOrNil(req) // milestone +1
 	if cachedMilestone == nil {
 		return status.Error(codes.NotFound, "milestone not found")
@@ -358,7 +361,7 @@ func (s *INXServer) ReadMilestoneConeMetadata(req *inx.MilestoneRequest, srv inx
 	defer cachedMilestone.Release(true) // milestone -1
 
 	return milestoneCone(cachedMilestone.Milestone().Index(), cachedMilestone.Milestone().Parents(), func(metadata *storage.BlockMetadata) error {
-		payload, err := INXNewBlockMetadata(metadata.BlockID(), metadata)
+		payload, err := NewINXBlockMetadata(metadata.BlockID(), metadata)
 		if err != nil {
 			return err
 		}

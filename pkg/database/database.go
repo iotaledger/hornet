@@ -27,12 +27,12 @@ var (
 	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
 )
 
-type DatabaseCleanup struct {
+type Cleanup struct {
 	Start time.Time
 	End   time.Time
 }
 
-func (c *DatabaseCleanup) MarshalJSON() ([]byte, error) {
+func (c *Cleanup) MarshalJSON() ([]byte, error) {
 
 	cleanup := struct {
 		Start int64 `json:"start"`
@@ -53,14 +53,14 @@ func (c *DatabaseCleanup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(cleanup)
 }
 
-func DatabaseCleanupCaller(handler interface{}, params ...interface{}) {
+func CleanupCaller(handler interface{}, params ...interface{}) {
 	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(*DatabaseCleanup))(params[0].(*DatabaseCleanup))
+	handler.(func(*Cleanup))(params[0].(*Cleanup))
 }
 
 type Events struct {
-	DatabaseCleanup    *events.Event
-	DatabaseCompaction *events.Event
+	Cleanup    *events.Event
+	Compaction *events.Event
 }
 
 // Database holds the underlying KVStore and database specific functions.

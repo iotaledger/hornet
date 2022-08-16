@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-// SnapshotMetrics holds metrics about a snapshot creation run.
-type SnapshotMetrics struct {
+// Metrics holds metrics about a snapshot creation run.
+type Metrics struct {
 	DurationReadLockLedger                time.Duration
 	DurationInit                          time.Duration
 	DurationSetSnapshotInfo               time.Duration

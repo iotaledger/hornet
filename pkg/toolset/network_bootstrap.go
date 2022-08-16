@@ -32,8 +32,8 @@ import (
 // CoordinatorState is the JSON representation of a coordinator state.
 type CoordinatorState struct {
 	LatestMilestoneIndex   iotago.MilestoneIndex `json:"latestMilestoneIndex"`
-	LatestMilestoneBlockID string                `json:"latestMilestoneBlockID"`
-	LatestMilestoneID      string                `json:"latestMilestoneID"`
+	LatestMilestoneBlockID string                `json:"latestMilestoneBlockId"`
+	LatestMilestoneID      string                `json:"latestMilestoneId"`
 	LatestMilestoneTime    int64                 `json:"latestMilestoneTime"`
 }
 
@@ -106,7 +106,7 @@ func networkBootstrap(args []string) error {
 		return fmt.Errorf("'%s' (%s) already exists", FlagToolCoordinatorStatePath, cooStatePath)
 	}
 
-	dbEngine, err := database.DatabaseEngineFromStringAllowed(*databaseEngineFlag, database.EnginePebble, database.EngineRocksDB)
+	dbEngine, err := database.EngineFromStringAllowed(*databaseEngineFlag, database.EnginePebble, database.EngineRocksDB)
 	if err != nil {
 		return err
 	}
@@ -164,10 +164,9 @@ func networkBootstrap(args []string) error {
 
 func getKeyManagerAndMilestonePublicKeyCountFromConfigFile(filePath string) (*keymanager.KeyManager, int, error) {
 
-	_, err := loadConfigFile(filePath, map[string]any{
+	if err := loadConfigFile(filePath, map[string]any{
 		"protocol": protocfg.ParamsProtocol,
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, 0, err
 	}
 

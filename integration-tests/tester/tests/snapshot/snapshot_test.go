@@ -1,5 +1,5 @@
-//nolint:forcetypeassert // we don't care about type assertions in tests
-package snapshot
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct // we don't care about these linters in test cases
+package snapshot_test
 
 import (
 	"context"

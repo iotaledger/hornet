@@ -23,8 +23,8 @@ var (
 	milestoneConfirmationDurations     *prometheus.GaugeVec
 
 	metricsLock                syncutils.RWMutex
-	lastSnapshotMetrics        *snapshot.SnapshotMetrics
-	lastDatabasePruningMetrics *pruning.PruningMetrics
+	lastSnapshotMetrics        *snapshot.Metrics
+	lastDatabasePruningMetrics *pruning.Metrics
 	lastConfirmationMetrics    *whiteflag.ConfirmationMetrics
 )
 
@@ -87,14 +87,14 @@ func configureDebug() {
 		[]string{"type"},
 	)
 
-	deps.SnapshotManager.Events.SnapshotMetricsUpdated.Hook(events.NewClosure(func(metrics *snapshot.SnapshotMetrics) {
+	deps.SnapshotManager.Events.SnapshotMetricsUpdated.Hook(events.NewClosure(func(metrics *snapshot.Metrics) {
 		snapshotTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()
 		lastSnapshotMetrics = metrics
 	}))
 
-	deps.PruningManager.Events.PruningMetricsUpdated.Hook(events.NewClosure(func(metrics *pruning.PruningMetrics) {
+	deps.PruningManager.Events.PruningMetricsUpdated.Hook(events.NewClosure(func(metrics *pruning.Metrics) {
 		databasePruningTotalDuration.Observe(metrics.DurationTotal.Seconds())
 		metricsLock.Lock()
 		defer metricsLock.Unlock()

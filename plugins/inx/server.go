@@ -20,27 +20,27 @@ const (
 	workerQueueSize = 10000
 )
 
-func newINXServer() *INXServer {
+func newServer() *Server {
 	grpcServer := grpc.NewServer(
 		grpc.StreamInterceptor(grpcprometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpcprometheus.UnaryServerInterceptor),
 	)
-	s := &INXServer{grpcServer: grpcServer}
+	s := &Server{grpcServer: grpcServer}
 	inx.RegisterINXServer(grpcServer, s)
 
 	return s
 }
 
-type INXServer struct {
+type Server struct {
 	inx.UnimplementedINXServer
 	grpcServer *grpc.Server
 }
 
-func (s *INXServer) ConfigurePrometheus() {
+func (s *Server) ConfigurePrometheus() {
 	grpcprometheus.Register(s.grpcServer)
 }
 
-func (s *INXServer) Start() {
+func (s *Server) Start() {
 	go func() {
 		lis, err := net.Listen("tcp", ParamsINX.BindAddress)
 		if err != nil {
@@ -54,11 +54,11 @@ func (s *INXServer) Start() {
 	}()
 }
 
-func (s *INXServer) Stop() {
+func (s *Server) Stop() {
 	s.grpcServer.Stop()
 }
 
-func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
+func (s *Server) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo == nil {
@@ -115,7 +115,7 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 	}, nil
 }
 
-func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.NodeConfiguration, error) {
+func (s *Server) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.NodeConfiguration, error) {
 	keyRanges := deps.KeyManager.KeyRanges()
 	inxKeyRanges := make([]*inx.MilestoneKeyRange, len(keyRanges))
 	for i, r := range keyRanges {
@@ -141,7 +141,7 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 	}, nil
 }
 
-func (s *INXServer) ReadProtocolParameters(_ context.Context, req *inx.MilestoneRequest) (*inx.RawProtocolParameters, error) {
+func (s *Server) ReadProtocolParameters(_ context.Context, req *inx.MilestoneRequest) (*inx.RawProtocolParameters, error) {
 
 	msIndex := req.GetMilestoneIndex()
 

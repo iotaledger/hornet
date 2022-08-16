@@ -117,7 +117,7 @@ func NewTreasuryUpdate(index iotago.MilestoneIndex, created *utxo.TreasuryOutput
 	return u, nil
 }
 
-func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.OutputResponse, error) {
+func (s *Server) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.OutputResponse, error) {
 	// we need to lock the ledger here to have the correct index for unspent info of the output.
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
@@ -171,7 +171,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 	}, nil
 }
 
-func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentOutputsServer) error {
+func (s *Server) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentOutputsServer) error {
 	// we need to lock the ledger here to have the correct index for unspent info of the output.
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
@@ -210,7 +210,7 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 	return err
 }
 
-func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
+func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo == nil {
@@ -324,12 +324,13 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	}
 
 	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
-		err := sendMilestoneDiffsRange(start, end)
-		if err != nil {
+		if err := sendMilestoneDiffsRange(start, end); err != nil {
 			Plugin.LogInfof("sendMilestoneDiffsRange error: %v", err)
+
+			return err
 		}
 
-		return err
+		return nil
 	}
 
 	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
@@ -361,17 +362,18 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		done, err := handleRangedSend(&task, task.Param(0).(iotago.MilestoneIndex), stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
+			cancel()
 
-			fallthrough
 		case done:
 			cancel()
 		}
 
-		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	closure := events.NewClosure(func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
@@ -387,7 +389,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv in
 	return innerErr
 }
 
-func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToTreasuryUpdatesServer) error {
+func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToTreasuryUpdatesServer) error {
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo == nil {
@@ -551,17 +553,18 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 	var innerErr error
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		done, err := handleRangedSend(&task, task.Param(0).(iotago.MilestoneIndex), stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
+			cancel()
 
-			fallthrough
 		case done:
 			cancel()
 		}
 
-		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	closure := events.NewClosure(func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) {
@@ -577,9 +580,11 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv 
 	return innerErr
 }
 
-func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenToMigrationReceiptsServer) error {
+func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenToMigrationReceiptsServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
 		receipt, ok := task.Param(0).(*iotago.ReceiptMilestoneOpt)
 		if !ok {
 			Plugin.LogInfof("send error: expected *iotago.ReceiptMilestoneOpt, got %T", task.Param(0))
@@ -592,13 +597,15 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 		if err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
+
+			return
 		}
 
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
-		task.Return(nil)
+
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 	closure := events.NewClosure(func(receipt *iotago.ReceiptMilestoneOpt) {
 		wp.Submit(receipt)

@@ -43,7 +43,7 @@ func newProtocolStorageGetterFunc(dbStorage *storage.Storage) ProtocolStorageGet
 
 // returns a file header consumer, which stores the ledger milestone index up on execution in the database.
 // the given targetHeader is populated with the value of the read file header.
-func newFullHeaderConsumer(targetFullHeader *FullSnapshotHeader, dbStorage *storage.Storage, utxoManager *utxo.Manager, targetNetworkID ...uint64) FullHeaderConsumerFunc {
+func newFullHeaderConsumer(targetFullHeader *FullSnapshotHeader, utxoManager *utxo.Manager, targetNetworkID ...uint64) FullHeaderConsumerFunc {
 	return func(header *FullSnapshotHeader) error {
 		if header.Version != SupportedFormatVersion {
 			return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file version is %d but this HORNET version only supports %v", header.Version, SupportedFormatVersion)
@@ -76,7 +76,7 @@ func newFullHeaderConsumer(targetFullHeader *FullSnapshotHeader, dbStorage *stor
 
 // returns a file header consumer, which stores the ledger milestone index up on execution in the database.
 // the given targetHeader is populated with the value of the read file header.
-func newDeltaHeaderConsumer(targetHeader *DeltaSnapshotHeader, utxoManager *utxo.Manager) DeltaHeaderConsumerFunc {
+func newDeltaHeaderConsumer(targetHeader *DeltaSnapshotHeader) DeltaHeaderConsumerFunc {
 	return func(header *DeltaSnapshotHeader) error {
 		if header.Version != SupportedFormatVersion {
 			return errors.Wrapf(ErrUnsupportedSnapshot, "snapshot file version is %d but this HORNET version only supports %v", header.Version, SupportedFormatVersion)
@@ -193,7 +193,7 @@ func loadFullSnapshotFileToStorage(
 	defer func() { _ = lsFile.Close() }()
 
 	fullHeader = &FullSnapshotHeader{}
-	fullHeaderConsumer := newFullHeaderConsumer(fullHeader, dbStorage, dbStorage.UTXOManager(), targetNetworkID)
+	fullHeaderConsumer := newFullHeaderConsumer(fullHeader, dbStorage.UTXOManager(), targetNetworkID)
 	treasuryOutputConsumer := NewUnspentTreasuryOutputConsumer(dbStorage.UTXOManager())
 	outputConsumer := NewOutputConsumer(dbStorage.UTXOManager())
 	msDiffConsumer := NewMsDiffConsumer(dbStorage, dbStorage.UTXOManager(), writeMilestonesToStorage)
@@ -201,6 +201,7 @@ func loadFullSnapshotFileToStorage(
 	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
 
 	if err = StreamFullSnapshotDataFrom(
+		ctx,
 		lsFile,
 		fullHeaderConsumer,
 		treasuryOutputConsumer,
@@ -268,12 +269,13 @@ func loadDeltaSnapshotFileToStorage(
 
 	deltaHeader = &DeltaSnapshotHeader{}
 	protocolStorageGetter := newProtocolStorageGetterFunc(dbStorage)
-	deltaHeaderConsumer := newDeltaHeaderConsumer(deltaHeader, dbStorage.UTXOManager())
+	deltaHeaderConsumer := newDeltaHeaderConsumer(deltaHeader)
 	msDiffConsumer := NewMsDiffConsumer(dbStorage, dbStorage.UTXOManager(), writeMilestonesToStorage)
 	sepConsumer := newSEPsConsumer(dbStorage)
 	protocolParamsMilestoneOptConsumer := newProtocolParamsMilestoneOptConsumerFunc(dbStorage)
 
 	if err = StreamDeltaSnapshotDataFrom(
+		ctx,
 		lsFile,
 		protocolStorageGetter,
 		deltaHeaderConsumer,

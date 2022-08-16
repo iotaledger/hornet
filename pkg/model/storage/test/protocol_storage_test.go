@@ -1,4 +1,4 @@
-//nolint:stylecheck // we do not care about the underlines in the test
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct // we don't care about these linters in test cases
 package storage_test
 
 import (

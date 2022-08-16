@@ -1,4 +1,4 @@
-//nolint:gosec // we do not care about weak random numbers here
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct,gosec // we don't care about these linters in test cases
 package framework
 
 import (

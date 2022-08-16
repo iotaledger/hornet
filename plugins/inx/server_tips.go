@@ -12,7 +12,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func (s *INXServer) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx.TipsResponse, error) {
+func (s *Server) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx.TipsResponse, error) {
 	if deps.TipSelector == nil {
 		return nil, status.Error(codes.Unavailable, "no tipselector available")
 	}
@@ -38,7 +38,7 @@ func (s *INXServer) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx
 	}, nil
 }
 
-func (s *INXServer) ListenToTipsMetrics(req *inx.TipsMetricRequest, srv inx.INX_ListenToTipsMetricsServer) error {
+func (s *Server) ListenToTipsMetrics(req *inx.TipsMetricRequest, srv inx.INX_ListenToTipsMetricsServer) error {
 	if req.GetIntervalInMilliseconds() == 0 {
 		return status.Error(codes.InvalidArgument, "interval must be > 0")
 	}

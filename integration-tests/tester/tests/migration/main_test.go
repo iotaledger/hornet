@@ -1,4 +1,5 @@
-package migration
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct // we don't care about these linters in test cases
+package migration_test
 
 import (
 	"os"

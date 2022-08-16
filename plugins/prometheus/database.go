@@ -95,7 +95,7 @@ func configureDatabase(name string, db *database.Database) {
 		},
 	)
 
-	db.Events().DatabaseCompaction.Hook(events.NewClosure(func(running bool) {
+	db.Events().Compaction.Hook(events.NewClosure(func(running bool) {
 		if running {
 			m.compactionCount.Inc()
 		}

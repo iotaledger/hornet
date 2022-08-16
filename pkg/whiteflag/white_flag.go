@@ -24,7 +24,7 @@ var (
 	ErrIncludedBlocksSumDoesntMatch = errors.New("the sum of the included blocks doesn't match the referenced blocks minus the excluded blocks")
 
 	// DefaultWhiteFlagTraversalCondition is the default traversal condition used in WhiteFlag.
-	//The traversal stops if no more blocks pass the given condition
+	// The traversal stops if no more blocks pass the given condition
 	// Caution: condition func is not in DFS order.
 	DefaultWhiteFlagTraversalCondition = func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 		defer cachedBlockMeta.Release(true) // meta -1
@@ -99,6 +99,8 @@ func (b ReferencedBlocks) NonTransactionBlockIDs() iotago.BlockIDs {
 }
 
 // WhiteFlagMutations contains the ledger mutations and referenced blocks applied to a cone under the "white-flag" approach.
+//
+//nolint:revive // better be explicit here
 type WhiteFlagMutations struct {
 	// The blocks which were referenced by the milestone
 	ReferencedBlocks ReferencedBlocks

@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -10,8 +11,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/core/contextutils"
 	"github.com/iotaledger/hive.go/core/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -730,7 +733,7 @@ func StreamFullSnapshotDataTo(
 	header *FullSnapshotHeader,
 	outputProd OutputProducerFunc,
 	msDiffProd MilestoneDiffProducerFunc,
-	sepProd SEPProducerFunc) (*SnapshotMetrics, error) {
+	sepProd SEPProducerFunc) (*Metrics, error) {
 
 	if outputProd == nil {
 		return nil, ErrOutputProducerNotProvided
@@ -845,7 +848,7 @@ func StreamFullSnapshotDataTo(
 	header.MilestoneDiffCount = msDiffCount
 	header.SEPCount = sepsCount
 
-	return &SnapshotMetrics{
+	return &Metrics{
 		DurationHeader:           timeHeader.Sub(timeStart),
 		DurationOutputs:          timeOutputs.Sub(timeHeader),
 		DurationMilestoneDiffs:   timeMilestoneDiffs.Sub(timeOutputs),
@@ -858,7 +861,7 @@ func StreamDeltaSnapshotDataTo(
 	writeSeeker io.WriteSeeker,
 	header *DeltaSnapshotHeader,
 	msDiffProd MilestoneDiffProducerFunc,
-	sepProd SEPProducerFunc) (*SnapshotMetrics, error) {
+	sepProd SEPProducerFunc) (*Metrics, error) {
 
 	if msDiffProd == nil {
 		return nil, ErrMilestoneDiffProducerNotProvided
@@ -951,7 +954,7 @@ func StreamDeltaSnapshotDataTo(
 	header.MilestoneDiffCount = msDiffCount
 	header.SEPCount = sepsCount
 
-	return &SnapshotMetrics{
+	return &Metrics{
 		DurationHeader:           timeHeader.Sub(timeStart),
 		DurationMilestoneDiffs:   timeMilestoneDiffs.Sub(timeHeader),
 		DurationSolidEntryPoints: timeSolidEntryPoints.Sub(timeMilestoneDiffs),
@@ -963,7 +966,7 @@ func StreamDeltaSnapshotDataToExisting(
 	fileHandle ReadWriteTruncateSeeker,
 	header *DeltaSnapshotHeader,
 	msDiffProd MilestoneDiffProducerFunc,
-	sepProd SEPProducerFunc) (*SnapshotMetrics, error) {
+	sepProd SEPProducerFunc) (*Metrics, error) {
 
 	if header.Type != Delta {
 		return nil, ErrWrongSnapshotType
@@ -981,7 +984,9 @@ func StreamDeltaSnapshotDataToExisting(
 	}
 
 	// seek back to the start of the header
-	fileHandle.Seek(0, io.SeekStart)
+	if _, err := fileHandle.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("unable to seek to start of delta snapshot header: %w", err)
+	}
 
 	if oldDeltaHeader.Version != header.Version {
 		return nil, errors.New("unable to update existing delta snapshot: mismatching snapshot file version")
@@ -1011,7 +1016,9 @@ func StreamDeltaSnapshotDataToExisting(
 	increaseOffsets(serializer.OneByte, &cursorPosition, &sepFileOffsetPosition)
 
 	// Seek to the position of Target Milestone Index
-	fileHandle.Seek(cursorPosition, io.SeekStart)
+	if _, err := fileHandle.Seek(cursorPosition, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("unable to seek to target milestone index: %w", err)
+	}
 
 	// Target Milestone Index
 	// The index of the milestone of which the SEPs within the snapshot are from.
@@ -1037,11 +1044,15 @@ func StreamDeltaSnapshotDataToExisting(
 	msDiffCount := oldDeltaHeader.MilestoneDiffCount
 	var sepsCount uint16
 
-	// Seek to the position of Target Milestone Index
-	fileHandle.Seek(oldDeltaHeader.SEPFileOffset, io.SeekStart)
+	// Seek to the position of the solid entry points file offset
+	if _, err := fileHandle.Seek(oldDeltaHeader.SEPFileOffset, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("unable to seek to solid entry points file offset: %w", err)
+	}
 
 	// Truncate the old SEPs
-	fileHandle.Truncate(oldDeltaHeader.SEPFileOffset)
+	if err := fileHandle.Truncate(oldDeltaHeader.SEPFileOffset); err != nil {
+		return nil, fmt.Errorf("unable to truncate old solid entry points: %w", err)
+	}
 
 	// Milestone Diffs
 	for {
@@ -1115,7 +1126,7 @@ func StreamDeltaSnapshotDataToExisting(
 	header.MilestoneDiffCount = msDiffCount
 	header.SEPCount = sepsCount
 
-	return &SnapshotMetrics{
+	return &Metrics{
 		DurationHeader:           timeHeader.Sub(timeStart),
 		DurationMilestoneDiffs:   timeMilestoneDiffs.Sub(timeHeader),
 		DurationSolidEntryPoints: timeSolidEntryPoints.Sub(timeMilestoneDiffs),
@@ -1139,7 +1150,9 @@ func ReadSnapshotType(readSeeker io.ReadSeeker) (Type, error) {
 	}
 
 	// seek back to the start of the header
-	readSeeker.Seek(0, io.SeekStart)
+	if _, err := readSeeker.Seek(0, io.SeekStart); err != nil {
+		return Full, fmt.Errorf("unable to seek to the start of the snapshot header: %w", err)
+	}
 
 	switch snapshotType {
 	case Full:
@@ -1164,6 +1177,7 @@ func ReadSnapshotTypeFromFile(filePath string) (Type, error) {
 
 // StreamFullSnapshotDataFrom consumes a full snapshot from the given reader.
 func StreamFullSnapshotDataFrom(
+	ctx context.Context,
 	reader io.ReadSeeker,
 	headerConsumer FullHeaderConsumerFunc,
 	unspentTreasuryOutputConsumer UnspentTreasuryOutputConsumerFunc,
@@ -1204,6 +1218,10 @@ func StreamFullSnapshotDataFrom(
 	}
 
 	for i := uint64(0); i < fullHeader.OutputCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		output, err := ReadOutput(reader, fullHeaderProtoParams)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
@@ -1215,19 +1233,25 @@ func StreamFullSnapshotDataFrom(
 	}
 
 	// this is the total length of the milestone diffs.
-	// we use that to seek back to the start of the diffs after the first iteration, or to seekd to the end in the second one.
+	// we use that to seek back to the start of the diffs after the first iteration, or to seek to the end in the second one.
 	var msDiffsLength int64
 
 	// we need to parse the milestone diffs twice.
 	// first round is to get the upcoming protocol parameter changes.
 	for i := uint32(0); i < fullHeader.MilestoneDiffCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		msDiffLength, err := ReadMilestoneDiffProtocolParameters(reader, protocolStorage)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
 		}
 		increaseOffsets(msDiffLength, &msDiffsLength)
 	}
-	reader.Seek(-msDiffsLength, io.SeekCurrent)
+	if _, err := reader.Seek(-msDiffsLength, io.SeekCurrent); err != nil {
+		return fmt.Errorf("unable to seek back to the start of the milestone diffs: %w", err)
+	}
 
 	// this is the currently parsed length of the milestone diffs.
 	// we use that to seek to the end of the milestone diffs.
@@ -1235,6 +1259,10 @@ func StreamFullSnapshotDataFrom(
 
 	// second round is to load the milestone diffs with correct protocol parameters.
 	for i := uint32(0); i < fullHeader.MilestoneDiffCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		// the milestone diffs in the full snapshot file are in backwards order.
 		msDiffLength, msDiff, err := ReadMilestoneDiff(reader, protocolStorage, false)
 		if err != nil {
@@ -1247,7 +1275,9 @@ func StreamFullSnapshotDataFrom(
 		if msDiff.Milestone.Index <= fullHeader.TargetMilestoneIndex {
 			// we can break the loop here since we are walking backwards.
 			// we also need to jump to the end of the milestone diffs.
-			reader.Seek(msDiffsLength-msDiffsParsedLength, io.SeekCurrent)
+			if _, err := reader.Seek(msDiffsLength-msDiffsParsedLength, io.SeekCurrent); err != nil {
+				return fmt.Errorf("unable to seek to the end of the milestone diffs: %w", err)
+			}
 
 			break
 		}
@@ -1258,6 +1288,10 @@ func StreamFullSnapshotDataFrom(
 	}
 
 	for i := uint16(0); i < fullHeader.SEPCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		solidEntryPointBlockID := iotago.BlockID{}
 		if _, err := io.ReadFull(reader, solidEntryPointBlockID[:]); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
@@ -1289,6 +1323,7 @@ func StreamFullSnapshotDataFrom(
 
 // StreamDeltaSnapshotDataFrom consumes a delta snapshot from the given reader.
 func StreamDeltaSnapshotDataFrom(
+	ctx context.Context,
 	reader io.ReadSeeker,
 	protocolStorageGetter ProtocolStorageGetterFunc,
 	headerConsumer DeltaHeaderConsumerFunc,
@@ -1322,6 +1357,10 @@ func StreamDeltaSnapshotDataFrom(
 	}
 
 	for i := uint32(0); i < deltaHeader.MilestoneDiffCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		_, msDiff, err := ReadMilestoneDiff(reader, protocolStorage, true)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
@@ -1333,10 +1372,15 @@ func StreamDeltaSnapshotDataFrom(
 	}
 
 	for i := uint16(0); i < deltaHeader.SEPCount; i++ {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+			return err
+		}
+
 		solidEntryPointBlockID := iotago.BlockID{}
 		if _, err := io.ReadFull(reader, solidEntryPointBlockID[:]); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}
+
 		if err := sepConsumer(solidEntryPointBlockID, deltaHeader.TargetMilestoneIndex); err != nil {
 			return fmt.Errorf("SEP consumer error at pos %d: %w", i, err)
 		}

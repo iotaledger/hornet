@@ -97,7 +97,7 @@ func NewPruningManager(
 		pruneReceipts:                        pruneReceipts,
 		Events: &Events{
 			PruningMilestoneIndexChanged: events.NewEvent(storagepkg.MilestoneIndexCaller),
-			PruningMetricsUpdated:        events.NewEvent(PruningMetricsCaller),
+			PruningMetricsUpdated:        events.NewEvent(MetricsCaller),
 		},
 	}
 }
@@ -416,7 +416,7 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 		p.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 		timePruningMilestoneIndexChanged := time.Now()
 
-		p.Events.PruningMetricsUpdated.Trigger(&PruningMetrics{
+		p.Events.PruningMetricsUpdated.Trigger(&Metrics{
 			DurationPruneUnreferencedBlocks:      timePruneUnreferencedBlocks.Sub(timeStart),
 			DurationTraverseMilestoneCone:        timeTraverseMilestoneCone.Sub(timePruneUnreferencedBlocks),
 			DurationPruneMilestone:               timePruneMilestone.Sub(timeTraverseMilestoneCone),

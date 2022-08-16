@@ -27,10 +27,9 @@ var (
 
 func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.MilestoneManager, error) {
 
-	_, err := loadConfigFile(filePath, map[string]any{
+	if err := loadConfigFile(filePath, map[string]any{
 		"protocol": protocfg.ParamsProtocol,
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
@@ -154,13 +153,13 @@ func getTangleStorage(path string,
 	markTainted bool,
 	checkSnapInfo bool) (*storage.Storage, error) {
 
-	dbEngine, err := database.DatabaseEngineFromStringAllowed(dbEngineStr, database.EnginePebble, database.EngineRocksDB, database.EngineAuto)
+	dbEngine, err := database.EngineFromStringAllowed(dbEngineStr, database.EnginePebble, database.EngineRocksDB, database.EngineAuto)
 	if err != nil {
 		return nil, err
 	}
 
 	if checkExist {
-		databaseExists, err := database.DatabaseExists(path)
+		databaseExists, err := database.Exists(path)
 		if err != nil {
 			return nil, err
 		}

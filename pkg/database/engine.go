@@ -19,9 +19,9 @@ type databaseInfo struct {
 	Engine string `toml:"databaseEngine"`
 }
 
-// DatabaseEngineFromString parses an engine from a string.
+// EngineFromString parses an engine from a string.
 // Returns an error if the engine is unknown.
-func DatabaseEngineFromString(engineStr string) (Engine, error) {
+func EngineFromString(engineStr string) (Engine, error) {
 
 	dbEngine := Engine(strings.ToLower(engineStr))
 
@@ -42,8 +42,8 @@ func DatabaseEngineFromString(engineStr string) (Engine, error) {
 	}
 }
 
-// DatabaseEngineAllowed checks if the database engine is allowed.
-func DatabaseEngineAllowed(dbEngine Engine, allowedEngines ...Engine) (Engine, error) {
+// EngineAllowed checks if the database engine is allowed.
+func EngineAllowed(dbEngine Engine, allowedEngines ...Engine) (Engine, error) {
 
 	if len(allowedEngines) > 0 {
 		supportedEngines := ""
@@ -72,22 +72,22 @@ func DatabaseEngineAllowed(dbEngine Engine, allowedEngines ...Engine) (Engine, e
 	return dbEngine, nil
 }
 
-// DatabaseEngineFromStringAllowed parses an engine from a string and checks if the database engine is allowed.
-func DatabaseEngineFromStringAllowed(dbEngineStr string, allowedEngines ...Engine) (Engine, error) {
+// EngineFromStringAllowed parses an engine from a string and checks if the database engine is allowed.
+func EngineFromStringAllowed(dbEngineStr string, allowedEngines ...Engine) (Engine, error) {
 
-	dbEngine, err := DatabaseEngineFromString(dbEngineStr)
+	dbEngine, err := EngineFromString(dbEngineStr)
 	if err != nil {
 		return EngineUnknown, err
 	}
 
-	return DatabaseEngineAllowed(dbEngine, allowedEngines...)
+	return EngineAllowed(dbEngine, allowedEngines...)
 }
 
-// CheckDatabaseEngine checks if the correct database engine is used.
+// CheckEngine checks if the correct database engine is used.
 // This function stores a so called "database info file" in the database folder or
 // checks if an existing "database info file" contains the correct engine.
 // Otherwise the files in the database folder are not compatible.
-func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine ...Engine) (Engine, error) {
+func CheckEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine ...Engine) (Engine, error) {
 
 	if len(dbEngine) > 0 && dbEngine[0] == EngineMapDB {
 		// no need to create or access a "database info file" in case of mapdb (in-memory)
@@ -97,7 +97,7 @@ func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine
 	dbEngineSpecified := len(dbEngine) > 0 && dbEngine[0] != EngineAuto
 
 	// check if the database exists and if it should be created
-	dbExists, err := DatabaseExists(dbPath)
+	dbExists, err := Exists(dbPath)
 	if err != nil {
 		return EngineUnknown, err
 	}
@@ -133,7 +133,7 @@ func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine
 
 		targetEngine = dbEngine[0]
 	} else {
-		dbEngineFromInfoFile, err := LoadDatabaseEngineFromFile(dbInfoFilePath)
+		dbEngineFromInfoFile, err := LoadEngineFromFile(dbInfoFilePath)
 		if err != nil {
 			return EngineUnknown, err
 		}
@@ -142,7 +142,7 @@ func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine
 		if dbEngineSpecified {
 
 			if dbEngineFromInfoFile != dbEngine[0] {
-				//nolint:stylecheck // this error message is shown to the user
+				//nolint:stylecheck,revive // this error message is shown to the user
 				return EngineUnknown, fmt.Errorf(`database (%s) engine does not match the configuration: '%v' != '%v'
 
 If you want to use another database engine, you can use the tool './hornet tool db-migration' to convert the current database.`, dbPath, dbEngineFromInfoFile, dbEngine[0])
@@ -155,8 +155,8 @@ If you want to use another database engine, you can use the tool './hornet tool 
 	return targetEngine, nil
 }
 
-// LoadDatabaseEngineFromFile returns the engine from the "database info file".
-func LoadDatabaseEngineFromFile(path string) (Engine, error) {
+// LoadEngineFromFile returns the engine from the "database info file".
+func LoadEngineFromFile(path string) (Engine, error) {
 
 	var info databaseInfo
 
@@ -164,7 +164,7 @@ func LoadDatabaseEngineFromFile(path string) (Engine, error) {
 		return "", fmt.Errorf("unable to read database info file: %w", err)
 	}
 
-	return DatabaseEngineFromStringAllowed(info.Engine)
+	return EngineFromStringAllowed(info.Engine)
 }
 
 // storeDatabaseInfoToFile stores the used engine in a "database info file".
@@ -186,7 +186,7 @@ func storeDatabaseInfoToFile(filePath string, engine Engine) error {
 // It also checks if the database engine is correct.
 func StoreWithDefaultSettings(path string, createDatabaseIfNotExists bool, dbEngine ...Engine) (kvstore.KVStore, error) {
 
-	targetEngine, err := CheckDatabaseEngine(path, createDatabaseIfNotExists, dbEngine...)
+	targetEngine, err := CheckEngine(path, createDatabaseIfNotExists, dbEngine...)
 	if err != nil {
 		return nil, err
 	}

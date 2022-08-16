@@ -1,5 +1,5 @@
-//nolint:forcetypeassert // we don't care about type assertions in tests
-package value
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct // we don't care about these linters in test cases
+package value_test
 
 import (
 	"context"

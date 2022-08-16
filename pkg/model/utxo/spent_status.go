@@ -30,8 +30,9 @@ func (o *Output) UnspentLookupKey() lookupKey {
 
 func outputIDFromDatabaseKey(key lookupKey) (iotago.OutputID, error) {
 	ms := marshalutil.New([]byte(key))
-	_, err := ms.ReadByte() // prefix
-	if err != nil {
+
+	// prefix
+	if _, err := ms.ReadByte(); err != nil {
 		return iotago.OutputID{}, err
 	}
 

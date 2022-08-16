@@ -37,7 +37,7 @@ func databaseHealth(args []string) error {
 
 	checkDatabaseHealth := func(path string, name string, outputJSON bool) error {
 
-		dbExists, err := database.DatabaseExists(path)
+		dbExists, err := database.Exists(path)
 		if err != nil {
 			return err
 		}

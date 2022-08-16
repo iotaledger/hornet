@@ -150,7 +150,7 @@ func verifyDatabase(
 
 	// compare solid entry points in source database and genesis snapshot
 	if err := compareSolidEntryPoints(tangleStoreSource, tangleStoreTemp); err != nil {
-		return nil
+		return err
 	}
 
 	// checkMilestoneCone checks if all blocks in the current milestone cone are found.
@@ -209,6 +209,10 @@ func verifyDatabase(
 			return err
 		}
 
+		if milestoneManager.VerifyMilestonePayload(milestonePayload) == nil {
+			return fmt.Errorf("milestone payload verification failed: %d", msIndex)
+		}
+
 		// traverse the milestone and collect all blocks that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
 			ctx,
@@ -229,7 +233,6 @@ func verifyDatabase(
 	}
 
 	applyAndCompareLedgerStateChange := func(
-		ctx context.Context,
 		storeSource *storage.Storage,
 		utxoManagerTemp *utxo.Manager,
 		msIndex iotago.MilestoneIndex) error {
@@ -323,7 +326,6 @@ func verifyDatabase(
 		}
 
 		if err := applyAndCompareLedgerStateChange(
-			ctx,
 			tangleStoreSource,
 			tangleStoreTemp.UTXOManager(),
 			msIndex); err != nil {

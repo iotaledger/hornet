@@ -71,11 +71,11 @@ func configure() error {
 	routeGroup := deps.RestRouteManager.AddRoute("dashboard-metrics/v1")
 
 	routeGroup.GET(RouteNodeInfoExtended, func(c echo.Context) error {
-		return httpserver.JSONResponse(c, http.StatusOK, nodeInfoExtended(c))
+		return httpserver.JSONResponse(c, http.StatusOK, nodeInfoExtended())
 	})
 
 	routeGroup.GET(RouteDatabaseSizes, func(c echo.Context) error {
-		resp, err := databaseSizesMetrics(c)
+		resp, err := databaseSizesMetrics()
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func configure() error {
 	})
 
 	routeGroup.GET(RouteGossipMetrics, func(c echo.Context) error {
-		return httpserver.JSONResponse(c, http.StatusOK, gossipMetrics(c))
+		return httpserver.JSONResponse(c, http.StatusOK, gossipMetrics())
 	})
 
 	return nil

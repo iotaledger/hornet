@@ -58,6 +58,7 @@ var (
 	syncedAtStartup    = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
 	revalidateDatabase = flag.Bool(CfgTangleRevalidateDatabase, false, "revalidate the database on startup if corrupted")
 
+	//nolint:revive // this error message is shown to the user
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new snapshot.")
 
 	onConfirmedMilestoneIndexChanged *events.Closure
@@ -149,9 +150,9 @@ func provide(c *dig.Container) error {
 
 	if err := c.Provide(func(deps tangleDeps) *tangle.Tangle {
 		return tangle.New(
-			logger.NewLogger("Tangle"),
-			CoreComponent.Daemon(),
 			CoreComponent.Daemon().ContextStopped(),
+			CoreComponent.Daemon(),
+			logger.NewLogger("Tangle"),
 			deps.Storage,
 			deps.SyncManager,
 			deps.MilestoneManager,

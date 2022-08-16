@@ -131,7 +131,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	if outputJSON {
 
 		type treasuryStruct struct {
-			MilestoneID string `json:"milestoneID"`
+			MilestoneID string `json:"milestoneId"`
 			Tokens      uint64 `json:"tokens"`
 		}
 
@@ -144,33 +144,33 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		}
 
 		result := struct {
-			Healthy                bool                  `json:"healthy"`
-			Tainted                bool                  `json:"tainted"`
-			SnapshotTime           time.Time             `json:"snapshotTime"`
-			NetworkID              uint64                `json:"networkID"`
-			Treasury               *treasuryStruct       `json:"treasury"`
-			LedgerIndex            iotago.MilestoneIndex `json:"ledgerIndex"`
-			SnapshotIndex          iotago.MilestoneIndex `json:"snapshotIndex"`
-			PruningIndex           iotago.MilestoneIndex `json:"pruningIndex"`
-			UTXOsCount             int                   `json:"UTXOsCount"`
-			SEPsCount              int                   `json:"SEPsCount"`
-			LedgerStateHash        string                `json:"ledgerStateHash"`
-			LedgerStateHashWithSEP string                `json:"ledgerStateHashWithSEP"`
-			ProtocolParametersHash string                `json:"protocolParametersHash"`
+			Healthy                             bool                  `json:"healthy"`
+			Tainted                             bool                  `json:"tainted"`
+			SnapshotTime                        time.Time             `json:"snapshotTime"`
+			NetworkID                           uint64                `json:"networkId"`
+			Treasury                            *treasuryStruct       `json:"treasury"`
+			LedgerIndex                         iotago.MilestoneIndex `json:"ledgerIndex"`
+			SnapshotIndex                       iotago.MilestoneIndex `json:"snapshotIndex"`
+			PruningIndex                        iotago.MilestoneIndex `json:"pruningIndex"`
+			UTXOsCount                          int                   `json:"utxosCount"`
+			SolidEntryPointsCount               int                   `json:"solidEntryPointsCount"`
+			LedgerStateHash                     string                `json:"ledgerStateHash"`
+			LedgerStateHashWithSolidEntryPoints string                `json:"ledgerStateHashWithSolidEntryPoints"`
+			ProtocolParametersHash              string                `json:"protocolParametersHash"`
 		}{
-			Healthy:                !corrupted,
-			Tainted:                tainted,
-			SnapshotTime:           snapshotInfo.SnapshotTimestamp(),
-			NetworkID:              protoParams.NetworkID(),
-			Treasury:               treasury,
-			LedgerIndex:            ledgerIndex,
-			SnapshotIndex:          snapshotInfo.SnapshotIndex(),
-			PruningIndex:           snapshotInfo.PruningIndex(),
-			UTXOsCount:             len(outputIDs),
-			SEPsCount:              len(solidEntryPoints),
-			LedgerStateHash:        hex.EncodeToString(snapshotHashSumWithoutSEPs),
-			LedgerStateHashWithSEP: hex.EncodeToString(snapshotHashSumWithSEPs),
-			ProtocolParametersHash: hex.EncodeToString(protocolParametersHashSum),
+			Healthy:                             !corrupted,
+			Tainted:                             tainted,
+			SnapshotTime:                        snapshotInfo.SnapshotTimestamp(),
+			NetworkID:                           protoParams.NetworkID(),
+			Treasury:                            treasury,
+			LedgerIndex:                         ledgerIndex,
+			SnapshotIndex:                       snapshotInfo.SnapshotIndex(),
+			PruningIndex:                        snapshotInfo.PruningIndex(),
+			UTXOsCount:                          len(outputIDs),
+			SolidEntryPointsCount:               len(solidEntryPoints),
+			LedgerStateHash:                     hex.EncodeToString(snapshotHashSumWithoutSEPs),
+			LedgerStateHashWithSolidEntryPoints: hex.EncodeToString(snapshotHashSumWithSEPs),
+			ProtocolParametersHash:              hex.EncodeToString(protocolParametersHashSum),
 		}
 
 		return printJSON(result)

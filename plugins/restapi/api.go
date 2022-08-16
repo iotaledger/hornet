@@ -73,7 +73,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 
 	// API tokens do not expire.
 	var err error
-	jwtAuth, err = jwt.NewJWTAuth(salt,
+	jwtAuth, err = jwt.NewAuth(salt,
 		0,
 		deps.Host.ID().String(),
 		deps.NodePrivateKey,

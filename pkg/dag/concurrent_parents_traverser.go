@@ -88,7 +88,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 				return inboundQueue[0]
 			}
 
-			outboundChannel := func(nextItem bool) chan *iotago.BlockID {
+			outboundChannel := func() chan *iotago.BlockID {
 				// in case the inbound queue is empty, we return a nil channel to block
 				// until the next element flows in or the inbound channel is closed.
 				if len(inboundQueue) == 0 {
@@ -109,10 +109,10 @@ func (t *ConcurrentParentsTraverser) reset() {
 						break inboundLoop
 					}
 					inboundQueue = append(inboundQueue, item)
-					out = outboundChannel(true)
+					out = outboundChannel()
 				case out <- nextValue():
 					inboundQueue = inboundQueue[1:]
-					out = outboundChannel(false)
+					out = outboundChannel()
 				}
 			}
 			close(outbound)

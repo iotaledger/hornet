@@ -1,4 +1,4 @@
-//nolint:forcetypeassert,gosec // we don't care about type assertions and weak random numbers in tests
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct,gosec // we don't care about these linters in test cases
 package testsuite
 
 import (

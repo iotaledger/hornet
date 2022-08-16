@@ -293,7 +293,7 @@ func parseEntryNode(entryNodeMultiAddrStr string, preferIPv6 bool) (entryNode *p
 	return peer.NewPeer(identity.New(*pubKey), ip, services), nil
 }
 
-type AutopeeringManager struct {
+type Manager struct {
 	// the logger used to log events.
 	*logger.WrappedLogger
 
@@ -313,9 +313,9 @@ type AutopeeringManager struct {
 	selectionProtocol *selection.Protocol
 }
 
-func NewAutopeeringManager(log *logger.Logger, bindAddress string, entryNodes []string, preferIPv6 bool, p2pServiceKey service.Key) *AutopeeringManager {
+func NewManager(log *logger.Logger, bindAddress string, entryNodes []string, preferIPv6 bool, p2pServiceKey service.Key) *Manager {
 
-	return &AutopeeringManager{
+	return &Manager{
 		WrappedLogger:      logger.NewWrappedLogger(log),
 		bindAddress:        bindAddress,
 		entryNodes:         entryNodes,
@@ -328,26 +328,26 @@ func NewAutopeeringManager(log *logger.Logger, bindAddress string, entryNodes []
 }
 
 // P2PServiceKey is the peering service key.
-func (a *AutopeeringManager) P2PServiceKey() service.Key {
+func (a *Manager) P2PServiceKey() service.Key {
 	return a.p2pServiceKey
 }
 
 // LocalPeerContainer returns the container for the local autopeering peer and database.
-func (a *AutopeeringManager) LocalPeerContainer() *LocalPeerContainer {
+func (a *Manager) LocalPeerContainer() *LocalPeerContainer {
 	return a.localPeerContainer
 }
 
 // Selection returns the peer selection protocol.
-func (a *AutopeeringManager) Selection() *selection.Protocol {
+func (a *Manager) Selection() *selection.Protocol {
 	return a.selectionProtocol
 }
 
 // Discovery returns the peer discovery protocol.
-func (a *AutopeeringManager) Discovery() *discover.Protocol {
+func (a *Manager) Discovery() *discover.Protocol {
 	return a.discoveryProtocol
 }
 
-func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSelection bool) {
+func (a *Manager) Init(localPeerContainer *LocalPeerContainer, initSelection bool) {
 
 	parseEntryNodes := func(entryNodesString []string, preferIPv6 bool) (result []*peer.Peer, err error) {
 		for _, entryNodeDefinition := range entryNodesString {
@@ -406,7 +406,7 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 	)
 }
 
-func (a *AutopeeringManager) Run(ctx context.Context) {
+func (a *Manager) Run(ctx context.Context) {
 	a.LogInfo("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
 
 	lPeer := a.localPeerContainer.Local()

@@ -296,7 +296,7 @@ func snapshotGen(args []string) error {
 			genesisBalancesIndex++
 
 			return utxo.CreateOutput(
-				iotago.OutputIDFromTransactionIDAndIndex(TransactionIDFromIndex(int64(genesisBalancesIndex)), 0),
+				iotago.OutputIDFromTransactionIDAndIndex(TransactionIDFromIndex(genesisBalancesIndex), 0),
 				iotago.EmptyBlockID(),
 				0,
 				0,

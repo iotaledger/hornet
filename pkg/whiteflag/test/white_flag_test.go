@@ -1,4 +1,4 @@
-//nolint:forcetypeassert // we don't care about type assertions in tests
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct // we don't care about these linters in test cases
 package test
 
 import (
@@ -40,7 +40,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
@@ -103,7 +103,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
@@ -268,7 +268,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 3, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	genesisWallet.BookOutput(te.GenesisOutput)
 
 	// Issue some transactions
@@ -307,7 +307,7 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
@@ -361,7 +361,7 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
@@ -463,7 +463,7 @@ func TestWhiteFlagAliasOutput(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
@@ -632,7 +632,7 @@ func TestWhiteFlagFoundryOutput(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
@@ -969,7 +969,7 @@ func TestWhiteFlagFoundryOutputInvalidSerialNumber(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
@@ -1053,7 +1053,7 @@ func TestWhiteFlagFoundryOutputInvalidAliasFoundryCounter(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
@@ -1139,7 +1139,7 @@ func TestWhiteFlagNFTOutputs(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, ProtocolVersion, BelowMaxDepth, MinPoWScore, ShowConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!ShowConfirmationGraphs)
 
-	//Add token supply to our local HDWallet
+	// Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 

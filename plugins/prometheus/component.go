@@ -83,9 +83,9 @@ type dependencies struct {
 	TipSelector      *tipselect.TipSelector `optional:"true"`
 	SnapshotManager  *snapshot.Manager
 	PruningManager   *pruning.Manager
-	Echo             *echo.Echo     `optional:"true"`
-	PrometheusEcho   *echo.Echo     `name:"prometheusEcho"`
-	INXServer        *inx.INXServer `optional:"true"`
+	Echo             *echo.Echo  `optional:"true"`
+	PrometheusEcho   *echo.Echo  `name:"prometheusEcho"`
+	INXServer        *inx.Server `optional:"true"`
 }
 
 func provide(c *dig.Container) error {

@@ -1,7 +1,8 @@
-//nolint:gosec // we do not care about weak random numbers here
+//nolint:forcetypeassert,varnamelen,revive,exhaustruct,gosec // we don't care about these linters in test cases
 package snapshot_test
 
 import (
+	"context"
 	"crypto/ed25519"
 	"fmt"
 	"math/rand"
@@ -284,6 +285,7 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 			require.NoError(t, err)
 
 			require.NoError(t, snapshot.StreamFullSnapshotDataFrom(
+				context.Background(),
 				snapshotFileRead,
 				tt.fullHeaderConsumer,
 				tt.unspentTreasuryOutputConsumer,
@@ -336,7 +338,7 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 			originDeltaHeader := randDeltaSnapshotHeader(50, 150)
 
 			// create generators and consumers
-			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(originDeltaHeader.TargetMilestoneIndex-syncmanager.MilestoneIndexDelta(originDeltaHeader.MilestoneDiffCount), originDeltaHeader.MilestoneDiffCount, snapshot.MsDiffDirectionOnwards)
+			msDiffIterFunc, msDiffGenRetriever := newMsDiffGenerator(originDeltaHeader.TargetMilestoneIndex-originDeltaHeader.MilestoneDiffCount, originDeltaHeader.MilestoneDiffCount, snapshot.MsDiffDirectionOnwards)
 			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
 
 			sepIterFunc, sepGenRetriever := newSEPGenerator(originDeltaHeader.SEPCount)
@@ -387,7 +389,7 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 				return getProtocolStorage(protoParams), nil
 			}
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(context.Background(), snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGen := tt.msDiffGenRetriever()
@@ -483,11 +485,11 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 				snapshotFileWrite, err := fs.OpenFile(filePath, os.O_RDWR, 0666)
 				require.NoError(t, err)
 
-				tt.originDeltaHeader.TargetMilestoneIndex += 1
-				tt.originDeltaHeader.TargetMilestoneTimestamp += 1
+				tt.originDeltaHeader.TargetMilestoneIndex++
+				tt.originDeltaHeader.TargetMilestoneTimestamp++
 
 				// extend the existing delta snapshot file
-				snapshot.StreamDeltaSnapshotDataToExisting(snapshotFileWrite, tt.originDeltaHeader, msDiffGen, sepGen)
+				_, err = snapshot.StreamDeltaSnapshotDataToExisting(snapshotFileWrite, tt.originDeltaHeader, msDiffGen, sepGen)
 				require.NoError(t, err)
 				require.NoError(t, snapshotFileWrite.Close())
 			}
@@ -504,7 +506,7 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 				return getProtocolStorage(protoParams), nil
 			}
 
-			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
+			require.NoError(t, snapshot.StreamDeltaSnapshotDataFrom(context.Background(), snapshotFileRead, protocolStorageGetter, tt.deltaHeaderConsumer, tt.msDiffConsumer, tt.sepConsumer, tt.protoParamsMsOptionsConsumer))
 
 			// verify that what has been written also has been read again
 			msDiffGenRetriever, sepGenRetriever := tt.snapshotExtensionGenRetriever()
@@ -709,7 +711,7 @@ func newDeltaSnapshotExtensionGenerator(deltaHeader *snapshot.DeltaSnapshotHeade
 			}
 			extensionsCount--
 
-			msDiffIterFunc, _ := newMsDiffGenerator(startMilestoneIndex-syncmanager.MilestoneIndexDelta(msDiffCount), msDiffCount, snapshot.MsDiffDirectionOnwards)
+			msDiffIterFunc, _ := newMsDiffGenerator(startMilestoneIndex-msDiffCount, msDiffCount, snapshot.MsDiffDirectionOnwards)
 			sepIterFunc, _ := newSEPGenerator(sepCount)
 
 			// reset the SEP every time
@@ -791,7 +793,7 @@ func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *u
 func randFullSnapshotHeader(outputCount uint64, msDiffCount uint32, sepCount uint16) *snapshot.FullSnapshotHeader {
 
 	targetMilestoneIndex := tpkg.RandMilestoneIndex()
-	for targetMilestoneIndex < iotago.MilestoneIndex(msDiffCount+1) {
+	for targetMilestoneIndex < msDiffCount+1 {
 		targetMilestoneIndex = tpkg.RandMilestoneIndex()
 	}
 

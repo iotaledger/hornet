@@ -75,7 +75,7 @@ func deleteReceipt(rt *ReceiptTuple, mutations kvstore.BatchedMutations) error {
 }
 
 // SearchHighestReceiptMigratedAtIndex searches the highest migratedAt of all stored receipts.
-func (u *Manager) SearchHighestReceiptMigratedAtIndex(options ...UTXOIterateOption) (iotago.MilestoneIndex, error) {
+func (u *Manager) SearchHighestReceiptMigratedAtIndex(options ...IterateOption) (iotago.MilestoneIndex, error) {
 	var highestMigratedAtIndex iotago.MilestoneIndex
 	if err := u.ForEachReceiptTuple(func(rt *ReceiptTuple) bool {
 		if rt.Receipt.MigratedAt > highestMigratedAtIndex {
@@ -95,7 +95,7 @@ func (u *Manager) SearchHighestReceiptMigratedAtIndex(options ...UTXOIterateOpti
 type ReceiptTupleConsumer func(rt *ReceiptTuple) bool
 
 // ForEachReceiptTuple iterates over all stored receipt tuples.
-func (u *Manager) ForEachReceiptTuple(consumer ReceiptTupleConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachReceiptTuple(consumer ReceiptTupleConsumer, options ...IterateOption) error {
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
@@ -129,7 +129,7 @@ func (u *Manager) ForEachReceiptTuple(consumer ReceiptTupleConsumer, options ...
 }
 
 // ForEachReceiptTupleMigratedAt iterates over all stored receipt tuples for a given migrated at index.
-func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex iotago.MilestoneIndex, consumer ReceiptTupleConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex iotago.MilestoneIndex, consumer ReceiptTupleConsumer, options ...IterateOption) error {
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
