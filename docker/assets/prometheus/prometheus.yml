@@ -1,4 +1,11 @@
 scrape_configs:
+  - job_name: cadvisor
+    scrape_interval: 5s
+    scrape_timeout: 5s
+    static_configs:
+      - targets:
+          - 'cadvisor:8080'
+
   - job_name: hornet
     scrape_interval: 5s
     scrape_timeout: 5s
@@ -33,3 +40,10 @@ scrape_configs:
     static_configs:
       - targets:
           - 'inx-dashboard:9312'
+  
+  - job_name: traefik
+    scrape_interval: 5s
+    scrape_timeout: 5s
+    static_configs:
+      - targets:
+          - 'traefik:8080'
