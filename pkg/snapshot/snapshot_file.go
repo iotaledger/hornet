@@ -269,7 +269,7 @@ func ReadMilestoneDiff(reader io.ReadSeeker, protocolStorage *storage.ProtocolSt
 
 // ReadMilestoneDiffProtocolParameters reads protocol parameter updates from a MilestoneDiff from the given reader.
 // automatically seek to the end of the MilestoneDiff.
-func ReadMilestoneDiffProtocolParameters(reader io.ReadSeeker, protocolStorage *storage.ProtocolStorage) (int64, error) {
+func ReadMilestoneDiffProtocolParameters(reader io.ReadSeeker, protocolStorage *storage.ProtocolStorage, ignoreIndex ...iotago.MilestoneIndex) (int64, error) {
 
 	var msDiffLength uint32
 	if err := binary.Read(reader, binary.LittleEndian, &msDiffLength); err != nil {
@@ -291,8 +291,9 @@ func ReadMilestoneDiffProtocolParameters(reader io.ReadSeeker, protocolStorage *
 		return 0, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
 	}
 
-	if milestonePayload.Opts.MustSet().ProtocolParams() != nil {
-		if err := protocolStorage.StoreProtocolParametersMilestoneOption(milestonePayload.Opts.MustSet().ProtocolParams()); err != nil {
+	protoParamsMsOption := milestonePayload.Opts.MustSet().ProtocolParams()
+	if protoParamsMsOption != nil && (len(ignoreIndex) == 0 || (ignoreIndex[0] != protoParamsMsOption.TargetMilestoneIndex)) {
+		if err := protocolStorage.StoreProtocolParametersMilestoneOption(protoParamsMsOption); err != nil {
 			return 0, fmt.Errorf("unable to store protocol parameters milestone option: %w", err)
 		}
 	}
@@ -1243,7 +1244,7 @@ func StreamFullSnapshotDataFrom(
 			return err
 		}
 
-		msDiffLength, err := ReadMilestoneDiffProtocolParameters(reader, protocolStorage)
+		msDiffLength, err := ReadMilestoneDiffProtocolParameters(reader, protocolStorage, fullHeader.ProtocolParamsMilestoneOpt.TargetMilestoneIndex)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
 		}
