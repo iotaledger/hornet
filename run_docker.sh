@@ -19,6 +19,9 @@ if [[ $1 = "build" ]]; then
   docker compose pull inx-mqtt
   docker compose pull inx-participation
   docker compose pull inx-dashboard
+  
+  # shift arguments to remove build arg
+  shift;
 fi
 
 # Prepare db directory
