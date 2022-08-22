@@ -6,6 +6,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
@@ -78,7 +79,7 @@ func listPeers(_ echo.Context) ([]*PeerResponse, error) {
 	return results, nil
 }
 
-func addPeer(c echo.Context) (*PeerResponse, error) {
+func addPeer(c echo.Context, logger *logger.Logger) (*PeerResponse, error) {
 
 	request := &addPeerRequest{}
 
@@ -110,7 +111,9 @@ func addPeer(c echo.Context) (*PeerResponse, error) {
 	}
 
 	// error is ignored because we don't care about the config here
-	_ = deps.PeeringConfigManager.AddPeer(multiAddr, alias)
+	if err := deps.PeeringConfigManager.AddPeer(multiAddr, alias); err != nil {
+		logger.Warn(err.Error())
+	}
 
 	return WrapInfoSnapshot(info), nil
 }

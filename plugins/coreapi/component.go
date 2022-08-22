@@ -443,7 +443,7 @@ func configure() error {
 	})
 
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
-		resp, err := addPeer(c)
+		resp, err := addPeer(c, Plugin.Logger())
 		if err != nil {
 			return err
 		}
