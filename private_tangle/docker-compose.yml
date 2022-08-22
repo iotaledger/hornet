@@ -53,13 +53,15 @@ services:
         ipv4_address: 172.18.211.20
     environment:
       - "COO_PRV_KEYS=651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c,0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"
+    ports:
+      - "6070:6060/tcp"
     volumes:
-      - ./config_coo.json:/app/config.json:ro
       - ./privatedb/state:/app/state
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.11:9029"
+      - "--coordinator.stateFilePath=state/coordinator.state"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.20:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -71,12 +73,23 @@ services:
       peering_net:
         ipv4_address: 172.18.211.21
     restart: on-failure
+    ports:
+      - "9321:9311/tcp"
+      - "6071:6060/tcp"
     volumes:
       - ./privatedb/indexer:/app/database
     command:
       - "--inx.address=172.18.211.11:9029"
       - "--indexer.bindAddress=172.18.211.21:9091"
-      - "--prometheus.bindAddress=172.18.211.21:9312"
+      - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=172.18.211.21:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.restAPIMetrics=true"
+      - "--prometheus.inxMetrics=true"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.21:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -88,15 +101,20 @@ services:
       peering_net:
         ipv4_address: 172.18.211.22
     restart: on-failure
-    volumes:
-      - ./config_mqtt.json:/app/config.json:ro
+    ports:
+      - "9322:9311/tcp"
+      - "6072:6060/tcp"
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.11:9029"
       - "--mqtt.websocket.bindAddress=172.18.211.22:1888"
       - "--prometheus.enabled=true"
-      - "--prometheus.bindAddress=172.18.211.22:9313"
+      - "--prometheus.bindAddress=172.18.211.22:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.mqttMetrics=true"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.22:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -110,18 +128,17 @@ services:
     restart: on-failure
     ports:
       - "8091:8091/tcp"
+      - "6073:6060/tcp"
     environment:
       - "FAUCET_PRV_KEY=887844b1e6bf9ca9e0b57584656add4370dbb49a8cb79e2e3032229f30fd80359e3df559ad0de8e5fa019b9ea46d1ee40879f3f3f74594a3306de9dfd43dcd25"
-    volumes:
-      - ./config_faucet.json:/app/config.json:ro
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.11:9029"
       - "--faucet.bindAddress=172.18.211.23:8091"
       - "--faucet.amount=100000000000"
       - "--faucet.smallAmount=10000000000"
       - "--faucet.maxAddressBalance=200000000000"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.23:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -135,14 +152,15 @@ services:
     restart: on-failure
     ports:
       - "9892:9892/tcp"
+      - "6074:6060/tcp"
     volumes:
       - ./privatedb/participation:/app/database
-      - ./config_participation.json:/app/config.json:ro
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.11:9029"
       - "--participation.bindAddress=172.18.211.24:9892"
+      - "--participation.db.path=/app/database"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.24:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -155,16 +173,37 @@ services:
         ipv4_address: 172.18.211.25
     restart: on-failure
     ports:
+      - "9325:9311/tcp"
       - "9092:9092/tcp"
+      - "6075:6060/tcp"
     environment:
       - "SPAMMER_MNEMONIC=reward addict anger tongue denial supply cattle lawn foot climb ask friend base spring ensure spike alien equal burst bitter crowd august ignore animal"
-    volumes:
-      - ./config_spammer.json:/app/config.json:ro
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.11:9029"
       - "--restAPI.bindAddress=172.18.211.25:9092"
+      - "--spammer.autostart=true"
+      - "--spammer.bpsRateLimit=50"
+      - "--spammer.cpuMaxUsage=0.0"
+      - "--spammer.workers=0"
+      - "--spammer.valueSpam.enabled=true"
+      - "--spammer.valueSpam.sendBasicOutput=true"
+      - "--spammer.valueSpam.collectBasicOutput=true"
+      - "--spammer.valueSpam.createAlias=true"
+      - "--spammer.valueSpam.destroyAlias=true"
+      - "--spammer.valueSpam.createFoundry=true"
+      - "--spammer.valueSpam.destroyFoundry=true"
+      - "--spammer.valueSpam.mintNativeToken=true"
+      - "--spammer.valueSpam.meltNativeToken=true"
+      - "--spammer.valueSpam.createNFT=true"
+      - "--spammer.valueSpam.destroyNFT=true"
+      - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=172.18.211.25:9311"
+      - "--prometheus.spammerMetrics=true"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.25:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -178,13 +217,12 @@ services:
     restart: on-failure
     ports:
       - "9687:9687/tcp"
-    volumes:
-      - ./config_poi.json:/app/config.json:ro
+      - "6076:6060/tcp"
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.11:9029"
       - "--poi.bindAddress=172.18.211.26:9687"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.26:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -199,15 +237,22 @@ services:
       - hornet-coo
     restart: on-failure
     ports:
+      - "9330:9311/tcp"
       - "8081:8081/tcp"
-    volumes:
-      - ./config_dashboard.json:/app/config.json:ro
+      - "6080:6060/tcp"
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.11:9029"
       - "--dashboard.bindAddress=172.18.211.31:8081"
+      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
+      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
       - "--dashboard.auth.identityPrivateKey=1f46fad4f538a031d4f87f490f6bca4319dfd0307636a5759a22b5e8874bd608f9156ba976a12918c16a481c38c88a7b5351b769adc30390e93b6c0a63b09b79"
+      - "--prometheus.enabled=false"
+      - "--prometheus.bindAddress=172.18.211.31:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.31:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -222,15 +267,22 @@ services:
       - hornet-2
     restart: on-failure
     ports:
+      - "9331:9311/tcp"
       - "8082:8081/tcp"
-    volumes:
-      - ./config_dashboard.json:/app/config.json:ro
+      - "6081:6060/tcp"
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.12:9029"
       - "--dashboard.bindAddress=172.18.211.32:8081"
+      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
+      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
       - "--dashboard.auth.identityPrivateKey=a06b288ce7fc3b6f1e716f6f7d72050b53417aae4b305a68883550a3bb28597f254b082515a79391a7f13009b4133851a0c4d48e0e948809c3b46ff3e2500b4f"
+      - "--prometheus.enabled=false"
+      - "--prometheus.bindAddress=172.18.211.32:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.32:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -245,15 +297,22 @@ services:
       - hornet-3
     restart: on-failure
     ports:
+      - "9332:9311/tcp"
       - "8083:8081/tcp"
-    volumes:
-      - ./config_dashboard.json:/app/config.json:ro
+      - "6082:6060/tcp"
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.13:9029"
       - "--dashboard.bindAddress=172.18.211.33:8081"
+      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
+      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
       - "--dashboard.auth.identityPrivateKey=5126767a84e1ced849dbbf2be809fd40f90bcfb81bd0d3309e2e25e34f803bf265500854f1f0e8fd3c389cf7b6b59cfd422b9319f257e2a8d3a772973560acdd"
+      - "--prometheus.enabled=false"
+      - "--prometheus.bindAddress=172.18.211.33:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.33:6060"
     profiles:
       - 3-nodes
       - 4-nodes
@@ -267,15 +326,22 @@ services:
       - hornet-4
     restart: on-failure
     ports:
+      - "9333:9311/tcp"
       - "8084:8081/tcp"
-    volumes:
-      - ./config_dashboard.json:/app/config.json:ro
+      - "6083:6060/tcp"
     command:
-      - "-c"
-      - "config.json"
       - "--inx.address=172.18.211.14:9029"
       - "--dashboard.bindAddress=172.18.211.34:8081"
+      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
+      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
       - "--dashboard.auth.identityPrivateKey=996dceaeddcb5fc21480646f38ac53c4f5668fd33f3c0bfecfd004861d4a9dc722355dabd7f31a1266423abcf6c1db6228eb8283deb55731915ed06bd2ca387e"
+      - "--prometheus.enabled=false"
+      - "--prometheus.bindAddress=172.18.211.34:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.34:6060"
     profiles:
       - 4-nodes
 
@@ -298,6 +364,7 @@ services:
       - "14265:14265/tcp"
       - "9311:9311/tcp"
       - "9029:9029/tcp"
+      - "6060:6060/tcp"
     cap_drop:
       - ALL
     volumes:
@@ -315,6 +382,9 @@ services:
       - "--p2p.peerAliases=hornet-2,hornet-3,hornet-4"
       - "--debug.enabled=true"
       - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=172.18.211.11:9311"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.11:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -336,6 +406,7 @@ services:
       - "14266:14265/tcp"
       - "15601:15600/tcp"
       - "9312:9311/tcp"
+      - "6061:6060/tcp"
     cap_drop:
       - ALL
     volumes:
@@ -353,6 +424,9 @@ services:
       - "--p2p.peerAliases=hornet-coo,hornet-3,hornet-4"
       - "--debug.enabled=true"
       - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=172.18.211.12:9311"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.12:6060"
     profiles:
       - 2-nodes
       - 3-nodes
@@ -374,6 +448,7 @@ services:
       - "14267:14265/tcp"
       - "15602:15600/tcp"
       - "9313:9311/tcp"
+      - "6062:6060/tcp"
     cap_drop:
       - ALL
     volumes:
@@ -391,6 +466,9 @@ services:
       - "--p2p.peerAliases=hornet-coo,hornet-2,hornet-4"
       - "--debug.enabled=true"
       - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=172.18.211.13:9311"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.13:6060"
     profiles:
       - 3-nodes
       - 4-nodes
@@ -411,6 +489,7 @@ services:
       - "14268:14265/tcp"
       - "15603:15600/tcp"
       - "9314:9311/tcp"
+      - "6063:6060/tcp"
     cap_drop:
       - ALL
     volumes:
@@ -428,6 +507,9 @@ services:
       - "--p2p.peerAliases=hornet-coo,hornet-2,hornet-3"
       - "--debug.enabled=true"
       - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=172.18.211.14:9311"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.14:6060"
     profiles:
       - 4-nodes
 
