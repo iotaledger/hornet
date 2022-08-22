@@ -31,6 +31,7 @@ mkdir -p testnet/participation
 mkdir -p testnet/dashboard
 if [[ "$OSTYPE" != "darwin"* ]]; then
   chown -R 65532:65532 testnet
+  chown 65532:65532 peering.json
 fi
 
 docker compose up $@
