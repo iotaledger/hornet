@@ -7,24 +7,46 @@
     "address": "localhost:9029"
   },
   "spammer": {
-    "bindAddress": "localhost:9092",
+    "autostart": true,
+    "bpsRateLimit": 50,
+    "cpuMaxUsage": 0.0,
+    "workers": 0,
     "message": "We are all made of stardust.",
     "tag": "HORNET Spammer",
     "tagSemiLazy": "HORNET Spammer Semi-Lazy",
-    "cpuMaxUsage": 0.8,
-    "bpsRateLimit": 5.0,
-    "workers": 0,
-    "autostart": true,
-    "valueSpamEnabled": false,
-    "nonLazyTipsThreshold": 0,
-    "semiLazyTipsThreshold": 30
+    "valueSpam": {
+      "enabled": true,
+      "sendBasicOutput": true,
+      "collectBasicOutput": true,
+      "createAlias": true,
+      "destroyAlias": true,
+      "createFoundry": true,
+      "destroyFoundry": true,
+      "mintNativeToken": true,
+      "meltNativeToken": true,
+      "createNFT": true,
+      "destroyNFT": true
+    },
+    "tipselection": {
+      "nonLazyTipsThreshold": 0,
+      "semiLazyTipsThreshold": 30
+    }
+  },
+  "restAPI": {
+    "bindAddress": "localhost:9092",
+    "debugRequestLoggerEnabled": false
+  },
+  "pow": {
+    "refreshTipsInterval": "5s"
   },
   "profiling": {
+    "enabled": true,
     "bindAddress": "localhost:6060"
   },
   "prometheus": {
     "enabled": true,
     "bindAddress": "localhost:9312",
+    "spammerMetrics": true,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

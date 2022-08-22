@@ -149,7 +149,7 @@ services:
       - 4-nodes
 
   inx-spammer:
-    image: iotaledger/inx-spammer:1.0.0-beta.5
+    image: iotaledger/inx-spammer:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.25
@@ -164,7 +164,7 @@ services:
       - "-c"
       - "config.json"
       - "--inx.address=172.18.211.11:9029"
-      - "--spammer.bindAddress=172.18.211.25:9092"
+      - "--restAPI.bindAddress=172.18.211.25:9092"
     profiles:
       - 2-nodes
       - 3-nodes

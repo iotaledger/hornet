@@ -3,7 +3,7 @@ FROM iotaledger/inx-indexer:1.0.0-beta.5 AS indexer
 FROM iotaledger/inx-faucet:1.0.0-beta.5 AS faucet
 FROM iotaledger/inx-dashboard:1.0.0-beta.5 AS dashboard
 FROM iotaledger/inx-mqtt:1.0.0-beta.5 AS mqtt
-FROM iotaledger/inx-spammer:1.0.0-beta.5 AS spammer
+FROM iotaledger/inx-spammer:1.0.0-beta.6 AS spammer
 FROM iotaledger/inx-coordinator:1.0.0-beta.5 AS coordinator
 FROM iotaledger/inx-poi:1.0.0-beta.5 AS poi
 

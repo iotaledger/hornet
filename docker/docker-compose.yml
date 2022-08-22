@@ -167,12 +167,12 @@ services:
       - "--participation.bindAddress=inx-participation:9892"
 
   inx-spammer:
-    image: iotaledger/inx-spammer:1.0.0-beta.5
+    image: iotaledger/inx-spammer:1.0.0-beta.6
     stop_grace_period: 5m
     restart: unless-stopped
     command:
       - "--inx.address=hornet:9029"
-      - "--spammer.bindAddress=inx-spammer:9092"
+      - "--restAPI.bindAddress=inx-spammer:9092"
       - "--prometheus.enabled=true"
       - "--prometheus.bindAddress=inx-spammer:9312"
 
