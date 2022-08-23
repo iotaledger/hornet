@@ -845,7 +845,7 @@ func CreateSnapshotFromStorage(
 	targetMilestoneTimestamp := cachedMilestoneTarget.Milestone().TimestampUnix()
 	targetMilestoneID := cachedMilestoneTarget.Milestone().MilestoneID()
 
-	protoParamsMsOption, err := dbStorage.ProtocolParametersMilestoneOption(ledgerIndex)
+	protoParamsMsOption, err := dbStorage.ProtocolParametersMilestoneOption(targetIndex)
 	if err != nil {
 		return nil, errors.Wrapf(common.ErrCritical, "loading protocol parameters milestone option failed: %s", err.Error())
 	}
@@ -857,7 +857,7 @@ func CreateSnapshotFromStorage(
 		TargetMilestoneIndex:       targetIndex,
 		TargetMilestoneTimestamp:   targetMilestoneTimestamp,
 		TargetMilestoneID:          targetMilestoneID,
-		LedgerMilestoneIndex:       ledgerIndex,
+		LedgerMilestoneIndex:       targetIndex,
 		TreasuryOutput:             unspentTreasuryOutput,
 		ProtocolParamsMilestoneOpt: protoParamsMsOption,
 		OutputCount:                0,
