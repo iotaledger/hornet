@@ -160,6 +160,10 @@ func generateEd25519Address(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolHRP)
 	}
 
+	if len(*publicKeyFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolPublicKey)
+	}
+
 	// parse pubkey
 	pubKey, err := crypto.ParseEd25519PublicKeyFromString(*publicKeyFlag)
 	if err != nil {
