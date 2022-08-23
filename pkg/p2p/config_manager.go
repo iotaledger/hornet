@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -71,7 +72,7 @@ func (pm *ConfigManager) AddPeer(multiAddress multiaddr.Multiaddr, alias string)
 		Alias:        alias,
 	})
 
-	return pm.store()
+	return pm.Store()
 }
 
 // RemovePeer removes a peer from the config manager.
@@ -98,7 +99,7 @@ func (pm *ConfigManager) RemovePeer(peerID peer.ID) error {
 			pm.peers[len(pm.peers)-1] = nil // avoid potential memory leak
 			pm.peers = pm.peers[:len(pm.peers)-1]
 
-			return pm.store()
+			return pm.Store()
 		}
 	}
 
@@ -110,11 +111,19 @@ func (pm *ConfigManager) StoreOnChange(store bool) {
 	pm.storeOnChange = store
 }
 
-// store calls the storeCallback if storeOnChange is active.
-func (pm *ConfigManager) store() error {
+// Store calls the storeCallback if storeOnChange is active.
+func (pm *ConfigManager) Store() error {
 	if !pm.storeOnChange {
 		return nil
 	}
 
-	return pm.storeCallback(pm.peers)
+	if pm.storeCallback == nil {
+		return nil
+	}
+
+	if err := pm.storeCallback(pm.peers); err != nil {
+		return fmt.Errorf("failed to store peering config: %w", err)
+	}
+
+	return nil
 }

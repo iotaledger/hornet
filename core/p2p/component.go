@@ -202,6 +202,7 @@ func provide(c *dig.Container) error {
 			applyAliases = false
 		}
 
+		peerAdded := false
 		for i, peerIDStr := range peerIDsStr {
 			multiAddr, err := multiaddr.NewMultiaddr(peerIDStr)
 			if err != nil {
@@ -216,9 +217,17 @@ func provide(c *dig.Container) error {
 			if err = p2pConfigManager.AddPeer(multiAddr, alias); err != nil {
 				CoreComponent.LogWarnf("unable to add peer to config manager %s: %s", peerIDStr, err)
 			}
+
+			peerAdded = true
 		}
 
 		p2pConfigManager.StoreOnChange(true)
+
+		if peerAdded {
+			if err := p2pConfigManager.Store(); err != nil {
+				CoreComponent.LogWarnf("failed to store peering config: %s", err)
+			}
+		}
 
 		return p2pConfigManager
 	}); err != nil {
