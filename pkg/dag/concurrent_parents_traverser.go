@@ -166,8 +166,16 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents iotag
 	doneChan := make(chan struct{})
 	errChan := make(chan error, t.parallelism)
 
+	wg := &sync.WaitGroup{}
+	wg.Add(t.parallelism)
+
+	defer func() {
+		// wait until the traverser is done
+		wg.Wait()
+	}()
+
 	for i := 0; i < t.parallelism; i++ {
-		go t.processStack(doneChan, errChan)
+		go t.processStack(wg, doneChan, errChan)
 	}
 
 	select {
@@ -187,7 +195,8 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents iotag
 }
 
 // processStack processes elements from the pipeline until there are no elements left or an error occurs.
-func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errChan chan error) {
+func (t *ConcurrentParentsTraverser) processStack(wg *sync.WaitGroup, doneChan chan struct{}, errChan chan error) {
+	defer wg.Done()
 
 	wasProcessed := func(blockID iotago.BlockID) bool {
 		_, wasProcessed := t.processed.Load(blockID)
