@@ -136,7 +136,11 @@ func databaseMerge(args []string) error {
 	}
 
 	ts := time.Now()
-	println(fmt.Sprintf("merging databases... (source: %s, target: %s)", *databasePathSourceFlag, *databasePathTargetFlag))
+	if len(*databasePathSourceFlag) > 0 {
+		println(fmt.Sprintf("merging databases... (source: %s, target: %s)", *databasePathSourceFlag, *databasePathTargetFlag))
+	} else {
+		println(fmt.Sprintf("merging databases... (nodeURL: %s, target: %s)", *nodeURLFlag, *databasePathTargetFlag))
+	}
 
 	errMerge := mergeDatabase(
 		getGracefulStopContext(),
@@ -508,11 +512,6 @@ func mergeDatabase(
 
 	tangleStoreSourceAvailable := tangleStoreSource != nil
 
-	if err := checkSnapshotInfo(tangleStoreTarget); err != nil {
-		return err
-	}
-	snapshotInfoTarget := tangleStoreTarget.SnapshotInfo()
-
 	var sourceNetworkID uint64
 	var msIndexStartSource, msIndexEndSource iotago.MilestoneIndex = 0, 0
 	msIndexStartTarget, msIndexEndTarget := getStorageMilestoneRange(tangleStoreTarget)
@@ -532,8 +531,17 @@ func mergeDatabase(
 			return errors.Wrapf(ErrCritical, "loading genesis snapshot failed: %s", err.Error())
 		}
 
+		if err := checkSnapshotInfo(tangleStoreTarget); err != nil {
+			return err
+		}
+		snapshotInfoTarget := tangleStoreTarget.SnapshotInfo()
+
 		// set the new start and end indexes after applying the genesis snapshot
 		msIndexStartTarget, msIndexEndTarget = snapshotInfoTarget.EntryPointIndex(), snapshotInfoTarget.EntryPointIndex()
+	} else {
+		if err := checkSnapshotInfo(tangleStoreTarget); err != nil {
+			return err
+		}
 	}
 
 	if tangleStoreSourceAvailable {
