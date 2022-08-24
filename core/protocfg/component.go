@@ -138,13 +138,20 @@ func provide(c *dig.Container) error {
 }
 
 func configure() error {
-	deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(events.NewClosure(deps.ProtocolManager.HandleConfirmedMilestone))
 
-	unsupportedProtoParamsMsOptionClosure := events.NewClosure(func(unsupportedProtoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) {
+	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
+		defer cachedMilestone.Release(true) // milestone -1
+
+		deps.ProtocolManager.HandleConfirmedMilestone(cachedMilestone.Milestone().Milestone())
+	})
+	deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
+
+	onNextMilestoneUnsupported := events.NewClosure(func(unsupportedProtoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) {
 		unsupportedVersion := unsupportedProtoParamsMsOption.ProtocolVersion
 		CoreComponent.LogWarnf("next milestone will run under unsupported protocol version %d!", unsupportedVersion)
 	})
-	deps.ProtocolManager.Events.NextMilestoneUnsupported.Hook(unsupportedProtoParamsMsOptionClosure)
+	deps.ProtocolManager.Events.NextMilestoneUnsupported.Hook(onNextMilestoneUnsupported)
+
 	deps.ProtocolManager.Events.CriticalErrors.Hook(events.NewClosure(func(err error) {
 		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("protocol manager hit a critical error: %s", err), true)
 	}))

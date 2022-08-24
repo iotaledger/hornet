@@ -283,8 +283,8 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	onConfirmedMilestoneChanged := events.NewClosure(func(milestone *storage.CachedMilestone) {
-		wp.Submit(milestone)
+	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
+		wp.Submit(cachedMilestone)
 	})
 
 	wp.Start()
