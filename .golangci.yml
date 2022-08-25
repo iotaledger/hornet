@@ -107,3 +107,22 @@ issues:
     # Set to 0 to disable.
     # Default: 3
     max-same-issues: 0
+    #exclude:
+    #    - 'Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked' # errcheck
+    #    - "err113: do not define dynamic errors, use wrapped static errors instead:" # goerr113
+    #    - "type name will be used as [0-9A-Za-z_.]+ by other packages, and that stutters; consider calling this" # golint
+    #    - "Potential file inclusion via variable" # gosec
+    #    - "G404: Use of weak random number generator" # gosec
+    #    - "Subprocess launch(ed with variable|ing should be audited)" # gosec
+    #    - "Use of unsafe calls should be audited" # gosec
+    #    - "G108: Profiling endpoint is automatically exposed on /debug/pprof" # gosec
+    #    - "(Expect directory permissions to be 0750 or less|Expect file permissions to be 0600 or less)" # gosec
+    #    - "G101: Potential hardcoded credentials" # gosec
+    #    - "(G104|G307)" # gosec Duplicated errcheck checks.
+    #    - "`[0-9A-Za-z_.]+` - `[0-9A-Za-z_.]+` always receives `[0-9A-Za-z_.]+`" # unparam
+    #    - "should have comment .*or be unexported" # revive
+    #    - "exported: comment on exported" # revive
+    #    - "package-comments: package comment should be of the form" # revive
+    #    - "blank-imports" # revive
+    #    - "var-naming: don't use leading k in Go names;" #revive
+    #    - 'shadow: declaration of "err"' # govet

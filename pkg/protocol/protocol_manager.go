@@ -123,12 +123,10 @@ func (m *Manager) NextPendingSupported() bool {
 	return m.SupportedVersions().Supports(m.pending[0].ProtocolVersion)
 }
 
-// HandleConfirmedMilestone examines the newly confirmed milestone for protocol parameter changes.
-func (m *Manager) HandleConfirmedMilestone(cachedMilestone *storage.CachedMilestone) {
-	defer cachedMilestone.Release(true) // milestone -1
-	ms := cachedMilestone.Milestone()
+// HandleConfirmedMilestone examines the newly confirmed milestone payload for protocol parameter changes.
+func (m *Manager) HandleConfirmedMilestone(milestonePayload *iotago.Milestone) {
 
-	if protoParamsMsOption := ms.Milestone().Opts.MustSet().ProtocolParams(); protoParamsMsOption != nil {
+	if protoParamsMsOption := milestonePayload.Opts.MustSet().ProtocolParams(); protoParamsMsOption != nil {
 		m.pendingLock.Lock()
 		m.pending = append(m.pending, protoParamsMsOption)
 		m.pendingLock.Unlock()
@@ -140,7 +138,7 @@ func (m *Manager) HandleConfirmedMilestone(cachedMilestone *storage.CachedMilest
 		}
 	}
 
-	if !m.currentShouldChange(ms) {
+	if !m.currentShouldChange(milestonePayload) {
 		return
 	}
 
@@ -152,9 +150,10 @@ func (m *Manager) HandleConfirmedMilestone(cachedMilestone *storage.CachedMilest
 }
 
 // checks whether the current protocol parameters need to be updated.
-func (m *Manager) currentShouldChange(milestone *storage.Milestone) bool {
+func (m *Manager) currentShouldChange(milestonePayload *iotago.Milestone) bool {
 	m.pendingLock.RLock()
 	defer m.pendingLock.RUnlock()
+
 	if len(m.pending) == 0 {
 		return false
 	}
@@ -162,13 +161,13 @@ func (m *Manager) currentShouldChange(milestone *storage.Milestone) bool {
 	next := m.pending[0]
 
 	switch {
-	case next.TargetMilestoneIndex == milestone.Milestone().Index+1:
+	case next.TargetMilestoneIndex == milestonePayload.Index+1:
 		if !m.SupportedVersions().Supports(next.ProtocolVersion) {
 			m.Events.NextMilestoneUnsupported.Trigger(next)
 		}
 
 		return false
-	case next.TargetMilestoneIndex > milestone.Milestone().Index:
+	case next.TargetMilestoneIndex > milestonePayload.Index:
 		return false
 	default:
 		return true
