@@ -292,6 +292,12 @@ func copyAndVerifyMilestoneCone(
 		return nil, fmt.Errorf("source milestone not valid! %d", msIndex)
 	}
 
+	// we need to store every milestone payload here as well,
+	// otherwise the ledger changes might be applied,
+	// but the corresponding milestone payload is unknown in the database.
+	cachedMilestone, _ := storeBlockTarget.StoreMilestoneIfAbsent(milestonePayload) // milestone +1
+	cachedMilestone.Release(true)                                                   // milestone -1
+
 	ts := time.Now()
 
 	//nolint:contextcheck // we don't want abort the copying of the blocks itself
@@ -587,7 +593,7 @@ func mergeDatabase(
 	for msIndex := msIndexStart; msIndex <= msIndexEnd; msIndex++ {
 		if !tangleStoreSourceAvailable || !indexAvailableInSource(msIndex) {
 			if client == nil {
-				return fmt.Errorf("history is missing (oldest source index: %d, target index: %d)", msIndexStartSource, msIndex)
+				return fmt.Errorf("history is missing (milestone range in source database: %d-%d, target index: %d)", msIndexStartSource, msIndexEndSource, msIndex)
 			}
 
 			print(fmt.Sprintf("get milestone %d via API... ", msIndex))
