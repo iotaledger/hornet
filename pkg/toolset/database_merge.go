@@ -18,6 +18,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
+	"github.com/iotaledger/hornet/v2/pkg/protocol"
 	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
@@ -81,9 +82,6 @@ func databaseMerge(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolDatabaseEngineTarget)
 	}
 
-	// TODO: needs to be adapted for when protocol parameters struct changes
-	protoParams := &iotago.ProtocolParameters{}
-
 	var tangleStoreSource *storage.Storage
 	if len(*databasePathSourceFlag) > 0 {
 		var err error
@@ -144,7 +142,6 @@ func databaseMerge(args []string) error {
 
 	errMerge := mergeDatabase(
 		getGracefulStopContext(),
-		protoParams,
 		milestoneManager,
 		tangleStoreSource,
 		tangleStoreTarget,
@@ -269,7 +266,7 @@ type confStats struct {
 // target storage, confirms the milestone and applies the ledger changes.
 func copyAndVerifyMilestoneCone(
 	ctx context.Context,
-	protoParams *iotago.ProtocolParameters,
+	protocolManager *protocol.Manager,
 	genesisMilestoneIndex iotago.MilestoneIndex,
 	msIndex iotago.MilestoneIndex,
 	getMilestonePayload func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error),
@@ -300,7 +297,7 @@ func copyAndVerifyMilestoneCone(
 	//nolint:contextcheck // we don't want abort the copying of the blocks itself
 	if err := copyMilestoneCone(
 		context.Background(),
-		protoParams,
+		protocolManager.Current(),
 		msIndex,
 		milestonePayload,
 		parentsTraverserInterfaceSource,
@@ -317,7 +314,7 @@ func copyAndVerifyMilestoneCone(
 		utxoManagerTarget,
 		parentsTraverserStorageTarget,
 		cachedBlockFuncTarget,
-		protoParams,
+		protocolManager.Current(),
 		genesisMilestoneIndex,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
@@ -341,6 +338,9 @@ func copyAndVerifyMilestoneCone(
 
 	timeConfirmMilestone := time.Now()
 
+	// handle protocol parameter updates
+	protocolManager.HandleConfirmedMilestone(milestonePayload)
+
 	return &confStats{
 		msIndex:              confirmedMilestoneStats.Index,
 		blocksReferenced:     confirmedMilestoneStats.BlocksReferenced,
@@ -352,7 +352,7 @@ func copyAndVerifyMilestoneCone(
 // mergeViaAPI copies a milestone from a remote node to the target database via API.
 func mergeViaAPI(
 	ctx context.Context,
-	protoParams *iotago.ProtocolParameters,
+	protocolManager *protocol.Manager,
 	msIndex iotago.MilestoneIndex,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
@@ -363,7 +363,7 @@ func mergeViaAPI(
 		ctxBlock, cancelBlock := context.WithTimeout(ctx, 5*time.Second)
 		defer cancelBlock()
 
-		block, err := client.BlockByBlockID(ctxBlock, blockID, protoParams)
+		block, err := client.BlockByBlockID(ctxBlock, blockID, protocolManager.Current())
 		if err != nil {
 			return nil, err
 		}
@@ -389,7 +389,7 @@ func mergeViaAPI(
 	snapshotInfoTarget := storeTarget.SnapshotInfo()
 
 	//nolint:contextcheck // false positive
-	proxyStorage, err := NewProxyStorage(protoParams, storeTarget, milestoneManager, getBlockViaAPI)
+	proxyStorage, err := NewProxyStorage(protocolManager.Current(), storeTarget, milestoneManager, getBlockViaAPI)
 	if err != nil {
 		return err
 	}
@@ -399,7 +399,7 @@ func mergeViaAPI(
 
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
-		protoParams,
+		protocolManager,
 		snapshotInfoTarget.GenesisMilestoneIndex(),
 		msIndex,
 		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
@@ -438,7 +438,7 @@ func mergeViaAPI(
 // mergeViaSourceDatabase copies a milestone from the source database to the target database.
 func mergeViaSourceDatabase(
 	ctx context.Context,
-	protoParams *iotago.ProtocolParameters,
+	protocolManager *protocol.Manager,
 	msIndex iotago.MilestoneIndex,
 	storeSource *storage.Storage,
 	storeTarget *storage.Storage,
@@ -450,7 +450,7 @@ func mergeViaSourceDatabase(
 	snapshotInfoTarget := storeTarget.SnapshotInfo()
 
 	//nolint:contextcheck // false positive
-	proxyStorage, err := NewProxyStorage(protoParams, storeTarget, milestoneManager, storeSource.Block)
+	proxyStorage, err := NewProxyStorage(protocolManager.Current(), storeTarget, milestoneManager, storeSource.Block)
 	if err != nil {
 		return err
 	}
@@ -460,7 +460,7 @@ func mergeViaSourceDatabase(
 
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
-		protoParams,
+		protocolManager,
 		snapshotInfoTarget.GenesisMilestoneIndex(),
 		msIndex,
 		func(msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
@@ -501,7 +501,6 @@ func mergeViaSourceDatabase(
 // if the target database has no history at all, a genesis snapshot is loaded.
 func mergeDatabase(
 	ctx context.Context,
-	protoParams *iotago.ProtocolParameters,
 	milestoneManager *milestonemanager.MilestoneManager,
 	tangleStoreSource *storage.Storage,
 	tangleStoreTarget *storage.Storage,
@@ -575,6 +574,16 @@ func mergeDatabase(
 		return (msIndex >= msIndexStartSource) && (msIndex <= msIndexEndSource)
 	}
 
+	ledgerIndexTarget, err := tangleStoreTarget.UTXOManager().ReadLedgerIndex()
+	if err != nil {
+		return errors.Wrapf(ErrCritical, "loading target ledger index failed: %s", err.Error())
+	}
+
+	protocolManagerTarget, err := protocol.NewManager(tangleStoreTarget, ledgerIndexTarget)
+	if err != nil {
+		return errors.Wrapf(ErrCritical, "initializing target protocol manager failed: %s", err.Error())
+	}
+
 	for msIndex := msIndexStart; msIndex <= msIndexEnd; msIndex++ {
 		if !tangleStoreSourceAvailable || !indexAvailableInSource(msIndex) {
 			if client == nil {
@@ -584,7 +593,7 @@ func mergeDatabase(
 			print(fmt.Sprintf("get milestone %d via API... ", msIndex))
 			if err := mergeViaAPI(
 				ctx,
-				protoParams,
+				protocolManagerTarget,
 				msIndex,
 				tangleStoreTarget,
 				milestoneManager,
@@ -600,7 +609,7 @@ func mergeDatabase(
 		print(fmt.Sprintf("get milestone %d via source database (source range: %d-%d)... ", msIndex, msIndexStartSource, msIndexEndSource))
 		if err := mergeViaSourceDatabase(
 			ctx,
-			protoParams,
+			protocolManagerTarget,
 			msIndex,
 			tangleStoreSource,
 			tangleStoreTarget,
