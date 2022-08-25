@@ -315,6 +315,9 @@ func (t *ConcurrentParentsTraverser) processStack(wg *sync.WaitGroup, doneChan c
 			return
 
 		case blockID := <-t.stackChanOut:
+			if blockID == nil {
+				return
+			}
 
 			if err := processStackParents(*blockID); err != nil {
 				if errors.Is(err, ErrTraversalDone) {
