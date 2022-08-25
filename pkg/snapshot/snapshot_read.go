@@ -134,8 +134,8 @@ func NewMsDiffConsumer(dbStorage *storage.Storage, utxoManager *utxo.Manager, wr
 	return func(msDiff *MilestoneDiff) error {
 
 		if writeMilestonesToStorage {
-			cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(msDiff.Milestone, iotago.EmptyBlockID()) // milestone +1
-			cachedMilestone.Release(true)                                                                   // milestone -1
+			cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(msDiff.Milestone) // milestone +1
+			cachedMilestone.Release(true)                                            // milestone -1
 		}
 
 		msIndex := msDiff.Milestone.Index

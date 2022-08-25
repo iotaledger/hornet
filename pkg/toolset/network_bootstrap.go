@@ -328,8 +328,8 @@ func createInitialMilestone(dbStorage *storage.Storage, signer signingprovider.M
 	// Mark milestone block as milestone in the database (needed for whiteflag to find last milestone)
 	cachedBlock.Metadata().SetMilestone(true)
 
-	cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload, cachedBlock.Block().BlockID()) // milestone +1
-	defer cachedMilestone.Release(true)                                                                     // milestone -1
+	cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload) // milestone +1
+	defer cachedMilestone.Release(true)                                      // milestone -1
 
 	if err := dbStorage.UTXOManager().ApplyConfirmation(index, utxo.Outputs{}, utxo.Spents{}, nil, nil); err != nil {
 		return nil, fmt.Errorf("applying confirmation failed: %w", err)

@@ -233,14 +233,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		return
 	}
 
-	milestoneBlockIDToSolidify, err := t.storage.MilestoneBlockIDByIndex(milestoneIndexToSolidify)
-	if err != nil {
-		// Milestone not found
-		t.LogPanic(storage.ErrMilestoneNotFound)
-
-		return
-	}
-
 	cachedMilestoneToSolidify := t.storage.CachedMilestoneByIndexOrNil(milestoneIndexToSolidify)
 	if cachedMilestoneToSolidify == nil {
 		// Milestone not found
@@ -279,7 +271,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		milestoneSolidificationCtx,
 		memcachedTraverserStorage,
 		milestoneIndexToSolidify,
-		iotago.BlockIDs{milestoneBlockIDToSolidify},
+		milestonePayloadToSolidify.Parents,
 	); !becameSolid {
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
