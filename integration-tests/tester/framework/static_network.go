@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-// connected is a bool whether nodes are connected or not.
-type connected bool
+// Connected is a bool whether nodes are Connected or not.
+type Connected bool
 
 // StaticPeeringLayout defines how in a statically peered
 // network nodes are peered to each other.
-type StaticPeeringLayout map[int]map[int]connected
+type StaticPeeringLayout map[int]map[int]Connected
 
 // Validate validates whether the static peering layout is valid by checking:
 //   - the layout isn't empty
@@ -48,8 +48,8 @@ func (spl StaticPeeringLayout) Validate() error {
 
 // DefaultStaticPeeringLayout returns a new static peering layout with 4 nodes
 // which are all statically peered to each other.
-func DefaultStaticPeeringLayout() map[int]map[int]connected {
-	return map[int]map[int]connected{
+func DefaultStaticPeeringLayout() map[int]map[int]Connected {
+	return map[int]map[int]Connected{
 		0: {1: false, 2: false, 3: false},
 		1: {0: false, 2: false, 3: false},
 		2: {0: false, 1: false, 3: false},
@@ -68,6 +68,7 @@ func (n *StaticNetwork) ConnectNodes() error {
 	// await for all nodes to become online
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
 	if err := n.AwaitOnline(ctx); err != nil {
 		return err
 	}
@@ -95,6 +96,7 @@ func (n *StaticNetwork) ConnectNodes() error {
 
 	peeringCtx, peeringCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer peeringCtxCancel()
+
 	if err := n.AwaitPeering(peeringCtx); err != nil {
 		return err
 	}
@@ -117,14 +119,20 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 				return fmt.Errorf("not enough nodes: %d", len(n.Nodes))
 			}
 
-			peers, err := node.DebugNodeAPIClient.Peers(context.Background())
+			ctxPeers, ctxPeersCancel := context.WithTimeout(ctx, 500*time.Millisecond)
+			defer ctxPeersCancel()
+
+			peers, err := node.DebugNodeAPIClient.Peers(ctxPeers)
 			if err != nil {
 				log.Printf("node %s, peering: %s\n", node.ID.String(), err)
+				time.Sleep(500 * time.Millisecond)
 
 				continue
 			}
 
 			if len(peers) < len(layoutPeers) {
+				time.Sleep(500 * time.Millisecond)
+
 				continue
 			}
 

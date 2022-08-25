@@ -141,7 +141,7 @@ func networkBootstrap(args []string) error {
 
 	// load the genesis ledger state into the storage (SEP and ledger state only)
 	println("loading genesis snapshot...")
-	if err := loadGenesisSnapshot(tangleStore, genesisSnapshotPath, false, 0); err != nil {
+	if err := loadGenesisSnapshot(context.Background(), tangleStore, genesisSnapshotPath, false, 0); err != nil {
 		return fmt.Errorf("failed to load genesis snapshot: %w", err)
 	}
 

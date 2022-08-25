@@ -788,6 +788,7 @@ func CreateSnapshotFromStorage(
 	}
 
 	// create a temp storage in memory
+	//nolint:contextcheck // false positive
 	utxoStoreTemp, err := database.StoreWithDefaultSettings("", false, database.EngineMapDB)
 	if err != nil {
 		return nil, fmt.Errorf("create temp storage failed: %w", err)
@@ -925,7 +926,7 @@ func CreateSnapshotFromStorage(
 // and the ledger and snapshot index are equal.
 // This function consumes disk space over memory by importing the full snapshot into a temporary database,
 // applying the delta diffs onto it and then writing out the merged state.
-func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
+func MergeSnapshotsFiles(ctx context.Context, fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
 
 	targetEngine, err := database.EngineAllowed(database.EnginePebble)
 	if err != nil {
@@ -937,11 +938,13 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		return nil, fmt.Errorf("can't create temp dir: %w", err)
 	}
 
+	//nolint:contextcheck // false positive
 	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.TangleDatabaseDirectoryName), true, targetEngine)
 	if err != nil {
 		return nil, fmt.Errorf("%s database initialization failed: %w", coreDatabase.TangleDatabaseDirectoryName, err)
 	}
 
+	//nolint:contextcheck // false positive
 	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.UTXODatabaseDirectoryName), true, targetEngine)
 	if err != nil {
 		return nil, fmt.Errorf("%s database initialization failed: %w", coreDatabase.UTXODatabaseDirectoryName, err)
@@ -967,7 +970,7 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		}
 	}()
 
-	fullSnapshotHeader, deltaSnapshotHeader, err := LoadSnapshotFilesToStorage(context.Background(), dbStorage, true, fullPath, deltaPath)
+	fullSnapshotHeader, deltaSnapshotHeader, err := LoadSnapshotFilesToStorage(ctx, dbStorage, true, fullPath, deltaPath)
 	if err != nil {
 		return nil, err
 	}

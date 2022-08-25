@@ -1,6 +1,7 @@
 package toolset
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -56,7 +57,7 @@ func snapshotMerge(args []string) error {
 
 	ts := time.Now()
 
-	mergeInfo, err := snapshot.MergeSnapshotsFiles(fullPath, deltaPath, targetPath)
+	mergeInfo, err := snapshot.MergeSnapshotsFiles(context.Background(), fullPath, deltaPath, targetPath)
 	if err != nil {
 		return err
 	}

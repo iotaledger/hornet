@@ -48,7 +48,7 @@ func (s *Server) ListenToTipsMetrics(req *inx.TipsMetricRequest, srv inx.INX_Lis
 	}
 
 	var innerErr error
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 	defer cancel()
 
 	ticker := timeutil.NewTicker(func() {

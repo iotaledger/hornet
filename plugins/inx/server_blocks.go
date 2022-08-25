@@ -19,7 +19,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func NewINXBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata, tip ...*tipselect.Tip) (*inx.BlockMetadata, error) {
+func NewINXBlockMetadata(ctx context.Context, blockID iotago.BlockID, metadata *storage.BlockMetadata, tip ...*tipselect.Tip) (*inx.BlockMetadata, error) {
 	m := &inx.BlockMetadata{
 		BlockId: inx.NewBlockId(blockID),
 		Parents: inx.NewBlockIds(metadata.Parents()),
@@ -78,7 +78,7 @@ func NewINXBlockMetadata(blockID iotago.BlockID, metadata *storage.BlockMetadata
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
-		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), blockID, cmi)
+		tipScore, err := deps.TipScoreCalculator.TipScore(ctx, blockID, cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, status.Errorf(codes.Unavailable, err.Error())
@@ -132,11 +132,13 @@ func (s *Server) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (*in
 	}
 	defer cachedBlockMeta.Release(true) // meta -1
 
-	return NewINXBlockMetadata(cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
+	//nolint:contextcheck // we don't care if the client context has ended already (merging contexts would be too expensive here)
+	return NewINXBlockMetadata(Plugin.Daemon().ContextStopped(), cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
 }
 
 func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServer) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
@@ -156,20 +158,23 @@ func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServe
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex) {
+
+	onReceivedNewBlock := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex) {
 		wp.Submit(cachedBlock)
 	})
+
 	wp.Start()
-	deps.Tangle.Events.ReceivedNewBlock.Hook(closure)
+	deps.Tangle.Events.ReceivedNewBlock.Hook(onReceivedNewBlock)
 	<-ctx.Done()
-	deps.Tangle.Events.ReceivedNewBlock.Detach(closure)
+	deps.Tangle.Events.ReceivedNewBlock.Detach(onReceivedNewBlock)
 	wp.Stop()
 
 	return ctx.Err()
 }
 
 func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidBlocksServer) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
@@ -182,7 +187,7 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 		}
 		defer blockMeta.Release(true) // meta -1
 
-		payload, err := NewINXBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata())
+		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
@@ -196,20 +201,23 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata) {
+
+	onBlockSolid := events.NewClosure(func(blockMeta *storage.CachedMetadata) {
 		wp.Submit(blockMeta)
 	})
+
 	wp.Start()
-	deps.Tangle.Events.BlockSolid.Hook(closure)
+	deps.Tangle.Events.BlockSolid.Hook(onBlockSolid)
 	<-ctx.Done()
-	deps.Tangle.Events.BlockSolid.Detach(closure)
+	deps.Tangle.Events.BlockSolid.Detach(onBlockSolid)
 	wp.Stop()
 
 	return ctx.Err()
 }
 
 func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToReferencedBlocksServer) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
@@ -222,7 +230,7 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 		}
 		defer blockMeta.Release(true) // meta -1
 
-		payload, err := NewINXBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata())
+		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
@@ -235,20 +243,23 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32) {
+
+	onBlockReferenced := events.NewClosure(func(blockMeta *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32) {
 		wp.Submit(blockMeta)
 	})
+
 	wp.Start()
-	deps.Tangle.Events.BlockReferenced.Hook(closure)
+	deps.Tangle.Events.BlockReferenced.Hook(onBlockReferenced)
 	<-ctx.Done()
-	deps.Tangle.Events.BlockReferenced.Detach(closure)
+	deps.Tangle.Events.BlockReferenced.Detach(onBlockReferenced)
 	wp.Stop()
 
 	return ctx.Err()
 }
 
 func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTipScoreUpdatesServer) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
@@ -266,7 +277,7 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 		}
 		defer blockMeta.Release(true) // meta -1
 
-		payload, err := NewINXBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata(), tip)
+		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata(), tip)
 		if err != nil {
 			Plugin.LogInfof("send error: %v", err)
 			cancel()
@@ -279,25 +290,28 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 		}
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	closure := events.NewClosure(func(tip *tipselect.Tip) { wp.Submit(tip) })
+	onTipAddedOrRemoved := events.NewClosure(func(tip *tipselect.Tip) {
+		wp.Submit(tip)
+	})
+
 	wp.Start()
-	deps.TipSelector.Events.TipAdded.Hook(closure)
-	deps.TipSelector.Events.TipRemoved.Hook(closure)
+	deps.TipSelector.Events.TipAdded.Hook(onTipAddedOrRemoved)
+	deps.TipSelector.Events.TipRemoved.Hook(onTipAddedOrRemoved)
 	<-ctx.Done()
-	deps.TipSelector.Events.TipAdded.Detach(closure)
-	deps.TipSelector.Events.TipRemoved.Detach(closure)
+	deps.TipSelector.Events.TipAdded.Detach(onTipAddedOrRemoved)
+	deps.TipSelector.Events.TipRemoved.Detach(onTipAddedOrRemoved)
 	wp.Stop()
 
 	return ctx.Err()
 }
 
-func (s *Server) SubmitBlock(context context.Context, rawBlock *inx.RawBlock) (*inx.BlockId, error) {
+func (s *Server) SubmitBlock(ctx context.Context, rawBlock *inx.RawBlock) (*inx.BlockId, error) {
 	block, err := rawBlock.UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(context, Plugin.Daemon().ContextStopped())
+	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(ctx, Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
 	blockID, err := attacher.AttachBlock(mergedCtx, block)

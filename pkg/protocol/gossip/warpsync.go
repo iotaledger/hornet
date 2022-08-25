@@ -358,7 +358,7 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 		msIndexToRequest := startingPoint + i
 
 		if !w.storage.ContainsMilestoneIndex(msIndexToRequest) {
-			// only request if we do not have the milestone
+			// only request if we don't have the milestone
 			requested++
 			msIndexes = append(msIndexes, msIndexToRequest)
 

@@ -191,7 +191,7 @@ func (mo *ManagerOptions) apply(opts ...ManagerOption) {
 func (mo *ManagerOptions) reconnectDelay() time.Duration {
 	recInter := mo.reconnectInterval
 	jitter := mo.reconnectIntervalJitter
-	//nolint:gosec // we do not care about weak random numbers here
+	//nolint:gosec // we don't care about weak random numbers here
 	delayJitter := rand.Int63n(int64(jitter))
 
 	return recInter + time.Duration(delayJitter)
@@ -321,7 +321,7 @@ func (m *Manager) shutdown() {
 	m.stopped.Set()
 
 	// drain all outstanding requests of the event loop.
-	// we do not care about correct handling of the channels, because we are shutting down anyway.
+	// we don't care about correct handling of the channels, because we are shutting down anyway.
 drainLoop:
 	for {
 		select {
@@ -612,7 +612,7 @@ func (m *Manager) eventLoop(ctx context.Context) {
 			return
 
 		case connectPeerMsg := <-m.connectPeerChan:
-			m.connectPeer(connectPeerMsg)
+			m.connectPeer(ctx, connectPeerMsg)
 
 		case connectPeerAttemptMsg := <-m.connectPeerAttemptChan:
 			if connectPeerAttemptMsg.connectErr != nil {
@@ -634,7 +634,7 @@ func (m *Manager) eventLoop(ctx context.Context) {
 			connectPeerAttemptMsg.back <- connectPeerAttemptMsg.connectErr
 
 		case reconnectMsg := <-m.reconnectChan:
-			m.reconnectPeer(reconnectMsg.peerID)
+			m.reconnectPeer(ctx, reconnectMsg.peerID)
 
 		case reconnectAttemptMsg := <-m.reconnectAttemptChan:
 			if reconnectAttemptMsg.connectErr != nil {
@@ -722,7 +722,7 @@ func (m *Manager) eventLoop(ctx context.Context) {
 
 // connects to the given peer if it isn't already connected and if its relation is PeerRelationKnown,
 // then the connection to the peer is further protected from trimming.
-func (m *Manager) connectPeer(connectPeerMsg *connectpeermsg) {
+func (m *Manager) connectPeer(ctx context.Context, connectPeerMsg *connectpeermsg) {
 
 	if _, has := m.peers[connectPeerMsg.addrInfo.ID]; has {
 		m.connectPeerAttemptChan <- &connectpeerattemptmsg{
@@ -763,8 +763,8 @@ func (m *Manager) connectPeer(connectPeerMsg *connectpeermsg) {
 	// perform an actual connection attempt to the given peer.
 	// connection attempts should happen in a separate goroutine
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
-		defer cancel()
+		ctxConnect, cancelConnect := context.WithTimeout(ctx, connTimeout)
+		defer cancelConnect()
 
 		// if the connection fails, the peer is either cleared from the Manager if its relation is PeerRelationUnknown
 		// or a reconnect attempt is scheduled if it is PeerRelationKnown.
@@ -776,14 +776,14 @@ func (m *Manager) connectPeer(connectPeerMsg *connectpeermsg) {
 			// pass the error channel of the caller to the connectPeerAttemptChan
 			back:       connectPeerMsg.back,
 			connect:    true,
-			connectErr: m.host.Connect(ctx, *connectPeerMsg.addrInfo),
+			connectErr: m.host.Connect(ctxConnect, *connectPeerMsg.addrInfo),
 		}
 	}()
 }
 
 // reconnect peer does a connection attempt to the given peer but only
 // if its relation is PeerRelationKnown.
-func (m *Manager) reconnectPeer(peerID peer.ID) {
+func (m *Manager) reconnectPeer(ctx context.Context, peerID peer.ID) {
 	p, has := m.peers[peerID]
 	if !has {
 		// directly return the result of the reconnect attempt
@@ -814,8 +814,8 @@ func (m *Manager) reconnectPeer(peerID peer.ID) {
 	// perform an actual connection attempt to the given peer.
 	// connection attempts should happen in a separate goroutine
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
-		defer cancel()
+		ctxConnect, cancelConnect := context.WithTimeout(ctx, connTimeout)
+		defer cancelConnect()
 
 		// if the connection fails, the peer is either cleared from the Manager if its relation is PeerRelationUnknown
 		// or a reconnect attempt is scheduled if it is PeerRelationKnown.
@@ -823,7 +823,7 @@ func (m *Manager) reconnectPeer(peerID peer.ID) {
 		m.reconnectAttemptChan <- &reconnectattemptmsg{
 			peerID:     peerID,
 			reconnect:  true,
-			connectErr: m.host.Connect(ctx, addrInfo),
+			connectErr: m.host.Connect(ctxConnect, addrInfo),
 		}
 	}()
 }

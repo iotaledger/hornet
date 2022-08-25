@@ -111,6 +111,7 @@ func verifyDatabase(
 
 	println(fmt.Sprintf("existing milestone range source database: %d-%d", msIndexStart, msIndexEnd))
 
+	//nolint:contextcheck // false positive
 	tangleStoreTemp, err := createTangleStorage("temp", "", "", database.EngineMapDB)
 	if err != nil {
 		return err
@@ -129,7 +130,7 @@ func verifyDatabase(
 
 	// load the genesis ledger state into the temporary storage (SEP and ledger state only)
 	println("loading genesis snapshot...")
-	if err := loadGenesisSnapshot(tangleStoreTemp, genesisSnapshotFilePath, true, protoParamsSource.NetworkID()); err != nil {
+	if err := loadGenesisSnapshot(ctx, tangleStoreTemp, genesisSnapshotFilePath, true, protoParamsSource.NetworkID()); err != nil {
 		return fmt.Errorf("loading genesis snapshot failed: %w", err)
 	}
 

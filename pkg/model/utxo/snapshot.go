@@ -76,7 +76,7 @@ func (s *Spent) SnapshotBytes() []byte {
 	m := marshalutil.New()
 	m.WriteBytes(s.Output().SnapshotBytes())
 	m.WriteBytes(s.transactionIDSpent[:])
-	// we do not need to write msIndexSpent and msTimestampSpent because this info is available in the milestoneDiff that consumes the output
+	// we don't need to write msIndexSpent and msTimestampSpent because this info is available in the milestoneDiff that consumes the output
 	return m.Bytes()
 }
 

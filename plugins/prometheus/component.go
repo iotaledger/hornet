@@ -229,11 +229,14 @@ func run() error {
 		Plugin.LogInfo("Stopping Prometheus exporter ...")
 
 		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCtxCancel()
+
+		//nolint:contextcheck // false positive
 		err := deps.PrometheusEcho.Shutdown(shutdownCtx)
 		if err != nil {
 			Plugin.LogWarn(err)
 		}
-		shutdownCtxCancel()
+
 		Plugin.LogInfo("Stopping Prometheus exporter ... done")
 	}, daemon.PriorityPrometheus); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)

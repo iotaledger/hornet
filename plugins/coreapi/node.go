@@ -24,7 +24,7 @@ func info() (*infoResponse, error) {
 
 	// latest milestone
 	var latestMilestoneIndex = deps.SyncManager.LatestMilestoneIndex()
-	var latestMilestoneTimestamp uint32 = 0
+	var latestMilestoneTimestamp uint32
 	var latestMilestoneIDHex string
 	cachedMilestoneLatest := deps.Storage.CachedMilestoneByIndexOrNil(latestMilestoneIndex) // milestone +1
 	if cachedMilestoneLatest != nil {
@@ -35,7 +35,7 @@ func info() (*infoResponse, error) {
 
 	// confirmed milestone index
 	var confirmedMilestoneIndex = deps.SyncManager.ConfirmedMilestoneIndex()
-	var confirmedMilestoneTimestamp uint32 = 0
+	var confirmedMilestoneTimestamp uint32
 	var confirmedMilestoneIDHex string
 	cachedMilestoneConfirmed := deps.Storage.CachedMilestoneByIndexOrNil(confirmedMilestoneIndex) // milestone +1
 	if cachedMilestoneConfirmed != nil {
