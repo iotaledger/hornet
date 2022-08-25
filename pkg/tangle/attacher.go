@@ -151,6 +151,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 
 	blockProcessedChan := a.tangle.RegisterBlockProcessedEvent(block.BlockID())
 
+	//nolint:contextcheck // we don't pass a context here to not prevent emitting blocks at shutdown (COO etc).
 	if err := a.tangle.messageProcessor.Emit(block); err != nil {
 		a.tangle.DeregisterBlockProcessedEvent(block.BlockID())
 
@@ -158,10 +159,10 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 	}
 
 	// wait for at most "blockProcessedTimeout" for the block to be processed
-	ctx, cancel := context.WithTimeout(context.Background(), a.opts.blockProcessedTimeout)
-	defer cancel()
+	ctxBlockProcessed, cancelBlockProcessed := context.WithTimeout(ctx, a.opts.blockProcessedTimeout)
+	defer cancelBlockProcessed()
 
-	if err := events.WaitForChannelClosed(ctx, blockProcessedChan); errors.Is(err, context.DeadlineExceeded) {
+	if err := events.WaitForChannelClosed(ctxBlockProcessed, blockProcessedChan); errors.Is(err, context.DeadlineExceeded) {
 		a.tangle.DeregisterBlockProcessedEvent(block.BlockID())
 	}
 

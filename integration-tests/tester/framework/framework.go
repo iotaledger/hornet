@@ -170,6 +170,7 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumP
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
 	if err := network.AwaitOnline(ctx); err != nil {
 		return nil, err
 	}

@@ -84,7 +84,7 @@ func databaseMerge(args []string) error {
 	// TODO: needs to be adapted for when protocol parameters struct changes
 	protoParams := &iotago.ProtocolParameters{}
 
-	var tangleStoreSource *storage.Storage = nil
+	var tangleStoreSource *storage.Storage
 	if len(*databasePathSourceFlag) > 0 {
 		var err error
 
@@ -293,8 +293,9 @@ func copyAndVerifyMilestoneCone(
 
 	ts := time.Now()
 
+	//nolint:contextcheck // we don't want abort the copying of the blocks itself
 	if err := copyMilestoneCone(
-		context.Background(), // we do not want abort the copying of the blocks itself
+		context.Background(),
 		protoParams,
 		msIndex,
 		milestonePayload,
@@ -307,6 +308,7 @@ func copyAndVerifyMilestoneCone(
 
 	timeCopyMilestoneCone := time.Now()
 
+	//nolint:contextcheck // we don't pass a context here to not cancel the whiteflag computation!
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		utxoManagerTarget,
 		parentsTraverserStorageTarget,
@@ -354,10 +356,10 @@ func mergeViaAPI(
 	apiParallelism int) error {
 
 	getBlockViaAPI := func(blockID iotago.BlockID) (*iotago.Block, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+		ctxBlock, cancelBlock := context.WithTimeout(ctx, 5*time.Second)
+		defer cancelBlock()
 
-		block, err := client.BlockByBlockID(ctx, blockID, protoParams)
+		block, err := client.BlockByBlockID(ctxBlock, blockID, protoParams)
 		if err != nil {
 			return nil, err
 		}
@@ -366,10 +368,10 @@ func mergeViaAPI(
 	}
 
 	getMilestonePayloadViaAPI := func(client *nodeclient.Client, msIndex iotago.MilestoneIndex) (*iotago.Milestone, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+		ctxMilestone, cancelMilestone := context.WithTimeout(ctx, 5*time.Second)
+		defer cancelMilestone()
 
-		ms, err := client.MilestoneByIndex(ctx, msIndex)
+		ms, err := client.MilestoneByIndex(ctxMilestone, msIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -382,6 +384,7 @@ func mergeViaAPI(
 	}
 	snapshotInfoTarget := storeTarget.SnapshotInfo()
 
+	//nolint:contextcheck // false positive
 	proxyStorage, err := NewProxyStorage(protoParams, storeTarget, milestoneManager, getBlockViaAPI)
 	if err != nil {
 		return err
@@ -442,6 +445,7 @@ func mergeViaSourceDatabase(
 	}
 	snapshotInfoTarget := storeTarget.SnapshotInfo()
 
+	//nolint:contextcheck // false positive
 	proxyStorage, err := NewProxyStorage(protoParams, storeTarget, milestoneManager, storeSource.Block)
 	if err != nil {
 		return err
@@ -524,7 +528,7 @@ func mergeDatabase(
 	if msIndexEndTarget == 0 {
 		// no ledger state in database available => load the genesis snapshot
 		println("loading genesis snapshot...")
-		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
+		if err := loadGenesisSnapshot(ctx, tangleStoreTarget, genesisSnapshotFilePath, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
 			return errors.Wrapf(ErrCritical, "loading genesis snapshot failed: %s", err.Error())
 		}
 

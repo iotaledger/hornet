@@ -549,7 +549,7 @@ func ReadFullSnapshotHeader(reader io.Reader) (*FullSnapshotHeader, error) {
 	}
 	readHeader.TreasuryOutput = to
 
-	var protoParamsMsOptionLength uint16 = 0
+	var protoParamsMsOptionLength uint16
 	if err := binary.Read(reader, binary.LittleEndian, &protoParamsMsOptionLength); err != nil {
 		return nil, fmt.Errorf("unable to read LS protocol parameters milestone option length: %w", err)
 	}
@@ -1271,7 +1271,7 @@ func StreamFullSnapshotDataFrom(
 		}
 		increaseOffsets(msDiffLength, &msDiffsParsedLength)
 
-		// we do not consume milestone diffs that are below the target milestone index.
+		// we don't consume milestone diffs that are below the target milestone index.
 		// these additional milestone diffs are only used to get the protocol parameter updates.
 		if msDiff.Milestone.Index <= fullHeader.TargetMilestoneIndex {
 			// we can break the loop here since we are walking backwards.

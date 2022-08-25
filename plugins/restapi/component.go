@@ -146,10 +146,13 @@ func run() error {
 		Plugin.LogInfo("Stopping REST-API server ...")
 
 		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCtxCancel()
+
+		//nolint:contextcheck // false positive
 		if err := deps.Echo.Shutdown(shutdownCtx); err != nil {
 			Plugin.LogWarn(err)
 		}
-		shutdownCtxCancel()
+
 		Plugin.LogInfo("Stopping REST-API server ... done")
 	}, daemon.PriorityRestAPI); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)

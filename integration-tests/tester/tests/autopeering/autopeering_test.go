@@ -24,5 +24,6 @@ func TestAutopeering(t *testing.T) {
 
 	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer syncCtxCancel()
+
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 }

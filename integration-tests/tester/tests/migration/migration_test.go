@@ -72,6 +72,7 @@ func TestMigration(t *testing.T) {
 
 	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer syncCtxCancel()
+
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 
 	// eventually all migrations should have happened
@@ -154,5 +155,6 @@ func TestAPIError(t *testing.T) {
 
 	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer syncCtxCancel()
+
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 }

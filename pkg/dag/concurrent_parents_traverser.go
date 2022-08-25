@@ -98,7 +98,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 				return outbound
 			}
 
-			var out chan *iotago.BlockID = nil
+			var out chan *iotago.BlockID
 
 		inboundLoop:
 			for {
@@ -203,7 +203,7 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 
 	// processStackParents checks if the current element in the stack must be processed or traversed.
 	// the logic in this walker is quite different.
-	// we do not walk in any order, we just process every
+	// we don't walk in any order, we just process every
 	// single block and traverse their parents afterwards.
 	processStackParents := func(currentBlockID iotago.BlockID) error {
 		if err := contextutils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {

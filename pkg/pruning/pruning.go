@@ -486,7 +486,7 @@ func (p *Manager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirme
 		return
 	}
 
-	var targetIndex iotago.MilestoneIndex = 0
+	var targetIndex iotago.MilestoneIndex
 	if p.pruningMilestonesEnabled && confirmedMilestoneIndex > p.pruningMilestonesMaxMilestonesToKeep {
 		targetIndex = confirmedMilestoneIndex - p.pruningMilestonesMaxMilestonesToKeep
 	}

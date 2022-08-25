@@ -14,9 +14,9 @@ type OutputIDConsumer func(outputID iotago.OutputID) bool
 // Returning false from this function indicates to abort the iteration.
 type OutputConsumer func(output *Output) bool
 
-type lookupKey []byte
+type LookupKey []byte
 
-func lookupKeyUnspentOutput(outputID iotago.OutputID) lookupKey {
+func lookupKeyUnspentOutput(outputID iotago.OutputID) LookupKey {
 	ms := marshalutil.New(35)
 	ms.WriteByte(UTXOStoreKeyPrefixOutputUnspent) // 1 byte
 	ms.WriteBytes(outputID[:])                    // 34 bytes
@@ -24,11 +24,11 @@ func lookupKeyUnspentOutput(outputID iotago.OutputID) lookupKey {
 	return ms.Bytes()
 }
 
-func (o *Output) UnspentLookupKey() lookupKey {
+func (o *Output) UnspentLookupKey() LookupKey {
 	return lookupKeyUnspentOutput(o.outputID)
 }
 
-func outputIDFromDatabaseKey(key lookupKey) (iotago.OutputID, error) {
+func outputIDFromDatabaseKey(key LookupKey) (iotago.OutputID, error) {
 	ms := marshalutil.New([]byte(key))
 
 	// prefix

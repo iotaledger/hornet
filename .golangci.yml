@@ -5,7 +5,7 @@ linters-settings:
     gofmt:
         simplify: true
     goimports:
-        local-prefixes: github.com/gohornet,github.com/iotaledger
+        local-prefixes: github.com/iotaledger
     golint:
         min-confidence: 0.9
     gocyclo:

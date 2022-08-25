@@ -35,6 +35,7 @@ func newNode(ctx context.Context, name string, t *testing.T, mngOpts []p2p.Manag
 	)
 	require.NoError(t, err)
 
+	//nolint:contextcheck // false positive
 	n, err := libp2p.New(
 		libp2p.DefaultListenAddrs,
 		libp2p.Identity(privateKey),

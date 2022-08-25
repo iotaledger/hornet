@@ -215,7 +215,7 @@ func snapshotGen(args []string) error {
 	}
 
 	// create snapshot file
-	var targetIndex iotago.MilestoneIndex = 0
+	var targetIndex iotago.MilestoneIndex
 	fullHeader := &snapshot.FullSnapshotHeader{
 		Version:                  snapshot.SupportedFormatVersion,
 		Type:                     snapshot.Full,

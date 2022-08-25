@@ -58,7 +58,12 @@ func (n *Network) AwaitOnline(ctx context.Context) error {
 				return err
 			}
 
-			if _, err := node.DebugNodeAPIClient.Info(context.Background()); err != nil {
+			ctxInfo, ctxInfoCancel := context.WithTimeout(ctx, 500*time.Millisecond)
+			defer ctxInfoCancel()
+
+			if _, err := node.DebugNodeAPIClient.Info(ctxInfo); err != nil {
+				time.Sleep(500 * time.Millisecond)
+
 				continue
 			}
 
@@ -78,14 +83,21 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 				return err
 			}
 
-			info, err := node.DebugNodeAPIClient.Info(context.Background())
+			ctxInfo, ctxInfoCancel := context.WithTimeout(ctx, 500*time.Millisecond)
+			defer ctxInfoCancel()
+
+			info, err := node.DebugNodeAPIClient.Info(ctxInfo)
 			if err != nil {
+				time.Sleep(500 * time.Millisecond)
+
 				continue
 			}
 
 			if info.Status.IsHealthy {
 				break
 			}
+
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 
@@ -354,7 +366,7 @@ func (n *Network) Shutdown() error {
 
 // RandomNode returns a random peer out of the list of peers.
 func (n *Network) RandomNode() *Node {
-	//nolint:gosec // we do not care about weak random numbers here
+	//nolint:gosec // we don't care about weak random numbers here
 	return n.Nodes[rand.Intn(len(n.Nodes))]
 }
 

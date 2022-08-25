@@ -382,7 +382,7 @@ func (m *Block) BookOnWallets() *Block {
 					continue
 				}
 			}
-			// Note: we do not care about SDRUC here right now
+			// Note: we don't care about SDRUC here right now
 			m.builder.fromWallet.BookOutput(sentOutput)
 
 		case *iotago.AliasOutput:

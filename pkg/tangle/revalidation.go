@@ -110,7 +110,7 @@ func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.Importer, pruneRe
 		return err
 	}
 
-	// deletes all unreferenced blocks that are left in the database (we do not need them since we deleted all unreferenced blocks).
+	// deletes all unreferenced blocks that are left in the database (we don't need them since we deleted all unreferenced blocks).
 	if err := t.cleanupUnreferencedBlocks(); err != nil {
 		return err
 	}
@@ -379,7 +379,7 @@ func (t *Tangle) cleanupChildren() error {
 		copy(childrenMapKey[:iotago.BlockIDLength], blockID[:])
 		copy(childrenMapKey[iotago.BlockIDLength:], childBlockID[:])
 
-		// we do not check if the parent still exists, to speed up the revalidation of children by 50%.
+		// we don't check if the parent still exists, to speed up the revalidation of children by 50%.
 		// if children entries would remain, but the block is missing, we would never start a walk from the
 		// parent block, since we always walk the future cone.
 		/*
@@ -428,7 +428,7 @@ func (t *Tangle) cleanupChildren() error {
 	return nil
 }
 
-// deletes all unreferenced blocks that are left in the database (we do not need them since we deleted all unreferenced blocks).
+// deletes all unreferenced blocks that are left in the database (we don't need them since we deleted all unreferenced blocks).
 func (t *Tangle) cleanupUnreferencedBlocks() error {
 
 	start := time.Now()

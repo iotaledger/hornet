@@ -324,7 +324,7 @@ func (s *Service) shutdown() {
 	s.stopped.Set()
 
 	// drain all outstanding requests of the event loop.
-	// we do not care about correct handling of the channels, because we are shutting down anyway.
+	// we don't care about correct handling of the channels, because we are shutting down anyway.
 drainLoop:
 	for {
 		select {
@@ -397,7 +397,7 @@ func (s *Service) eventLoop(ctx context.Context) {
 			s.handleInboundStream(inboundStream)
 
 		case connectedMsg := <-s.connectedChan:
-			s.handleConnected(connectedMsg.peer, connectedMsg.conn)
+			s.handleConnected(ctx, connectedMsg.peer, connectedMsg.conn)
 
 		case closeStreamMsg := <-s.closeStreamChan:
 			if err := s.deregisterProtocol(closeStreamMsg.peerID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
@@ -416,7 +416,7 @@ func (s *Service) eventLoop(ctx context.Context) {
 			}
 
 		case relationUpdatedMsg := <-s.relationUpdatedChan:
-			s.handleRelationUpdated(relationUpdatedMsg.peer, relationUpdatedMsg.oldRelation)
+			s.handleRelationUpdated(ctx, relationUpdatedMsg.peer, relationUpdatedMsg.oldRelation)
 
 		case streamReqMsg := <-s.streamReqChan:
 			streamReqMsg.back <- s.proto(streamReqMsg.peerID)
@@ -495,7 +495,7 @@ func (s *Service) closeUnwantedStreamAndClosePeer(stream network.Stream) {
 
 // handles the automatic creation of a protocol instance if the given peer
 // was connected outbound and its peer relation allows it.
-func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
+func (s *Service) handleConnected(ctx context.Context, peer *p2p.Peer, conn network.Conn) {
 
 	connect := func() error {
 		// don't create a new protocol if one is already ongoing
@@ -519,7 +519,7 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
 			s.unknownPeers[peer.ID] = struct{}{}
 		}
 
-		stream, err := s.openStream(peer.ID)
+		stream, err := s.openStream(ctx, peer.ID)
 		if err != nil {
 			// close the connection to the peer
 			_ = conn.Close()
@@ -538,11 +538,11 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
 }
 
 // opens up a stream to the given peer.
-func (s *Service) openStream(peerID peer.ID) (network.Stream, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.opts.streamConnectTimeout)
-	defer cancel()
+func (s *Service) openStream(ctx context.Context, peerID peer.ID) (network.Stream, error) {
+	ctxNewStream, cancelNewStream := context.WithTimeout(ctx, s.opts.streamConnectTimeout)
+	defer cancelNewStream()
 
-	stream, err := s.host.NewStream(ctx, peerID, s.protocol)
+	stream, err := s.host.NewStream(ctxNewStream, peerID, s.protocol)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create gossip stream to %s: %w", peerID, err)
 	}
@@ -590,7 +590,7 @@ func (s *Service) deregisterProtocol(peerID peer.ID) error {
 // is no longer unknown, a gossip protocol stream is started. likewise, if the
 // relation is "downgraded" to unknown, the ongoing stream is closed if no more
 // unknown peer slots are available.
-func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation) {
+func (s *Service) handleRelationUpdated(ctx context.Context, peer *p2p.Peer, oldRel p2p.PeerRelation) {
 	newRel := peer.Relation
 
 	updateRelation := func() error {
@@ -616,7 +616,7 @@ func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation)
 
 		// here we might open a stream even if the connection is inbound:
 		// the service should however take care of duplicated streams
-		stream, err := s.openStream(peer.ID)
+		stream, err := s.openStream(ctx, peer.ID)
 		if err != nil {
 			return err
 		}

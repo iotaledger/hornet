@@ -273,7 +273,7 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 
 	// if a startIndex is given, we send all available milestone diffs including the start index.
 	// if an endIndex is given, we send all available milestone diffs up to and including min(ledgerIndex, endIndex).
-	// if no startIndex is given, but an endIndex, we do not send previous milestone diffs.
+	// if no startIndex is given, but an endIndex, we don't send previous milestone diffs.
 	sendPreviousMilestoneDiffs := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 		if startIndex == 0 {
 			// no need to send previous milestone diffs
@@ -360,7 +360,8 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 	}
 
 	var innerErr error
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
@@ -376,14 +377,14 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	closure := events.NewClosure(func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+	onLedgerUpdated := events.NewClosure(func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 		wp.Submit(index, newOutputs, newSpents)
 	})
 
 	wp.Start()
-	deps.Tangle.Events.LedgerUpdated.Hook(closure)
+	deps.Tangle.Events.LedgerUpdated.Hook(onLedgerUpdated)
 	<-ctx.Done()
-	deps.Tangle.Events.LedgerUpdated.Detach(closure)
+	deps.Tangle.Events.LedgerUpdated.Detach(onLedgerUpdated)
 	wp.Stop()
 
 	return innerErr
@@ -432,7 +433,7 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 
 	// if a startIndex is given, we send all available treasury updates including the start index.
 	// if an endIndex is given, we send all available treasury updates up to and including min(ledgerIndex, endIndex).
-	// if no startIndex is given, but an endIndex, we do not send previous treasury updates.
+	// if no startIndex is given, but an endIndex, we don't send previous treasury updates.
 	sendPreviousTreasuryUpdates := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 		if startIndex == 0 {
 			// no need to send treasury updates diffs
@@ -551,7 +552,8 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 	}
 
 	var innerErr error
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
@@ -567,21 +569,22 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	closure := events.NewClosure(func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) {
+	onTreasuryMutated := events.NewClosure(func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) {
 		wp.Submit(index, tuple)
 	})
 
 	wp.Start()
-	deps.Tangle.Events.TreasuryMutated.Hook(closure)
+	deps.Tangle.Events.TreasuryMutated.Hook(onTreasuryMutated)
 	<-ctx.Done()
-	deps.Tangle.Events.TreasuryMutated.Detach(closure)
+	deps.Tangle.Events.TreasuryMutated.Detach(onTreasuryMutated)
 	wp.Stop()
 
 	return innerErr
 }
 
 func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenToMigrationReceiptsServer) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
@@ -607,14 +610,15 @@ func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenTo
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(receipt *iotago.ReceiptMilestoneOpt) {
+
+	onNewReceipt := events.NewClosure(func(receipt *iotago.ReceiptMilestoneOpt) {
 		wp.Submit(receipt)
 	})
 
 	wp.Start()
-	deps.Tangle.Events.NewReceipt.Hook(closure)
+	deps.Tangle.Events.NewReceipt.Hook(onNewReceipt)
 	<-ctx.Done()
-	deps.Tangle.Events.NewReceipt.Detach(closure)
+	deps.Tangle.Events.NewReceipt.Detach(onNewReceipt)
 	wp.Stop()
 
 	return ctx.Err()

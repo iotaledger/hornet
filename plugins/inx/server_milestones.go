@@ -75,7 +75,8 @@ func (s *Server) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*i
 }
 
 func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
@@ -101,13 +102,15 @@ func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToL
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
+
+	onLatestMilestoneChanged := events.NewClosure(func(milestone *storage.CachedMilestone) {
 		wp.Submit(milestone)
 	})
+
 	wp.Start()
-	deps.Tangle.Events.LatestMilestoneChanged.Hook(closure)
+	deps.Tangle.Events.LatestMilestoneChanged.Hook(onLatestMilestoneChanged)
 	<-ctx.Done()
-	deps.Tangle.Events.LatestMilestoneChanged.Detach(closure)
+	deps.Tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
 	wp.Stop()
 
 	return ctx.Err()
@@ -177,7 +180,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 
 	// if a startIndex is given, we send all available milestones including the start index.
 	// if an endIndex is given, we send all available milestones up to and including min(ledgerIndex, endIndex).
-	// if no startIndex is given, but an endIndex, we do not send previous milestones.
+	// if no startIndex is given, but an endIndex, we don't send previous milestones.
 	sendPreviousMilestones := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, error) {
 		if startIndex == 0 {
 			// no need to send previous milestones
@@ -254,7 +257,8 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	}
 
 	var innerErr error
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
@@ -279,14 +283,14 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	closure := events.NewClosure(func(milestone *storage.CachedMilestone) {
+	onConfirmedMilestoneChanged := events.NewClosure(func(milestone *storage.CachedMilestone) {
 		wp.Submit(milestone)
 	})
 
 	wp.Start()
-	deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(closure)
+	deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
 	<-ctx.Done()
-	deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(closure)
+	deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(onConfirmedMilestoneChanged)
 	wp.Stop()
 
 	return innerErr
@@ -335,7 +339,7 @@ func (s *Server) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_ReadMi
 		}
 		defer cachedBlock.Release(true)
 
-		meta, err := NewINXBlockMetadata(metadata.BlockID(), metadata)
+		meta, err := NewINXBlockMetadata(Plugin.Daemon().ContextStopped(), metadata.BlockID(), metadata)
 		if err != nil {
 			return err
 		}
@@ -361,7 +365,7 @@ func (s *Server) ReadMilestoneConeMetadata(req *inx.MilestoneRequest, srv inx.IN
 	defer cachedMilestone.Release(true) // milestone -1
 
 	return milestoneCone(cachedMilestone.Milestone().Index(), cachedMilestone.Milestone().Parents(), func(metadata *storage.BlockMetadata) error {
-		payload, err := NewINXBlockMetadata(metadata.BlockID(), metadata)
+		payload, err := NewINXBlockMetadata(Plugin.Daemon().ContextStopped(), metadata.BlockID(), metadata)
 		if err != nil {
 			return err
 		}

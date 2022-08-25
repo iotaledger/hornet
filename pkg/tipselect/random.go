@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	//nolint:gosec // we do not care about weak random numbers here
+	//nolint:gosec // we don't care about weak random numbers here
 	seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	randLock   = &syncutils.Mutex{}
 )

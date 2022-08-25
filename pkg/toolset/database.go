@@ -85,7 +85,7 @@ func getMilestonePayloadFromStorage(tangleStore *storage.Storage, msIndex iotago
 // getStorageMilestoneRange returns the range of milestones that are found in the storage.
 func getStorageMilestoneRange(tangleStore *storage.Storage) (iotago.MilestoneIndex, iotago.MilestoneIndex) {
 	var msIndexStart iotago.MilestoneIndex = math.MaxUint32
-	var msIndexEnd iotago.MilestoneIndex = 0
+	var msIndexEnd iotago.MilestoneIndex
 
 	tangleStore.ForEachMilestoneIndex(func(msIndex iotago.MilestoneIndex) bool {
 		if msIndexStart > msIndex {
@@ -223,7 +223,7 @@ func createTangleStorage(name string, tangleDatabasePath string, utxoDatabasePat
 }
 
 // loadGenesisSnapshot loads the genesis snapshot to the storage and checks if the networkID fits.
-func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath string, checkSourceNetworkID bool, sourceNetworkID uint64) error {
+func loadGenesisSnapshot(ctx context.Context, storage *storage.Storage, genesisSnapshotFilePath string, checkSourceNetworkID bool, sourceNetworkID uint64) error {
 
 	fullHeader, err := snapshot.ReadFullSnapshotHeaderFromFile(genesisSnapshotFilePath)
 	if err != nil {
@@ -239,7 +239,7 @@ func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath strin
 		return fmt.Errorf("source storage networkID not equal to genesis snapshot networkID (%d != %d)", sourceNetworkID, fullHeaderProtoParams.NetworkID())
 	}
 
-	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, false, genesisSnapshotFilePath); err != nil {
+	if _, _, err := snapshot.LoadSnapshotFilesToStorage(ctx, storage, false, genesisSnapshotFilePath); err != nil {
 		return err
 	}
 

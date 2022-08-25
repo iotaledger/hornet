@@ -26,6 +26,7 @@ func TestValue(t *testing.T) {
 
 	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer syncCtxCancel()
+
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 
 	infoRes, err := n.Coordinator().DebugNodeAPIClient.Info(context.Background())

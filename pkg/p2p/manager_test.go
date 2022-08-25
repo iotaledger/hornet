@@ -100,7 +100,7 @@ func TestManager(t *testing.T) {
 		_ = node2Manager.ConnectPeer(node3AddrInfo, p2p.PeerRelationUnknown)
 	}()
 
-	// note we do not explicitly let node 3 connect to node 2
+	// note we don't explicitly let node 3 connect to node 2
 
 	// should eventually both be connected to each other
 	connectivity(t, node1Manager, node2.ID(), false)
