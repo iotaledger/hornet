@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/iotaledger/hive.go/core/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
@@ -66,6 +67,16 @@ func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(ctx conte
 	return solidifyFutureCone(ctx, memcachedTraverserStorage, s.markBlockAsSolidFunc, blockIDs)
 }
 
+// SolidifyDirectChildrenWithMetadataMemcache updates the solidity of the direct children of the given blocks.
+// The given blocks itself must already be solid, otherwise an error is returned.
+// This function doesn't use the same memcache nor traverser like the FutureConeSolidifier, but it holds the lock, so no other solidifications are done in parallel.
+func (s *FutureConeSolidifier) SolidifyDirectChildrenWithMetadataMemcache(ctx context.Context, memcachedTraverserStorage dag.TraverserStorage, blockIDs iotago.BlockIDs) error {
+	s.Lock()
+	defer s.Unlock()
+
+	return solidifyDirectChildren(ctx, memcachedTraverserStorage, s.markBlockAsSolidFunc, blockIDs)
+}
+
 // solidifyFutureCone updates the solidity of the future cone (blocks approving the given blocks).
 // We keep on walking the future cone, if a block became newly solid during the walk.
 func solidifyFutureCone(
@@ -87,9 +98,9 @@ func solidifyFutureCone(
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 
-				if cachedBlockMeta.Metadata().IsSolid() && startBlockID != cachedBlockMeta.Metadata().BlockID() {
+				if cachedBlockMeta.Metadata().IsSolid() {
 					// do not walk the future cone if the current block is already solid, except it was the startTx
-					return false, nil
+					return startBlockID == cachedBlockMeta.Metadata().BlockID(), nil
 				}
 
 				// check if current block is solid by checking the solidity of its parents
@@ -128,6 +139,82 @@ func solidifyFutureCone(
 
 				// walk the future cone since the block got newly solid
 				return true, nil
+			},
+			// consumer
+			// no need to consume here
+			nil,
+			true); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// solidifyDirectChildren updates the solidity of the future cone (blocks approving the given blocks).
+// We only solidify the direct children of the given blockIDs.
+func solidifyDirectChildren(
+	ctx context.Context,
+	traverserStorage dag.TraverserStorage,
+	markBlockAsSolidFunc MarkBlockAsSolidFunc,
+	blockIDs iotago.BlockIDs) error {
+
+	childrenTraverser := dag.NewChildrenTraverser(traverserStorage)
+
+	for _, blockID := range blockIDs {
+
+		startBlockID := blockID
+
+		if err := childrenTraverser.Traverse(
+			ctx,
+			blockID,
+			// traversal stops if no more blocks pass the given condition
+			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
+
+				if cachedBlockMeta.Metadata().IsSolid() {
+					// we never walk the future cone, except it was the startTx and it was solid
+					return startBlockID == cachedBlockMeta.Metadata().BlockID(), nil
+				}
+
+				if startBlockID == cachedBlockMeta.Metadata().BlockID() {
+					return false, fmt.Errorf("starting block for solidifyDirectChildren was not solid: %s", startBlockID.ToHex())
+				}
+
+				// check if current block is solid by checking the solidity of its parents
+				for _, parentBlockID := range cachedBlockMeta.Metadata().Parents() {
+					contains, err := traverserStorage.SolidEntryPointsContain(parentBlockID)
+					if err != nil {
+						return false, err
+					}
+					if contains {
+						// Ignore solid entry points (snapshot milestone included)
+						continue
+					}
+
+					cachedBlockMetaParent, err := traverserStorage.CachedBlockMetadata(parentBlockID) // meta +1
+					if err != nil {
+						return false, err
+					}
+					if cachedBlockMetaParent == nil {
+						// parent is missing => block is not solid
+						return false, nil
+					}
+
+					if !cachedBlockMetaParent.Metadata().IsSolid() {
+						// parent is not solid => block is not solid
+						cachedBlockMetaParent.Release(true) // meta -1
+
+						return false, nil
+					}
+					cachedBlockMetaParent.Release(true) // meta -1
+				}
+
+				// mark current block as solid
+				markBlockAsSolidFunc(cachedBlockMeta.Retain()) // meta pass +1
+
+				// never walk the future cone
+				return false, nil
 			},
 			// consumer
 			// no need to consume here

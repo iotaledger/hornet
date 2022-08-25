@@ -730,6 +730,6 @@ func (s *ProxyStorage) StoreChild(parentBlockID iotago.BlockID, childBlockID iot
 	return s.storeProxy.StoreChild(parentBlockID, childBlockID)
 }
 
-func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, blockID iotago.BlockID) (*storage.CachedMilestone, bool) {
-	return s.storeProxy.StoreMilestoneIfAbsent(milestone, blockID)
+func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone) (*storage.CachedMilestone, bool) {
+	return s.storeProxy.StoreMilestoneIfAbsent(milestone)
 }

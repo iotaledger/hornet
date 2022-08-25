@@ -109,7 +109,7 @@ func getStorageMilestoneRange(tangleStore *storage.Storage) (iotago.MilestoneInd
 type StoreBlockInterface interface {
 	StoreBlockIfAbsent(block *storage.Block) (cachedBlock *storage.CachedBlock, newlyAdded bool)
 	StoreChild(parentBlockID iotago.BlockID, childBlockID iotago.BlockID) *storage.CachedChild
-	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blockID iotago.BlockID) (*storage.CachedMilestone, bool)
+	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone) (*storage.CachedMilestone, bool)
 }
 
 // storeBlock adds a new block to the storage,
@@ -134,7 +134,7 @@ func storeBlock(protoParams *iotago.ProtocolParameters, dbStorage StoreBlockInte
 	}
 
 	if milestonePayload := milestoneManager.VerifyMilestoneBlock(block.Block()); milestonePayload != nil {
-		cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload, block.BlockID()) // milestone +1
+		cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload) // milestone +1
 
 		// Force release to store milestones without caching
 		cachedMilestone.Release(true) // milestone -1

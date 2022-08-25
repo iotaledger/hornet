@@ -74,17 +74,9 @@ func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile
 		milestoneID := iotago.MilestoneID{}
 		copy(milestoneID[:], msID)
 
-		bID, err := marshalUtil.ReadBytes(iotago.BlockIDLength)
-		if err != nil {
-			return nil, err
-		}
-		blockID := iotago.BlockID{}
-		copy(blockID[:], bID)
-
 		return &MilestoneIndex{
 			Index:       milestoneIndexFromDatabaseKey(key),
 			milestoneID: milestoneID,
-			blockID:     blockID,
 		}, nil
 	}
 
@@ -138,10 +130,9 @@ type MilestoneIndex struct {
 
 	Index       iotago.MilestoneIndex
 	milestoneID iotago.MilestoneID
-	blockID     iotago.BlockID
 }
 
-func NewMilestoneIndex(milestonePayload *iotago.Milestone, blockID iotago.BlockID, milestoneID ...iotago.MilestoneID) (*MilestoneIndex, error) {
+func NewMilestoneIndex(milestonePayload *iotago.Milestone, milestoneID ...iotago.MilestoneID) (*MilestoneIndex, error) {
 
 	var msID iotago.MilestoneID
 	if len(milestoneID) > 0 {
@@ -157,7 +148,6 @@ func NewMilestoneIndex(milestonePayload *iotago.Milestone, blockID iotago.BlockI
 	msIndex := &MilestoneIndex{
 		Index:       milestonePayload.Index,
 		milestoneID: msID,
-		blockID:     blockID,
 	}
 
 	return msIndex, nil
@@ -180,12 +170,10 @@ func (ms *MilestoneIndex) ObjectStorageKey() []byte {
 func (ms *MilestoneIndex) ObjectStorageValue() (data []byte) {
 	/*
 		32 byte milestone ID
-		32 byte block ID
 	*/
 
-	return marshalutil.New(64).
+	return marshalutil.New(32).
 		WriteBytes(ms.milestoneID[:]).
-		WriteBytes(ms.blockID[:iotago.BlockIDLength]).
 		Bytes()
 }
 
@@ -412,19 +400,6 @@ func (s *Storage) CachedMilestoneByIndexOrNil(milestoneIndex iotago.MilestoneInd
 	return s.CachedMilestoneOrNil(cachedMilestoneIdx.MilestoneIndex().MilestoneID()) // milestone +1
 }
 
-// MilestoneBlockIDByIndex returns the block ID of a milestone.
-// Attention: this can be different from node to node, because only the first seen reattachment of milestone payload
-// is stored in a node. This information should never be exposed via external API in any way.
-func (s *Storage) MilestoneBlockIDByIndex(milestoneIndex iotago.MilestoneIndex) (iotago.BlockID, error) {
-	cachedMilestoneIdx := s.cachedMilestoneIndexOrNil(milestoneIndex) // milestoneIndex +1
-	if cachedMilestoneIdx == nil {
-		return iotago.EmptyBlockID(), ErrMilestoneNotFound
-	}
-	defer cachedMilestoneIdx.Release(true) // milestoneIndex -1
-
-	return cachedMilestoneIdx.MilestoneIndex().blockID, nil
-}
-
 // MilestoneParentsByIndex returns the parents of a milestone.
 func (s *Storage) MilestoneParentsByIndex(milestoneIndex iotago.MilestoneIndex) (iotago.BlockIDs, error) {
 	cachedMilestone := s.CachedMilestoneByIndexOrNil(milestoneIndex) // milestone +1
@@ -475,7 +450,7 @@ func (s *Storage) SearchLatestMilestoneIndexInStore() iotago.MilestoneIndex {
 
 // StoreMilestoneIfAbsent stores a milestone if it is not known yet.
 // milestone +1.
-func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blockID iotago.BlockID) (cachedMilestone *CachedMilestone, newlyAdded bool) {
+func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone) (cachedMilestone *CachedMilestone, newlyAdded bool) {
 
 	// compute the milestone ID
 	msID, err := milestonePayload.ID()
@@ -484,7 +459,7 @@ func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blo
 	}
 	milestoneID := msID
 
-	msIndexLookup, err := NewMilestoneIndex(milestonePayload, blockID, milestoneID)
+	msIndexLookup, err := NewMilestoneIndex(milestonePayload, milestoneID)
 	if err != nil {
 		return nil, false
 	}

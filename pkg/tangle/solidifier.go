@@ -233,14 +233,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		return
 	}
 
-	milestoneBlockIDToSolidify, err := t.storage.MilestoneBlockIDByIndex(milestoneIndexToSolidify)
-	if err != nil {
-		// Milestone not found
-		t.LogPanic(storage.ErrMilestoneNotFound)
-
-		return
-	}
-
 	cachedMilestoneToSolidify := t.storage.CachedMilestoneByIndexOrNil(milestoneIndexToSolidify)
 	if cachedMilestoneToSolidify == nil {
 		// Milestone not found
@@ -279,7 +271,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		milestoneSolidificationCtx,
 		memcachedTraverserStorage,
 		milestoneIndexToSolidify,
-		iotago.BlockIDs{milestoneBlockIDToSolidify},
+		milestonePayloadToSolidify.Parents,
 	); !becameSolid {
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
@@ -323,6 +315,19 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		// rerun to solidify the older one
 		t.setSolidifierMilestoneIndex(0)
 		t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
+
+		return
+	}
+
+	// solidify the direct children of the milestone parents,
+	// to eventually solidify all blocks that contained the milestone payload itself.
+	// this is needed to trigger the solid event for the milestone block that is expected by the coordinator.
+	if err := t.futureConeSolidifier.SolidifyDirectChildrenWithMetadataMemcache(
+		milestoneSolidificationCtx,
+		memcachedTraverserStorage,
+		milestonePayloadToSolidify.Parents,
+	); err != nil {
+		t.LogWarnf("Aborted confirmation of milestone %d because solidification of direct children failed: %s", milestoneIndexToSolidify, err.Error())
 
 		return
 	}
