@@ -319,6 +319,19 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		return
 	}
 
+	// solidify the direct children of the milestone parents,
+	// to eventually solidify all blocks that contained the milestone payload itself.
+	// this is needed to trigger the solid event for the milestone block that is expected by the coordinator.
+	if err := t.futureConeSolidifier.SolidifyDirectChildrenWithMetadataMemcache(
+		milestoneSolidificationCtx,
+		memcachedTraverserStorage,
+		milestonePayloadToSolidify.Parents,
+	); err != nil {
+		t.LogWarnf("Aborted confirmation of milestone %d because solidification of direct children failed: %s", milestoneIndexToSolidify, err.Error())
+
+		return
+	}
+
 	var (
 		timeStart                             time.Time
 		timeSetConfirmedMilestoneIndexStart   time.Time
