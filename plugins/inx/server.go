@@ -3,10 +3,12 @@ package inx
 import (
 	"context"
 	"net"
+	"time"
 
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 
 	"github.com/iotaledger/hive.go/core/workerpool"
@@ -24,7 +26,13 @@ func newServer() *Server {
 	grpcServer := grpc.NewServer(
 		grpc.StreamInterceptor(grpcprometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpcprometheus.UnaryServerInterceptor),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:    20 * time.Second,
+			Timeout: 5 * time.Second,
+		}),
+		grpc.MaxConcurrentStreams(10),
 	)
+
 	s := &Server{grpcServer: grpcServer}
 	inx.RegisterINXServer(grpcServer, s)
 
