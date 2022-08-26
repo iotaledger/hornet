@@ -42,13 +42,13 @@ func (s *Server) ConfigurePrometheus() {
 
 func (s *Server) Start() {
 	go func() {
-		lis, err := net.Listen("tcp", ParamsINX.BindAddress)
+		listener, err := net.Listen("tcp", ParamsINX.BindAddress)
 		if err != nil {
 			Plugin.LogFatalfAndExit("failed to listen: %v", err)
 		}
-		defer lis.Close()
+		defer listener.Close()
 
-		if err := s.grpcServer.Serve(lis); err != nil {
+		if err := s.grpcServer.Serve(listener); err != nil {
 			Plugin.LogFatalfAndExit("failed to serve: %v", err)
 		}
 	}()
