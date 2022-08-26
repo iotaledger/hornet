@@ -258,7 +258,7 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 
 	sendMilestoneDiffsRange := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
 		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
-			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+			msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
 			if err != nil {
 				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
 			}
@@ -418,7 +418,7 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 
 	sendTreasuryUpdatesRange := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
 		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
-			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+			msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
 			if err != nil {
 				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
 			}
