@@ -28,10 +28,6 @@ const (
 
 	// SolidEntryPointCheckAdditionalThresholdFuture is the additional future cone (to BMD) that is needed to calculate solid entry points correctly.
 	SolidEntryPointCheckAdditionalThresholdFuture = 5
-
-	// AdditionalPruningThreshold is the additional threshold (to BMD), which is needed, because the blocks in the getMilestoneParents call in solidEntryPoints
-	// can reference older blocks as well.
-	AdditionalPruningThreshold = 5
 )
 
 const (
@@ -163,7 +159,6 @@ func provide(c *dig.Container) error {
 
 		solidEntryPointCheckThresholdPast := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
 		solidEntryPointCheckThresholdFuture := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
-		pruningThreshold := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + AdditionalPruningThreshold)
 
 		snapshotDepth := syncmanager.MilestoneIndexDelta(ParamsSnapshots.Depth)
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {
@@ -176,14 +171,13 @@ func provide(c *dig.Container) error {
 			deps.Storage,
 			deps.SyncManager,
 			deps.UTXOManager,
-			deps.ProtocolManager,
+			ParamsSnapshots.Enabled,
 			deps.SnapshotsFullPath,
 			deps.SnapshotsDeltaPath,
 			ParamsSnapshots.DeltaSizeThresholdPercentage,
 			deltaSnapshotSizeThresholdMinSizeBytes,
 			solidEntryPointCheckThresholdPast,
 			solidEntryPointCheckThresholdFuture,
-			pruningThreshold,
 			snapshotDepth,
 			syncmanager.MilestoneIndexDelta(ParamsSnapshots.Interval),
 		)

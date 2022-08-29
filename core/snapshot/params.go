@@ -7,6 +7,8 @@ import (
 
 // ParametersSnapshots contains the definition of the parameters used by snapshots.
 type ParametersSnapshots struct {
+	// Enabled defines whether to generate snapshot files.
+	Enabled bool `default:"false" usage:"whether to generate snapshot files"`
 	// Depth defines the depth, respectively the starting point, at which a snapshot of the ledger is generated
 	Depth int `default:"50" usage:"the depth, respectively the starting point, at which a snapshot of the ledger is generated"`
 	// Interval defines the interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)

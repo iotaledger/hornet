@@ -255,23 +255,13 @@ func (p *Manager) pruneDatabase(ctx context.Context, targetIndex iotago.Mileston
 	}
 
 	targetIndexMax := p.getMinimumTangleHistory()
+	if targetIndex > targetIndexMax {
+		targetIndex = targetIndexMax
+	}
 
 	snapshotInfo := p.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return 0, errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
-	}
-
-	//if snapshotInfo.SnapshotIndex() < p.solidEntryPointCheckThresholdPast+p.additionalPruningThreshold+1 {
-	if snapshotInfo.SnapshotIndex() < p.additionalPruningThreshold+1 {
-		// Not enough history
-		//return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", p.solidEntryPointCheckThresholdPast+p.additionalPruningThreshold+1, targetIndex)
-		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", p.additionalPruningThreshold+1, targetIndex)
-	}
-
-	// TODO
-	//targetIndexMax := snapshotInfo.SnapshotIndex() - p.solidEntryPointCheckThresholdPast - p.additionalPruningThreshold - 1
-	if targetIndex > targetIndexMax {
-		targetIndex = targetIndexMax
 	}
 
 	if snapshotInfo.PruningIndex() >= targetIndex {

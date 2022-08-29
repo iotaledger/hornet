@@ -324,15 +324,16 @@ Example:
 
 ## <a id="snapshots"></a> 9. Snapshots
 
-| Name                                    | Description                                                                                                                                                           | Type   | Default value                          |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------------------------- |
-| depth                                   | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                            | int    | 50                                     |
-| interval                                | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                       | int    | 200                                    |
-| fullPath                                | Path to the full snapshot file                                                                                                                                        | string | "testnet/snapshots/full_snapshot.bin"  |
-| deltaPath                               | Path to the delta snapshot file                                                                                                                                       | string | "testnet/snapshots/delta_snapshot.bin" |
-| deltaSizeThresholdPercentage            | Create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history) | float  | 50.0                                   |
-| deltaSizeThresholdMinSize               | The minimum size of the delta snapshot file before the threshold percentage condition is checked (below that size the delta snapshot is always created)               | string | "50M"                                  |
-| [downloadURLs](#snapshots_downloadurls) | Configuration for downloadURLs                                                                                                                                        | array  | see example below                      |
+| Name                                    | Description                                                                                                                                                           | Type    | Default value                          |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------- |
+| enabled                                 | Whether to generate snapshot files                                                                                                                                    | boolean | false                                  |
+| depth                                   | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                            | int     | 50                                     |
+| interval                                | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                       | int     | 200                                    |
+| fullPath                                | Path to the full snapshot file                                                                                                                                        | string  | "testnet/snapshots/full_snapshot.bin"  |
+| deltaPath                               | Path to the delta snapshot file                                                                                                                                       | string  | "testnet/snapshots/delta_snapshot.bin" |
+| deltaSizeThresholdPercentage            | Create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history) | float   | 50.0                                   |
+| deltaSizeThresholdMinSize               | The minimum size of the delta snapshot file before the threshold percentage condition is checked (below that size the delta snapshot is always created)               | string  | "50M"                                  |
+| [downloadURLs](#snapshots_downloadurls) | Configuration for downloadURLs                                                                                                                                        | array   | see example below                      |
 
 ### <a id="snapshots_downloadurls"></a> DownloadURLs
 
@@ -346,6 +347,7 @@ Example:
 ```json
   {
     "snapshots": {
+      "enabled": false,
       "depth": 50,
       "interval": 200,
       "fullPath": "testnet/snapshots/full_snapshot.bin",

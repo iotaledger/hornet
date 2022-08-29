@@ -14,7 +14,6 @@ import (
 	storagepkg "github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
-	"github.com/iotaledger/hornet/v2/pkg/protocol"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -59,6 +58,7 @@ type Manager struct {
 	storage                                *storagepkg.Storage
 	syncManager                            *syncmanager.SyncManager
 	utxoManager                            *utxo.Manager
+	snapshotCreationEnabled                bool
 	snapshotFullPath                       string
 	snapshotDeltaPath                      string
 	deltaSnapshotSizeThresholdPercentage   float64
@@ -81,14 +81,13 @@ func NewSnapshotManager(
 	storage *storagepkg.Storage,
 	syncManager *syncmanager.SyncManager,
 	utxoManager *utxo.Manager,
-	protocolManager *protocol.Manager,
+	snapshotCreationEnabled bool,
 	snapshotFullPath string,
 	snapshotDeltaPath string,
 	deltaSnapshotSizeThresholdPercentage float64,
 	deltaSnapshotSizeThresholdMinSizeBytes int64,
 	solidEntryPointCheckThresholdPast syncmanager.MilestoneIndexDelta,
 	solidEntryPointCheckThresholdFuture syncmanager.MilestoneIndexDelta,
-	additionalPruningThreshold iotago.MilestoneIndex,
 	snapshotDepth syncmanager.MilestoneIndexDelta,
 	snapshotInterval iotago.MilestoneIndex,
 ) *Manager {
@@ -98,6 +97,7 @@ func NewSnapshotManager(
 		storage:                                storage,
 		syncManager:                            syncManager,
 		utxoManager:                            utxoManager,
+		snapshotCreationEnabled:                snapshotCreationEnabled,
 		snapshotFullPath:                       snapshotFullPath,
 		snapshotDeltaPath:                      snapshotDeltaPath,
 		deltaSnapshotSizeThresholdPercentage:   deltaSnapshotSizeThresholdPercentage,
@@ -115,18 +115,24 @@ func NewSnapshotManager(
 }
 
 func (s *Manager) MinimumMilestoneIndex() iotago.MilestoneIndex {
+	minimumIndex := s.syncManager.ConfirmedMilestoneIndex()
 
-	snapshotInfo := s.storage.SnapshotInfo()
-	if snapshotInfo == nil {
-		s.LogPanic(common.ErrSnapshotInfoNotFound)
+	if s.snapshotCreationEnabled {
 
-		return 0
+		snapshotInfo := s.storage.SnapshotInfo()
+		if snapshotInfo == nil {
+			s.LogPanic(common.ErrSnapshotInfoNotFound)
+
+			return 0
+		}
+
+		minimumIndex = snapshotInfo.SnapshotIndex()
+		minimumIndex -= s.snapshotDepth
 	}
 
-	minimumIndex := snapshotInfo.SnapshotIndex()
-	minimumIndex -= s.snapshotDepth
-	minimumIndex -= s.solidEntryPointCheckThresholdPast
-
+	if minimumIndex >= s.solidEntryPointCheckThresholdPast {
+		minimumIndex -= s.solidEntryPointCheckThresholdPast
+	}
 	return minimumIndex
 }
 
@@ -138,6 +144,9 @@ func (s *Manager) IsSnapshotting() bool {
 }
 
 func (s *Manager) shouldTakeSnapshot(confirmedMilestoneIndex iotago.MilestoneIndex) bool {
+	if !s.snapshotCreationEnabled {
+		return false
+	}
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {

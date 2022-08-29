@@ -120,6 +120,7 @@
     "whiteFlagParentsSolidTimeout": "2s"
   },
   "snapshots": {
+    "enabled": false,
     "depth": 50,
     "interval": 200,
     "fullPath": "testnet/snapshots/full_snapshot.bin",
