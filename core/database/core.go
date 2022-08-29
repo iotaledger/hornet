@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -61,8 +62,10 @@ var (
 
 type dependencies struct {
 	dig.In
-	TangleDatabase *database.Database `name:"tangleDatabase"`
-	UTXODatabase   *database.Database `name:"utxoDatabase"`
+	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+	TangleDatabase *database.Database           `name:"tangleDatabase"`
+	UTXODatabase   *database.Database           `name:"utxoDatabase"`
+	UTXOManager    *utxo.Manager
 	Storage        *storage.Storage
 	StorageMetrics *metrics.StorageMetrics
 }
@@ -282,6 +285,16 @@ func configure() {
 		if !databaseVersionUpdated {
 			CorePlugin.LogPanic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
+	}
+
+	if deps.NodeConfig.Bool(CfgCheckLedgerStateOnStartup) {
+		CorePlugin.LogInfo("Checking ledger state...")
+		ledgerStateCheckStart := time.Now()
+		if err := deps.UTXOManager.CheckLedgerState(); err != nil {
+			CorePlugin.LogError(err)
+			os.Exit(1)
+		}
+		CorePlugin.LogInfof("Checking ledger state... done. took %v", time.Since(ledgerStateCheckStart).Truncate(time.Millisecond))
 	}
 
 	if err = CorePlugin.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {

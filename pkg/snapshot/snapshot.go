@@ -656,11 +656,5 @@ func (s *SnapshotManager) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInf
 		s.LogPanicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", s.networkID, s.networkIDSource, snapshotInfo.NetworkID)
 	}
 
-	// if we don't enforce loading of a snapshot,
-	// we can check the ledger state of the current database and start the node.
-	if err := s.utxoManager.CheckLedgerState(); err != nil {
-		s.LogFatal(err)
-	}
-
 	return nil
 }

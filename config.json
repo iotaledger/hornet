@@ -45,7 +45,8 @@
   "db": {
     "engine": "rocksdb",
     "path": "mainnetdb",
-    "autoRevalidation": false
+    "autoRevalidation": false,
+    "checkLedgerStateOnStartup": false
   },
   "snapshots": {
     "enabled": false,

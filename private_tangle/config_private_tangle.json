@@ -33,7 +33,8 @@
   "db": {
     "engine": "pebble",
     "path": "privatedb",
-    "autoRevalidation": false
+    "autoRevalidation": false,
+    "checkLedgerStateOnStartup": false
   },
   "snapshots": {
     "enabled": false,

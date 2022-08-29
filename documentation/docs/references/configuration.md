@@ -126,19 +126,20 @@ Example:
 
 ## 3. DB
 
-| Name             | Description                                                                         | Type   |
-| :--------------- | :---------------------------------------------------------------------------------- | :----- |
-| engine           | The used database engine (pebble/rocksdb/mapdb)                                     | string |
-| path             | The path to the database folder                                                     | string |
-| autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | bool   |
-
+| Name                      | Description                                                                         | Type   |
+| :------------------------ | :---------------------------------------------------------------------------------- | :----- |
+| engine                    | The used database engine (pebble/rocksdb/mapdb)                                     | string |
+| path                      | The path to the database folder                                                     | string |
+| autoRevalidation          | Whether to automatically start revalidation on startup if the database is corrupted | bool   |
+| checkLedgerStateOnStartup | Whether to check if the ledger state matches the total supply on startup            | bool   |
 Example:
 
 ```json
   "db": {
     "engine": "rocksdb",
     "path": "mainnetdb",
-    "autoRevalidation": false
+    "autoRevalidation": false,
+    "checkLedgerStateOnStartup": false
   },
 ```
 

@@ -22,7 +22,8 @@ Hornet uses an embedded database engine that stores its data in a directory in a
 "db": {
     "engine": "rocksdb",
     "path": "mainnetdb",
-    "autoRevalidation": false
+    "autoRevalidation": false,
+    "checkLedgerStateOnStartup": false
   }
 ```
 

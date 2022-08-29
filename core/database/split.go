@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -74,7 +73,7 @@ func SplitIntoTangleAndUTXO(databasePath string, dbEngine ...database.Engine) er
 	}
 
 	// Move the legacy database into the tangle directory
-	files, err := ioutil.ReadDir(legacyDatabasePath)
+	files, err := os.ReadDir(legacyDatabasePath)
 	if err != nil {
 		return err
 	}

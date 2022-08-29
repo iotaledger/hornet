@@ -223,6 +223,7 @@ func configure() {
 
 	switch {
 	case snapshotInfo != nil && !*forceLoadingSnapshot:
+		// snapshot already exists, no need to load it
 		if err := deps.SnapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
 			CorePlugin.LogPanic(err)
 		}
