@@ -126,6 +126,42 @@ func NewSEPsProducer(
 	}
 }
 
+// NewSEPsProducerFromMilestone returns a producer which produces the parents of a milestone as solid entry points.
+func NewSEPsProducerFromMilestone(milestonePayload *iotago.Milestone) SEPProducerFunc {
+
+	prodChan := make(chan interface{})
+	errChan := make(chan error)
+
+	go func() {
+		// use the parents of the milestone as solid entry points.
+		for _, parent := range milestonePayload.Parents {
+			prodChan <- parent
+		}
+
+		close(prodChan)
+		close(errChan)
+	}()
+
+	binder := producerFromChannels(prodChan, errChan)
+
+	return func() (iotago.BlockID, error) {
+		obj, err := binder()
+		if err != nil {
+			return iotago.EmptyBlockID(), err
+		}
+		if obj == nil {
+			return iotago.EmptyBlockID(), ErrNoMoreSEPToProduce
+		}
+
+		blockID, ok := obj.(iotago.BlockID)
+		if !ok {
+			return iotago.EmptyBlockID(), fmt.Errorf("expected iotago.BlockID, got %T", obj)
+		}
+
+		return blockID, nil
+	}
+}
+
 // NewCMIUTXOProducer returns a producer which produces unspent outputs which exist for the current confirmed milestone.
 func NewCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	prodChan := make(chan interface{})
@@ -344,6 +380,7 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 		snapshotInfo,
 		s.syncManager.ConfirmedMilestoneIndex(),
 		targetIndex,
+		false,
 		s.solidEntryPointCheckThresholdPast,
 		s.solidEntryPointCheckThresholdFuture,
 		// if we write the snapshot state to the database, the newly generated snapshot index must be greater than the last snapshot index
@@ -491,6 +528,7 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 		snapshotInfo,
 		s.syncManager.ConfirmedMilestoneIndex(),
 		targetIndex,
+		false,
 		s.solidEntryPointCheckThresholdPast,
 		s.solidEntryPointCheckThresholdFuture,
 		// if we write the snapshot state to the database, the newly generated snapshot index must be greater than the last snapshot index
@@ -761,6 +799,7 @@ func CreateSnapshotFromStorage(
 	utxoManager *utxo.Manager,
 	filePath string,
 	targetIndex iotago.MilestoneIndex,
+	globalSnapshot bool,
 	solidEntryPointCheckThresholdPast iotago.MilestoneIndex,
 	solidEntryPointCheckThresholdFuture iotago.MilestoneIndex,
 ) (*FullSnapshotHeader, error) {
@@ -781,6 +820,7 @@ func CreateSnapshotFromStorage(
 		snapshotInfo,
 		ledgerIndex,
 		targetIndex,
+		globalSnapshot,
 		solidEntryPointCheckThresholdPast,
 		solidEntryPointCheckThresholdFuture,
 		false); err != nil {
@@ -867,7 +907,15 @@ func CreateSnapshotFromStorage(
 
 	// create a prepped solid entry point producer which counts how many went through
 	sepsCount := 0
-	sepProducer := NewSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
+	var sepProducer SEPProducerFunc
+	if globalSnapshot {
+		// if we create a global snapshot, we do not need to calculate the SEP.
+		// we can simply take the milestone parents of the ledger milestone.
+		sepProducer = NewSEPsProducerFromMilestone(cachedMilestoneTarget.Milestone().Milestone())
+	} else {
+		sepProducer = NewSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
+	}
+
 	countingSepProducer := func() (iotago.BlockID, error) {
 		sep, err := sepProducer()
 		if err != nil {
