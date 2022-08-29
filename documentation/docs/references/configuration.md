@@ -168,11 +168,12 @@ Example:
 
 ## <a id="db"></a> 4. Database
 
-| Name             | Description                                                                         | Type    | Default value      |
-| ---------------- | ----------------------------------------------------------------------------------- | ------- | ------------------ |
-| engine           | The used database engine (pebble/rocksdb/mapdb)                                     | string  | "rocksdb"          |
-| path             | The path to the database folder                                                     | string  | "testnet/database" |
-| autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | boolean | false              |
+| Name                      | Description                                                                         | Type    | Default value      |
+| ------------------------- | ----------------------------------------------------------------------------------- | ------- | ------------------ |
+| engine                    | The used database engine (pebble/rocksdb/mapdb)                                     | string  | "rocksdb"          |
+| path                      | The path to the database folder                                                     | string  | "testnet/database" |
+| autoRevalidation          | Whether to automatically start revalidation on startup if the database is corrupted | boolean | false              |
+| checkLedgerStateOnStartup | Whether to check if the ledger state matches the total supply on startup            | boolean | false              |
 
 Example:
 
@@ -181,7 +182,8 @@ Example:
     "db": {
       "engine": "rocksdb",
       "path": "testnet/database",
-      "autoRevalidation": false
+      "autoRevalidation": false,
+      "checkLedgerStateOnStartup": false
     }
   }
 ```
