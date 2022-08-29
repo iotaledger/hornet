@@ -751,17 +751,7 @@ func createFullSnapshotFromMergedSnapshotStorageState(dbStorage *storage.Storage
 		}
 	}()
 
-	// create a prepped output producer which counts how many went through
-	unspentOutputsCount := 0
 	cmiUTXOProducer := NewCMIUTXOProducer(dbStorage.UTXOManager())
-	countingOutputProducer := func() (*utxo.Output, error) {
-		output, err := cmiUTXOProducer()
-		if output != nil {
-			unspentOutputsCount++
-		}
-
-		return output, err
-	}
 
 	// normally we won't have any ms diffs within this merged full snapshot file,
 	// but the "AdditionalMilestoneDiffRange" milestone diffs are needed to reconstruct pending protocol parameter updates.
@@ -776,7 +766,7 @@ func createFullSnapshotFromMergedSnapshotStorageState(dbStorage *storage.Storage
 	if _, err := StreamFullSnapshotDataTo(
 		snapshotFile,
 		fullHeader,
-		countingOutputProducer,
+		cmiUTXOProducer,
 		milestoneDiffProducer,
 		sepProducer); err != nil {
 		_ = snapshotFile.Close()
@@ -905,8 +895,6 @@ func CreateSnapshotFromStorage(
 		SEPCount:                   0,
 	}
 
-	// create a prepped solid entry point producer which counts how many went through
-	sepsCount := 0
 	var sepProducer SEPProducerFunc
 	if globalSnapshot {
 		// if we create a global snapshot, we do not need to calculate the SEP.
@@ -916,26 +904,7 @@ func CreateSnapshotFromStorage(
 		sepProducer = NewSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
 	}
 
-	countingSepProducer := func() (iotago.BlockID, error) {
-		sep, err := sepProducer()
-		if err != nil {
-			sepsCount++
-		}
-
-		return sep, err
-	}
-
-	// create a prepped output producer which counts how many went through
-	unspentOutputsCount := 0
 	cmiUTXOProducer := NewCMIUTXOProducer(utxoManagerTemp)
-	countingOutputProducer := func() (*utxo.Output, error) {
-		output, err := cmiUTXOProducer()
-		if output != nil {
-			unspentOutputsCount++
-		}
-
-		return output, err
-	}
 
 	milestoneDiffProducer := func() (*MilestoneDiff, error) {
 		// we won't have any ms diffs within this merged full snapshot file
@@ -952,9 +921,9 @@ func CreateSnapshotFromStorage(
 	if _, err := StreamFullSnapshotDataTo(
 		snapshotFile,
 		fullHeader,
-		countingOutputProducer,
+		cmiUTXOProducer,
 		milestoneDiffProducer,
-		countingSepProducer); err != nil {
+		sepProducer); err != nil {
 		_ = snapshotFile.Close()
 
 		return nil, fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[Full], err)
