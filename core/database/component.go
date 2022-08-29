@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -266,10 +267,11 @@ func configure() error {
 
 	if ParamsDatabase.CheckLedgerStateOnStartup {
 		CoreComponent.LogInfo("Checking ledger state...")
+		ledgerStateCheckStart := time.Now()
 		if err := deps.Storage.CheckLedgerState(); err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
-		CoreComponent.LogInfo("Checking ledger state... done")
+		CoreComponent.LogInfof("Checking ledger state... done. took %v", time.Since(ledgerStateCheckStart).Truncate(time.Millisecond))
 	}
 
 	if err = CoreComponent.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
