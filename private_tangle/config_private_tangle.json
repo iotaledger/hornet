@@ -36,6 +36,7 @@
     "autoRevalidation": false
   },
   "snapshots": {
+    "enabled": false,
     "depth": 50,
     "interval": 200,
     "fullPath": "snapshots/private_tangle/full_snapshot.bin",

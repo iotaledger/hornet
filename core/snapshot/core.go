@@ -181,6 +181,7 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.SyncManager,
 			deps.UTXOManager,
+			deps.NodeConfig.Bool(CfgSnapshotsEnabled),
 			deps.NetworkID,
 			networkIDSource,
 			deps.SnapshotsFullPath,

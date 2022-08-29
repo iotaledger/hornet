@@ -146,6 +146,7 @@ Example:
 
 | Name                          | Description                                                                                                                                                            | Type             |
 | :---------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| enabled                       | whether to generate snapshot files                                                                                                                                     | bool             |
 | depth                         | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                             | integer          |
 | interval                      | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                        | integer          |
 | fullPath                      | Path to the full snapshot file                                                                                                                                         | string           |
@@ -164,6 +165,7 @@ Example:
 
 ```json
   "snapshots": {
+    "enabled": false,
     "depth": 50,
     "interval": 200,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",

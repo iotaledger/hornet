@@ -72,6 +72,7 @@ type SnapshotManager struct {
 	storage                              *storage.Storage
 	syncManager                          *syncmanager.SyncManager
 	utxoManager                          *utxo.Manager
+	snapshotCreationEnabled              bool
 	networkID                            uint64
 	networkIDSource                      string
 	snapshotFullPath                     string
@@ -108,6 +109,7 @@ func NewSnapshotManager(
 	storage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	utxoManager *utxo.Manager,
+	snapshotCreationEnabled bool,
 	networkID uint64,
 	networkIDSource string,
 	snapshotFullPath string,
@@ -131,6 +133,7 @@ func NewSnapshotManager(
 		WrappedLogger:                        utils.NewWrappedLogger(log),
 		tangleDatabase:                       tangleDatabase,
 		utxoDatabase:                         utxoDatabase,
+		snapshotCreationEnabled:              snapshotCreationEnabled,
 		storage:                              storage,
 		syncManager:                          syncManager,
 		utxoManager:                          utxoManager,
@@ -168,6 +171,9 @@ func (s *SnapshotManager) IsSnapshottingOrPruning() bool {
 }
 
 func (s *SnapshotManager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
+	if !s.snapshotCreationEnabled {
+		return false
+	}
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {

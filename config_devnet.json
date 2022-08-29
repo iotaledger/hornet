@@ -49,6 +49,7 @@
     "autoRevalidation": false
   },
   "snapshots": {
+    "enabled": false,
     "depth": 50,
     "interval": 200,
     "fullPath": "snapshots/devnet/full_snapshot.bin",
