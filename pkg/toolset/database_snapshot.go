@@ -25,6 +25,7 @@ func databaseSnapshot(args []string) error {
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
 	targetIndexFlag := fs.Uint32(FlagToolDatabaseTargetIndex, 0, "the target index")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+	globalSnapshotFlag := fs.Bool(FlagToolSnapshotGlobal, false, "create a global snapshot (SEP equal to milestone parents)")
 
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseSnapshot)
@@ -77,6 +78,7 @@ func databaseSnapshot(args []string) error {
 		tangleStoreSource.UTXOManager(),
 		*snapshotPathTargetFlag,
 		*targetIndexFlag,
+		*globalSnapshotFlag,
 		solidEntryPointCheckThresholdPast,
 		solidEntryPointCheckThresholdFuture,
 	)
