@@ -2,6 +2,7 @@ package coreapi
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -186,7 +187,7 @@ func configure() error {
 
 	// Check for features
 	if restapi.ParamsRestAPI.PoW.Enabled {
-		AddFeature("PoW")
+		AddFeature("pow")
 		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, restapi.ParamsRestAPI.PoW.WorkerCount))
 	}
 
@@ -483,7 +484,7 @@ func configure() error {
 
 // AddFeature adds a feature to the RouteInfo endpoint.
 func AddFeature(feature string) {
-	features = append(features, feature)
+	features = append(features, strings.ToLower(feature))
 }
 
 func checkNodeAlmostSynced() echo.MiddlewareFunc {
