@@ -111,7 +111,11 @@ func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToL
 	deps.Tangle.Events.LatestMilestoneChanged.Hook(onLatestMilestoneChanged)
 	<-ctx.Done()
 	deps.Tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
-	wp.Stop()
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
 
 	return ctx.Err()
 }
@@ -291,7 +295,11 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
 	<-ctx.Done()
 	deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(onConfirmedMilestoneChanged)
-	wp.Stop()
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
 
 	return innerErr
 }

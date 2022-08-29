@@ -258,7 +258,7 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 
 	sendMilestoneDiffsRange := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
 		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
-			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+			msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
 			if err != nil {
 				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
 			}
@@ -385,7 +385,11 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 	deps.Tangle.Events.LedgerUpdated.Hook(onLedgerUpdated)
 	<-ctx.Done()
 	deps.Tangle.Events.LedgerUpdated.Detach(onLedgerUpdated)
-	wp.Stop()
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
 
 	return innerErr
 }
@@ -418,7 +422,7 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 
 	sendTreasuryUpdatesRange := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
 		for currentIndex := startIndex; currentIndex <= endIndex; currentIndex++ {
-			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+			msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
 			if err != nil {
 				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
 			}
@@ -577,7 +581,11 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 	deps.Tangle.Events.TreasuryMutated.Hook(onTreasuryMutated)
 	<-ctx.Done()
 	deps.Tangle.Events.TreasuryMutated.Detach(onTreasuryMutated)
-	wp.Stop()
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
 
 	return innerErr
 }
@@ -619,7 +627,11 @@ func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenTo
 	deps.Tangle.Events.NewReceipt.Hook(onNewReceipt)
 	<-ctx.Done()
 	deps.Tangle.Events.NewReceipt.Detach(onNewReceipt)
-	wp.Stop()
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
 
 	return ctx.Err()
 }

@@ -167,7 +167,11 @@ func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServe
 	deps.Tangle.Events.ReceivedNewBlock.Hook(onReceivedNewBlock)
 	<-ctx.Done()
 	deps.Tangle.Events.ReceivedNewBlock.Detach(onReceivedNewBlock)
-	wp.Stop()
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
 
 	return ctx.Err()
 }
@@ -210,7 +214,11 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 	deps.Tangle.Events.BlockSolid.Hook(onBlockSolid)
 	<-ctx.Done()
 	deps.Tangle.Events.BlockSolid.Detach(onBlockSolid)
-	wp.Stop()
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
 
 	return ctx.Err()
 }
@@ -252,7 +260,11 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 	deps.Tangle.Events.BlockReferenced.Hook(onBlockReferenced)
 	<-ctx.Done()
 	deps.Tangle.Events.BlockReferenced.Detach(onBlockReferenced)
-	wp.Stop()
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
 
 	return ctx.Err()
 }
@@ -300,7 +312,11 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 	<-ctx.Done()
 	deps.TipSelector.Events.TipAdded.Detach(onTipAddedOrRemoved)
 	deps.TipSelector.Events.TipRemoved.Detach(onTipAddedOrRemoved)
-	wp.Stop()
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
 
 	return ctx.Err()
 }
