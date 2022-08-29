@@ -14,6 +14,8 @@ type ParametersDatabase struct {
 	AutoRevalidation bool `default:"false" usage:"whether to automatically start revalidation on startup if the database is corrupted"`
 	// Debug defines whether to ignore the check for corrupted databases (should only be used for debug reasons).
 	Debug bool `default:"false" usage:"ignore the check for corrupted databases (should only be used for debug reasons)"`
+	// CheckLedgerStateOnStartup defines whether to check if the ledger state matches the total supply on startup
+	CheckLedgerStateOnStartup bool `default:"false" usage:"whether to check if the ledger state matches the total supply on startup"`
 }
 
 var ParamsDatabase = &ParametersDatabase{}

@@ -264,6 +264,14 @@ func configure() error {
 		}
 	}
 
+	if ParamsDatabase.CheckLedgerStateOnStartup {
+		CoreComponent.LogInfo("Checking ledger state...")
+		if err := deps.Storage.CheckLedgerState(); err != nil {
+			CoreComponent.LogErrorAndExit(err)
+		}
+		CoreComponent.LogInfo("Checking ledger state... done")
+	}
+
 	if err = CoreComponent.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
 		<-ctx.Done()
 
