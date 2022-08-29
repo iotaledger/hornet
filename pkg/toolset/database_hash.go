@@ -86,6 +86,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		return err
 	}
 
+	var ledgerTokenSupply uint64
 	// write all unspent outputs in lexicographical order
 	for _, outputID := range outputIDs.RemoveDupsAndSort() {
 		output, err := dbStorage.UTXOManager().ReadOutputByOutputID(outputID)
@@ -93,10 +94,21 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			return err
 		}
 
+		ledgerTokenSupply += output.Deposit()
+
 		outputBytes := output.SnapshotBytes()
 		if err = binary.Write(lsHash, binary.LittleEndian, outputBytes); err != nil {
 			return err
 		}
+	}
+
+	protoParams, err := dbStorage.ProtocolParameters(ledgerIndex)
+	if err != nil {
+		return errors.Wrapf(ErrCritical, "loading protocol parameters failed: %s", err.Error())
+	}
+
+	if ledgerTokenSupply != protoParams.TokenSupply {
+		return errors.Wrapf(ErrCritical, "ledger token supply does not match the protocol parameters: %d vs %d", ledgerTokenSupply, protoParams.TokenSupply)
 	}
 
 	// calculate sha256 hash of the current ledger state
@@ -108,11 +120,6 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 
 		return true
 	})
-
-	protoParams, err := dbStorage.ProtocolParameters(ledgerIndex)
-	if err != nil {
-		return errors.Wrapf(ErrCritical, "loading protocol parameters failed: %s", err.Error())
-	}
 
 	// write all solid entry points in lexicographical order
 	for _, solidEntryPoint := range solidEntryPoints.RemoveDupsAndSort() {
@@ -154,6 +161,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			PruningIndex                        iotago.MilestoneIndex `json:"pruningIndex"`
 			UTXOsCount                          int                   `json:"utxosCount"`
 			SolidEntryPointsCount               int                   `json:"solidEntryPointsCount"`
+			LedgerTokenSupply                   uint64                `json:"ledgerTokenSupply"`
 			LedgerStateHash                     string                `json:"ledgerStateHash"`
 			LedgerStateHashWithSolidEntryPoints string                `json:"ledgerStateHashWithSolidEntryPoints"`
 			ProtocolParametersHash              string                `json:"protocolParametersHash"`
@@ -168,6 +176,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			PruningIndex:                        snapshotInfo.PruningIndex(),
 			UTXOsCount:                          len(outputIDs),
 			SolidEntryPointsCount:               len(solidEntryPoints),
+			LedgerTokenSupply:                   ledgerTokenSupply,
 			LedgerStateHash:                     hex.EncodeToString(snapshotHashSumWithoutSEPs),
 			LedgerStateHashWithSolidEntryPoints: hex.EncodeToString(snapshotHashSumWithSEPs),
 			ProtocolParametersHash:              hex.EncodeToString(protocolParametersHashSum),
@@ -187,6 +196,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
         - Pruning index:  %d
         - UTXOs count:    %d
         - SEPs count:     %d
+        - Ledger token supply: %d
         - Ledger state hash (w/o  solid entry points): %s
         - Ledger state hash (with solid entry points): %s
         - Protocol parameters hash (current+pending):  %s`+"\n\n",
@@ -206,6 +216,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		snapshotInfo.PruningIndex(),
 		len(outputIDs),
 		len(solidEntryPoints),
+		ledgerTokenSupply,
 		hex.EncodeToString(snapshotHashSumWithoutSEPs),
 		hex.EncodeToString(snapshotHashSumWithSEPs),
 		hex.EncodeToString(protocolParametersHashSum),

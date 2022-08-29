@@ -122,10 +122,6 @@ func provide(c *dig.Container) error {
 		switch {
 		case deps.Storage.SnapshotInfo() != nil && !*forceLoadingSnapshot:
 			// snapshot already exists, no need to load it
-			if err := deps.Storage.CheckLedgerState(); err != nil {
-				CoreComponent.LogWarn(err)
-				os.Exit(1)
-			}
 		default:
 			// import the initial snapshot
 			if err := importer.ImportSnapshots(CoreComponent.Daemon().ContextStopped()); err != nil {

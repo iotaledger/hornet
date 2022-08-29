@@ -74,7 +74,8 @@
   "db": {
     "engine": "rocksdb",
     "path": "testnet/database",
-    "autoRevalidation": false
+    "autoRevalidation": false,
+    "checkLedgerStateOnStartup": false
   },
   "pow": {
     "refreshTipsInterval": "5s"

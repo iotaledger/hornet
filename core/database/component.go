@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -262,6 +263,15 @@ func configure() error {
 		if !databaseVersionUpdated {
 			CoreComponent.LogPanic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
+	}
+
+	if ParamsDatabase.CheckLedgerStateOnStartup {
+		CoreComponent.LogInfo("Checking ledger state...")
+		ledgerStateCheckStart := time.Now()
+		if err := deps.Storage.CheckLedgerState(); err != nil {
+			CoreComponent.LogErrorAndExit(err)
+		}
+		CoreComponent.LogInfof("Checking ledger state... done. took %v", time.Since(ledgerStateCheckStart).Truncate(time.Millisecond))
 	}
 
 	if err = CoreComponent.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
