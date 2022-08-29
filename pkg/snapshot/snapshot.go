@@ -118,7 +118,6 @@ func (s *Manager) MinimumMilestoneIndex() iotago.MilestoneIndex {
 	minimumIndex := s.syncManager.ConfirmedMilestoneIndex()
 
 	if s.snapshotCreationEnabled {
-
 		snapshotInfo := s.storage.SnapshotInfo()
 		if snapshotInfo == nil {
 			s.LogPanic(common.ErrSnapshotInfoNotFound)
@@ -127,12 +126,17 @@ func (s *Manager) MinimumMilestoneIndex() iotago.MilestoneIndex {
 		}
 
 		minimumIndex = snapshotInfo.SnapshotIndex()
+		if minimumIndex < s.snapshotDepth {
+			return 0
+		}
 		minimumIndex -= s.snapshotDepth
 	}
 
-	if minimumIndex >= s.solidEntryPointCheckThresholdPast {
-		minimumIndex -= s.solidEntryPointCheckThresholdPast
+	if minimumIndex < s.solidEntryPointCheckThresholdPast {
+		return 0
 	}
+	minimumIndex -= s.solidEntryPointCheckThresholdPast
+
 	return minimumIndex
 }
 
