@@ -2,7 +2,7 @@ package coreapi
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 

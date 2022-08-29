@@ -6,6 +6,7 @@ import (
 
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
+	"github.com/wollac/iota-crypto-demo/pkg/slip10/eddsa"
 
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -78,13 +79,13 @@ func (hd *HDWallet) KeyPair() (ed25519.PrivateKey, ed25519.PublicKey) {
 		panic(err)
 	}
 
-	curve := slip10.Ed25519()
+	curve := eddsa.Ed25519()
 	key, err := slip10.DeriveKeyFromPath(hd.seed, curve, path)
 	if err != nil {
 		panic(err)
 	}
 
-	pubKey, privKey := slip10.Ed25519Key(key)
+	pubKey, privKey := key.Key.(eddsa.Seed).Ed25519Key()
 
 	return ed25519.PrivateKey(privKey), ed25519.PublicKey(pubKey)
 }

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/libp2p/go-libp2p-core/crypto"
-	peer2 "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	peer2 "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mr-tron/base58/base58"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -249,7 +249,7 @@ func ConvertLibP2PPrivateKeyToHive(key *crypto.Ed25519PrivateKey) (*ed25519.Priv
 		return nil, err
 	}
 
-	hivePrivKey, err, _ := ed25519.PrivateKeyFromBytes(privKeyBytes)
+	hivePrivKey, _, err := ed25519.PrivateKeyFromBytes(privKeyBytes)
 	if err != nil {
 		return nil, err
 	}

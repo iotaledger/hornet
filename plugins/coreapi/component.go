@@ -157,7 +157,7 @@ type dependencies struct {
 	PoWHandler              *pow.Handler
 	SnapshotManager         *snapshot.Manager
 	PruningManager          *pruning.Manager
-	AppInfo                 *app.AppInfo
+	AppInfo                 *app.Info
 	PeeringConfigManager    *p2p.ConfigManager
 	ProtocolManager         *protocol.Manager
 	BaseToken               *protocfg.BaseToken
