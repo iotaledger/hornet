@@ -61,7 +61,7 @@ require (
 	github.com/iotaledger/go-ds-kvstore v1.0.0-beta.2 // indirect
 	github.com/iotaledger/grocksdb v1.7.5-0.20220808142449-1dc0b8ac4d7d // indirect
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-beta.1 // indirect
-	github.com/iotaledger/inx-app v1.0.0-beta.7 // indirect
+	github.com/iotaledger/inx-app v1.0.0-beta.9 // indirect
 	github.com/iotaledger/inx/go v1.0.0-beta.5 // indirect
 	github.com/iotaledger/iota.go v1.0.0 // indirect
 	github.com/iotaledger/iota.go/v3 v3.0.0-beta.6 // indirect
@@ -79,7 +79,7 @@ require (
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/echo-contrib v0.13.0 // indirect
-	github.com/labstack/echo/v4 v4.7.2 // indirect
+	github.com/labstack/echo/v4 v4.8.0 // indirect
 	github.com/labstack/gommon v0.3.1 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
@@ -152,7 +152,7 @@ require (
 	github.com/valyala/fasttemplate v1.2.1 // indirect
 	github.com/wollac/iota-crypto-demo v0.0.0-20220407192531-0c9bc107c733 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/dig v1.15.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.22.0 // indirect
