@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p/core/host"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/core/app"
@@ -54,7 +54,7 @@ var (
 type dependencies struct {
 	dig.In
 	RestRouteManager *restapi.RestRouteManager `optional:"true"`
-	AppInfo          *app.AppInfo
+	AppInfo          *app.Info
 	Host             host.Host
 	NodeAlias        string             `name:"nodeAlias"`
 	TangleDatabase   *database.Database `name:"tangleDatabase"`

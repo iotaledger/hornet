@@ -56,7 +56,7 @@ func (s *Server) PerformAPIRequest(_ context.Context, req *inx.APIRequest) (*inx
 	}
 
 	httpReq := httptest.NewRequest(req.GetMethod(), req.GetPath(), bytes.NewBuffer(req.GetBody()))
-	httpReq.Header = req.HttpHeader()
+	httpReq.Header = req.HTTPHeader()
 
 	rec := httptest.NewRecorder()
 	c := deps.Echo.NewContext(httpReq, rec)
@@ -67,7 +67,7 @@ func (s *Server) PerformAPIRequest(_ context.Context, req *inx.APIRequest) (*inx
 
 	return &inx.APIResponse{
 		Code:    uint32(rec.Code),
-		Headers: inx.HeadersFromHttpHeader(rec.Header()),
+		Headers: inx.HeadersFromHTTPHeader(rec.Header()),
 		Body:    rec.Body.Bytes(),
 	}, nil
 }

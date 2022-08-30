@@ -65,7 +65,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo          *app.AppInfo
+	AppInfo          *app.Info
 	SyncManager      *syncmanager.SyncManager
 	ServerMetrics    *metrics.ServerMetrics
 	Storage          *storage.Storage
