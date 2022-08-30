@@ -121,7 +121,7 @@ func networkBootstrap(args []string) error {
 		return fmt.Errorf("failed to load milestone signing provider: %w", err)
 	}
 
-	println("creating databases...")
+	println("creating databases ...")
 	tangleStore, err := createTangleStorage(
 		"",
 		tangleDatabasePath,
@@ -133,26 +133,26 @@ func networkBootstrap(args []string) error {
 	}
 
 	defer func() {
-		println("\nshutdown storage...")
+		println("\nshutdown storage ...")
 		if err := tangleStore.Shutdown(); err != nil {
 			panic(err)
 		}
 	}()
 
 	// load the genesis ledger state into the storage (SEP and ledger state only)
-	println("loading genesis snapshot...")
+	println("loading genesis snapshot ...")
 	if err := loadGenesisSnapshot(context.Background(), tangleStore, genesisSnapshotPath, false, 0); err != nil {
 		return fmt.Errorf("failed to load genesis snapshot: %w", err)
 	}
 
 	// create first milestone to bootstrap the network
-	println("create first milestone...")
+	println("create first milestone ...")
 	cooState, err := createInitialMilestone(tangleStore, signer)
 	if err != nil {
 		return fmt.Errorf("failed to create initial milestone: %w", err)
 	}
 
-	println("store coordinator state...")
+	println("store coordinator state ...")
 	if err := ioutils.WriteJSONToFile(cooStatePath, cooState, 0660); err != nil {
 		return fmt.Errorf("failed to store coordinator state: %w", err)
 	}

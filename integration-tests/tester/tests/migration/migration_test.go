@@ -76,7 +76,7 @@ func TestMigration(t *testing.T) {
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 
 	// eventually all migrations should have happened
-	log.Println("waiting for treasury to be reduced to correct amount after migrations...")
+	log.Println("waiting for treasury to be reduced to correct amount after migrations ...")
 	require.Eventually(t, func() bool {
 		treasury, err := n.Coordinator().DebugNodeAPIClient.Treasury(context.Background())
 		if err != nil {
@@ -95,7 +95,7 @@ func TestMigration(t *testing.T) {
 	}, 2*time.Minute, time.Second)
 
 	// checking that funds were migrated in appropriate receipts
-	log.Println("checking receipts...")
+	log.Println("checking receipts ...")
 	receiptTuples, err := n.Coordinator().DebugNodeAPIClient.Receipts(context.Background())
 	require.NoError(t, err)
 
@@ -118,7 +118,7 @@ func TestMigration(t *testing.T) {
 	}
 
 	// check that indeed the funds were correctly minted
-	log.Println("checking that migrated funds are available...")
+	log.Println("checking that migrated funds are available ...")
 	for addr, tuple := range migrations {
 		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), iotago.MustParseEd25519AddressFromHexString(addr))
 		require.NoError(t, err)

@@ -158,7 +158,7 @@ func (s *Importer) downloadSnapshotFiles(ctx context.Context, targetNetworkID ui
 func (s *Importer) LoadFullSnapshotFromFile(ctx context.Context, filePath string, targetNetworkID iotago.NetworkID) (err error) {
 	snapshotName := snapshotNames[Full]
 
-	s.LogInfof("importing %s snapshot file...", snapshotName)
+	s.LogInfof("importing %s snapshot file ...", snapshotName)
 	ts := time.Now()
 
 	fullHeader, err := loadFullSnapshotFileToStorage(ctx, s.storage, filePath, targetNetworkID, false)
@@ -196,7 +196,7 @@ SnapshotInfo:
 func (s *Importer) LoadDeltaSnapshotFromFile(ctx context.Context, filePath string) (err error) {
 	snapshotName := snapshotNames[Delta]
 
-	s.LogInfof("importing %s snapshot file...", snapshotName)
+	s.LogInfof("importing %s snapshot file ...", snapshotName)
 	ts := time.Now()
 
 	header, err := loadDeltaSnapshotFileToStorage(ctx, s.storage, filePath, false)

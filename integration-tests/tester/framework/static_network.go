@@ -107,7 +107,7 @@ func (n *StaticNetwork) ConnectNodes() error {
 
 // AwaitPeering awaits until all nodes are peered according to the peering layout.
 func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
-	log.Println("verifying peering...")
+	log.Println("verifying peering ...")
 	for nodeID, layoutPeers := range n.layout {
 		node := n.Nodes[nodeID]
 		for {

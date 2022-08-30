@@ -1,7 +1,8 @@
 version: '3'
 services:
   inx-indexer:
-    image: iotaledger/inx-indexer:1.0.0-beta.5
+    container_name: inx-indexer
+    image: iotaledger/inx-indexer:1.0.0-beta.6
     restart: on-failure
     volumes:
       - ./testnet/indexer:/app/database
@@ -10,23 +11,26 @@ services:
       - "--indexer.bindAddress=inx-indexer:9091"
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:1.0.0-beta.5
+    container_name: inx-mqtt
+    image: iotaledger/inx-mqtt:1.0.0-beta.6
     restart: on-failure
     command:
       - "--inx.address=hornet:9029"
       - "--mqtt.websocket.bindAddress=inx-mqtt:1888"
 
   inx-participation:
-    image: iotaledger/inx-participation:1.0.0-beta.5
+    container_name: inx-participation
+    image: iotaledger/inx-participation:1.0.0-beta.6
     restart: on-failure
     volumes:
       - ./testnet/participation:/app/database
     command:
       - "--inx.address=hornet:9029"
-      - "--participation.bindAddress=inx-participation:9892"
+      - "--restAPI.bindAddress=inx-participation:9892"
 
   inx-dashboard:
-    image: iotaledger/inx-dashboard:1.0.0-beta.5
+    container_name: inx-dashboard
+    image: iotaledger/inx-dashboard:1.0.0-beta.6
     restart: on-failure
     ports:
       - "8081:8081/tcp"
@@ -41,6 +45,7 @@ services:
       - "--dashboard.auth.passwordSalt=0000000000000000000000000000000000000000000000000000000000000000"
   
   hornet:
+    container_name: hornet
     build:
       context: .
       dockerfile: Dockerfile

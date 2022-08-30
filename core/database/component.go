@@ -266,12 +266,12 @@ func configure() error {
 	}
 
 	if ParamsDatabase.CheckLedgerStateOnStartup {
-		CoreComponent.LogInfo("Checking ledger state...")
+		CoreComponent.LogInfo("Checking ledger state ...")
 		ledgerStateCheckStart := time.Now()
 		if err := deps.Storage.CheckLedgerState(); err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
-		CoreComponent.LogInfof("Checking ledger state... done. took %v", time.Since(ledgerStateCheckStart).Truncate(time.Millisecond))
+		CoreComponent.LogInfof("Checking ledger state ... done. took %v", time.Since(ledgerStateCheckStart).Truncate(time.Millisecond))
 	}
 
 	if err = CoreComponent.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
@@ -281,11 +281,11 @@ func configure() error {
 			CoreComponent.LogPanic(err)
 		}
 
-		CoreComponent.LogInfo("Syncing databases to disk...")
+		CoreComponent.LogInfo("Syncing databases to disk ...")
 		if err = deps.Storage.FlushAndCloseStores(); err != nil {
-			CoreComponent.LogPanicf("Syncing databases to disk... failed: %s", err)
+			CoreComponent.LogPanicf("Syncing databases to disk ... failed: %s", err)
 		}
-		CoreComponent.LogInfo("Syncing databases to disk... done")
+		CoreComponent.LogInfo("Syncing databases to disk ... done")
 	}, daemon.PriorityCloseDatabase); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}

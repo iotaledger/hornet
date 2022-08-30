@@ -65,7 +65,7 @@ func TestBatch(t *testing.T) {
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 
 	// eventually all migrations should have happened
-	log.Println("waiting for treasury to be reduced to correct amount after migrations...")
+	log.Println("waiting for treasury to be reduced to correct amount after migrations ...")
 	require.Eventually(t, func() bool {
 		treasury, err := n.Coordinator().DebugNodeAPIClient.Treasury(context.Background())
 		if err != nil {
@@ -84,7 +84,7 @@ func TestBatch(t *testing.T) {
 	}, 2*time.Minute, time.Second)
 
 	// checking that funds were migrated in appropriate receipts
-	log.Println("checking receipts...")
+	log.Println("checking receipts ...")
 	receiptTuples, err := n.Coordinator().DebugNodeAPIClient.Receipts(context.Background())
 	require.NoError(t, err)
 	require.Lenf(t, receiptTuples, totalReceipts, "expected %d receipts in total", totalReceipts)
@@ -95,7 +95,7 @@ func TestBatch(t *testing.T) {
 	}
 
 	// check that indeed the funds were correctly minted
-	log.Println("checking that migrated funds are available...")
+	log.Println("checking that migrated funds are available ...")
 	for i := uint32(0); i < migratedFundsCount; i++ {
 		var addr iotago.Ed25519Address
 		binary.LittleEndian.PutUint32(addr[:], i)

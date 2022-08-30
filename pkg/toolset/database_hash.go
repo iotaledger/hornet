@@ -43,7 +43,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	ts := time.Now()
 
 	if !outputJSON {
-		fmt.Println("calculating ledger state hash...")
+		fmt.Println("calculating ledger state hash ...")
 	}
 
 	ledgerIndex, err := dbStorage.UTXOManager().ReadLedgerIndex()

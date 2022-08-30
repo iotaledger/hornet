@@ -976,7 +976,7 @@ func MergeSnapshotsFiles(ctx context.Context, fullPath string, deltaPath string,
 	}
 
 	defer func() {
-		println("\nshutdown storage...")
+		println("\nshutdown storage ...")
 		err := dbStorage.Shutdown()
 
 		// clean up temp db

@@ -116,9 +116,9 @@ func run() error {
 
 		<-ctx.Done()
 
-		CoreComponent.LogInfo("Stopping pruning background worker...")
+		CoreComponent.LogInfo("Stopping pruning background worker ...")
 		deps.SnapshotManager.Events.HandledConfirmedMilestoneIndexChanged.Detach(onSnapshotHandledConfirmedMilestoneIndexChanged)
-		CoreComponent.LogInfo("Stopping pruning background worker... done")
+		CoreComponent.LogInfo("Stopping pruning background worker ... done")
 	}, daemon.PriorityPruning); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}

@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+:warning: :warning: :warning:
+This release contains a breaking change in the transaction validation, so you need to update your nodes ASAP to participate in the testnet.
+:warning: :warning: :warning:
+
+## [2.0.0-beta.7] - 30.08.2022
+
+### Added
+- Added 5 pubkeys to alphanet config (#1704)
+- Add config parameter to disable snapshot file creation
+- Add config parameter to check ledger state on startup
+- Add global flag to db-snap tool (#1713)
+
+### Changed
+- Use CLI flags instead of config files for private tangle (#1695)
+- Store additional peers on startup and fix peering.json ownership (#1696) 
+- Update modules (#1715)
+- Fix new linter warnings (revive, contextcheck) (#1702)
+- Remove BlockID lookup from milestone payloads (#1703)
+- Change private tangle ports and expose INX of all nodes (#1705)
+- Enforce lowercase for Features in API info endpoint (#1714)
+
+## Fixed
+- Do not pass build flag to docker compose
+- Fix several bugs in hornet tools (#1700)
+- Fix INX deadlock (#1707) 
+
+
 ## [2.0.0-beta.6] - 16.08.2022
 
 ## Removed

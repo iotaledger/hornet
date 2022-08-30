@@ -51,7 +51,7 @@ func (n *Network) PrefixName(suffix string) string {
 
 // AwaitOnline awaits until all nodes are online or the given context is canceled.
 func (n *Network) AwaitOnline(ctx context.Context) error {
-	log.Println("waiting for nodes to become online...")
+	log.Println("waiting for nodes to become online ...")
 	for _, node := range n.Nodes {
 		for {
 			if err := returnErrIfCtxDone(ctx, ErrNodesNotOnlineInTime); err != nil {
@@ -76,7 +76,7 @@ func (n *Network) AwaitOnline(ctx context.Context) error {
 
 // AwaitAllSync awaits until all nodes see themselves as synced.
 func (n *Network) AwaitAllSync(ctx context.Context) error {
-	log.Println("waiting for nodes to become synced...")
+	log.Println("waiting for nodes to become synced ...")
 	for _, node := range n.Nodes {
 		for {
 			if err := returnErrIfCtxDone(ctx, ErrNodesDidNotSyncInTime); err != nil {

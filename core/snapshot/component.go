@@ -199,8 +199,8 @@ func run() error {
 		for {
 			select {
 			case <-ctx.Done():
-				CoreComponent.LogInfo("Stopping snapshot background worker...")
-				CoreComponent.LogInfo("Stopping snapshot background worker... done")
+				CoreComponent.LogInfo("Stopping snapshot background worker ...")
+				CoreComponent.LogInfo("Stopping snapshot background worker ... done")
 
 				return
 

@@ -1,7 +1,7 @@
 {
   "protocol": {
-    "targetNetworkName": "alphanet-9",
-    "milestonePublicKeyCount": 3,
+    "targetNetworkName": "alphanet-10",
+    "milestonePublicKeyCount": 7,
     "baseToken": {
       "name": "Shimmer",
       "tickerSymbol": "SMR",

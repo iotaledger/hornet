@@ -266,7 +266,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		metadataMemcache.Cleanup(true)
 	}()
 
-	t.LogInfof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
+	t.LogInfof("Run solidity check for Milestone (%d) ...", milestoneIndexToSolidify)
 	if becameSolid, aborted := t.SolidQueueCheck(
 		milestoneSolidificationCtx,
 		memcachedTraverserStorage,
@@ -296,7 +296,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		}
 
 		if milestoneIndexClosestNext == milestoneIndexToSolidify {
-			t.LogInfof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentConfirmedIndex, milestoneIndexClosestNext)
+			t.LogInfof("Milestones missing between (%d) and (%d). Search for missing milestones ...", currentConfirmedIndex, milestoneIndexClosestNext)
 
 			// no Milestones found in between => search an older milestone in the solid cone
 			if found, err := t.searchMissingMilestones(

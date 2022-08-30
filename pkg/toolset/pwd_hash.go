@@ -43,7 +43,7 @@ func readPasswordFromStdin() ([]byte, error) {
 		<-signalChan
 		// reset the terminal to the original state if we receive an interrupt
 		_ = term.Restore(syscall.Stdin, originalTerminalState)
-		fmt.Println("\naborted... Bye!")
+		fmt.Println("\naborted ... Bye!")
 		os.Exit(1)
 	}()
 

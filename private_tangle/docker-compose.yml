@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   create-snapshots:
+    container_name: create-snapshots
     build:
       context: ../
       dockerfile: Dockerfile
@@ -22,6 +23,7 @@ services:
       - snapshots
 
   bootstrap-network:
+    container_name: bootstrap-network
     build:
       context: ../
       dockerfile: Dockerfile
@@ -47,7 +49,8 @@ services:
       - bootstrap
 
   inx-coordinator:
-    image: iotaledger/inx-coordinator:1.0.0-beta.5
+    container_name: inx-coordinator
+    image: iotaledger/inx-coordinator:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.21
@@ -68,7 +71,8 @@ services:
       - 4-nodes
 
   inx-indexer:
-    image: iotaledger/inx-indexer:1.0.0-beta.5
+    container_name: inx-indexer
+    image: iotaledger/inx-indexer:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.22
@@ -96,7 +100,8 @@ services:
       - 4-nodes
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:1.0.0-beta.5
+    container_name: inx-mqtt
+    image: iotaledger/inx-mqtt:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.23
@@ -121,7 +126,8 @@ services:
       - 4-nodes
 
   inx-faucet:
-    image: iotaledger/inx-faucet:1.0.0-beta.5
+    container_name: inx-faucet
+    image: iotaledger/inx-faucet:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.24
@@ -145,7 +151,8 @@ services:
       - 4-nodes
 
   inx-participation:
-    image: iotaledger/inx-participation:1.0.0-beta.5
+    container_name: inx-participation
+    image: iotaledger/inx-participation:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.25
@@ -157,7 +164,7 @@ services:
       - ./privatedb/participation:/app/database
     command:
       - "--inx.address=172.18.211.11:9011"
-      - "--participation.bindAddress=172.18.211.25:9892"
+      - "--restAPI.bindAddress=172.18.211.25:9892"
       - "--participation.db.path=/app/database"
       - "--profiling.enabled=true"
       - "--profiling.bindAddress=172.18.211.25:6060"
@@ -167,7 +174,8 @@ services:
       - 4-nodes
 
   inx-spammer:
-    image: iotaledger/inx-spammer:1.0.0-beta.6
+    container_name: inx-spammer
+    image: iotaledger/inx-spammer:1.0.0-beta.7
     networks:
       peering_net:
         ipv4_address: 172.18.211.26
@@ -210,7 +218,8 @@ services:
       - 4-nodes
 
   inx-poi:
-    image: iotaledger/inx-poi:1.0.0-beta.5
+    container_name: inx-poi
+    image: iotaledger/inx-poi:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.27
@@ -229,7 +238,8 @@ services:
       - 4-nodes
 
   inx-dashboard-1:
-    image: iotaledger/inx-dashboard:1.0.0-beta.5
+    container_name: inx-dashboard-1
+    image: iotaledger/inx-dashboard:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.31
@@ -259,7 +269,8 @@ services:
       - 4-nodes
 
   inx-dashboard-2:
-    image: iotaledger/inx-dashboard:1.0.0-beta.5
+    container_name: inx-dashboard-2
+    image: iotaledger/inx-dashboard:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.32
@@ -289,7 +300,8 @@ services:
       - 4-nodes
 
   inx-dashboard-3:
-    image: iotaledger/inx-dashboard:1.0.0-beta.5
+    container_name: inx-dashboard-3
+    image: iotaledger/inx-dashboard:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.33
@@ -318,7 +330,8 @@ services:
       - 4-nodes
 
   inx-dashboard-4:
-    image: iotaledger/inx-dashboard:1.0.0-beta.5
+    container_name: inx-dashboard-4
+    image: iotaledger/inx-dashboard:1.0.0-beta.6
     networks:
       peering_net:
         ipv4_address: 172.18.211.34
@@ -346,6 +359,7 @@ services:
       - 4-nodes
 
   hornet-1:
+    container_name: hornet-1
     build:
       context: ../
       dockerfile: Dockerfile
@@ -390,6 +404,7 @@ services:
       - 4-nodes
 
   hornet-2:
+    container_name: hornet-2
     image: hornet:dev
     networks:
       peering_net:
@@ -433,6 +448,7 @@ services:
       - 4-nodes
 
   hornet-3:
+    container_name: hornet-3
     image: hornet:dev
     networks:
       peering_net:
@@ -475,6 +491,7 @@ services:
       - 4-nodes
 
   hornet-4:
+    container_name: hornet-4
     image: hornet:dev
     networks:
       peering_net:

@@ -208,7 +208,7 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 --deleteAll:      deletes the database and the snapshot files
 `)
 		}
-		CoreComponent.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
+		CoreComponent.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation ...")
 
 		if err := deps.Tangle.RevalidateDatabase(deps.SnapshotImporter, deps.PruneReceipts); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
@@ -240,9 +240,9 @@ func run() error {
 		<-ctx.Done()
 		deps.Tangle.AbortMilestoneSolidification()
 
-		CoreComponent.LogInfo("Flushing caches to database...")
+		CoreComponent.LogInfo("Flushing caches to database ...")
 		deps.Storage.ShutdownStorages()
-		CoreComponent.LogInfo("Flushing caches to database... done")
+		CoreComponent.LogInfo("Flushing caches to database ... done")
 
 	}, daemon.PriorityFlushToDatabase); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)

@@ -89,7 +89,7 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumPeers int) error {
 			return nil
 		}
 
-		log.Printf("criteria (%d) not fulfilled yet. trying again in 5 seconds...", minimumPeers)
+		log.Printf("criteria (%d) not fulfilled yet. trying again in 5 seconds ...", minimumPeers)
 		time.Sleep(5 * time.Second)
 	}
 

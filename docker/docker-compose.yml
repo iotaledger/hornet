@@ -2,6 +2,7 @@ version: '3'
 services:
 
   hornet:
+    container_name: hornet
     image: iotaledger/hornet:2.0.0-beta.6
     ulimits:
       nofile:
@@ -47,6 +48,7 @@ services:
 ##################################################################
 
   traefik:
+    container_name: traefik
     image: traefik:v2.6
     command:
       - "--providers.docker=true"
@@ -71,8 +73,8 @@ services:
 ##################################################################
 
   prometheus:
-    image: prom/prometheus:latest
     container_name: prometheus
+    image: prom/prometheus:latest
     restart: unless-stopped
     user: "65532"
     volumes:
@@ -81,32 +83,32 @@ services:
       - /etc/localtime:/etc/localtime:ro
 
   cadvisor:
-     image: gcr.io/cadvisor/cadvisor:latest
-     container_name: cadvisor
-     privileged: true
-     command: 
-       - --housekeeping_interval=30s    # kubernetes default args
-       - --max_housekeeping_interval=35s
-       - --event_storage_event_limit=default=0
-       - --event_storage_age_limit=default=0
-       - --store_container_labels=false
-       - --global_housekeeping_interval=30s
-       - --event_storage_event_limit=default=0
-       - --event_storage_age_limit=default=0
-       - --disable_metrics=accelerator,advtcp,cpu_topology,disk,hugetlb,memory_numa,percpu,referenced_memory,resctrl,sched,tcp,udp
-       - --enable_load_reader=true
-       - --docker_only=true          # only show stats for docker containers
-       - --allow_dynamic_housekeeping=true
-       - --storage_duration=1m0s
-     volumes:
-       - /:/rootfs:ro
-       - /var/run:/var/run:rw
-       - /sys:/sys:ro
-       - /var/lib/docker/:/var/lib/docker:ro
+    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:latest
+    privileged: true
+    command: 
+      - --housekeeping_interval=30s    # kubernetes default args
+      - --max_housekeeping_interval=35s
+      - --event_storage_event_limit=default=0
+      - --event_storage_age_limit=default=0
+      - --store_container_labels=false
+      - --global_housekeeping_interval=30s
+      - --event_storage_event_limit=default=0
+      - --event_storage_age_limit=default=0
+      - --disable_metrics=accelerator,advtcp,cpu_topology,disk,hugetlb,memory_numa,percpu,referenced_memory,resctrl,sched,tcp,udp
+      - --enable_load_reader=true
+      - --docker_only=true          # only show stats for docker containers
+      - --allow_dynamic_housekeeping=true
+      - --storage_duration=1m0s
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
 
   grafana:
-    image: grafana/grafana:latest
     container_name: grafana
+    image: grafana/grafana:latest
     restart: unless-stopped
     user: "65532"
     labels:
@@ -129,7 +131,8 @@ services:
 ##################################################################
 
   inx-indexer:
-    image: iotaledger/inx-indexer:1.0.0-beta.5
+    container_name: inx-indexer
+    image: iotaledger/inx-indexer:1.0.0-beta.6
     stop_grace_period: 5m
     restart: unless-stopped
     volumes:
@@ -142,7 +145,8 @@ services:
       - "--prometheus.bindAddress=inx-indexer:9312"
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:1.0.0-beta.5
+    container_name: inx-mqtt
+    image: iotaledger/inx-mqtt:1.0.0-beta.6
     stop_grace_period: 5m
     restart: unless-stopped
     command:
@@ -152,7 +156,8 @@ services:
       - "--prometheus.bindAddress=inx-mqtt:9312"
 
   inx-participation:
-    image: iotaledger/inx-participation:1.0.0-beta.5
+    container_name: inx-participation
+    image: iotaledger/inx-participation:1.0.0-beta.6
     stop_grace_period: 5m
     restart: unless-stopped
     ulimits:
@@ -164,10 +169,11 @@ services:
     command:
       - "--inx.address=hornet:9029"
       - "--participation.db.path=database/participation"
-      - "--participation.bindAddress=inx-participation:9892"
+      - "--restAPI.bindAddress=inx-participation:9892"
 
   inx-spammer:
-    image: iotaledger/inx-spammer:1.0.0-beta.6
+    container_name: inx-spammer
+    image: iotaledger/inx-spammer:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
     command:
@@ -177,7 +183,8 @@ services:
       - "--prometheus.bindAddress=inx-spammer:9312"
 
   inx-poi:
-    image: iotaledger/inx-poi:1.0.0-beta.5
+    container_name: inx-poi
+    image: iotaledger/inx-poi:1.0.0-beta.6
     stop_grace_period: 5m
     restart: unless-stopped
     command:
@@ -185,7 +192,8 @@ services:
       - "--poi.bindAddress=inx-poi:9687"
 
   inx-dashboard:
-    image: iotaledger/inx-dashboard:1.0.0-beta.5
+    container_name: inx-dashboard
+    image: iotaledger/inx-dashboard:1.0.0-beta.6
     stop_grace_period: 5m
     restart: unless-stopped
     labels:
@@ -206,4 +214,3 @@ services:
       - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT}"
       - "--prometheus.enabled=true"
       - "--prometheus.bindAddress=inx-dashboard:9312"
-
