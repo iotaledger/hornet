@@ -282,7 +282,7 @@ func (t *Tangle) cleanupBlocks(info *storage.SnapshotInfo) error {
 
 	t.storage.FlushBlocksStorage()
 
-	t.LogInfof("deleting block s... %d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting blocks ... %d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
