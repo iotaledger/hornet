@@ -23,7 +23,7 @@ services:
       - ./testnet/participation:/app/database
     command:
       - "--inx.address=hornet:9029"
-      - "--participation.bindAddress=inx-participation:9892"
+      - "--restAPI.bindAddress=inx-participation:9892"
 
   inx-dashboard:
     image: iotaledger/inx-dashboard:1.0.0-beta.6

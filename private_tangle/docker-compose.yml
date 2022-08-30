@@ -157,7 +157,7 @@ services:
       - ./privatedb/participation:/app/database
     command:
       - "--inx.address=172.18.211.11:9011"
-      - "--participation.bindAddress=172.18.211.25:9892"
+      - "--restAPI.bindAddress=172.18.211.25:9892"
       - "--participation.db.path=/app/database"
       - "--profiling.enabled=true"
       - "--profiling.bindAddress=172.18.211.25:6060"
