@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   hornet-nest:
+    container_name: hornet-nest
     build:
       dockerfile: Dockerfile
     image: hornet-nest:dev

@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   create-snapshots:
+    container_name: create-snapshots
     build:
       context: ../
       dockerfile: Dockerfile
@@ -22,6 +23,7 @@ services:
       - snapshots
 
   bootstrap-network:
+    container_name: bootstrap-network
     build:
       context: ../
       dockerfile: Dockerfile
@@ -47,6 +49,7 @@ services:
       - bootstrap
 
   inx-coordinator:
+    container_name: inx-coordinator
     image: iotaledger/inx-coordinator:1.0.0-beta.6
     networks:
       peering_net:
@@ -68,6 +71,7 @@ services:
       - 4-nodes
 
   inx-indexer:
+    container_name: inx-indexer
     image: iotaledger/inx-indexer:1.0.0-beta.6
     networks:
       peering_net:
@@ -96,6 +100,7 @@ services:
       - 4-nodes
 
   inx-mqtt:
+    container_name: inx-mqtt
     image: iotaledger/inx-mqtt:1.0.0-beta.6
     networks:
       peering_net:
@@ -121,6 +126,7 @@ services:
       - 4-nodes
 
   inx-faucet:
+    container_name: inx-faucet
     image: iotaledger/inx-faucet:1.0.0-beta.6
     networks:
       peering_net:
@@ -145,6 +151,7 @@ services:
       - 4-nodes
 
   inx-participation:
+    container_name: inx-participation
     image: iotaledger/inx-participation:1.0.0-beta.6
     networks:
       peering_net:
@@ -167,6 +174,7 @@ services:
       - 4-nodes
 
   inx-spammer:
+    container_name: inx-spammer
     image: iotaledger/inx-spammer:1.0.0-beta.7
     networks:
       peering_net:
@@ -210,6 +218,7 @@ services:
       - 4-nodes
 
   inx-poi:
+    container_name: inx-poi
     image: iotaledger/inx-poi:1.0.0-beta.6
     networks:
       peering_net:
@@ -229,6 +238,7 @@ services:
       - 4-nodes
 
   inx-dashboard-1:
+    container_name: inx-dashboard-1
     image: iotaledger/inx-dashboard:1.0.0-beta.6
     networks:
       peering_net:
@@ -259,6 +269,7 @@ services:
       - 4-nodes
 
   inx-dashboard-2:
+    container_name: inx-dashboard-2
     image: iotaledger/inx-dashboard:1.0.0-beta.6
     networks:
       peering_net:
@@ -289,6 +300,7 @@ services:
       - 4-nodes
 
   inx-dashboard-3:
+    container_name: inx-dashboard-3
     image: iotaledger/inx-dashboard:1.0.0-beta.6
     networks:
       peering_net:
@@ -318,6 +330,7 @@ services:
       - 4-nodes
 
   inx-dashboard-4:
+    container_name: inx-dashboard-4
     image: iotaledger/inx-dashboard:1.0.0-beta.6
     networks:
       peering_net:
@@ -346,6 +359,7 @@ services:
       - 4-nodes
 
   hornet-1:
+    container_name: hornet-1
     build:
       context: ../
       dockerfile: Dockerfile
@@ -390,6 +404,7 @@ services:
       - 4-nodes
 
   hornet-2:
+    container_name: hornet-2
     image: hornet:dev
     networks:
       peering_net:
@@ -433,6 +448,7 @@ services:
       - 4-nodes
 
   hornet-3:
+    container_name: hornet-3
     image: hornet:dev
     networks:
       peering_net:
@@ -475,6 +491,7 @@ services:
       - 4-nodes
 
   hornet-4:
+    container_name: hornet-4
     image: hornet:dev
     networks:
       peering_net:
