@@ -82,7 +82,7 @@ func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.Importer, pruneRe
 		return fmt.Errorf("snapshot files (index: %d) do not fit the revalidation target (index: %d)", snapshotLedgerIndex, snapshotInfo.SnapshotIndex())
 	}
 
-	t.LogInfof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex())
+	t.LogInfof("reverting database state back from %d to snapshot %d (this might take a while) ... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex())
 
 	// deletes all ledger entries (unspent, spent, diffs, balances, treasury, receipts).
 	if err := t.cleanupLedger(pruneReceipts); err != nil {
@@ -115,9 +115,9 @@ func (t *Tangle) RevalidateDatabase(snapshotImporter *snapshot.Importer, pruneRe
 		return err
 	}
 
-	t.LogInfo("flushing storages...")
+	t.LogInfo("flushing storages ...")
 	t.storage.FlushStorages()
-	t.LogInfo("flushing storages... done!")
+	t.LogInfo("flushing storages ... done!")
 
 	// apply the ledger from the last snapshot to the database
 	if err := t.applySnapshotLedger(snapshotInfo, snapshotImporter); err != nil {
@@ -134,11 +134,11 @@ func (t *Tangle) cleanupLedger(pruneReceipts bool) error {
 
 	start := time.Now()
 
-	t.LogInfo("clearing ledger... ")
+	t.LogInfo("clearing ledger ... ")
 	if err := t.storage.UTXOManager().ClearLedger(pruneReceipts); err != nil {
 		return err
 	}
-	t.LogInfof("clearing ledger... done. took %v", time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("clearing ledger ... done. took %v", time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -192,7 +192,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.LogInfof("deleting milestones...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting milestones ... %d/%d (%0.2f%%). %v left ...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteUnreferencedBlocks(msIndex)
@@ -202,7 +202,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 	t.storage.FlushUnreferencedBlocksStorage()
 	t.storage.FlushMilestoneStorage()
 
-	t.LogInfof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting milestones ... %d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -274,7 +274,7 @@ func (t *Tangle) cleanupBlocks(info *storage.SnapshotInfo) error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.LogInfof("deleting blocks...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting blocks ... %d/%d (%0.2f%%). %v left ...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteBlock(blockID)
@@ -282,7 +282,7 @@ func (t *Tangle) cleanupBlocks(info *storage.SnapshotInfo) error {
 
 	t.storage.FlushBlocksStorage()
 
-	t.LogInfof("deleting blocks...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting block s... %d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -335,7 +335,7 @@ func (t *Tangle) cleanupBlockMetadata() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.LogInfof("deleting block metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting block metadata ... %d/%d (%0.2f%%). %v left ...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteBlockMetadata(blockID)
@@ -343,7 +343,7 @@ func (t *Tangle) cleanupBlockMetadata() error {
 
 	t.storage.FlushBlocksStorage()
 
-	t.LogInfof("deleting block metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting block metadata ... %d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -415,7 +415,7 @@ func (t *Tangle) cleanupChildren() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.LogInfof("deleting children...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting children ... %d/%d (%0.2f%%). %v left ...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteChild(child.blockID, child.childBlockID)
@@ -423,7 +423,7 @@ func (t *Tangle) cleanupChildren() error {
 
 	t.storage.FlushChildrenStorage()
 
-	t.LogInfof("deleting children...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting children ... %d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -473,7 +473,7 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.LogInfof("deleting unreferenced blocks...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting unreferenced blocks ... %d/%d (%0.2f%%). %v left ...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteUnreferencedBlocks(msIndex)
@@ -481,7 +481,7 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 
 	t.storage.FlushUnreferencedBlocksStorage()
 
-	t.LogInfof("deleting unreferenced blocks...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting unreferenced blocks ... %d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -489,7 +489,7 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 // apply the ledger from the last snapshot to the database.
 func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshotImporter *snapshot.Importer) error {
 
-	t.LogInfo("applying snapshot balances to the ledger state...")
+	t.LogInfo("applying snapshot balances to the ledger state ...")
 
 	// set the confirmed milestone index to 0.
 	// the correct milestone index will be applied during "ImportSnapshots"

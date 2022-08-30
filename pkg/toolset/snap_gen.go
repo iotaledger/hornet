@@ -144,7 +144,7 @@ func snapshotGen(args []string) error {
 		return fmt.Errorf("'%s' already exists", FlagToolOutputPath)
 	}
 
-	println("loading protocol parameters...")
+	println("loading protocol parameters ...")
 	// TODO: needs to be adapted for when protocol parameters struct changes
 	protoParams := &iotago.ProtocolParameters{}
 	if err := ioutils.ReadJSONFromFile(protocolParametersPath, protoParams); err != nil {
@@ -171,13 +171,13 @@ func snapshotGen(args []string) error {
 			return fmt.Errorf("'%s' (%s) does not exist", FlagToolGenesisAddressesPath, genesisAddressesPath)
 		}
 
-		println("loading genesis addresses from file...")
+		println("loading genesis addresses from file ...")
 		if err := ioutils.ReadJSONFromFile(genesisAddressesPath, genesisAddresses); err != nil {
 			return fmt.Errorf("failed to load genesis addresses: %w", err)
 		}
 	}
 	if len(*genesisAddressesFlag) > 0 {
-		println("loading genesis addresses from command line...")
+		println("loading genesis addresses from command line ...")
 
 		addressesWithBalances := strings.Split(*genesisAddressesFlag, ",")
 		for i, addressWithBalance := range addressesWithBalances {

@@ -84,7 +84,7 @@ func benchmarkIO(args []string) error {
 			bytesPerSecond := uint64(float64(bytes) / duration.Seconds())
 			objectsPerSecond := uint64(float64(i) / duration.Seconds())
 			percentage, remaining := utils.EstimateRemainingTime(ts, int64(i), int64(objectCnt))
-			fmt.Printf("Average IO speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, %0.2f%%. %v left...)\n", humanize.Bytes(bytesPerSecond), i, size, dbEngine, humanize.Bytes(bytes), humanize.Bytes(totalBytes), objectsPerSecond, percentage, remaining.Truncate(time.Second))
+			fmt.Printf("Average IO speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, %0.2f%%. %v left ...)\n", humanize.Bytes(bytesPerSecond), i, size, dbEngine, humanize.Bytes(bytes), humanize.Bytes(totalBytes), objectsPerSecond, percentage, remaining.Truncate(time.Second))
 		}
 	}
 
@@ -167,7 +167,7 @@ func benchmarkCPU(args []string) error {
 				elapsed := time.Since(ts)
 				percentage, remaining := utils.EstimateRemainingTime(ts, elapsed.Milliseconds(), duration.Milliseconds())
 				megahashesPerSecond := float64(counter) / (elapsed.Seconds() * 1000000)
-				fmt.Printf("Average CPU speed: %0.2fMH/s (%d thread(s), %0.2f%%. %v left...)\n", megahashesPerSecond, threads, percentage, remaining.Truncate(time.Second))
+				fmt.Printf("Average CPU speed: %0.2fMH/s (%d thread(s), %0.2f%%. %v left ...)\n", megahashesPerSecond, threads, percentage, remaining.Truncate(time.Second))
 			}
 		}()
 

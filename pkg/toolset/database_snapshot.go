@@ -60,14 +60,14 @@ func databaseSnapshot(args []string) error {
 		return err
 	}
 	defer func() {
-		println("\nshutdown source storage...")
+		println("\nshutdown source storage ...")
 		if err := tangleStoreSource.Shutdown(); err != nil {
 			panic(err)
 		}
 	}()
 
 	if !*outputJSONFlag {
-		fmt.Println("creating full snapshot file...")
+		fmt.Println("creating full snapshot file ...")
 	}
 
 	ts := time.Now()

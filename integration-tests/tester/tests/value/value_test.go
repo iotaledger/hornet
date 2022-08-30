@@ -81,7 +81,7 @@ func TestValue(t *testing.T) {
 	require.NoError(t, err)
 
 	// broadcast to a node
-	log.Println("submitting transaction...")
+	log.Println("submitting transaction ...")
 	submittedBlock, err := n.Nodes[2].DebugNodeAPIClient.SubmitBlock(context.Background(), block, protoParams)
 	require.NoError(t, err)
 
@@ -89,7 +89,7 @@ func TestValue(t *testing.T) {
 	submittedBlockID, err := submittedBlock.ID()
 	require.NoError(t, err)
 
-	log.Println("checking that the transaction gets confirmed...")
+	log.Println("checking that the transaction gets confirmed ...")
 	require.Eventually(t, func() bool {
 		blockMeta, err := n.Coordinator().DebugNodeAPIClient.BlockMetadataByBlockID(context.Background(), submittedBlockID)
 		if err != nil {

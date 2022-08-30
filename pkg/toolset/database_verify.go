@@ -65,7 +65,7 @@ func databaseVerify(args []string) error {
 		return err
 	}
 	defer func() {
-		println("\nshutdown source storage...")
+		println("\nshutdown source storage ...")
 		if err := tangleStoreSource.Shutdown(); err != nil {
 			panic(err)
 		}
@@ -77,7 +77,7 @@ func databaseVerify(args []string) error {
 	}
 
 	ts := time.Now()
-	println(fmt.Sprintf("verifying source database... (path: %s)", *databasePathSourceFlag))
+	println(fmt.Sprintf("verifying source database ... (path: %s)", *databasePathSourceFlag))
 
 	if err := verifyDatabase(
 		getGracefulStopContext(),
@@ -117,7 +117,7 @@ func verifyDatabase(
 		return err
 	}
 	defer func() {
-		println("\nshutdown temp storage...")
+		println("\nshutdown temp storage ...")
 		if err := tangleStoreTemp.Shutdown(); err != nil {
 			panic(err)
 		}
@@ -129,7 +129,7 @@ func verifyDatabase(
 	}
 
 	// load the genesis ledger state into the temporary storage (SEP and ledger state only)
-	println("loading genesis snapshot...")
+	println("loading genesis snapshot ...")
 	if err := loadGenesisSnapshot(ctx, tangleStoreTemp, genesisSnapshotFilePath, true, protoParamsSource.NetworkID()); err != nil {
 		return fmt.Errorf("loading genesis snapshot failed: %w", err)
 	}
@@ -336,7 +336,7 @@ func verifyDatabase(
 		println(fmt.Sprintf("successfully verified milestone cone %d, blocks: %d, total: %v", msIndex, blocksCount, time.Since(ts).Truncate(time.Millisecond)))
 	}
 
-	println("verifying final ledger state...")
+	println("verifying final ledger state ...")
 	if err := compareLedgerState(tangleStoreSource.UTXOManager(), tangleStoreTemp.UTXOManager()); err != nil {
 		return err
 	}

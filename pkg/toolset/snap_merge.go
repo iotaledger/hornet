@@ -52,7 +52,7 @@ func snapshotMerge(args []string) error {
 	var fullPath, deltaPath, targetPath = *snapshotPathFullFlag, *snapshotPathDeltaFlag, *snapshotPathTargetFlag
 
 	if !*outputJSONFlag {
-		fmt.Println("merging snapshot files...")
+		fmt.Println("merging snapshot files ...")
 	}
 
 	ts := time.Now()

@@ -71,7 +71,7 @@ func (wc *WriteCounter) PrintProgress() {
 
 	// return again and print current status of download
 	// we use the humanize package to print the bytes in a meaningful way (e.g. 10 MB)
-	fmt.Printf("\rDownloading... %s/%s (%s/s)", humanize.Bytes(wc.total), humanize.Bytes(wc.Expected), humanize.Bytes(bytesPerSecond))
+	fmt.Printf("\rDownloading ... %s/%s (%s/s)", humanize.Bytes(wc.total), humanize.Bytes(wc.Expected), humanize.Bytes(bytesPerSecond))
 }
 
 // DownloadTarget holds URLs to a full and delta snapshot.

@@ -252,11 +252,11 @@ func configure() error {
 			return deps.PeerStoreContainer.Close()
 		}
 
-		CoreComponent.LogInfo("Syncing p2p peer database to disk...")
+		CoreComponent.LogInfo("Syncing p2p peer database to disk ...")
 		if err := closeDatabases(); err != nil {
-			CoreComponent.LogPanicf("Syncing p2p peer database to disk... failed: %s", err)
+			CoreComponent.LogPanicf("Syncing p2p peer database to disk ... failed: %s", err)
 		}
-		CoreComponent.LogInfo("Syncing p2p peer database to disk... done")
+		CoreComponent.LogInfo("Syncing p2p peer database to disk ... done")
 	}, daemon.PriorityCloseDatabase); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}

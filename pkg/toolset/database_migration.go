@@ -96,7 +96,7 @@ func databaseMigration(args []string) error {
 		targetPathAbs = targetPath
 	}
 
-	fmt.Printf("Migrating database... (source: \"%s\", target: \"%s\")\n", sourcePathAbs, targetPathAbs)
+	fmt.Printf("Migrating database ... (source: \"%s\", target: \"%s\")\n", sourcePathAbs, targetPathAbs)
 
 	var errDB error
 	if err := storeSource.Iterate(kvstore.EmptyPrefix, func(key []byte, value kvstore.Value) bool {
@@ -114,7 +114,7 @@ func databaseMigration(args []string) error {
 			targetSizeBytes, _ := ioutils.FolderSize(targetPath)
 
 			percentage, remaining := utils.EstimateRemainingTime(ts, targetSizeBytes, sourceSizeBytes)
-			fmt.Printf("Source database size: %s, target database size: %s, estimated percentage: %0.2f%%. %v elapsed, %v left...)\n", humanize.Bytes(uint64(sourceSizeBytes)), humanize.Bytes(uint64(targetSizeBytes)), percentage, time.Since(ts).Truncate(time.Second), remaining.Truncate(time.Second))
+			fmt.Printf("Source database size: %s, target database size: %s, estimated percentage: %0.2f%%. %v elapsed, %v left ...)\n", humanize.Bytes(uint64(sourceSizeBytes)), humanize.Bytes(uint64(targetSizeBytes)), percentage, time.Since(ts).Truncate(time.Second), remaining.Truncate(time.Second))
 		}
 
 		return true

@@ -93,7 +93,7 @@ func databaseMerge(args []string) error {
 			return err
 		}
 		defer func() {
-			println("\nshutdown source storage...")
+			println("\nshutdown source storage ...")
 			if err := tangleStoreSource.Shutdown(); err != nil {
 				panic(err)
 			}
@@ -106,7 +106,7 @@ func databaseMerge(args []string) error {
 		return err
 	}
 	defer func() {
-		println("\nshutdown target storage...")
+		println("\nshutdown target storage ...")
 		if err := tangleStoreTarget.Shutdown(); err != nil {
 			panic(err)
 		}
@@ -135,9 +135,9 @@ func databaseMerge(args []string) error {
 
 	ts := time.Now()
 	if len(*databasePathSourceFlag) > 0 {
-		println(fmt.Sprintf("merging databases... (source: %s, target: %s)", *databasePathSourceFlag, *databasePathTargetFlag))
+		println(fmt.Sprintf("merging databases ... (source: %s, target: %s)", *databasePathSourceFlag, *databasePathTargetFlag))
 	} else {
-		println(fmt.Sprintf("merging databases... (nodeURL: %s, target: %s)", *nodeURLFlag, *databasePathTargetFlag))
+		println(fmt.Sprintf("merging databases ... (nodeURL: %s, target: %s)", *nodeURLFlag, *databasePathTargetFlag))
 	}
 
 	errMerge := mergeDatabase(
@@ -531,7 +531,7 @@ func mergeDatabase(
 
 	if msIndexEndTarget == 0 {
 		// no ledger state in database available => load the genesis snapshot
-		println("loading genesis snapshot...")
+		println("loading genesis snapshot ...")
 		if err := loadGenesisSnapshot(ctx, tangleStoreTarget, genesisSnapshotFilePath, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
 			return errors.Wrapf(ErrCritical, "loading genesis snapshot failed: %s", err.Error())
 		}
@@ -596,7 +596,7 @@ func mergeDatabase(
 				return fmt.Errorf("history is missing (milestone range in source database: %d-%d, target index: %d)", msIndexStartSource, msIndexEndSource, msIndex)
 			}
 
-			print(fmt.Sprintf("get milestone %d via API... ", msIndex))
+			print(fmt.Sprintf("get milestone %d via API ... ", msIndex))
 			if err := mergeViaAPI(
 				ctx,
 				protocolManagerTarget,
@@ -612,7 +612,7 @@ func mergeDatabase(
 			continue
 		}
 
-		print(fmt.Sprintf("get milestone %d via source database (source range: %d-%d)... ", msIndex, msIndexStartSource, msIndexEndSource))
+		print(fmt.Sprintf("get milestone %d via source database (source range: %d-%d) ... ", msIndex, msIndexStartSource, msIndexEndSource))
 		if err := mergeViaSourceDatabase(
 			ctx,
 			protocolManagerTarget,
