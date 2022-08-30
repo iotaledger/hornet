@@ -1,7 +1,7 @@
 {
   "protocol": {
-    "targetNetworkName": "alphanet-9",
-    "milestonePublicKeyCount": 3,
+    "targetNetworkName": "alphanet-10",
+    "milestonePublicKeyCount": 7,
     "baseToken": {
       "name": "Shimmer",
       "tickerSymbol": "SMR",
@@ -33,6 +33,31 @@
       },
       {
         "key": "8e222ae7e2adcfb87a2984a19aad52b1979ed1472c3cb17239a73ef1d344c35a",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "64bc7cd3de254cc3a2a6e0aaee5b841d0a671b22b487788f594fbf1ef329935c",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "a3be03ff2390210354a9af6beb418a957766b050f5a7c62662803cc267a944f6",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "19596d570e9535f11cc34091db98ec44a526e38657f826b5d6b6152e533b8c06",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "afeac2c52a0ad3da537ba87d0172720fd55fa4fdb3c44b0fd20bc812d18a8856",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "2a6977f6e547518d572d7ba63f6b50b5bbaf3de8023dc542751723f391297b8b",
         "start": 0,
         "end": 0
       }
