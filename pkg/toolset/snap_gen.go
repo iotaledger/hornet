@@ -81,20 +81,26 @@ func (g *GenesisAddresses) UnmarshalJSON(bytes []byte) error {
 // Sort sorts the addresses based on the address and balance in case they are equal.
 func (g *GenesisAddresses) Sort() {
 	sort.Slice(g.Balances, func(i int, j int) bool {
-		addressBytesI, err := g.Balances[i].Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+		addressI := g.Balances[i].Address
+		addressJ := g.Balances[j].Address
+
+		addressBytesI, err := addressI.Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
-			panic(fmt.Sprintf("serializing address %s failed: %s", g.Balances[i].Address.String(), err.Error()))
+			panic(fmt.Sprintf("serializing address %s failed: %s", addressI.String(), err.Error()))
 		}
 
-		addressBytesJ, err := g.Balances[j].Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+		addressBytesJ, err := addressJ.Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
-			panic(fmt.Sprintf("serializing address %s failed: %s", g.Balances[i].Address.String(), err.Error()))
+			panic(fmt.Sprintf("serializing address %s failed: %s", addressJ.String(), err.Error()))
 		}
 
 		result := bytes.Compare(addressBytesI, addressBytesJ)
 		if result == 0 {
+			balanceI := g.Balances[i].Balance
+			balanceJ := g.Balances[j].Balance
+
 			// if both addresses are equal, we sort by larger balance first
-			return g.Balances[i].Balance > g.Balances[j].Balance
+			return balanceI > balanceJ
 		}
 
 		return result < 0
