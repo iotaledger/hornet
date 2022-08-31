@@ -3,7 +3,7 @@ services:
 
   hornet:
     container_name: hornet
-    image: iotaledger/hornet:2.0.0-beta.6
+    image: iotaledger/hornet:2.0.0-beta.7
     ulimits:
       nofile:
         soft: 16384
