@@ -1,10 +1,12 @@
 package toolset
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -74,6 +76,29 @@ func (g *GenesisAddresses) UnmarshalJSON(bytes []byte) error {
 	}
 
 	return nil
+}
+
+// Sort sorts the addresses based on the address and balance in case they are equal.
+func (g *GenesisAddresses) Sort() {
+	sort.Slice(g.Balances, func(i int, j int) bool {
+		addressBytesI, err := g.Balances[i].Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+		if err != nil {
+			panic(fmt.Sprintf("serializing address %s failed: %s", g.Balances[i].Address.String(), err.Error()))
+		}
+
+		addressBytesJ, err := g.Balances[j].Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+		if err != nil {
+			panic(fmt.Sprintf("serializing address %s failed: %s", g.Balances[i].Address.String(), err.Error()))
+		}
+
+		result := bytes.Compare(addressBytesI, addressBytesJ)
+		if result == 0 {
+			// if both addresses are equal, we sort by larger balance first
+			return g.Balances[i].Balance > g.Balances[j].Balance
+		}
+
+		return result < 0
+	})
 }
 
 func parseAddress(bech32Address string) (iotago.Address, error) {
@@ -202,6 +227,9 @@ func snapshotGen(args []string) error {
 			})
 		}
 	}
+
+	// sort the addresses to have a deterministic order
+	genesisAddresses.Sort()
 
 	// build temp file path
 	outputFilePathTmp := outputFilePath + "_tmp"
