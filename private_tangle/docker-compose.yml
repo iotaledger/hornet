@@ -84,7 +84,7 @@ services:
       - ./privatedb/indexer:/app/database
     command:
       - "--inx.address=172.18.211.11:9029"
-      - "--indexer.bindAddress=172.18.211.22:9091"
+      - "--restAPI.bindAddress=172.18.211.22:9091"
       - "--prometheus.enabled=true"
       - "--prometheus.bindAddress=172.18.211.22:9311"
       - "--prometheus.goMetrics=false"
@@ -229,7 +229,7 @@ services:
       - "6027:6060/tcp"
     command:
       - "--inx.address=172.18.211.11:9029"
-      - "--poi.bindAddress=172.18.211.27:9687"
+      - "--restAPI.bindAddress=172.18.211.27:9687"
       - "--profiling.enabled=true"
       - "--profiling.bindAddress=172.18.211.27:6060"
     profiles:

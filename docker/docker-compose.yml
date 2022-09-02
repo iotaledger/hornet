@@ -140,7 +140,7 @@ services:
     command:
       - "--inx.address=hornet:9029"
       - "--indexer.db.path=database/indexer"
-      - "--indexer.bindAddress=inx-indexer:9091"
+      - "--restAPI.bindAddress=inx-indexer:9091"
       - "--prometheus.enabled=true"
       - "--prometheus.bindAddress=inx-indexer:9312"
 
@@ -189,7 +189,7 @@ services:
     restart: unless-stopped
     command:
       - "--inx.address=hornet:9029"
-      - "--poi.bindAddress=inx-poi:9687"
+      - "--restAPI.bindAddress=inx-poi:9687"
 
   inx-dashboard:
     container_name: inx-dashboard

@@ -8,7 +8,7 @@ services:
       - ./testnet/indexer:/app/database
     command:
       - "--inx.address=hornet:9029"
-      - "--indexer.bindAddress=inx-indexer:9091"
+      - "--restAPI.bindAddress=inx-indexer:9091"
 
   inx-mqtt:
     container_name: inx-mqtt

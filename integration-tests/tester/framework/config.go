@@ -188,7 +188,7 @@ func DefaultINXIndexerConfig() *INXIndexerConfig {
 func (cfg *INXIndexerConfig) CLIFlags() []string {
 	var cliFlags []string
 	cliFlags = append(cliFlags, fmt.Sprintf("--inx.address=%s", cfg.INXAddress))
-	cliFlags = append(cliFlags, fmt.Sprintf("--indexer.bindAddress=%s", cfg.BindAddress))
+	cliFlags = append(cliFlags, fmt.Sprintf("--restAPI.bindAddress=%s", cfg.BindAddress))
 
 	return cliFlags
 }
