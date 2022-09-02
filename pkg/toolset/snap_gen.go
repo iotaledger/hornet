@@ -1,10 +1,12 @@
 package toolset
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -76,6 +78,45 @@ func (g *GenesisAddresses) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+// Sort sorts the addresses based on the address and balance in case they are equal.
+func (g *GenesisAddresses) Sort() {
+	sort.Slice(g.Balances, func(i int, j int) bool {
+		addressI := g.Balances[i].Address
+		addressJ := g.Balances[j].Address
+
+		addressBytesI, err := addressI.Serialize(serializer.DeSeriModeNoValidation, nil)
+		if err != nil {
+			panic(fmt.Sprintf("serializing address %s failed: %s", addressI.String(), err.Error()))
+		}
+
+		addressBytesJ, err := addressJ.Serialize(serializer.DeSeriModeNoValidation, nil)
+		if err != nil {
+			panic(fmt.Sprintf("serializing address %s failed: %s", addressJ.String(), err.Error()))
+		}
+
+		result := bytes.Compare(addressBytesI, addressBytesJ)
+		if result == 0 {
+			balanceI := g.Balances[i].Balance
+			balanceJ := g.Balances[j].Balance
+
+			// if both addresses are equal, we sort by larger balance first
+			return balanceI > balanceJ
+		}
+
+		return result < 0
+	})
+}
+
+// TotalBalance calculates the total balance of all genesis addresses.
+func (g *GenesisAddresses) TotalBalance() uint64 {
+	total := uint64(0)
+	for _, genesisAddress := range g.Balances {
+		total += genesisAddress.Balance
+	}
+
+	return total
+}
+
 func parseAddress(bech32Address string) (iotago.Address, error) {
 	_, address, err := iotago.ParseBech32(bech32Address)
 	if err != nil {
@@ -127,9 +168,6 @@ func snapshotGen(args []string) error {
 	if len(*protocolParametersPathFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolProtocolParametersPath)
 	}
-	if len(*mintAddressFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolSnapGenMintAddress)
-	}
 	if len(*outputFilePathFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolOutputPath)
 	}
@@ -154,12 +192,6 @@ func snapshotGen(args []string) error {
 	protoParamsBytes, err := protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return fmt.Errorf("failed to serialize protocol parameters: %w", err)
-	}
-
-	// check mint address
-	mintAddress, err := parseAddress(*mintAddressFlag)
-	if err != nil {
-		return fmt.Errorf("failed to parse mint address: %w", err)
 	}
 
 	treasury := *treasuryAllocationFlag
@@ -203,16 +235,8 @@ func snapshotGen(args []string) error {
 		}
 	}
 
-	// build temp file path
-	outputFilePathTmp := outputFilePath + "_tmp"
-
-	// we don't need to check the error, maybe the file doesn't exist
-	_ = os.Remove(outputFilePathTmp)
-
-	fileHandle, err := os.OpenFile(outputFilePathTmp, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		return fmt.Errorf("unable to create snapshot file: %w", err)
-	}
+	// sort the addresses to have a deterministic order
+	genesisAddresses.Sort()
 
 	// create snapshot file
 	var targetIndex iotago.MilestoneIndex
@@ -250,45 +274,52 @@ func snapshotGen(args []string) error {
 		return iotago.EmptyBlockID(), nil
 	}
 
-	// calculate total balance of all genesis addresses
-	genesisBalancesTotal := uint64(0)
-	for _, genesisAddress := range genesisAddresses.Balances {
-		genesisBalancesTotal += genesisAddress.Balance
+	genesisBalancesTotal := genesisAddresses.TotalBalance()
+
+	// calculate the remaining amount for the "genesis mint address"
+	balanceMintAddress := int64(protoParams.TokenSupply) - int64(treasury) - int64(genesisBalancesTotal)
+
+	var mintAddress iotago.Address
+	genesisOutputAdded := false
+	switch {
+	case balanceMintAddress < 0:
+		return fmt.Errorf("not enough funds to create genesis snapshot")
+
+	case balanceMintAddress == 0:
+		// no genesis output needed, all balances distributed
+		genesisOutputAdded = true
+
+	default:
+		// genesis mint address needs to be added
+		if len(*mintAddressFlag) == 0 {
+			return fmt.Errorf("'%s' not specified", FlagToolSnapGenMintAddress)
+		}
+
+		// check mint address
+		mintAddress, err = parseAddress(*mintAddressFlag)
+		if err != nil {
+			return fmt.Errorf("failed to parse mint address: %w", err)
+		}
 	}
 
 	// unspent transaction outputs
 	genesisBalancesIndex := int64(0)
-	genesisOutputAdded := false
 	outputProducerFunc := func() (*utxo.Output, error) {
 		if !genesisOutputAdded {
 			genesisOutputAdded = true
 
-			// add the genesis output
-			remainingAmount := int64(protoParams.TokenSupply) - int64(treasury) - int64(genesisBalancesTotal)
-
-			switch {
-			case remainingAmount < 0:
-				return nil, fmt.Errorf("not enough funds to create genesis snapshot")
-
-			case remainingAmount == 0:
-				// no genesis output needed, all balances distributed
-				//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
-				return nil, nil
-
-			default:
-				// add the genesis output with the remaining balance
-				return utxo.CreateOutput(
-					iotago.OutputID{},
-					iotago.EmptyBlockID(),
-					0,
-					0,
-					&iotago.BasicOutput{
-						Amount: uint64(remainingAmount),
-						Conditions: iotago.UnlockConditions{
-							&iotago.AddressUnlockCondition{Address: mintAddress},
-						},
-					}), nil
-			}
+			// add the genesis output with the remaining balance
+			return utxo.CreateOutput(
+				iotago.OutputID{},
+				iotago.EmptyBlockID(),
+				0,
+				0,
+				&iotago.BasicOutput{
+					Amount: uint64(balanceMintAddress),
+					Conditions: iotago.UnlockConditions{
+						&iotago.AddressUnlockCondition{Address: mintAddress},
+					},
+				}), nil
 		}
 
 		if genesisBalancesIndex < int64(len(genesisAddresses.Balances)) {
@@ -318,6 +349,17 @@ func snapshotGen(args []string) error {
 		// no milestone diffs needed
 		//nolint:nilnil // nil, nil is ok in this context, even if it is not go idiomatic
 		return nil, nil
+	}
+
+	// build temp file path
+	outputFilePathTmp := outputFilePath + "_tmp"
+
+	// we don't need to check the error, maybe the file doesn't exist
+	_ = os.Remove(outputFilePathTmp)
+
+	fileHandle, err := os.OpenFile(outputFilePathTmp, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return fmt.Errorf("unable to create snapshot file: %w", err)
 	}
 
 	if _, err := snapshot.StreamFullSnapshotDataTo(
