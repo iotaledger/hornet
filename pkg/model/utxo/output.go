@@ -2,6 +2,7 @@ package utxo
 
 import (
 	"bytes"
+	"sync"
 
 	"github.com/pkg/errors"
 
@@ -34,7 +35,9 @@ type Output struct {
 	msIndexBooked     iotago.MilestoneIndex
 	msTimestampBooked uint32
 
-	output iotago.Output
+	outputData []byte
+	outputOnce sync.Once
+	output     iotago.Output
 }
 
 func (o *Output) OutputID() iotago.OutputID {
@@ -58,15 +61,34 @@ func (o *Output) MilestoneTimestampBooked() uint32 {
 }
 
 func (o *Output) OutputType() iotago.OutputType {
-	return o.output.Type()
+	return o.Output().Type()
 }
 
 func (o *Output) Output() iotago.Output {
+	o.outputOnce.Do(func() {
+		if o.output == nil {
+			var err error
+			outputType := o.outputData[0]
+			o.output, err = iotago.OutputSelector(uint32(outputType))
+			if err != nil {
+				panic(err)
+			}
+			_, err = o.output.Deserialize(o.outputData, serializer.DeSeriModeNoValidation, nil)
+			if err != nil {
+				panic(err)
+			}
+		}
+	})
+
 	return o.output
 }
 
+func (o *Output) Bytes() []byte {
+	return o.outputData
+}
+
 func (o *Output) Deposit() uint64 {
-	return o.output.Deposit()
+	return o.Output().Deposit()
 }
 
 type Outputs []*Output
@@ -74,20 +96,32 @@ type Outputs []*Output
 func (o Outputs) ToOutputSet() iotago.OutputSet {
 	outputSet := make(iotago.OutputSet)
 	for _, output := range o {
-		outputSet[output.outputID] = output.output
+		outputSet[output.outputID] = output.Output()
 	}
 
 	return outputSet
 }
 
 func CreateOutput(outputID iotago.OutputID, blockID iotago.BlockID, msIndexBooked iotago.MilestoneIndex, msTimestampBooked uint32, output iotago.Output) *Output {
-	return &Output{
+
+	outputBytes, err := output.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	o := &Output{
 		outputID:          outputID,
 		blockID:           blockID,
 		msIndexBooked:     msIndexBooked,
 		msTimestampBooked: msTimestampBooked,
-		output:            output,
+		outputData:        outputBytes,
 	}
+
+	o.outputOnce.Do(func() {
+		o.output = output
+	})
+
+	return o
 }
 
 func NewOutput(blockID iotago.BlockID, msIndexBooked iotago.MilestoneIndex, msTimestampBooked uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
@@ -126,12 +160,7 @@ func (o *Output) KVStorableValue() (value []byte) {
 	ms.WriteBytes(o.blockID[:])         // 32 bytes
 	ms.WriteUint32(o.msIndexBooked)     // 4 bytes
 	ms.WriteUint32(o.msTimestampBooked) // 4 bytes
-
-	outputBytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
-	if err != nil {
-		panic(err)
-	}
-	ms.WriteBytes(outputBytes)
+	ms.WriteBytes(o.outputData)
 
 	return ms.Bytes()
 }
@@ -169,20 +198,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 		return err
 	}
 
-	outputType, err := valueUtil.ReadByte()
-	if err != nil {
-		return err
-	}
-	valueUtil.ReadSeek(-1)
-
-	o.output, err = iotago.OutputSelector(uint32(outputType))
-	if err != nil {
-		return err
-	}
-	_, err = o.output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, nil)
-	if err != nil {
-		return err
-	}
+	o.outputData = valueUtil.ReadRemainingBytes()
 
 	return nil
 }

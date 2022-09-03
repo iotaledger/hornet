@@ -16,17 +16,14 @@ import (
 )
 
 func NewLedgerOutput(o *utxo.Output) (*inx.LedgerOutput, error) {
-	output, err := inx.WrapOutput(o.Output())
-	if err != nil {
-		return nil, err
-	}
-
 	return &inx.LedgerOutput{
 		OutputId:                 inx.NewOutputId(o.OutputID()),
 		BlockId:                  inx.NewBlockId(o.BlockID()),
 		MilestoneIndexBooked:     o.MilestoneIndexBooked(),
 		MilestoneTimestampBooked: o.MilestoneTimestampBooked(),
-		Output:                   output,
+		Output: &inx.RawOutput{
+			Data: o.Bytes(),
+		},
 	}, nil
 }
 

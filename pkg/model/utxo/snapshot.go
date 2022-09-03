@@ -18,13 +18,8 @@ func (o *Output) SnapshotBytes() []byte {
 	m.WriteBytes(o.blockID[:])
 	m.WriteUint32(o.msIndexBooked)
 	m.WriteUint32(o.msTimestampBooked)
-
-	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
-	if err != nil {
-		panic(err)
-	}
-	m.WriteUint32(uint32(len(bytes)))
-	m.WriteBytes(bytes)
+	m.WriteUint32(uint32(len(o.outputData)))
+	m.WriteBytes(o.outputData)
 
 	return m.Bytes()
 }
