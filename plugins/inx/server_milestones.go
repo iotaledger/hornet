@@ -352,14 +352,12 @@ func (s *Server) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_ReadMi
 			return err
 		}
 
-		data := cachedBlock.Block().Data()
 		payload := &inx.BlockWithMetadata{
 			Metadata: meta,
 			Block: &inx.RawBlock{
-				Data: make([]byte, len(data)),
+				Data: cachedBlock.Block().Data(),
 			},
 		}
-		copy(payload.Block.Data[:], data[:])
 
 		return srv.Send(payload)
 	})
