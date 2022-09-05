@@ -149,6 +149,11 @@ func verifyDatabase(
 		return fmt.Errorf("entry point index does not match genesis snapshot index: (%d != %d)", snapshotInfoSource.EntryPointIndex(), snapshotInfoTemp.EntryPointIndex())
 	}
 
+	// check if the known milestone range is valid
+	if msIndexEnd < snapshotInfoSource.EntryPointIndex()+1 {
+		return fmt.Errorf("last known milestone index of source database is older than genesis snapshot solid entry point index+1: (%d < %d)", msIndexEnd, snapshotInfoSource.EntryPointIndex()+1)
+	}
+
 	// compare solid entry points in source database and genesis snapshot
 	if err := compareSolidEntryPoints(tangleStoreSource, tangleStoreTemp); err != nil {
 		return err
@@ -310,7 +315,8 @@ func verifyDatabase(
 		return nil
 	}
 
-	for msIndex := msIndexStart; msIndex <= msIndexEnd; msIndex++ {
+	// we start to verify the cone with the first index after the solid entry point index of the genesis snapshot
+	for msIndex := snapshotInfoSource.EntryPointIndex() + 1; msIndex <= msIndexEnd; msIndex++ {
 		blocksCount := 0
 
 		ts := time.Now()
