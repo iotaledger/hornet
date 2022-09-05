@@ -376,13 +376,7 @@ func (proc *MessageProcessor) processBlockRequest(p *Protocol, data []byte) {
 	}
 	defer cachedBlock.Release(true) // block -1
 
-	requestedData, err := cachedBlock.Block().Block().Serialize(serializer.DeSeriModeNoValidation, nil)
-	if err != nil {
-		// can't reply if serialization fails
-		return
-	}
-
-	msg, err := newBlockMessage(requestedData)
+	msg, err := newBlockMessage(cachedBlock.Block().Data())
 	if err != nil {
 		// can't reply if serialization fails
 		return
