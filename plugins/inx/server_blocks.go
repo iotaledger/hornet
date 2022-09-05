@@ -113,7 +113,9 @@ func (s *Server) ReadBlock(_ context.Context, blockID *inx.BlockId) (*inx.RawBlo
 	}
 	defer cachedBlock.Release(true) // block -1
 
-	return inx.WrapBlock(cachedBlock.Block().Block())
+	return &inx.RawBlock{
+		Data: cachedBlock.Block().Data(),
+	}, nil
 }
 
 func (s *Server) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (*inx.BlockMetadata, error) {
