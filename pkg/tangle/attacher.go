@@ -87,6 +87,10 @@ func (t *Tangle) BlockAttacher(opts ...BlockAttacherOption) *BlockAttacher {
 
 func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block) (iotago.BlockID, error) {
 
+	if iotaBlock.ProtocolVersion != a.tangle.protocolManager.Current().Version {
+		return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, "protocolVersion invalid: %d", iotaBlock.ProtocolVersion)
+	}
+
 	targetScore := a.tangle.protocolManager.Current().MinPoWScore
 
 	var tipSelFunc inxpow.RefreshTipsFunc
@@ -95,14 +99,19 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 		if a.opts.tipSelFunc == nil {
 			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents given and node tipselection disabled")
 		}
+
 		if a.opts.powHandler == nil && targetScore != 0 {
 			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents given and node PoW is disabled")
 		}
+
+		// only allow to update tips during proof of work if no parents were given
 		tipSelFunc = a.opts.tipSelFunc
+
 		tips, err := a.opts.tipSelFunc()
 		if err != nil {
-			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherAttachingNotPossible, err.Error())
+			return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherAttachingNotPossible, "tipselection failed, error: %s", err.Error())
 		}
+
 		iotaBlock.Parents = tips
 	}
 
@@ -113,10 +122,17 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 		iotaBlock.Nonce = 0
 
 	default:
+		switch payload := iotaBlock.Payload.(type) {
+		case *iotago.Transaction:
+			if payload.Essence.NetworkID != a.tangle.protocolManager.Current().NetworkID() {
+				return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
+			}
+		}
+
 		if iotaBlock.Nonce == 0 && targetScore != 0 {
 			score, err := iotaBlock.POW()
 			if err != nil {
-				return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
+				return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, err.Error())
 			}
 
 			if score < float64(targetScore) {
@@ -146,7 +162,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 
 	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, a.tangle.protocolManager.Current())
 	if err != nil {
-		return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
+		return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, err.Error())
 	}
 
 	blockProcessedChan := a.tangle.RegisterBlockProcessedEvent(block.BlockID())
@@ -155,7 +171,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 	if err := a.tangle.messageProcessor.Emit(block); err != nil {
 		a.tangle.DeregisterBlockProcessedEvent(block.BlockID())
 
-		return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, err.Error())
+		return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, err.Error())
 	}
 
 	// wait for at most "blockProcessedTimeout" for the block to be processed

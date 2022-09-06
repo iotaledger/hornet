@@ -173,31 +173,24 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 		return nil, echo.ErrUnsupportedMediaType
 	}
 
-	if iotaBlock.ProtocolVersion != deps.ProtocolManager.Current().Version {
-		return nil, errors.WithMessage(httpserver.ErrInvalidParameter, "invalid block, error: protocolVersion invalid")
-	}
-
-	switch payload := iotaBlock.Payload.(type) {
-	case *iotago.Transaction:
-		if payload.Essence.NetworkID != deps.ProtocolManager.Current().NetworkID() {
-			return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
-		}
-	default:
-	}
-
 	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
 	blockID, err := attacher.AttachBlock(mergedCtx, iotaBlock)
 	if err != nil {
-		if errors.Is(err, tangle.ErrBlockAttacherAttachingNotPossible) {
-			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
-		}
-		if errors.Is(err, tangle.ErrBlockAttacherInvalidBlock) {
-			return nil, errors.WithMessage(httpserver.ErrInvalidParameter, err.Error())
-		}
+		switch {
+		case errors.Is(err, tangle.ErrBlockAttacherInvalidBlock):
+			return nil, errors.WithMessagef(httpserver.ErrInvalidParameter, "failed to attach block: %s", err.Error())
 
-		return nil, err
+		case errors.Is(err, tangle.ErrBlockAttacherAttachingNotPossible):
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to attach block: %s", err.Error())
+
+		case errors.Is(err, tangle.ErrBlockAttacherPoWNotAvailable):
+			return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "failed to attach block: %s", err.Error())
+
+		default:
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to attach block: %s", err.Error())
+		}
 	}
 
 	return &blockCreatedResponse{

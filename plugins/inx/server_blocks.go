@@ -334,7 +334,19 @@ func (s *Server) SubmitBlock(ctx context.Context, rawBlock *inx.RawBlock) (*inx.
 
 	blockID, err := attacher.AttachBlock(mergedCtx, block)
 	if err != nil {
-		return nil, err
+		switch {
+		case errors.Is(err, tangle.ErrBlockAttacherInvalidBlock):
+			return nil, status.Errorf(codes.InvalidArgument, "failed to attach block: %s", err.Error())
+
+		case errors.Is(err, tangle.ErrBlockAttacherAttachingNotPossible):
+			return nil, status.Errorf(codes.Internal, "failed to attach block: %s", err.Error())
+
+		case errors.Is(err, tangle.ErrBlockAttacherPoWNotAvailable):
+			return nil, status.Errorf(codes.Unavailable, "failed to attach block: %s", err.Error())
+
+		default:
+			return nil, status.Errorf(codes.Internal, "failed to attach block: %s", err.Error())
+		}
 	}
 
 	return inx.NewBlockId(blockID), nil
