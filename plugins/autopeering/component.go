@@ -204,7 +204,7 @@ func configure() error {
 }
 
 func run() error {
-	if err := Plugin.App.Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
+	if err := Plugin.App().Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
 		attachEvents()
 		deps.AutopeeringManager.Run(ctx)
 		detachEvents()

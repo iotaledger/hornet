@@ -8,7 +8,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/app/core/shutdown"
+	"github.com/iotaledger/hive.go/core/app/pkg/shutdown"
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"

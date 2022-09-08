@@ -16,7 +16,6 @@ import (
 
 	"github.com/iotaledger/hive.go/core/app"
 	"github.com/iotaledger/hive.go/core/configuration"
-	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
@@ -149,7 +148,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func(deps mngDeps) *p2p.Manager {
 		if !deps.AutopeeringRunAsEntryNode {
 			return p2p.NewManager(deps.Host,
-				p2p.WithManagerLogger(logger.NewLogger("P2P-Manager")),
+				p2p.WithManagerLogger(CoreComponent.App().NewLogger("P2P-Manager")),
 				p2p.WithManagerReconnectInterval(ParamsP2P.ReconnectInterval, 1*time.Second),
 			)
 		}

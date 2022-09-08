@@ -68,7 +68,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 	// configure JWT auth
 	salt := ParamsRestAPI.JWTAuth.Salt
 	if len(salt) == 0 {
-		Plugin.LogErrorfAndExit("'%s' should not be empty", Plugin.App.Config().GetParameterPath(&(ParamsRestAPI.JWTAuth.Salt)))
+		Plugin.LogErrorfAndExit("'%s' should not be empty", Plugin.App().Config().GetParameterPath(&(ParamsRestAPI.JWTAuth.Salt)))
 	}
 
 	// API tokens do not expire.

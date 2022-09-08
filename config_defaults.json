@@ -1,7 +1,22 @@
 {
   "app": {
     "checkForUpdates": true,
-    "stopGracePeriod": "5m"
+    "stopGracePeriod": "5m",
+    "shutdownLog": {
+      "enabled": true,
+      "filePath": "shutdown.log"
+    }
+  },
+  "logger": {
+    "level": "info",
+    "disableCaller": true,
+    "disableStacktrace": false,
+    "stacktraceLevel": "panic",
+    "encoding": "console",
+    "outputPaths": [
+      "stdout"
+    ],
+    "disableEvents": true
   },
   "node": {
     "profile": "auto",

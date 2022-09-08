@@ -79,7 +79,7 @@ type dependencies struct {
 
 func configure() error {
 	// check if RestAPI plugin is disabled
-	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
+	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
 
