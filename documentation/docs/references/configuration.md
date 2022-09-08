@@ -38,13 +38,19 @@ hornet -h --full
 
 ## <a id="app"></a> 1. Application
 
-| Name                            | Description                                                                                            | Type    | Default value |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------ | ------- | ------------- |
-| checkForUpdates                 | Whether to check for updates of the application or not                                                 | boolean | true          |
-| stopGracePeriod                 | The maximum time to wait for background processes to finish during shutdown before terminating the app | string  | "5m"          |
-| [shutdownLog](#app_shutdownlog) | Configuration for shutdownLog                                                                          | object  |               |
+| Name                      | Description                                            | Type    | Default value |
+| ------------------------- | ------------------------------------------------------ | ------- | ------------- |
+| checkForUpdates           | Whether to check for updates of the application or not | boolean | true          |
+| [shutdown](#app_shutdown) | Configuration for shutdown                             | object  |               |
 
-### <a id="app_shutdownlog"></a> ShutdownLog
+### <a id="app_shutdown"></a> Shutdown
+
+| Name                     | Description                                                                                            | Type   | Default value |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ | ------ | ------------- |
+| stopGracePeriod          | The maximum time to wait for background processes to finish during shutdown before terminating the app | string | "5m"          |
+| [log](#app_shutdown_log) | Configuration for log                                                                                  | object |               |
+
+### <a id="app_shutdown_log"></a> Log
 
 | Name     | Description                                         | Type    | Default value  |
 | -------- | --------------------------------------------------- | ------- | -------------- |
@@ -57,10 +63,12 @@ Example:
   {
     "app": {
       "checkForUpdates": true,
-      "stopGracePeriod": "5m",
-      "shutdownLog": {
-        "enabled": true,
-        "filePath": "shutdown.log"
+      "shutdown": {
+        "stopGracePeriod": "5m",
+        "log": {
+          "enabled": true,
+          "filePath": "shutdown.log"
+        }
       }
     }
   }

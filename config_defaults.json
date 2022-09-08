@@ -1,10 +1,12 @@
 {
   "app": {
     "checkForUpdates": true,
-    "stopGracePeriod": "5m",
-    "shutdownLog": {
-      "enabled": true,
-      "filePath": "shutdown.log"
+    "shutdown": {
+      "stopGracePeriod": "5m",
+      "log": {
+        "enabled": true,
+        "filePath": "shutdown.log"
+      }
     }
   },
   "logger": {
