@@ -13,7 +13,7 @@ import (
 )
 
 func (s *Server) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest) (*inx.NoParams, error) {
-	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
+	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
 		return nil, status.Error(codes.Unavailable, "RestAPI plugin is not enabled")
 	}
 
@@ -37,7 +37,7 @@ func (s *Server) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest) (
 }
 
 func (s *Server) UnregisterAPIRoute(_ context.Context, req *inx.APIRouteRequest) (*inx.NoParams, error) {
-	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
+	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
 		return nil, status.Error(codes.Unavailable, "RestAPI plugin is not enabled")
 	}
 
@@ -51,7 +51,7 @@ func (s *Server) UnregisterAPIRoute(_ context.Context, req *inx.APIRouteRequest)
 }
 
 func (s *Server) PerformAPIRequest(_ context.Context, req *inx.APIRequest) (*inx.APIResponse, error) {
-	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
+	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
 		return nil, status.Error(codes.Unavailable, "RestAPI plugin is not enabled")
 	}
 

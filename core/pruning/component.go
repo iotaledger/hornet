@@ -73,17 +73,17 @@ func provide(c *dig.Container) error {
 		pruningMilestonesMaxMilestonesToKeep := syncmanager.MilestoneIndexDelta(ParamsPruning.Milestones.MaxMilestonesToKeep)
 
 		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
-			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.Enabled)))
+			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Milestones.Enabled)))
 		}
 
 		pruningSizeEnabled := ParamsPruning.Size.Enabled
 		pruningTargetDatabaseSizeBytes, err := bytes.Parse(ParamsPruning.Size.TargetSize)
 		if err != nil {
-			CoreComponent.LogPanicf("parameter %s invalid", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)))
+			CoreComponent.LogPanicf("parameter %s invalid", CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)))
 		}
 
 		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
-			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)), CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.Enabled)))
+			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)), CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Size.Enabled)))
 		}
 
 		return pruning.NewPruningManager(

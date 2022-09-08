@@ -13,7 +13,6 @@ import (
 	"github.com/iotaledger/hive.go/core/app"
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/generics/event"
-	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -133,7 +132,7 @@ func provide(c *dig.Container) error {
 			deps.Host,
 			deps.PeeringManager,
 			deps.ServerMetrics,
-			gossip.WithLogger(logger.NewLogger("GossipService")),
+			gossip.WithLogger(CoreComponent.App().NewLogger("GossipService")),
 			gossip.WithUnknownPeersLimit(ParamsGossip.UnknownPeersLimit),
 			gossip.WithStreamReadTimeout(ParamsGossip.StreamReadTimeout),
 			gossip.WithStreamWriteTimeout(ParamsGossip.StreamWriteTimeout),

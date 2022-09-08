@@ -150,7 +150,7 @@ func provide(c *dig.Container) error {
 	return c.Provide(func(deps snapshotDeps) *snapshot.Manager {
 		deltaSnapshotSizeThresholdMinSizeBytes, err := bytes.Parse(ParamsSnapshots.DeltaSizeThresholdMinSize)
 		if err != nil {
-			CoreComponent.LogPanicf("parameter %s invalid", CoreComponent.App.Config().GetParameterPath(&(ParamsSnapshots.DeltaSizeThresholdMinSize)))
+			CoreComponent.LogPanicf("parameter %s invalid", CoreComponent.App().Config().GetParameterPath(&(ParamsSnapshots.DeltaSizeThresholdMinSize)))
 		}
 
 		solidEntryPointCheckThresholdPast := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
@@ -158,7 +158,7 @@ func provide(c *dig.Container) error {
 
 		snapshotDepth := syncmanager.MilestoneIndexDelta(ParamsSnapshots.Depth)
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {
-			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CoreComponent.App.Config().GetParameterPath(&(ParamsSnapshots.Depth)), snapshotDepth, solidEntryPointCheckThresholdFuture)
+			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CoreComponent.App().Config().GetParameterPath(&(ParamsSnapshots.Depth)), snapshotDepth, solidEntryPointCheckThresholdFuture)
 			snapshotDepth = solidEntryPointCheckThresholdFuture
 		}
 

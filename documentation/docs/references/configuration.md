@@ -38,10 +38,24 @@ hornet -h --full
 
 ## <a id="app"></a> 1. Application
 
-| Name            | Description                                                                                            | Type    | Default value |
-| --------------- | ------------------------------------------------------------------------------------------------------ | ------- | ------------- |
-| checkForUpdates | Whether to check for updates of the application or not                                                 | boolean | true          |
-| stopGracePeriod | The maximum time to wait for background processes to finish during shutdown before terminating the app | string  | "5m"          |
+| Name                      | Description                                            | Type    | Default value |
+| ------------------------- | ------------------------------------------------------ | ------- | ------------- |
+| checkForUpdates           | Whether to check for updates of the application or not | boolean | true          |
+| [shutdown](#app_shutdown) | Configuration for shutdown                             | object  |               |
+
+### <a id="app_shutdown"></a> Shutdown
+
+| Name                     | Description                                                                                            | Type   | Default value |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ | ------ | ------------- |
+| stopGracePeriod          | The maximum time to wait for background processes to finish during shutdown before terminating the app | string | "5m"          |
+| [log](#app_shutdown_log) | Configuration for log                                                                                  | object |               |
+
+### <a id="app_shutdown_log"></a> Log
+
+| Name     | Description                                         | Type    | Default value  |
+| -------- | --------------------------------------------------- | ------- | -------------- |
+| enabled  | Whether to store self-shutdown events to a log file | boolean | true           |
+| filePath | The file path to the self-shutdown log              | string  | "shutdown.log" |
 
 Example:
 
@@ -49,12 +63,48 @@ Example:
   {
     "app": {
       "checkForUpdates": true,
-      "stopGracePeriod": "5m"
+      "shutdown": {
+        "stopGracePeriod": "5m",
+        "log": {
+          "enabled": true,
+          "filePath": "shutdown.log"
+        }
+      }
     }
   }
 ```
 
-## <a id="node"></a> 2. Node
+## <a id="logger"></a> 2. Logger
+
+| Name              | Description                                                                 | Type    | Default value |
+| ----------------- | --------------------------------------------------------------------------- | ------- | ------------- |
+| level             | The minimum enabled logging level                                           | string  | "info"        |
+| disableCaller     | Stops annotating logs with the calling function's file name and line number | boolean | true          |
+| disableStacktrace | Disables automatic stacktrace capturing                                     | boolean | false         |
+| stacktraceLevel   | The level stacktraces are captured and above                                | string  | "panic"       |
+| encoding          | The logger's encoding (options: "json", "console")                          | string  | "console"     |
+| outputPaths       | A list of URLs, file paths or stdout/stderr to write logging output to      | array   | stdout        |
+| disableEvents     | Prevents log messages from being raced as events                            | boolean | true          |
+
+Example:
+
+```json
+  {
+    "logger": {
+      "level": "info",
+      "disableCaller": true,
+      "disableStacktrace": false,
+      "stacktraceLevel": "panic",
+      "encoding": "console",
+      "outputPaths": [
+        "stdout"
+      ],
+      "disableEvents": true
+    }
+  }
+```
+
+## <a id="node"></a> 3. Node
 
 | Name    | Description                     | Type   | Default value |
 | ------- | ------------------------------- | ------ | ------------- |
@@ -72,7 +122,7 @@ Example:
   }
 ```
 
-## <a id="protocol"></a> 3. Protocol
+## <a id="protocol"></a> 4. Protocol
 
 | Name                                         | Description                                             | Type   | Default value     |
 | -------------------------------------------- | ------------------------------------------------------- | ------ | ----------------- |
@@ -171,7 +221,7 @@ Example:
   }
 ```
 
-## <a id="db"></a> 4. Database
+## <a id="db"></a> 5. Database
 
 | Name                      | Description                                                                         | Type    | Default value      |
 | ------------------------- | ----------------------------------------------------------------------------------- | ------- | ------------------ |
@@ -193,7 +243,7 @@ Example:
   }
 ```
 
-## <a id="pow"></a> 5. Proof of Work
+## <a id="pow"></a> 6. Proof of Work
 
 | Name                | Description                                                                       | Type   | Default value |
 | ------------------- | --------------------------------------------------------------------------------- | ------ | ------------- |
@@ -209,7 +259,7 @@ Example:
   }
 ```
 
-## <a id="p2p"></a> 6. Peer to Peer
+## <a id="p2p"></a> 7. Peer to Peer
 
 | Name                                        | Description                                                        | Type   | Default value                                |
 | ------------------------------------------- | ------------------------------------------------------------------ | ------ | -------------------------------------------- |
@@ -289,7 +339,7 @@ Example:
   }
 ```
 
-## <a id="requests"></a> 7. Requests
+## <a id="requests"></a> 8. Requests
 
 | Name                     | Description                                           | Type   | Default value |
 | ------------------------ | ----------------------------------------------------- | ------ | ------------- |
@@ -307,7 +357,7 @@ Example:
   }
 ```
 
-## <a id="tangle"></a> 8. Tangle
+## <a id="tangle"></a> 9. Tangle
 
 | Name                                    | Description                                                                                                           | Type   | Default value |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
@@ -329,7 +379,7 @@ Example:
   }
 ```
 
-## <a id="snapshots"></a> 9. Snapshots
+## <a id="snapshots"></a> 10. Snapshots
 
 | Name                                    | Description                                                                                                                                                           | Type    | Default value                          |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------- |
@@ -371,7 +421,7 @@ Example:
   }
 ```
 
-## <a id="pruning"></a> 10. Pruning
+## <a id="pruning"></a> 11. Pruning
 
 | Name                              | Description                                           | Type    | Default value |
 | --------------------------------- | ----------------------------------------------------- | ------- | ------------- |
@@ -415,7 +465,7 @@ Example:
   }
 ```
 
-## <a id="profiling"></a> 11. Profiling
+## <a id="profiling"></a> 12. Profiling
 
 | Name        | Description                                       | Type    | Default value    |
 | ----------- | ------------------------------------------------- | ------- | ---------------- |
@@ -433,7 +483,7 @@ Example:
   }
 ```
 
-## <a id="restapi"></a> 12. RestAPI
+## <a id="restapi"></a> 13. RestAPI
 
 | Name                        | Description                                                                                    | Type    | Default value                                                                                                                                                                                                                                                                                                                                                                                                |
 | --------------------------- | ---------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -510,7 +560,7 @@ Example:
   }
 ```
 
-## <a id="warpsync"></a> 13. WarpSync
+## <a id="warpsync"></a> 14. WarpSync
 
 | Name             | Description                                        | Type    | Default value |
 | ---------------- | -------------------------------------------------- | ------- | ------------- |
@@ -528,7 +578,7 @@ Example:
   }
 ```
 
-## <a id="tipsel"></a> 14. Tipselection
+## <a id="tipsel"></a> 15. Tipselection
 
 | Name                         | Description                                | Type    | Default value |
 | ---------------------------- | ------------------------------------------ | ------- | ------------- |
@@ -572,7 +622,7 @@ Example:
   }
 ```
 
-## <a id="receipts"></a> 15. Receipts
+## <a id="receipts"></a> 16. Receipts
 
 | Name                             | Description                            | Type    | Default value |
 | -------------------------------- | -------------------------------------- | ------- | ------------- |
@@ -636,7 +686,7 @@ Example:
   }
 ```
 
-## <a id="prometheus"></a> 16. Prometheus
+## <a id="prometheus"></a> 17. Prometheus
 
 | Name                                                     | Description                                                  | Type    | Default value    |
 | -------------------------------------------------------- | ------------------------------------------------------------ | ------- | ---------------- |
@@ -690,7 +740,7 @@ Example:
   }
 ```
 
-## <a id="inx"></a> 17. INX
+## <a id="inx"></a> 18. INX
 
 | Name            | Description                                            | Type    | Default value    |
 | --------------- | ------------------------------------------------------ | ------- | ---------------- |
@@ -718,7 +768,7 @@ Example:
   }
 ```
 
-## <a id="debug"></a> 18. Debug
+## <a id="debug"></a> 19. Debug
 
 | Name    | Description                         | Type    | Default value |
 | ------- | ----------------------------------- | ------- | ------------- |

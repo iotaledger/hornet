@@ -11,7 +11,6 @@ import (
 
 	"github.com/iotaledger/hive.go/core/app"
 	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
@@ -154,7 +153,7 @@ func provide(c *dig.Container) error {
 		return tangle.New(
 			CoreComponent.Daemon().ContextStopped(),
 			CoreComponent.Daemon(),
-			logger.NewLogger("Tangle"),
+			CoreComponent.App().NewLogger("Tangle"),
 			deps.Storage,
 			deps.SyncManager,
 			deps.MilestoneManager,
