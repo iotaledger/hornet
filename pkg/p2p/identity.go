@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -312,7 +311,7 @@ func MigrateDeprecatedPeerStore(p2pStorePath string, identityPrivKey string, new
 		}
 
 		// there was no private key specified, retrieve it from the peer store with the public key from the deprecated file
-		existingPubKeyBytes, err := ioutil.ReadFile(deprecatedPubKeyFilePath)
+		existingPubKeyBytes, err := os.ReadFile(deprecatedPubKeyFilePath)
 		if err != nil {
 			return false, fmt.Errorf("unable to read deprecated public key file for peer identity: %w", err)
 		}

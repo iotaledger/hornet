@@ -2,7 +2,6 @@ package migrator_test
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,7 +17,7 @@ import (
 var stateFileName string
 
 func init() {
-	dir, err := ioutil.TempDir("", "migrator_test")
+	dir, err := os.MkdirTemp("", "migrator_test")
 	if err != nil {
 		log.Fatalf("failed to create temp dir: %s", err)
 	}

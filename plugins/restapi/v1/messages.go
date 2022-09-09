@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
@@ -210,7 +210,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			// bad request
 		}
 
-		bytes, err := ioutil.ReadAll(c.Request().Body)
+		bytes, err := io.ReadAll(c.Request().Body)
 		if err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
@@ -243,14 +243,15 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		tips, err := deps.TipSelector.SelectNonLazyTips()
 		if err != nil {
 			if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
-				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
+				return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "tipselection failed, error: %s", err.Error())
 			}
-			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "tipselection failed, error: %s", err.Error())
 		}
 		msg.Parents = tips.ToSliceOfArrays()
 
 		// this function pointer is used to refresh the tips of a message
 		// if no parents were given and the PoW takes longer than a configured duration.
+		// only allow to update tips during proof of work if no parents were given
 		refreshTipsFunc = deps.TipSelector.SelectNonLazyTips
 	}
 

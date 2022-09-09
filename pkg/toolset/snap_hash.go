@@ -3,7 +3,6 @@ package toolset
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -49,7 +48,7 @@ func snapshotHash(args []string) error {
 		return err
 	}
 
-	tempDir, err := ioutil.TempDir("", "snapHash")
+	tempDir, err := os.MkdirTemp("", "snapHash")
 	if err != nil {
 		return fmt.Errorf("can't create temp dir: %w", err)
 	}
