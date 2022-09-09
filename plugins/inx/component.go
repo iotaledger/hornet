@@ -17,6 +17,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/pow"
 	"github.com/iotaledger/hornet/v2/pkg/protocol"
+	"github.com/iotaledger/hornet/v2/pkg/pruning"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	"github.com/iotaledger/hornet/v2/pkg/tipselect"
 	"github.com/iotaledger/hornet/v2/plugins/restapi"
@@ -58,6 +59,7 @@ type dependencies struct {
 	TipSelector             *tipselect.TipSelector `optional:"true"`
 	MilestonePublicKeyCount int                    `name:"milestonePublicKeyCount"`
 	ProtocolManager         *protocol.Manager
+	PruningManager          *pruning.Manager
 	BaseToken               *protocfg.BaseToken
 	PoWHandler              *pow.Handler
 	INXServer               *Server

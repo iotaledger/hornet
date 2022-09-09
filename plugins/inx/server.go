@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 
+	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	inx "github.com/iotaledger/inx/go"
@@ -66,7 +67,7 @@ func (s *Server) Stop() {
 	s.grpcServer.Stop()
 }
 
-func (s *Server) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
+func currentNodeStatus() (*inx.NodeStatus, error) {
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo == nil {
@@ -112,15 +113,102 @@ func (s *Server) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus
 		}
 	}
 
+	protocolParams, err := rawProtocolParametersForIndex(confirmedMilestoneIndex)
+	if err != nil {
+		return nil, err
+	}
+
 	return &inx.NodeStatus{
-		IsHealthy:              deps.Tangle.IsNodeHealthy(),
-		LatestMilestone:        lmi,
-		ConfirmedMilestone:     cmi,
-		TanglePruningIndex:     pruningIndex,
-		MilestonesPruningIndex: pruningIndex,
-		LedgerPruningIndex:     pruningIndex,
-		LedgerIndex:            index,
+		IsHealthy:                 deps.Tangle.IsNodeHealthy(),
+		IsSynced:                  deps.SyncManager.IsNodeSynced(),
+		IsAlmostSynced:            deps.SyncManager.IsNodeAlmostSynced(),
+		LatestMilestone:           lmi,
+		ConfirmedMilestone:        cmi,
+		CurrentProtocolParameters: protocolParams,
+		TanglePruningIndex:        pruningIndex,
+		MilestonesPruningIndex:    pruningIndex,
+		LedgerPruningIndex:        pruningIndex,
+		LedgerIndex:               index,
 	}, nil
+}
+
+func (s *Server) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
+	return currentNodeStatus()
+}
+
+func (s *Server) ListenToNodeStatus(req *inx.NodeStatusRequest, srv inx.INX_ListenToNodeStatusServer) error {
+	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+
+	lastSent := time.Time{}
+	sendStatus := func(status *inx.NodeStatus) {
+		if err := srv.Send(status); err != nil {
+			Plugin.LogErrorf("send error: %v", err)
+			cancel()
+
+			return
+		}
+		lastSent = time.Now()
+	}
+
+	var lastUpdateTimer *time.Timer
+	coolDownDuration := time.Duration(req.GetCooldownInMilliseconds()) * time.Millisecond
+	wp := workerpool.New(func(task workerpool.Task) {
+		defer task.Return(nil)
+
+		status, ok := task.Param(0).(*inx.NodeStatus)
+		if !ok {
+			Plugin.LogInfof("send error: expected *inx.NodeStatus, got %T", task.Param(0))
+			cancel()
+
+			return
+		}
+
+		if lastUpdateTimer != nil {
+			lastUpdateTimer.Stop()
+			lastUpdateTimer = nil
+		}
+
+		// Use cooldown if the node is syncing
+		if coolDownDuration > 0 && !status.IsAlmostSynced {
+			timeSinceLastSent := time.Since(lastSent)
+			if timeSinceLastSent < coolDownDuration {
+				lastUpdateTimer = time.AfterFunc(coolDownDuration-timeSinceLastSent, func() {
+					sendStatus(status)
+				})
+
+				return
+			}
+		}
+
+		sendStatus(status)
+
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
+	onIndexChange := events.NewClosure(func(_ iotago.MilestoneIndex) {
+		status, err := currentNodeStatus()
+		if err != nil {
+			Plugin.LogErrorf("error creating inx.NodeStatus: %s", err.Error())
+
+			return
+		}
+		wp.Submit(status)
+	})
+
+	wp.Start()
+	deps.Tangle.Events.LatestMilestoneIndexChanged.Hook(onIndexChange)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onIndexChange)
+	deps.PruningManager.Events.PruningMilestoneIndexChanged.Hook(onIndexChange)
+	<-ctx.Done()
+	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onIndexChange)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onIndexChange)
+	deps.PruningManager.Events.PruningMilestoneIndexChanged.Detach(onIndexChange)
+
+	// We need to wait until all tasks are done, otherwise we might call
+	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
+	// not safe according to the grpc docs.
+	wp.StopAndWait()
+
+	return ctx.Err()
 }
 
 func (s *Server) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.NodeConfiguration, error) {
