@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -260,34 +261,62 @@ func checkHeartbeats() {
 	})
 
 	peersToRemove := make(map[peer.ID]error)
-	peersToReconnect := make(map[peer.ID]struct{})
+	peersToReconnect := make(map[peer.ID]error)
+
+	snapshotInfo := deps.Storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		// we can't check the health of the peers without info about pruning index
+		return
+	}
 
 	// check if peers are alive by checking whether we received heartbeats lately
 	deps.GossipService.ForEach(func(proto *gossip.Protocol) bool {
 
-		// use a grace period before the heartbeat check is applied
-		if time.Since(proto.Stream.Stat().Opened) <= checkHeartbeatsInterval ||
-			time.Since(proto.HeartbeatReceivedTime) < heartbeatReceiveTimeout {
+		protoStream := proto.Stream
+		if protoStream == nil {
+			// stream not established yet
 			return true
 		}
 
-		// peer is connected but doesn't seem to be alive
-		var peerRelation p2p.PeerRelation
+		latestHeatbeat := proto.LatestHeartbeat
+		if latestHeatbeat == nil && time.Since(protoStream.Stat().Opened) <= checkHeartbeatsInterval {
+			// use a grace period before the heartbeat check is applied
+			return true
+		}
+
+		var peerRelationKnown bool
 		deps.PeeringManager.Call(proto.PeerID, func(peer *p2p.Peer) {
-			peerRelation = peer.Relation
+			peerRelationKnown = peer.Relation == p2p.PeerRelationKnown
 		})
 
-		// it's better to drop the connection to unknown and autopeered peers and free the slots for other peers
-		switch peerRelation {
-		case p2p.PeerRelationUnknown, p2p.PeerRelationAutopeered:
-			peersToRemove[proto.PeerID] = fmt.Errorf("dropping peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
+		var errUnhealthy error
+		switch {
+		case latestHeatbeat == nil:
+			// no heartbeat received in the grace period
+			errUnhealthy = errors.New("no heartbeat received in grace period")
 
+		case time.Since(proto.HeartbeatReceivedTime) > heartbeatReceiveTimeout:
+			// heartbeat outdated
+			errUnhealthy = errors.New("heartbeat outdated")
+
+		case !peerRelationKnown && latestHeatbeat.SolidMilestoneIndex < snapshotInfo.PruningIndex():
+			// peer is unknown or connected via autopeering and its solid milestone index is below our pruning index.
+			// we can't help this neighbor to become sync, so it's better to drop the connection and free the slots for other peers.
+			errUnhealthy = fmt.Errorf("peers solid milestone index is below our pruning index: %d < %d", latestHeatbeat.SolidMilestoneIndex, snapshotInfo.PruningIndex())
+		}
+
+		if errUnhealthy == nil {
+			// peer is healthy
 			return true
 		}
 
-		// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
-		CoreComponent.LogInfof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
-		peersToReconnect[proto.PeerID] = struct{}{}
+		if peerRelationKnown {
+			// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
+			peersToReconnect[proto.PeerID] = fmt.Errorf("dropping connection to peer %s, error: %w", proto.PeerID.ShortString(), errUnhealthy)
+		} else {
+			// it's better to drop the connection to unknown and autopeered peers and free the slots for other peers
+			peersToRemove[proto.PeerID] = fmt.Errorf("dropping connection to peer %s, error: %w", proto.PeerID.ShortString(), errUnhealthy)
+		}
 
 		return true
 	})
@@ -298,7 +327,9 @@ func checkHeartbeats() {
 	}
 
 	// close the connection to the peers to trigger a reconnect
-	for p := range peersToReconnect {
+	for p, reason := range peersToReconnect {
+		CoreComponent.LogWarn(reason.Error())
+
 		conns := deps.Host.Network().ConnsToPeer(p)
 		for _, conn := range conns {
 			_ = conn.Close()
