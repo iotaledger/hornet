@@ -3,7 +3,7 @@ services:
 
   hornet:
     container_name: hornet
-    image: iotaledger/hornet:2.0.0-beta.7
+    image: iotaledger/hornet:2.0.0-beta.8
     ulimits:
       nofile:
         soft: 16384
@@ -132,7 +132,7 @@ services:
 
   inx-indexer:
     container_name: inx-indexer
-    image: iotaledger/inx-indexer:1.0.0-beta.6
+    image: iotaledger/inx-indexer:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
     volumes:
@@ -140,13 +140,13 @@ services:
     command:
       - "--inx.address=hornet:9029"
       - "--indexer.db.path=database/indexer"
-      - "--indexer.bindAddress=inx-indexer:9091"
+      - "--restAPI.bindAddress=inx-indexer:9091"
       - "--prometheus.enabled=true"
       - "--prometheus.bindAddress=inx-indexer:9312"
 
   inx-mqtt:
     container_name: inx-mqtt
-    image: iotaledger/inx-mqtt:1.0.0-beta.6
+    image: iotaledger/inx-mqtt:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
     command:
@@ -157,7 +157,7 @@ services:
 
   inx-participation:
     container_name: inx-participation
-    image: iotaledger/inx-participation:1.0.0-beta.6
+    image: iotaledger/inx-participation:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
     ulimits:
@@ -173,7 +173,7 @@ services:
 
   inx-spammer:
     container_name: inx-spammer
-    image: iotaledger/inx-spammer:1.0.0-beta.7
+    image: iotaledger/inx-spammer:1.0.0-beta.8
     stop_grace_period: 5m
     restart: unless-stopped
     command:
@@ -184,16 +184,16 @@ services:
 
   inx-poi:
     container_name: inx-poi
-    image: iotaledger/inx-poi:1.0.0-beta.6
+    image: iotaledger/inx-poi:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
     command:
       - "--inx.address=hornet:9029"
-      - "--poi.bindAddress=inx-poi:9687"
+      - "--restAPI.bindAddress=inx-poi:9687"
 
   inx-dashboard:
     container_name: inx-dashboard
-    image: iotaledger/inx-dashboard:1.0.0-beta.6
+    image: iotaledger/inx-dashboard:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
     labels:

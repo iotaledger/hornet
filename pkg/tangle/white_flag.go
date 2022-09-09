@@ -30,7 +30,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 	}
 
 	// check if the requested milestone index would be the next one
-	if index > t.syncManager.ConfirmedMilestoneIndex()+1 {
+	if index != t.syncManager.ConfirmedMilestoneIndex()+1 {
 		return nil, common.ErrNodeNotSynced
 	}
 

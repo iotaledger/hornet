@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/blang/vfs v1.0.0
 	github.com/cockroachdb/pebble v0.0.0-20220907220441-20a40b515be9
-	github.com/docker/docker v20.10.17+incompatible
+	github.com/docker/docker v20.10.18+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -161,7 +161,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
-	golang.org/x/exp v0.0.0-20220907003533-145caa8ea1d0 // indirect
+	golang.org/x/exp v0.0.0-20220909145303-c79614ebc70f // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20220907135653-1e95f45603a7 // indirect
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804 // indirect

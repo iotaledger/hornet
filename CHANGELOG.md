@@ -6,6 +6,26 @@ All notable changes to this project will be documented in this file.
 This release contains a breaking change in the transaction validation, so you need to update your nodes ASAP to participate in the testnet.
 :warning: :warning: :warning:
 
+## [2.0.0-beta.8] - 09.09.2022
+
+### Added
+- Drop unhealthy peers (#1736)
+- Add support for inx ListenToNodeStatus (#1737)
+- Drop peers that are below our pruning index (#1739)
+
+### Changed
+- Avoid unnecessary deserialization/serialization when using INX (#1725) 
+- Move protocol and payload checks in attacher (#1729)
+- Adapt to latest hive.go version and update modules (#1735)
+- Updated INX dependencies and adapt to changed params (#1724)
+
+## Fixed
+- Fixing internal private tangle INX ports to use the default 9029 instead of the exposed one
+- Fix order of genesis addresses in snap-gen tool (#1722) 
+- Fix start index of db-verify loop (#1728)
+- Fix index check in CheckSolidityAndComputeWhiteFlagMutations
+
+
 ## [2.0.0-beta.7] - 30.08.2022
 
 ### Added
