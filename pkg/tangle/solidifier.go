@@ -218,8 +218,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 	t.solidifierLock.Lock()
 	defer t.solidifierLock.Unlock()
 
-	currentConfirmedIndex := t.syncManager.ConfirmedMilestoneIndex()
-	latestIndex := t.syncManager.LatestMilestoneIndex()
+	syncState := t.syncManager.SyncState()
+	currentConfirmedIndex := syncState.ConfirmedMilestoneIndex
+	latestIndex := syncState.LatestMilestoneIndex
 
 	if currentConfirmedIndex == latestIndex && latestIndex != 0 {
 		// Latest milestone already solid
@@ -399,7 +400,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 			}
 			timeSetConfirmedMilestoneIndexEnd = time.Now()
 
-			if t.syncManager.IsNodeAlmostSynced() {
+			if syncState.NodeAlmostSynced {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, block broadcasting, etc...)
 				// we can safely ignore errors of the future cone solidifier.
 				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.ReferencedBlocks.BlockIDs(), confirmation.MilestoneIndex)
@@ -458,7 +459,8 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 
 	var rbpsBlock string
 	if metric, err := t.calcConfirmedMilestoneMetric(milestonePayloadToSolidify); err == nil {
-		if t.syncManager.IsNodeSynced() {
+		isNodeSynced := t.syncManager.IsNodeSynced()
+		if isNodeSynced {
 			// Only trigger the metrics event if the node is sync (otherwise the BPS and conf.rate is wrong)
 			if t.firstSyncedMilestone == 0 {
 				t.firstSyncedMilestone = milestoneIndexToSolidify
@@ -468,7 +470,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 			t.firstSyncedMilestone = 0
 		}
 
-		if t.syncManager.IsNodeSynced() && (milestoneIndexToSolidify > t.firstSyncedMilestone+1) {
+		if isNodeSynced && (milestoneIndexToSolidify > t.firstSyncedMilestone+1) {
 			t.lastConfirmedMilestoneMetricLock.Lock()
 			t.lastConfirmedMilestoneMetric = metric
 			t.lastConfirmedMilestoneMetricLock.Unlock()

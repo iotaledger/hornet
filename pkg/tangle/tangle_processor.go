@@ -62,8 +62,9 @@ func (t *Tangle) RunTangleProcessor() {
 
 	// set latest known milestone from database
 	latestMilestoneFromDatabase := t.storage.SearchLatestMilestoneIndexInStore()
-	if latestMilestoneFromDatabase < t.syncManager.ConfirmedMilestoneIndex() {
-		latestMilestoneFromDatabase = t.syncManager.ConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := t.syncManager.ConfirmedMilestoneIndex()
+	if latestMilestoneFromDatabase < confirmedMilestoneIndex {
+		latestMilestoneFromDatabase = confirmedMilestoneIndex
 	}
 
 	t.syncManager.SetLatestMilestoneIndex(latestMilestoneFromDatabase, t.updateSyncedAtStartup)
@@ -205,8 +206,9 @@ func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
 
 func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip.Requests, proto *gossip.Protocol) {
 
-	latestMilestoneIndex := t.syncManager.LatestMilestoneIndex()
-	isNodeSyncedWithinBelowMaxDepth := t.syncManager.IsNodeSyncedWithinBelowMaxDepth()
+	syncState := t.syncManager.SyncState()
+	latestMilestoneIndex := syncState.LatestMilestoneIndex
+	isNodeSyncedWithinBelowMaxDepth := syncState.NodeSyncedWithinBelowMaxDepth
 
 	requested := requests.HasRequest()
 
@@ -232,12 +234,12 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 			}
 		}
 
-		confirmedMilestoneIndex := t.syncManager.ConfirmedMilestoneIndex()
+		confirmedMilestoneIndex := syncState.ConfirmedMilestoneIndex
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = confirmedMilestoneIndex
 		}
 
-		if t.syncManager.IsNodeAlmostSynced() {
+		if syncState.NodeAlmostSynced {
 			// try to solidify the block and its future cone
 			t.futureConeSolidifierWorkerPool.Submit(cachedBlock.CachedMetadata()) // meta pass +1
 		}
@@ -261,7 +263,7 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 	// we check whether the request is nil, so we only trigger the solidifier when
 	// we actually handled a block coming from a request (as otherwise the solidifier
 	// is triggered too often through blocks received from normal gossip)
-	if requested && !t.syncManager.IsNodeSynced() && t.requestQueue.Empty() {
+	if requested && !syncState.NodeSynced && t.requestQueue.Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
 		t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
@@ -297,6 +299,7 @@ func (t *Tangle) PrintStatus() {
 	queued, pending, processing := t.requestQueue.Size()
 	avgLatency := t.requestQueue.AvgLatency()
 
+	syncState := t.syncManager.SyncState()
 	println(
 		fmt.Sprintf(
 			"req(qu/pe/proc/lat): %05d/%05d/%05d/%04dms, "+
@@ -308,8 +311,8 @@ func (t *Tangle) PrintStatus() {
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			t.receiveBlockWorkerPool.GetPendingQueueSize(),
-			t.syncManager.ConfirmedMilestoneIndex(),
-			t.syncManager.LatestMilestoneIndex(),
+			syncState.ConfirmedMilestoneIndex,
+			syncState.LatestMilestoneIndex,
 			t.lastIncomingBPS,
 			t.lastNewBPS,
 			t.lastOutgoingBPS,

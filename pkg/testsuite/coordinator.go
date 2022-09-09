@@ -178,9 +178,10 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 func (te *TestEnvironment) ConfirmMilestone(ms *storage.Milestone, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
 
 	// Verify that we are properly synced and confirming the next milestone
-	currentIndex := te.syncManager.LatestMilestoneIndex()
+	syncState := te.syncManager.SyncState()
+	currentIndex := syncState.LatestMilestoneIndex
 	require.GreaterOrEqual(te.TestInterface, ms.Index(), currentIndex)
-	confirmedIndex := te.syncManager.ConfirmedMilestoneIndex()
+	confirmedIndex := syncState.ConfirmedMilestoneIndex
 	require.Equal(te.TestInterface, ms.Index(), confirmedIndex+1)
 
 	wfConf, confirmedMilestoneStats, err := te.PerformWhiteFlagConfirmation(ms.Milestone())
