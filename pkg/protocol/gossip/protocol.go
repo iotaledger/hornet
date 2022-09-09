@@ -200,35 +200,38 @@ func (p *Protocol) SendLatestMilestoneRequest() {
 // HasDataForMilestone tells whether the underlying peer given the latest heartbeat message, has the cone data for the given milestone.
 // Returns false if no heartbeat message was received yet.
 func (p *Protocol) HasDataForMilestone(index iotago.MilestoneIndex) bool {
-	if p.LatestHeartbeat == nil {
+	heartbeat := p.LatestHeartbeat
+	if heartbeat == nil {
 		return false
 	}
 
-	return p.LatestHeartbeat.PrunedMilestoneIndex < index && p.LatestHeartbeat.SolidMilestoneIndex >= index
+	return heartbeat.PrunedMilestoneIndex < index && heartbeat.SolidMilestoneIndex >= index
 }
 
 // CouldHaveDataForMilestone tells whether the underlying peer given the latest heartbeat message, could have parts of the cone data for the given milestone.
 // Returns false if no heartbeat message was received yet.
 func (p *Protocol) CouldHaveDataForMilestone(index iotago.MilestoneIndex) bool {
-	if p.LatestHeartbeat == nil {
+	heartbeat := p.LatestHeartbeat
+	if heartbeat == nil {
 		return false
 	}
 
-	return p.LatestHeartbeat.PrunedMilestoneIndex < index && p.LatestHeartbeat.LatestMilestoneIndex >= index
+	return heartbeat.PrunedMilestoneIndex < index && heartbeat.LatestMilestoneIndex >= index
 }
 
 // IsSynced tells whether the underlying peer is synced.
 func (p *Protocol) IsSynced(cmi iotago.MilestoneIndex) bool {
-	if p.LatestHeartbeat == nil {
+	heartbeat := p.LatestHeartbeat
+	if heartbeat == nil {
 		return false
 	}
 
-	latestIndex := p.LatestHeartbeat.LatestMilestoneIndex
+	latestIndex := heartbeat.LatestMilestoneIndex
 	if latestIndex < cmi {
 		latestIndex = cmi
 	}
 
-	if p.LatestHeartbeat.SolidMilestoneIndex < (latestIndex - minCMISynchronizationThreshold) {
+	if heartbeat.SolidMilestoneIndex < (latestIndex - minCMISynchronizationThreshold) {
 		return false
 	}
 
