@@ -143,6 +143,7 @@ services:
       - "--faucet.amount=100000000000"
       - "--faucet.smallAmount=10000000000"
       - "--faucet.maxAddressBalance=200000000000"
+      - "--faucet.rateLimit.enabled=false"
       - "--profiling.enabled=true"
       - "--profiling.bindAddress=172.18.211.24:6060"
     profiles:
