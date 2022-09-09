@@ -258,6 +258,7 @@ func checkHeartbeats() {
 		return time.Since(proto.HeartbeatSentTime) > heartbeatSentInterval
 	})
 
+	peersToRemove := make(map[peer.ID]error)
 	peersToReconnect := make(map[peer.ID]struct{})
 
 	// check if peers are alive by checking whether we received heartbeats lately
@@ -269,16 +270,19 @@ func checkHeartbeats() {
 			return true
 		}
 
-		/*
-			// TODO: re-introduce once p2p discovery is implemented
-			// peer is connected but doesn't seem to be alive
-			if p.Autopeering != nil {
-				// it's better to drop the connection to autopeered peers and free the slots for other peers
-				peerIDsToRemove[p.ID] = struct{}{}
-				CorePlugin.LogInfof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
-				return true
-			}
-		*/
+		// peer is connected but doesn't seem to be alive
+		var peerRelation p2p.PeerRelation
+		deps.PeeringManager.Call(proto.PeerID, func(peer *p2p.Peer) {
+			peerRelation = peer.Relation
+		})
+
+		// it's better to drop the connection to unknown and autopeered peers and free the slots for other peers
+		switch peerRelation {
+		case p2p.PeerRelationUnknown, p2p.PeerRelationAutopeered:
+			peersToRemove[proto.PeerID] = fmt.Errorf("dropping peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
+
+			return true
+		}
 
 		// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
 		CorePlugin.LogInfof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
@@ -286,12 +290,10 @@ func checkHeartbeats() {
 		return true
 	})
 
-	/*
-		// TODO: re-introduce once p2p discovery is implemented
-		for peerIDToRemove := range peerIDsToRemove {
-			peering.Manager().Remove(peerIDToRemove)
-		}
-	*/
+	// drop the connection to the peers
+	for p, reason := range peersToRemove {
+		_ = deps.PeeringManager.DisconnectPeer(p, reason)
+	}
 
 	// close the connection to the peers to trigger a reconnect
 	for p := range peersToReconnect {
