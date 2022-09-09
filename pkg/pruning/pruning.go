@@ -162,12 +162,13 @@ func (p *Manager) calcTargetIndexBySize(targetSizeBytes ...int64) (iotago.Milest
 		return 0, common.ErrSnapshotInfoNotFound
 	}
 
-	milestoneRange := p.syncManager.ConfirmedMilestoneIndex() - snapshotInfo.PruningIndex()
+	confirmedMilestoneIndex := p.syncManager.ConfirmedMilestoneIndex()
+	milestoneRange := confirmedMilestoneIndex - snapshotInfo.PruningIndex()
 	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - p.pruningSizeThresholdPercentage) / 100.0)
 	diffPercentage := prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes)
 	milestoneDiff := syncmanager.MilestoneIndexDelta(math.Ceil(float64(milestoneRange) * diffPercentage))
 
-	return p.syncManager.ConfirmedMilestoneIndex() - milestoneDiff, nil
+	return confirmedMilestoneIndex - milestoneDiff, nil
 }
 
 // pruneUnreferencedBlocks prunes all unreferenced blocks from the database for the given milestone.

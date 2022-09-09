@@ -17,6 +17,14 @@ const (
 // MilestoneIndexDelta is a the type used to describe an amount of Milestones that should be used to offset a certain Index.
 type MilestoneIndexDelta = uint32
 
+type SyncState struct {
+	NodeSynced                    bool
+	NodeAlmostSynced              bool
+	NodeSyncedWithinBelowMaxDepth bool
+	LatestMilestoneIndex          iotago.MilestoneIndex
+	ConfirmedMilestoneIndex       iotago.MilestoneIndex
+}
+
 type SyncManager struct {
 	protocolManager *protocol.Manager
 
@@ -55,6 +63,21 @@ func (s *SyncManager) ResetMilestoneIndexes() {
 
 	s.confirmedMilestoneIndex = 0
 	s.latestMilestoneIndex = 0
+}
+
+func (s *SyncManager) SyncState() *SyncState {
+	s.confirmedMilestoneLock.RLock()
+	s.latestMilestoneLock.RLock()
+	defer s.confirmedMilestoneLock.RUnlock()
+	defer s.latestMilestoneLock.RUnlock()
+
+	return &SyncState{
+		NodeSynced:                    s.isNodeSynced,
+		NodeAlmostSynced:              s.isNodeAlmostSynced,
+		NodeSyncedWithinBelowMaxDepth: s.isNodeSyncedWithinBelowMaxDepth,
+		LatestMilestoneIndex:          s.latestMilestoneIndex,
+		ConfirmedMilestoneIndex:       s.confirmedMilestoneIndex,
+	}
 }
 
 // IsNodeSynced returns whether the node is synced.

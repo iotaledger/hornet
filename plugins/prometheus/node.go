@@ -108,8 +108,13 @@ func configureNode() {
 }
 
 func collectInfo() {
+
+	syncState := deps.SyncManager.SyncState()
+	milestones.WithLabelValues("latest").Set(float64(syncState.LatestMilestoneIndex))
+	milestones.WithLabelValues("confirmed").Set(float64(syncState.ConfirmedMilestoneIndex))
+
 	health.Set(0)
-	if deps.Tangle.IsNodeHealthy() {
+	if deps.Tangle.IsNodeHealthy(syncState) {
 		health.Set(1)
 	}
 
@@ -123,9 +128,6 @@ func collectInfo() {
 		referencedBlocksPerSecond.Set(lastConfirmedMilestoneMetric.RBPS)
 		referencedRate.Set(lastConfirmedMilestoneMetric.ReferencedRate)
 	}
-
-	milestones.WithLabelValues("latest").Set(float64(deps.SyncManager.LatestMilestoneIndex()))
-	milestones.WithLabelValues("confirmed").Set(float64(deps.SyncManager.ConfirmedMilestoneIndex()))
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	milestones.WithLabelValues("snapshot").Set(0)

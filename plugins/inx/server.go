@@ -81,47 +81,47 @@ func currentNodeStatus() (*inx.NodeStatus, error) {
 		return nil, err
 	}
 
-	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
+	syncState := deps.SyncManager.SyncState()
+
 	var lmi *inx.Milestone
-	if latestMilestoneIndex > pruningIndex {
-		lmi, err = milestoneForIndex(latestMilestoneIndex)
+	if syncState.LatestMilestoneIndex > pruningIndex {
+		lmi, err = milestoneForIndex(syncState.LatestMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		lmi = &inx.Milestone{
 			MilestoneInfo: &inx.MilestoneInfo{
-				MilestoneIndex: latestMilestoneIndex,
+				MilestoneIndex: syncState.LatestMilestoneIndex,
 			},
 			Milestone: nil,
 		}
 	}
 
-	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
 	var cmi *inx.Milestone
-	if confirmedMilestoneIndex > pruningIndex {
-		cmi, err = milestoneForIndex(confirmedMilestoneIndex)
+	if syncState.ConfirmedMilestoneIndex > pruningIndex {
+		cmi, err = milestoneForIndex(syncState.ConfirmedMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		cmi = &inx.Milestone{
 			MilestoneInfo: &inx.MilestoneInfo{
-				MilestoneIndex: confirmedMilestoneIndex,
+				MilestoneIndex: syncState.ConfirmedMilestoneIndex,
 			},
 			Milestone: nil,
 		}
 	}
 
-	protocolParams, err := rawProtocolParametersForIndex(confirmedMilestoneIndex)
+	protocolParams, err := rawProtocolParametersForIndex(syncState.ConfirmedMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}
 
 	return &inx.NodeStatus{
-		IsHealthy:                 deps.Tangle.IsNodeHealthy(),
-		IsSynced:                  deps.SyncManager.IsNodeSynced(),
-		IsAlmostSynced:            deps.SyncManager.IsNodeAlmostSynced(),
+		IsHealthy:                 deps.Tangle.IsNodeHealthy(syncState),
+		IsSynced:                  syncState.NodeSynced,
+		IsAlmostSynced:            syncState.NodeAlmostSynced,
 		LatestMilestone:           lmi,
 		ConfirmedMilestone:        cmi,
 		CurrentProtocolParameters: protocolParams,

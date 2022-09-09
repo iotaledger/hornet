@@ -22,8 +22,10 @@ func info() (*infoResponse, error) {
 		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
 	}
 
+	syncState := deps.SyncManager.SyncState()
+
 	// latest milestone
-	var latestMilestoneIndex = deps.SyncManager.LatestMilestoneIndex()
+	var latestMilestoneIndex = syncState.LatestMilestoneIndex
 	var latestMilestoneTimestamp uint32
 	var latestMilestoneIDHex string
 	cachedMilestoneLatest := deps.Storage.CachedMilestoneByIndexOrNil(latestMilestoneIndex) // milestone +1
@@ -34,7 +36,7 @@ func info() (*infoResponse, error) {
 	}
 
 	// confirmed milestone index
-	var confirmedMilestoneIndex = deps.SyncManager.ConfirmedMilestoneIndex()
+	var confirmedMilestoneIndex = syncState.ConfirmedMilestoneIndex
 	var confirmedMilestoneTimestamp uint32
 	var confirmedMilestoneIDHex string
 	cachedMilestoneConfirmed := deps.Storage.CachedMilestoneByIndexOrNil(confirmedMilestoneIndex) // milestone +1
@@ -55,7 +57,7 @@ func info() (*infoResponse, error) {
 		Name:    deps.AppInfo.Name,
 		Version: deps.AppInfo.Version,
 		Status: nodeStatus{
-			IsHealthy: deps.Tangle.IsNodeHealthy(),
+			IsHealthy: deps.Tangle.IsNodeHealthy(syncState),
 			LatestMilestone: milestoneInfoResponse{
 				Index:       latestMilestoneIndex,
 				Timestamp:   latestMilestoneTimestamp,

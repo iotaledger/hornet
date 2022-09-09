@@ -344,11 +344,11 @@ func configureEvents() {
 		if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
 			// send heartbeat and latest milestone request
 			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
-				latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
-				syncedCount := deps.GossipService.SynchronizedCount(latestMilestoneIndex)
+				syncState := deps.SyncManager.SyncState()
+				syncedCount := deps.GossipService.SynchronizedCount(syncState.LatestMilestoneIndex)
 				connectedCount := deps.PeeringManager.ConnectedCount()
 				// TODO: overflow not handled for synced/connected
-				proto.SendHeartbeat(deps.SyncManager.ConfirmedMilestoneIndex(), snapshotInfo.PruningIndex(), latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
+				proto.SendHeartbeat(syncState.ConfirmedMilestoneIndex, snapshotInfo.PruningIndex(), syncState.LatestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 				proto.SendLatestMilestoneRequest()
 			}
 

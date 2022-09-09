@@ -3,6 +3,7 @@ package tangle
 import (
 	"time"
 
+	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 )
 
@@ -11,8 +12,16 @@ const (
 )
 
 // IsNodeHealthy returns whether the node is synced, has active peers and its latest milestone is not too old.
-func (t *Tangle) IsNodeHealthy() bool {
-	if !t.syncManager.IsNodeAlmostSynced() {
+func (t *Tangle) IsNodeHealthy(sync ...*syncmanager.SyncState) bool {
+
+	var syncState *syncmanager.SyncState
+	if len(sync) > 0 {
+		syncState = sync[0]
+	} else {
+		syncState = t.syncManager.SyncState()
+	}
+
+	if !syncState.NodeAlmostSynced {
 		return false
 	}
 
@@ -20,7 +29,8 @@ func (t *Tangle) IsNodeHealthy() bool {
 	t.gossipService.ForEach(func(_ *gossip.Protocol) bool {
 		gossipStreamsOngoing++
 
-		return true
+		// one stream is enough
+		return false
 	})
 
 	if gossipStreamsOngoing == 0 {
@@ -32,9 +42,7 @@ func (t *Tangle) IsNodeHealthy() bool {
 	}
 
 	// latest milestone timestamp
-	lmi := t.syncManager.LatestMilestoneIndex()
-
-	milestoneTimestamp, err := t.storage.MilestoneTimestampByIndex(lmi)
+	milestoneTimestamp, err := t.storage.MilestoneTimestampByIndex(syncState.LatestMilestoneIndex)
 	if err != nil {
 		return false
 	}
