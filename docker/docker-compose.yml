@@ -20,10 +20,6 @@ services:
       - "traefik.http.routers.hornet.rule=PathPrefix(`/api`)"
       - "traefik.http.routers.hornet.entrypoints=web"
       - "traefik.http.services.hornet.loadbalancer.server.port=14265"
-      - "traefik.http.routers.hornet.middlewares=redirect-dashboard"
-      - "traefik.http.middlewares.redirect-dashboard.redirectregex.permanent=true"
-      - "traefik.http.middlewares.redirect-dashboard.redirectregex.regex=^http:\\/\\/([^\\/]+)\\/?$$"
-      - "traefik.http.middlewares.redirect-dashboard.redirectregex.replacement=http://$$1/dashboard/"
 
     cap_drop:
       - ALL
