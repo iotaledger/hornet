@@ -1,0 +1,50 @@
+version: '3'
+services:
+
+  hornet:
+    labels:
+      - "traefik.http.routers.hornet.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.hornet.entrypoints=websecure"
+      - "traefik.http.routers.hornet.tls=true"
+      - "traefik.http.routers.hornet.tls.certresolver=myresolver"
+      - "traefik.http.middlewares.redirect-dashboard.redirectregex.regex=^https:\\/\\/([^\\/]+)\\/?$$"
+      - "traefik.http.middlewares.redirect-dashboard.redirectregex.replacement=https://$$1/dashboard/"
+
+##################################################################
+#  Reverse Proxy and SSL                                         #
+##################################################################
+
+  traefik:
+    command:
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "443:443/tcp"
+
+##################################################################
+#  Monitoring                                                    #
+##################################################################
+
+  grafana:
+    labels:
+      - "traefik.http.routers.grafana.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+    environment:
+      - GF_SERVER_DOMAIN=${HORNET_HOST}
+
+
+##################################################################
+#  INX Extensions                                                #
+#  disable them out by commenting out the services               #
+##################################################################
+
+  inx-dashboard:
+    labels:
+      - "traefik.http.routers.hornet-dashboard.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.hornet-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.hornet-dashboard.tls=true"

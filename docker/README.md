@@ -1,15 +1,15 @@
 # Hornet Docker Setup
-This setup lets you run an [IOTA Hornet node](https://wiki.iota.org/hornet/welcome) using Docker to manage your services and Traefik as [a reverse proxy](https://en.wikipedia.org/wiki/Reverse_proxy) to enable TLS using [Let's Encrypt](https://letsencrypt.org/), control access to your node and route requests to the correct endpoints.
+This setup lets you run an [IOTA Hornet node](https://wiki.iota.org/hornet/welcome) using Docker to manage your services and Traefik as [a reverse proxy](https://en.wikipedia.org/wiki/Reverse_proxy) to enable (optional) TLS using [Let's Encrypt](https://letsencrypt.org/), control access to your node and route requests to the correct endpoints.
 
 ## Requirements
 1. A recent release of Docker enterprise or community edition. You can find installation instructions in the [official Docker documentation](https://docs.docker.com/engine/install/).
 2. [Docker Compose CLI plugin](https://docs.docker.com/compose/install/compose-plugin/).
-3. A registered domain name pointing to the public IP address of your server.
+3. A registered domain name pointing to the public IP address of your server. _(optional if not using HTTPS)_
 4. Opening up the following ports in your servers firewall:
   - `15600 TCP` - Used for gossip.
   - `14626 UDP` - Used for autopeering.
   - `80 TCP` - Used for HTTP.
-  - `443 TCP` - Used for HTTPS.
+  - `443 TCP` - Used for HTTPS. _(optional if not using HTTPS)_
 
 ## Prepare
 
@@ -17,9 +17,15 @@ This setup lets you run an [IOTA Hornet node](https://wiki.iota.org/hornet/welco
 
 ### 1. Setup Environment
 
+You can configure your node to either use HTTP or HTTPS. For publicly exposed nodes we heavily recommend using HTTPS.
+
+#### 1.1 HTTPS
+
 Create a file named `.env` add the following to the file:
 
 ```
+COMPOSE_FILE=docker-compose.yml:docker-compose-https.yml
+
 ACME_EMAIL=your-email@example.com
 
 HORNET_HOST=node.your-domain.com
@@ -32,6 +38,16 @@ DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
 * Replace `your-email@example.com` with the e-mail used for issuing a [Let's Encrypt](https://letsencrypt.org) SSL certificate.
 * Replace `node.your-domain.com` with the domain pointing to your public IP address as described in the [requirements](#requirements).
 
+#### 1.2 HTTP
+
+Create a file named `.env` add the following to the file:
+
+```
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=0000000000000000000000000000000000000000000000000000000000000000
+DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
+```
+
 ### 2. Setup neighbors
 
 Add your neighbors addresses to the `peering.json` file.
@@ -39,7 +55,6 @@ Add your neighbors addresses to the `peering.json` file.
 > **NOTE**:
 > This step is recommended, but optional if you are using autopeering.
 > See [peering](../references/peering.md) for more information.
-
 
 ### 3. Create the `data` folder
 
@@ -74,6 +89,8 @@ docker compose up -d
 
 * `-d` Instructs Docker to start HORNET in the background.
 
+#### HTTPS
+
 After starting HORNET you will be able to access your node at the following endpoints:
 - API: `https://node.your-domain.com/api/routes`
 - Dashboard: `https://node.your-domain.com/dashboard`
@@ -82,9 +99,17 @@ After starting HORNET you will be able to access your node at the following endp
 > **_Warning:_**
 > After starting your node for the first time, please change the default grafana credentials<br />
 > User: `admin`<br />
-> assword: `admin`
+> Password: `admin`
 
 You can configure your wallet software to use `https://node.your-domain.com`
+
+#### HTTP
+
+After starting HORNET you will be able to access your node at the following endpoints:
+- API: `http://localhost/api/routes`
+- Dashboard: `http://localhost/dashboard`
+- Grafana: `http://localhost/grafana`
+
 
 ### Displaying Log Output
 
