@@ -9,6 +9,8 @@ services:
         soft: 16384
         hard: 16384
     stop_grace_period: 5m
+    depends_on:
+      - traefik
     ports:
       - "15600:15600/tcp"
       - "14626:14626/udp"
@@ -47,7 +49,7 @@ services:
 
   traefik:
     container_name: traefik
-    image: traefik:v2.6
+    image: traefik:v2.8
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -124,6 +126,8 @@ services:
     image: iotaledger/inx-indexer:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
     volumes:
       - ./data:/app/database
     command:
@@ -138,6 +142,8 @@ services:
     image: iotaledger/inx-mqtt:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
     command:
       - "--inx.address=hornet:9029"
       - "--mqtt.websocket.bindAddress=inx-mqtt:1888"
@@ -149,6 +155,8 @@ services:
     image: iotaledger/inx-participation:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
     ulimits:
       nofile:
         soft: 16384
@@ -165,6 +173,9 @@ services:
     image: iotaledger/inx-spammer:1.0.0-beta.8
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
+      - inx-indexer
     command:
       - "--inx.address=hornet:9029"
       - "--restAPI.bindAddress=inx-spammer:9092"
@@ -176,6 +187,8 @@ services:
     image: iotaledger/inx-poi:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
     command:
       - "--inx.address=hornet:9029"
       - "--restAPI.bindAddress=inx-poi:9687"
@@ -185,6 +198,9 @@ services:
     image: iotaledger/inx-dashboard:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
+      - inx-indexer
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.hornet-dashboard.service=hornet-dashboard"
