@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ ! -f .env ]; then
-  cat README.md
+  echo ".env file missing. Please read README.md"
   exit 0
 fi
 

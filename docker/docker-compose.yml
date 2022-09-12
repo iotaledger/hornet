@@ -9,21 +9,17 @@ services:
         soft: 16384
         hard: 16384
     stop_grace_period: 5m
+    depends_on:
+      - traefik
     ports:
       - "15600:15600/tcp"
       - "14626:14626/udp"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.hornet.service=hornet"
-      - "traefik.http.routers.hornet.rule=Host(`${HORNET_HOST}`)"
-      - "traefik.http.routers.hornet.entrypoints=websecure"
-      - "traefik.http.routers.hornet.tls=true"
-      - "traefik.http.routers.hornet.tls.certresolver=myresolver"
+      - "traefik.http.routers.hornet.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.hornet.entrypoints=web"
       - "traefik.http.services.hornet.loadbalancer.server.port=14265"
-      - "traefik.http.routers.hornet.middlewares=redirect-dashboard"
-      - "traefik.http.middlewares.redirect-dashboard.redirectregex.regex=^https:\\/\\/([^\\/]+)\\/?$$"
-      - "traefik.http.middlewares.redirect-dashboard.redirectregex.replacement=https://$$1/dashboard/"
-      - "traefik.http.middlewares.redirect-dashboard.redirectregex.permanent=true"
 
     cap_drop:
       - ALL
@@ -49,21 +45,14 @@ services:
 
   traefik:
     container_name: traefik
-    image: traefik:v2.6
+    image: traefik:v2.8
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--metrics.prometheus=true"
       - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
     ports:
       - "80:80/tcp"
-      - "443:443/tcp"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./data/letsencrypt:/letsencrypt"
@@ -113,12 +102,10 @@ services:
     user: "65532"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/grafana`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     environment:
-      - GF_SERVER_DOMAIN=${HORNET_HOST}
       - GF_SERVER_ROOT_URL=/grafana
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
@@ -135,6 +122,8 @@ services:
     image: iotaledger/inx-indexer:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
     volumes:
       - ./data:/app/database
     command:
@@ -149,6 +138,8 @@ services:
     image: iotaledger/inx-mqtt:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
     command:
       - "--inx.address=hornet:9029"
       - "--mqtt.websocket.bindAddress=inx-mqtt:1888"
@@ -160,6 +151,8 @@ services:
     image: iotaledger/inx-participation:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
     ulimits:
       nofile:
         soft: 16384
@@ -176,6 +169,9 @@ services:
     image: iotaledger/inx-spammer:1.0.0-beta.8
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
+      - inx-indexer
     command:
       - "--inx.address=hornet:9029"
       - "--restAPI.bindAddress=inx-spammer:9092"
@@ -187,6 +183,8 @@ services:
     image: iotaledger/inx-poi:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
     command:
       - "--inx.address=hornet:9029"
       - "--restAPI.bindAddress=inx-poi:9687"
@@ -196,12 +194,14 @@ services:
     image: iotaledger/inx-dashboard:1.0.0-beta.7
     stop_grace_period: 5m
     restart: unless-stopped
+    depends_on:
+      - hornet
+      - inx-indexer
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.hornet-dashboard.service=hornet-dashboard"
-      - "traefik.http.routers.hornet-dashboard.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/dashboard`)"
-      - "traefik.http.routers.hornet-dashboard.entrypoints=websecure"
-      - "traefik.http.routers.hornet-dashboard.tls=true"
+      - "traefik.http.routers.hornet-dashboard.rule=PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.hornet-dashboard.entrypoints=web"
       - "traefik.http.services.hornet-dashboard.loadbalancer.server.port=8081"
     volumes:
       - ./data:/app/database
