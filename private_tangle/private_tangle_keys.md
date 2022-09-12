@@ -32,7 +32,7 @@ token bech32 address with `tst` HRP:   tst1qqweu75ldpyann5jsthqsa6m0thx4tmqxncj6
 
 ## P2P Identities
 
-### Coordinator node
+### 1st node
 p2p private key:   1f46fad4f538a031d4f87f490f6bca4319dfd0307636a5759a22b5e8874bd608f9156ba976a12918c16a481c38c88a7b5351b769adc30390e93b6c0a63b09b79 <br>
 p2p public key:    f9156ba976a12918c16a481c38c88a7b5351b769adc30390e93b6c0a63b09b79 <br>
 p2p PeerID:        12D3KooWSagdVaCrS14GeJhM8CbQr41AW2PiYMgptTyAybCbQuEY

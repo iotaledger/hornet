@@ -12,9 +12,9 @@ are:
 1. `./bootstrap.sh` this will bootstrap your own private tangle by creating the genesis snapshot and required files.
    - _**Note:** If you are running this from inside the repository, you should run `./bootstrap.sh build` to re-build the docker images after any updates to the HORNET codebase (e.g. changing files or pulling git changes)_ 
 2. Run:
-   - `./run.sh` to run COO + 1 additional node.
-   - `./run.sh 3` to run COO + 2 additional nodes.
-   - `./run.sh 4` to run COO + 3 additional nodes.
+   - `./run.sh` to run 2 nodes + COO.
+   - `./run.sh 3` to run 3 nodes + COO.
+   - `./run.sh 4` to run 4 nodes + COO.
 
 3. `./cleanup.sh` to clean up all generated files and start over. 
 
