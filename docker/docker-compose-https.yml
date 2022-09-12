@@ -3,7 +3,7 @@ services:
 
   hornet:
     labels:
-      - "traefik.http.routers.hornet.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.hornet.rule=Host(`${HORNET_HOST}`)"
       - "traefik.http.routers.hornet.entrypoints=websecure"
       - "traefik.http.routers.hornet.tls=true"
       - "traefik.http.routers.hornet.tls.certresolver=myresolver"
