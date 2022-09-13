@@ -73,10 +73,6 @@ COMPOSE_FILE=docker-compose.yml:docker-compose-https.yml
 ACME_EMAIL=your-email@example.com
 
 HORNET_HOST=node.your-domain.com
-
-DASHBOARD_USERNAME=admin
-DASHBOARD_PASSWORD=0000000000000000000000000000000000000000000000000000000000000000
-DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
 ```
 
 * Replace `your-email@example.com` with the e-mail used for issuing a [Let's Encrypt](https://letsencrypt.org) SSL certificate.
@@ -84,12 +80,11 @@ DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
 
 #### 1.2 HTTP
 
-Create a file named `.env` add the following to the file:
+By default this setup will expose the Traefik reverse proxy on the default HTTP port 80.
+If you want to change the port to a different value you can create a file named  `.env` and add the following to e.g. expose it over port 9000:
 
 ```
-DASHBOARD_USERNAME=admin
-DASHBOARD_PASSWORD=0000000000000000000000000000000000000000000000000000000000000000
-DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
+HTTP_PORT=9000
 ```
 
 ### 2. Setup neighbors
@@ -121,7 +116,20 @@ Run the following command to generate a password hash and salt for the dashboard
 docker compose run hornet tool pwd-hash
 ```
 
+Create a file named `.env` if you did not create it already and add the following lines:
+
+```
+DASHBOARD_PASSWORD=0000000000000000000000000000000000000000000000000000000000000000
+DASHBOARD_SALT=0000000000000000000000000000000000000000000000000000000000000000
+```
+
 * Update the `DASHBOARD_PASSWORD` and `DASHBOARD_SALT` values in the `.env` file with the result of the previous command.
+
+If you want to change the default `admin` username, you can add this line to your `.env` file:
+
+```
+DASHBOARD_USERNAME=someotherusername
+```
 
 ## Run
 
@@ -156,6 +164,10 @@ After starting HORNET you will be able to access your node at the following endp
 - API: `http://localhost/api/routes`
 - Dashboard: `http://localhost/dashboard`
 - Grafana: `http://localhost/grafana`
+
+:::note
+   If you changed the default `HTTP_PORT` value, you will need to add the port to the urls.
+:::
 
 ### Displaying Log Output
 
