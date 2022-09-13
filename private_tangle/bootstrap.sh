@@ -26,26 +26,26 @@ if [[ $1 = "build" ]]; then
 fi
 
 # Create snapshot
-mkdir -p snapshots/coo
+mkdir -p snapshots/hornet-1
 if [[ "$OSTYPE" != "darwin"* ]]; then
   chown -R 65532:65532 snapshots
 fi
 docker compose run create-snapshots
 
-# Prepare database directory for coo
-mkdir -p privatedb/coo
+# Prepare database directory for hornet-1
+mkdir -p privatedb/hornet-1
 mkdir -p privatedb/state
 if [[ "$OSTYPE" != "darwin"* ]]; then
   chown -R 65532:65532 privatedb
 fi
 
-# Bootstrap network (create coo database, create genesis milestone, create coo state)
+# Bootstrap network (create hornet-1 database, create genesis milestone, create coo state)
 docker compose run bootstrap-network
 
 # Duplicate snapshot for all nodes
-cp -R snapshots/coo snapshots/hornet-2
-cp -R snapshots/coo snapshots/hornet-3
-cp -R snapshots/coo snapshots/hornet-4
+cp -R snapshots/hornet-1 snapshots/hornet-2
+cp -R snapshots/hornet-1 snapshots/hornet-3
+cp -R snapshots/hornet-1 snapshots/hornet-4
 if [[ "$OSTYPE" != "darwin"* ]]; then
   chown -R 65532:65532 snapshots
 fi

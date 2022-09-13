@@ -18,7 +18,7 @@ services:
       - "--protocolParametersPath=/app/protocol_parameters.json"
       - "--mintAddress=tst1qq2kvnu9pqzptkggrpqrvltvagccsh6aj2fkdhla7p3lrsy9dwhdzu5l2ye"
       - "--genesisAddresses=tst1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vlupxvxq2:1000000000000,tst1qqweu75ldpyann5jsthqsa6m0thx4tmqxncj6uqxf5q974pmqx30y5mcdp2:1000000000000"
-      - "--outputPath=/app/snapshots/coo/full_snapshot.bin"
+      - "--outputPath=/app/snapshots/hornet-1/full_snapshot.bin"
     profiles:
       - snapshots
 
@@ -35,8 +35,8 @@ services:
       - "COO_PRV_KEYS=651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c,0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"
     volumes:
       - ./config_private_tangle.json:/app/config_private_tangle.json:ro
-      - ./snapshots/coo:/app/snapshots
-      - ./privatedb/coo:/app/privatedb
+      - ./snapshots/hornet-1:/app/snapshots
+      - ./privatedb/hornet-1:/app/privatedb
       - ./privatedb/state:/app/state
     command:
       - "tool"
@@ -48,317 +48,9 @@ services:
     profiles:
       - bootstrap
 
-  inx-coordinator:
-    container_name: inx-coordinator
-    image: iotaledger/inx-coordinator:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.21
-    environment:
-      - "COO_PRV_KEYS=651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c,0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"
-    ports:
-      - "6021:6060/tcp"
-    volumes:
-      - ./privatedb/state:/app/state
-    command:
-      - "--inx.address=172.18.211.11:9029"
-      - "--coordinator.stateFilePath=state/coordinator.state"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.21:6060"
-    profiles:
-      - 2-nodes
-      - 3-nodes
-      - 4-nodes
-
-  inx-indexer:
-    container_name: inx-indexer
-    image: iotaledger/inx-indexer:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.22
-    restart: on-failure
-    ports:
-      - "9322:9311/tcp"
-      - "6022:6060/tcp"
-    volumes:
-      - ./privatedb/indexer:/app/database
-    command:
-      - "--inx.address=172.18.211.11:9029"
-      - "--restAPI.bindAddress=172.18.211.22:9091"
-      - "--prometheus.enabled=true"
-      - "--prometheus.bindAddress=172.18.211.22:9311"
-      - "--prometheus.goMetrics=false"
-      - "--prometheus.processMetrics=false"
-      - "--prometheus.restAPIMetrics=true"
-      - "--prometheus.inxMetrics=true"
-      - "--prometheus.promhttpMetrics=false"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.22:6060"
-    profiles:
-      - 2-nodes
-      - 3-nodes
-      - 4-nodes
-
-  inx-mqtt:
-    container_name: inx-mqtt
-    image: iotaledger/inx-mqtt:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.23
-    restart: on-failure
-    ports:
-      - "9323:9311/tcp"
-      - "6023:6060/tcp"
-    command:
-      - "--inx.address=172.18.211.11:9029"
-      - "--mqtt.websocket.bindAddress=172.18.211.23:1888"
-      - "--prometheus.enabled=true"
-      - "--prometheus.bindAddress=172.18.211.23:9311"
-      - "--prometheus.goMetrics=false"
-      - "--prometheus.mqttMetrics=true"
-      - "--prometheus.processMetrics=false"
-      - "--prometheus.promhttpMetrics=false"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.23:6060"
-    profiles:
-      - 2-nodes
-      - 3-nodes
-      - 4-nodes
-
-  inx-faucet:
-    container_name: inx-faucet
-    image: iotaledger/inx-faucet:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.24
-    restart: on-failure
-    ports:
-      - "8091:8091/tcp"
-      - "6024:6060/tcp"
-    environment:
-      - "FAUCET_PRV_KEY=887844b1e6bf9ca9e0b57584656add4370dbb49a8cb79e2e3032229f30fd80359e3df559ad0de8e5fa019b9ea46d1ee40879f3f3f74594a3306de9dfd43dcd25"
-    command:
-      - "--inx.address=172.18.211.11:9029"
-      - "--faucet.bindAddress=172.18.211.24:8091"
-      - "--faucet.amount=100000000000"
-      - "--faucet.smallAmount=10000000000"
-      - "--faucet.maxAddressBalance=200000000000"
-      - "--faucet.rateLimit.enabled=false"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.24:6060"
-    profiles:
-      - 2-nodes
-      - 3-nodes
-      - 4-nodes
-
-  inx-participation:
-    container_name: inx-participation
-    image: iotaledger/inx-participation:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.25
-    restart: on-failure
-    ports:
-      - "9892:9892/tcp"
-      - "6025:6060/tcp"
-    volumes:
-      - ./privatedb/participation:/app/database
-    command:
-      - "--inx.address=172.18.211.11:9029"
-      - "--restAPI.bindAddress=172.18.211.25:9892"
-      - "--participation.db.path=/app/database"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.25:6060"
-    profiles:
-      - 2-nodes
-      - 3-nodes
-      - 4-nodes
-
-  inx-spammer:
-    container_name: inx-spammer
-    image: iotaledger/inx-spammer:1.0.0-beta.8
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.26
-    restart: on-failure
-    ports:
-      - "9326:9311/tcp"
-      - "9092:9092/tcp"
-      - "6026:6060/tcp"
-    environment:
-      - "SPAMMER_MNEMONIC=reward addict anger tongue denial supply cattle lawn foot climb ask friend base spring ensure spike alien equal burst bitter crowd august ignore animal"
-    command:
-      - "--inx.address=172.18.211.11:9029"
-      - "--restAPI.bindAddress=172.18.211.26:9092"
-      - "--spammer.autostart=true"
-      - "--spammer.bpsRateLimit=50"
-      - "--spammer.cpuMaxUsage=0.0"
-      - "--spammer.workers=0"
-      - "--spammer.valueSpam.enabled=true"
-      - "--spammer.valueSpam.sendBasicOutput=true"
-      - "--spammer.valueSpam.collectBasicOutput=true"
-      - "--spammer.valueSpam.createAlias=true"
-      - "--spammer.valueSpam.destroyAlias=true"
-      - "--spammer.valueSpam.createFoundry=true"
-      - "--spammer.valueSpam.destroyFoundry=true"
-      - "--spammer.valueSpam.mintNativeToken=true"
-      - "--spammer.valueSpam.meltNativeToken=true"
-      - "--spammer.valueSpam.createNFT=true"
-      - "--spammer.valueSpam.destroyNFT=true"
-      - "--prometheus.enabled=true"
-      - "--prometheus.bindAddress=172.18.211.26:9311"
-      - "--prometheus.spammerMetrics=true"
-      - "--prometheus.goMetrics=false"
-      - "--prometheus.processMetrics=false"
-      - "--prometheus.promhttpMetrics=false"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.26:6060"
-    profiles:
-      - 2-nodes
-      - 3-nodes
-      - 4-nodes
-
-  inx-poi:
-    container_name: inx-poi
-    image: iotaledger/inx-poi:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.27
-    restart: on-failure
-    ports:
-      - "9687:9687/tcp"
-      - "6027:6060/tcp"
-    command:
-      - "--inx.address=172.18.211.11:9029"
-      - "--restAPI.bindAddress=172.18.211.27:9687"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.27:6060"
-    profiles:
-      - 2-nodes
-      - 3-nodes
-      - 4-nodes
-
-  inx-dashboard-1:
-    container_name: inx-dashboard-1
-    image: iotaledger/inx-dashboard:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.31
-    depends_on:
-      - hornet-1
-    restart: on-failure
-    ports:
-      - "9331:9311/tcp"
-      - "8011:8081/tcp"
-      - "6031:6060/tcp"
-    command:
-      - "--inx.address=172.18.211.11:9029"
-      - "--dashboard.bindAddress=172.18.211.31:8081"
-      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
-      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
-      - "--dashboard.auth.identityPrivateKey=1f46fad4f538a031d4f87f490f6bca4319dfd0307636a5759a22b5e8874bd608f9156ba976a12918c16a481c38c88a7b5351b769adc30390e93b6c0a63b09b79"
-      - "--prometheus.enabled=false"
-      - "--prometheus.bindAddress=172.18.211.31:9311"
-      - "--prometheus.goMetrics=false"
-      - "--prometheus.processMetrics=false"
-      - "--prometheus.promhttpMetrics=false"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.31:6060"
-    profiles:
-      - 2-nodes
-      - 3-nodes
-      - 4-nodes
-
-  inx-dashboard-2:
-    container_name: inx-dashboard-2
-    image: iotaledger/inx-dashboard:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.32
-    depends_on:
-      - hornet-2
-    restart: on-failure
-    ports:
-      - "9332:9311/tcp"
-      - "8012:8081/tcp"
-      - "6032:6060/tcp"
-    command:
-      - "--inx.address=172.18.211.12:9029"
-      - "--dashboard.bindAddress=172.18.211.32:8081"
-      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
-      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
-      - "--dashboard.auth.identityPrivateKey=a06b288ce7fc3b6f1e716f6f7d72050b53417aae4b305a68883550a3bb28597f254b082515a79391a7f13009b4133851a0c4d48e0e948809c3b46ff3e2500b4f"
-      - "--prometheus.enabled=false"
-      - "--prometheus.bindAddress=172.18.211.32:9311"
-      - "--prometheus.goMetrics=false"
-      - "--prometheus.processMetrics=false"
-      - "--prometheus.promhttpMetrics=false"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.32:6060"
-    profiles:
-      - 2-nodes
-      - 3-nodes
-      - 4-nodes
-
-  inx-dashboard-3:
-    container_name: inx-dashboard-3
-    image: iotaledger/inx-dashboard:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.33
-    depends_on:
-      - hornet-3
-    restart: on-failure
-    ports:
-      - "9333:9311/tcp"
-      - "8013:8081/tcp"
-      - "6033:6060/tcp"
-    command:
-      - "--inx.address=172.18.211.13:9029"
-      - "--dashboard.bindAddress=172.18.211.33:8081"
-      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
-      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
-      - "--dashboard.auth.identityPrivateKey=5126767a84e1ced849dbbf2be809fd40f90bcfb81bd0d3309e2e25e34f803bf265500854f1f0e8fd3c389cf7b6b59cfd422b9319f257e2a8d3a772973560acdd"
-      - "--prometheus.enabled=false"
-      - "--prometheus.bindAddress=172.18.211.33:9311"
-      - "--prometheus.goMetrics=false"
-      - "--prometheus.processMetrics=false"
-      - "--prometheus.promhttpMetrics=false"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.33:6060"
-    profiles:
-      - 3-nodes
-      - 4-nodes
-
-  inx-dashboard-4:
-    container_name: inx-dashboard-4
-    image: iotaledger/inx-dashboard:1.0.0-beta.7
-    networks:
-      peering_net:
-        ipv4_address: 172.18.211.34
-    depends_on:
-      - hornet-4
-    restart: on-failure
-    ports:
-      - "9334:9311/tcp"
-      - "8014:8081/tcp"
-      - "6034:6060/tcp"
-    command:
-      - "--inx.address=172.18.211.14:9029"
-      - "--dashboard.bindAddress=172.18.211.34:8081"
-      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
-      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
-      - "--dashboard.auth.identityPrivateKey=996dceaeddcb5fc21480646f38ac53c4f5668fd33f3c0bfecfd004861d4a9dc722355dabd7f31a1266423abcf6c1db6228eb8283deb55731915ed06bd2ca387e"
-      - "--prometheus.enabled=false"
-      - "--prometheus.bindAddress=172.18.211.34:9311"
-      - "--prometheus.goMetrics=false"
-      - "--prometheus.processMetrics=false"
-      - "--prometheus.promhttpMetrics=false"
-      - "--profiling.enabled=true"
-      - "--profiling.bindAddress=172.18.211.34:6060"
-    profiles:
-      - 4-nodes
-
+  #
+  # Nodes
+  #
   hornet-1:
     container_name: hornet-1
     build:
@@ -383,8 +75,8 @@ services:
       - ALL
     volumes:
       - ./config_private_tangle.json:/app/config_private_tangle.json:ro
-      - ./privatedb/coo:/app/privatedb
-      - ./snapshots/coo:/app/snapshots
+      - ./privatedb/hornet-1:/app/privatedb
+      - ./snapshots/hornet-1:/app/snapshots
     command:
       - "-c"
       - "config_private_tangle.json"
@@ -530,6 +222,336 @@ services:
       - "--prometheus.bindAddress=172.18.211.14:9311"
       - "--profiling.enabled=true"
       - "--profiling.bindAddress=172.18.211.14:6060"
+    profiles:
+      - 4-nodes
+
+  #
+  # INX
+  # 
+  inx-coordinator:
+    container_name: inx-coordinator
+    image: iotaledger/inx-coordinator:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.21
+    depends_on:
+      - hornet-1
+    environment:
+      - "COO_PRV_KEYS=651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c,0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"
+    ports:
+      - "6021:6060/tcp"
+    volumes:
+      - ./privatedb/state:/app/state
+    command:
+      - "--inx.address=172.18.211.11:9029"
+      - "--coordinator.stateFilePath=state/coordinator.state"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.21:6060"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-indexer:
+    container_name: inx-indexer
+    image: iotaledger/inx-indexer:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.22
+    depends_on:
+      - hornet-1
+    restart: on-failure
+    ports:
+      - "9322:9311/tcp"
+      - "6022:6060/tcp"
+    volumes:
+      - ./privatedb/indexer:/app/database
+    command:
+      - "--inx.address=172.18.211.11:9029"
+      - "--restAPI.bindAddress=172.18.211.22:9091"
+      - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=172.18.211.22:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.restAPIMetrics=true"
+      - "--prometheus.inxMetrics=true"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.22:6060"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-mqtt:
+    container_name: inx-mqtt
+    image: iotaledger/inx-mqtt:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.23
+    depends_on:
+      - hornet-1
+    restart: on-failure
+    ports:
+      - "9323:9311/tcp"
+      - "6023:6060/tcp"
+    command:
+      - "--inx.address=172.18.211.11:9029"
+      - "--mqtt.websocket.bindAddress=172.18.211.23:1888"
+      - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=172.18.211.23:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.mqttMetrics=true"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.23:6060"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-faucet:
+    container_name: inx-faucet
+    image: iotaledger/inx-faucet:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.24
+    depends_on:
+      - hornet-1
+      - inx-indexer
+    restart: on-failure
+    ports:
+      - "8091:8091/tcp"
+      - "6024:6060/tcp"
+    environment:
+      - "FAUCET_PRV_KEY=887844b1e6bf9ca9e0b57584656add4370dbb49a8cb79e2e3032229f30fd80359e3df559ad0de8e5fa019b9ea46d1ee40879f3f3f74594a3306de9dfd43dcd25"
+    command:
+      - "--inx.address=172.18.211.11:9029"
+      - "--faucet.bindAddress=172.18.211.24:8091"
+      - "--faucet.amount=100000000000"
+      - "--faucet.smallAmount=10000000000"
+      - "--faucet.maxAddressBalance=200000000000"
+      - "--faucet.rateLimit.enabled=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.24:6060"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-participation:
+    container_name: inx-participation
+    image: iotaledger/inx-participation:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.25
+    depends_on:
+      - hornet-1
+    restart: on-failure
+    ports:
+      - "9892:9892/tcp"
+      - "6025:6060/tcp"
+    volumes:
+      - ./privatedb/participation:/app/database
+    command:
+      - "--inx.address=172.18.211.11:9029"
+      - "--restAPI.bindAddress=172.18.211.25:9892"
+      - "--participation.db.path=/app/database"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.25:6060"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-spammer:
+    container_name: inx-spammer
+    image: iotaledger/inx-spammer:1.0.0-beta.8
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.26
+    depends_on:
+      - hornet-1
+      - inx-indexer
+    restart: on-failure
+    ports:
+      - "9326:9311/tcp"
+      - "9092:9092/tcp"
+      - "6026:6060/tcp"
+    environment:
+      - "SPAMMER_MNEMONIC=reward addict anger tongue denial supply cattle lawn foot climb ask friend base spring ensure spike alien equal burst bitter crowd august ignore animal"
+    command:
+      - "--inx.address=172.18.211.11:9029"
+      - "--restAPI.bindAddress=172.18.211.26:9092"
+      - "--spammer.autostart=true"
+      - "--spammer.bpsRateLimit=50"
+      - "--spammer.cpuMaxUsage=0.0"
+      - "--spammer.workers=0"
+      - "--spammer.valueSpam.enabled=true"
+      - "--spammer.valueSpam.sendBasicOutput=true"
+      - "--spammer.valueSpam.collectBasicOutput=true"
+      - "--spammer.valueSpam.createAlias=true"
+      - "--spammer.valueSpam.destroyAlias=true"
+      - "--spammer.valueSpam.createFoundry=true"
+      - "--spammer.valueSpam.destroyFoundry=true"
+      - "--spammer.valueSpam.mintNativeToken=true"
+      - "--spammer.valueSpam.meltNativeToken=true"
+      - "--spammer.valueSpam.createNFT=true"
+      - "--spammer.valueSpam.destroyNFT=true"
+      - "--prometheus.enabled=true"
+      - "--prometheus.bindAddress=172.18.211.26:9311"
+      - "--prometheus.spammerMetrics=true"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.26:6060"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-poi:
+    container_name: inx-poi
+    image: iotaledger/inx-poi:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.27
+    depends_on:
+      - hornet-1
+    restart: on-failure
+    ports:
+      - "9687:9687/tcp"
+      - "6027:6060/tcp"
+    command:
+      - "--inx.address=172.18.211.11:9029"
+      - "--restAPI.bindAddress=172.18.211.27:9687"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.27:6060"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-dashboard-1:
+    container_name: inx-dashboard-1
+    image: iotaledger/inx-dashboard:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.31
+    depends_on:
+      - hornet-1
+    restart: on-failure
+    ports:
+      - "9331:9311/tcp"
+      - "8011:8081/tcp"
+      - "6031:6060/tcp"
+    command:
+      - "--inx.address=172.18.211.11:9029"
+      - "--dashboard.bindAddress=172.18.211.31:8081"
+      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
+      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
+      - "--dashboard.auth.identityPrivateKey=1f46fad4f538a031d4f87f490f6bca4319dfd0307636a5759a22b5e8874bd608f9156ba976a12918c16a481c38c88a7b5351b769adc30390e93b6c0a63b09b79"
+      - "--prometheus.enabled=false"
+      - "--prometheus.bindAddress=172.18.211.31:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.31:6060"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-dashboard-2:
+    container_name: inx-dashboard-2
+    image: iotaledger/inx-dashboard:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.32
+    depends_on:
+      - hornet-2
+    restart: on-failure
+    ports:
+      - "9332:9311/tcp"
+      - "8012:8081/tcp"
+      - "6032:6060/tcp"
+    command:
+      - "--inx.address=172.18.211.12:9029"
+      - "--dashboard.bindAddress=172.18.211.32:8081"
+      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
+      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
+      - "--dashboard.auth.identityPrivateKey=a06b288ce7fc3b6f1e716f6f7d72050b53417aae4b305a68883550a3bb28597f254b082515a79391a7f13009b4133851a0c4d48e0e948809c3b46ff3e2500b4f"
+      - "--prometheus.enabled=false"
+      - "--prometheus.bindAddress=172.18.211.32:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.32:6060"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
+  inx-dashboard-3:
+    container_name: inx-dashboard-3
+    image: iotaledger/inx-dashboard:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.33
+    depends_on:
+      - hornet-3
+    restart: on-failure
+    ports:
+      - "9333:9311/tcp"
+      - "8013:8081/tcp"
+      - "6033:6060/tcp"
+    command:
+      - "--inx.address=172.18.211.13:9029"
+      - "--dashboard.bindAddress=172.18.211.33:8081"
+      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
+      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
+      - "--dashboard.auth.identityPrivateKey=5126767a84e1ced849dbbf2be809fd40f90bcfb81bd0d3309e2e25e34f803bf265500854f1f0e8fd3c389cf7b6b59cfd422b9319f257e2a8d3a772973560acdd"
+      - "--prometheus.enabled=false"
+      - "--prometheus.bindAddress=172.18.211.33:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.33:6060"
+    profiles:
+      - 3-nodes
+      - 4-nodes
+
+  inx-dashboard-4:
+    container_name: inx-dashboard-4
+    image: iotaledger/inx-dashboard:1.0.0-beta.7
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.34
+    depends_on:
+      - hornet-4
+    restart: on-failure
+    ports:
+      - "9334:9311/tcp"
+      - "8014:8081/tcp"
+      - "6034:6060/tcp"
+    command:
+      - "--inx.address=172.18.211.14:9029"
+      - "--dashboard.bindAddress=172.18.211.34:8081"
+      - "--dashboard.auth.passwordHash=577eb97f8faf2af47ff957b00827d6bfe9d05b810981e3073dc42553505282c1"
+      - "--dashboard.auth.passwordSalt=e5d8d0bd3bb9723236177b4713a11580c55b69a51e7055dd11fa1dad3b8f6d6c"
+      - "--dashboard.auth.identityPrivateKey=996dceaeddcb5fc21480646f38ac53c4f5668fd33f3c0bfecfd004861d4a9dc722355dabd7f31a1266423abcf6c1db6228eb8283deb55731915ed06bd2ca387e"
+      - "--prometheus.enabled=false"
+      - "--prometheus.bindAddress=172.18.211.34:9311"
+      - "--prometheus.goMetrics=false"
+      - "--prometheus.processMetrics=false"
+      - "--prometheus.promhttpMetrics=false"
+      - "--profiling.enabled=true"
+      - "--profiling.bindAddress=172.18.211.34:6060"
     profiles:
       - 4-nodes
 
