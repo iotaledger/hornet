@@ -17,7 +17,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.hornet.service=hornet"
-      - "traefik.http.routers.hornet.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.hornet.rule=PathPrefix(`/`)"
       - "traefik.http.routers.hornet.entrypoints=web"
       - "traefik.http.services.hornet.loadbalancer.server.port=14265"
 
