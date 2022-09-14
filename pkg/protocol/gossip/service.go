@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/core/events"
@@ -176,7 +175,6 @@ type Service struct {
 	connectedChan       chan *connectionmsg
 	closeStreamChan     chan *closestreammsg
 	disconnectedChan    chan *connectionmsg
-	streamClosedChan    chan *streamclosedmsg
 	relationUpdatedChan chan *relationupdatedmsg
 	streamReqChan       chan *streamreqmsg
 	forEachChan         chan *foreachmsg
@@ -224,7 +222,6 @@ func NewService(
 		connectedChan:       make(chan *connectionmsg, 10),
 		closeStreamChan:     make(chan *closestreammsg, 10),
 		disconnectedChan:    make(chan *connectionmsg, 10),
-		streamClosedChan:    make(chan *streamclosedmsg, 10),
 		relationUpdatedChan: make(chan *relationupdatedmsg, 10),
 		streamReqChan:       make(chan *streamreqmsg, 10),
 		forEachChan:         make(chan *foreachmsg, 10),
@@ -304,16 +301,10 @@ func (s *Service) Start(ctx context.Context) {
 		s.inboundStreamChan <- stream
 	})
 
-	// manage libp2p network events
-	s.host.Network().Notify((*netNotifiee)(s))
-
 	s.eventLoop(ctx)
 
 	// libp2p stream handler
 	s.host.RemoveStreamHandler(s.protocol)
-
-	// de-register libp2p network events
-	s.host.Network().StopNotify((*netNotifiee)(s))
 
 	s.detachEvents()
 	s.peeringMngWP.Stop()
@@ -337,8 +328,6 @@ drainLoop:
 			disconnectMsg.back <- nil
 
 		case <-s.disconnectedChan:
-
-		case <-s.streamClosedChan:
 
 		case <-s.relationUpdatedChan:
 
@@ -367,11 +356,6 @@ type closestreammsg struct {
 type streamreqmsg struct {
 	peerID peer.ID
 	back   chan *Protocol
-}
-
-type streamclosedmsg struct {
-	peerID peer.ID
-	stream network.Stream
 }
 
 type relationupdatedmsg struct {
@@ -407,11 +391,6 @@ func (s *Service) eventLoop(ctx context.Context) {
 
 		case disconnectedMsg := <-s.disconnectedChan:
 			if err := s.deregisterProtocol(disconnectedMsg.peer.ID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
-				s.Events.Error.Trigger(err)
-			}
-
-		case streamClosedMsg := <-s.streamClosedChan:
-			if err := s.deregisterProtocol(streamClosedMsg.peerID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
 				s.Events.Error.Trigger(err)
 			}
 
@@ -728,23 +707,4 @@ func (s *Service) detachEvents() {
 	s.Events.ProtocolTerminated.Detach(s.onGossipServiceProtocolTerminated)
 	s.Events.InboundStreamCanceled.Detach(s.onGossipServiceInboundStreamCanceled)
 	s.Events.Error.Detach(s.onGossipServiceError)
-}
-
-// lets Service implement network.Notifiee in order to automatically
-// clean up ongoing reset streams.
-type netNotifiee Service
-
-func (m *netNotifiee) Listen(net network.Network, multiaddr multiaddr.Multiaddr)      {}
-func (m *netNotifiee) ListenClose(net network.Network, multiaddr multiaddr.Multiaddr) {}
-func (m *netNotifiee) Connected(net network.Network, conn network.Conn)               {}
-func (m *netNotifiee) Disconnected(net network.Network, conn network.Conn)            {}
-func (m *netNotifiee) OpenedStream(net network.Network, stream network.Stream)        {}
-func (m *netNotifiee) ClosedStream(net network.Network, stream network.Stream) {
-	if stream.Protocol() != m.protocol {
-		return
-	}
-	if m.stopped.IsSet() {
-		return
-	}
-	m.streamClosedChan <- &streamclosedmsg{peerID: stream.Conn().RemotePeer(), stream: stream}
 }
