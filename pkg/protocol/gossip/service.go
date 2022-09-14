@@ -562,6 +562,11 @@ func (s *Service) deregisterProtocol(peerID peer.ID) error {
 		return fmt.Errorf("unable to cleanly reset stream to %s: %w", peerID, err)
 	}
 
+	// Drop connection to peer since we no longer have a protocol stream to it
+	if conn := proto.Stream.Conn(); conn != nil {
+		return conn.Close()
+	}
+
 	return nil
 }
 
