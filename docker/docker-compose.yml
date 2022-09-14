@@ -52,7 +52,7 @@ services:
       - "--metrics.prometheus=true"
       - "--entrypoints.web.address=:80"
     ports:
-      - "80:80/tcp"
+      - "${HTTP_PORT:-80}:80/tcp"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./data/letsencrypt:/letsencrypt"
@@ -209,8 +209,8 @@ services:
       - "--inx.address=hornet:9029"
       - "--dashboard.bindAddress=inx-dashboard:8081"
       - "--dashboard.auth.identityFilePath=/app/database/dashboard/identity.key"
-      - "--dashboard.auth.username=${DASHBOARD_USERNAME}"
-      - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD}"
-      - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT}"
+      - "--dashboard.auth.username=${DASHBOARD_USERNAME:-admin}"
+      - "--dashboard.auth.passwordHash=${DASHBOARD_PASSWORD:-0000000000000000000000000000000000000000000000000000000000000000}"
+      - "--dashboard.auth.passwordSalt=${DASHBOARD_SALT:-0000000000000000000000000000000000000000000000000000000000000000}"
       - "--prometheus.enabled=true"
       - "--prometheus.bindAddress=inx-dashboard:9312"

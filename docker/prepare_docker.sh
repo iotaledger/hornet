@@ -1,8 +1,7 @@
 #!/bin/bash
 
 if [ ! -f .env ]; then
-  echo ".env file missing. Please read README.md"
-  exit 0
+  echo "No .env file found. Please see README.md for more details"
 fi
 
 if [[ "$OSTYPE" != "darwin"* && "$EUID" -ne 0 ]]; then
