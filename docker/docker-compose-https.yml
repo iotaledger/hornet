@@ -37,7 +37,7 @@ services:
 
   grafana:
     labels:
-      - "traefik.http.routers.grafana.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.rule=Host(`${HORNET_HOST}`) && (Path(`/grafana`) || PathPrefix(`/grafana/`))"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
     environment:
@@ -51,6 +51,6 @@ services:
 
   inx-dashboard:
     labels:
-      - "traefik.http.routers.hornet-dashboard.rule=Host(`${HORNET_HOST}`) && PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.hornet-dashboard.rule=Host(`${HORNET_HOST}`) && (Path(`/dashboard`) || `PathPrefix(`/dashboard/`))"
       - "traefik.http.routers.hornet-dashboard.entrypoints=websecure"
       - "traefik.http.routers.hornet-dashboard.tls=true"
