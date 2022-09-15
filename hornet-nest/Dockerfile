@@ -1,6 +1,6 @@
 FROM iotaledger/hornet:2.0.0-beta.8 AS hornet
 FROM iotaledger/inx-indexer:1.0.0-beta.7 AS indexer
-FROM iotaledger/inx-faucet:1.0.0-beta.7 AS faucet
+FROM iotaledger/inx-faucet:1.0.0-beta.8 AS faucet
 FROM iotaledger/inx-dashboard:1.0.0-beta.7 AS dashboard
 FROM iotaledger/inx-mqtt:1.0.0-beta.7 AS mqtt
 FROM iotaledger/inx-spammer:1.0.0-beta.8 AS spammer
