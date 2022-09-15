@@ -47,6 +47,6 @@ services:
 
   inx-dashboard:
     labels:
-      - "traefik.http.routers.hornet-dashboard.rule=Host(`${HORNET_HOST}`) && (Path(`/dashboard`) || `PathPrefix(`/dashboard/`))"
+      - "traefik.http.routers.hornet-dashboard.rule=Host(`${HORNET_HOST}`) && (Path(`/dashboard`) || PathPrefix(`/dashboard/`))"
       - "traefik.http.routers.hornet-dashboard.entrypoints=websecure"
       - "traefik.http.routers.hornet-dashboard.tls=true"
