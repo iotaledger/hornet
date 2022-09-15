@@ -7,10 +7,6 @@ services:
       - "traefik.http.routers.hornet.entrypoints=websecure"
       - "traefik.http.routers.hornet.tls=true"
       - "traefik.http.routers.hornet.tls.certresolver=myresolver"
-      - "traefik.http.routers.hornet.middlewares=redirect-dashboard"
-      - "traefik.http.middlewares.redirect-dashboard.redirectregex.regex=^https:\\/\\/([^\\/]+)\\/?$$"
-      - "traefik.http.middlewares.redirect-dashboard.redirectregex.replacement=https://$$1/dashboard/"
-      - "traefik.http.middlewares.redirect-dashboard.redirectregex.permanent=true"
 
 ##################################################################
 #  Reverse Proxy and SSL                                         #
