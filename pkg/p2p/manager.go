@@ -1066,5 +1066,3 @@ func (m *netNotifiee) Disconnected(net network.Network, conn network.Conn) {
 	}
 	m.disconnectedChan <- &disconnectmsg{net: net, conn: conn, reason: errors.New("connection closed by libp2p network event")}
 }
-func (m *netNotifiee) OpenedStream(net network.Network, stream network.Stream) {}
-func (m *netNotifiee) ClosedStream(net network.Network, stream network.Stream) {}
