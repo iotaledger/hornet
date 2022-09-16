@@ -2,7 +2,7 @@ version: '3'
 services:
   inx-indexer:
     container_name: inx-indexer
-    image: iotaledger/inx-indexer:1.0.0-beta.7
+    image: iotaledger/inx-indexer:1.0-beta
     restart: on-failure
     volumes:
       - ./testnet/indexer:/app/database
@@ -12,7 +12,7 @@ services:
 
   inx-mqtt:
     container_name: inx-mqtt
-    image: iotaledger/inx-mqtt:1.0.0-beta.7
+    image: iotaledger/inx-mqtt:1.0-beta
     restart: on-failure
     command:
       - "--inx.address=hornet:9029"
@@ -20,7 +20,7 @@ services:
 
   inx-participation:
     container_name: inx-participation
-    image: iotaledger/inx-participation:1.0.0-beta.7
+    image: iotaledger/inx-participation:1.0-beta
     restart: on-failure
     volumes:
       - ./testnet/participation:/app/database
@@ -30,7 +30,7 @@ services:
 
   inx-dashboard:
     container_name: inx-dashboard
-    image: iotaledger/inx-dashboard:1.0.0-beta.7
+    image: iotaledger/inx-dashboard:1.0-beta
     restart: on-failure
     ports:
       - "8081:8081/tcp"
