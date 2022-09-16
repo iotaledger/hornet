@@ -123,7 +123,7 @@ services:
 
   inx-indexer:
     container_name: inx-indexer
-    image: iotaledger/inx-indexer:1.0.0-beta.7
+    image: iotaledger/inx-indexer:1.0-beta
     stop_grace_period: 5m
     restart: unless-stopped
     depends_on:
@@ -139,7 +139,7 @@ services:
 
   inx-mqtt:
     container_name: inx-mqtt
-    image: iotaledger/inx-mqtt:1.0.0-beta.7
+    image: iotaledger/inx-mqtt:1.0-beta
     stop_grace_period: 5m
     restart: unless-stopped
     depends_on:
@@ -152,7 +152,7 @@ services:
 
   inx-participation:
     container_name: inx-participation
-    image: iotaledger/inx-participation:1.0.0-beta.7
+    image: iotaledger/inx-participation:1.0-beta
     stop_grace_period: 5m
     restart: unless-stopped
     depends_on:
@@ -170,7 +170,7 @@ services:
 
   inx-spammer:
     container_name: inx-spammer
-    image: iotaledger/inx-spammer:1.0.0-beta.8
+    image: iotaledger/inx-spammer:1.0-beta
     stop_grace_period: 5m
     restart: unless-stopped
     depends_on:
@@ -184,7 +184,7 @@ services:
 
   inx-poi:
     container_name: inx-poi
-    image: iotaledger/inx-poi:1.0.0-beta.7
+    image: iotaledger/inx-poi:1.0-beta
     stop_grace_period: 5m
     restart: unless-stopped
     depends_on:
@@ -195,7 +195,7 @@ services:
 
   inx-dashboard:
     container_name: inx-dashboard
-    image: iotaledger/inx-dashboard:1.0.0-beta.7
+    image: iotaledger/inx-dashboard:1.0-beta
     stop_grace_period: 5m
     restart: unless-stopped
     depends_on:

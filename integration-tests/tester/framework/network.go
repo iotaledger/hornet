@@ -308,16 +308,10 @@ func (n *Network) Shutdown() error {
 		}
 	}
 
-	// save exit status of containers to check at end of shutdown process
+	// save exit status of containers to check at end of shutdown process.
+	// we ignore the INXExtensions here, since they will exit with errors if INX disconnects.
 	exitStatus := make(map[string]int, len(n.Nodes))
 	for _, p := range n.Nodes {
-		var err error
-		exitStatus[p.Name], err = p.ExitStatus()
-		if err != nil {
-			return err
-		}
-	}
-	for _, p := range n.INXExtensions {
 		var err error
 		exitStatus[p.Name], err = p.ExitStatus()
 		if err != nil {
