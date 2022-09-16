@@ -3,8 +3,27 @@
 All notable changes to this project will be documented in this file.
 
 :warning: :warning: :warning:
-This release contains a breaking change in the transaction validation, so you need to update your nodes ASAP to participate in the testnet.
+The way the docker setup works was changed. Please perform a fresh install of the docker setup.
 :warning: :warning: :warning:
+
+## [2.0.0-beta.9] - 16.09.2022
+
+### Added
+- Add additional docker tags for pre-releases (#1744)
+
+### Changed
+- Separate docker HTTP and HTTPS setups (#1745)
+- Cleanup private tangle (#1746)
+- Bump github.com/iotaledger/hive.go/core (#1747)
+- Bump github.com/iotaledger/inx-app from 1.0.0-beta.12 to 1.0.0-beta.13 (#1748)
+- Add defaults to docker env variables to that no .env file is required (#1751)
+- Use new 1.0-beta tags for inx containers (#1756)
+- Feat/docker fixes (#1754)
+
+### Fixed
+- Fixed /health endpoint when using HTTP docker setup (#1750)
+- Fix stuck peer (#1752)
+
 
 ## [2.0.0-beta.8] - 09.09.2022
 
@@ -19,7 +38,7 @@ This release contains a breaking change in the transaction validation, so you ne
 - Adapt to latest hive.go version and update modules (#1735)
 - Updated INX dependencies and adapt to changed params (#1724)
 
-## Fixed
+### Fixed
 - Fixing internal private tangle INX ports to use the default 9029 instead of the exposed one
 - Fix order of genesis addresses in snap-gen tool (#1722) 
 - Fix start index of db-verify loop (#1728)
@@ -43,7 +62,7 @@ This release contains a breaking change in the transaction validation, so you ne
 - Change private tangle ports and expose INX of all nodes (#1705)
 - Enforce lowercase for Features in API info endpoint (#1714)
 
-## Fixed
+### Fixed
 - Do not pass build flag to docker compose
 - Fix several bugs in hornet tools (#1700)
 - Fix INX deadlock (#1707) 
@@ -51,7 +70,7 @@ This release contains a breaking change in the transaction validation, so you ne
 
 ## [2.0.0-beta.6] - 16.08.2022
 
-## Removed
+### Removed
     - Remove chronicle compatibility mode in toolset (#1678) 
 
 ### Changed
