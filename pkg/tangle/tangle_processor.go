@@ -244,13 +244,16 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 			// otherwise clients might successfully attach blocks to the node and reuse them as parents
 			// in further transactions, knowing that these blocks are solid, but for the node itself they might not be solid yet,
 			// because the asynchronous futureConeSolidifierWorkerPool did not process the block yet.
-			_, newlySolid, err := checkBlockSolid(t.storage, cachedBlock.CachedMetadata()) // meta pass +1
-			if err == nil && newlySolid {
-				t.markBlockAsSolid(cachedBlock.CachedMetadata()) // meta pass +1
-			}
+			if isSolid, newlySolid, err := checkBlockSolid(t.storage, cachedBlock.CachedMetadata()); err == nil { // meta pass +1
+				if newlySolid {
+					t.markBlockAsSolid(cachedBlock.CachedMetadata()) // meta pass +1
+				}
 
-			// try solidify the future cone of the block
-			t.futureConeSolidifierWorkerPool.Submit(cachedBlock.CachedMetadata()) // meta pass +1
+				if isSolid {
+					// try to solidify the future cone of the block
+					t.futureConeSolidifierWorkerPool.Submit(cachedBlock.CachedMetadata()) // meta pass +1
+				}
+			}
 		}
 
 		t.Events.ReceivedNewBlock.Trigger(cachedBlock, latestMilestoneIndex, confirmedMilestoneIndex)
