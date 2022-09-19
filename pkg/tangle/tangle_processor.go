@@ -240,7 +240,16 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 		}
 
 		if syncState.NodeAlmostSynced {
-			// try to solidify the block and its future cone
+			// we need to solidify the block before marking "blockProcessedSyncEvent" as done,
+			// otherwise clients might successfully attach blocks to the node and reuse them as parents
+			// in further transactions, knowing that these blocks are solid, but for the node itself they might not be solid yet,
+			// because the asynchronous futureConeSolidifierWorkerPool did not process the block yet.
+			_, newlySolid, err := checkBlockSolid(t.storage, cachedBlock.CachedMetadata()) // meta pass +1
+			if err == nil && newlySolid {
+				t.markBlockAsSolid(cachedBlock.CachedMetadata()) // meta pass +1
+			}
+
+			// try solidify the future cone of the block
 			t.futureConeSolidifierWorkerPool.Submit(cachedBlock.CachedMetadata()) // meta pass +1
 		}
 
