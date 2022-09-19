@@ -222,8 +222,20 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 		}
 
 		if t.syncManager.IsNodeAlmostSynced() {
-			// try to solidify the message and its future cone
-			t.futureConeSolidifierWorkerPool.Submit(cachedMsg.CachedMetadata()) // meta pass +1
+			// we need to solidify the message before marking "messageProcessedSyncEvent" as done,
+			// otherwise clients might successfully attach messages to the node and reuse them as parents
+			// in further transactions, knowing that these messages are solid, but for the node itself they might not be solid yet,
+			// because the asynchronous futureConeSolidifierWorkerPool did not process the message yet.
+			if isSolid, newlySolid, err := checkMessageSolid(t.storage, cachedMsg.CachedMetadata()); err == nil { // meta pass +1
+				if newlySolid {
+					t.markMessageAsSolid(cachedMsg.CachedMetadata()) // meta pass +1
+				}
+
+				if isSolid {
+					// try to solidify the future cone of the message
+					t.futureConeSolidifierWorkerPool.Submit(cachedMsg.CachedMetadata()) // meta pass +1
+				}
+			}
 		}
 
 		t.Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, confirmedMilestoneIndex)
