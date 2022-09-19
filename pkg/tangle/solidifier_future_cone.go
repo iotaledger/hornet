@@ -77,6 +77,46 @@ func (s *FutureConeSolidifier) SolidifyDirectChildrenWithMetadataMemcache(ctx co
 	return solidifyDirectChildren(ctx, memcachedTraverserStorage, s.markBlockAsSolidFunc, blockIDs)
 }
 
+// checkBlockSolid checks if the block is solid by checking the solid state of the direct parents.
+func checkBlockSolid(dbStorage dag.TraverserStorage, cachedBlockMeta *storage.CachedMetadata) (isSolid bool, newlySolid bool, err error) {
+	defer cachedBlockMeta.Release(true) // meta -1
+
+	if cachedBlockMeta.Metadata().IsSolid() {
+		return true, false, nil
+	}
+
+	// check if current block is solid by checking the solidity of its parents
+	for _, parentBlockID := range cachedBlockMeta.Metadata().Parents() {
+		contains, err := dbStorage.SolidEntryPointsContain(parentBlockID)
+		if err != nil {
+			return false, false, err
+		}
+		if contains {
+			// Ignore solid entry points (snapshot milestone included)
+			continue
+		}
+
+		cachedBlockMetaParent, err := dbStorage.CachedBlockMetadata(parentBlockID) // meta +1
+		if err != nil {
+			return false, false, err
+		}
+		if cachedBlockMetaParent == nil {
+			// parent is missing => block is not solid
+			return false, false, nil
+		}
+
+		if !cachedBlockMetaParent.Metadata().IsSolid() {
+			// parent is not solid => block is not solid
+			cachedBlockMetaParent.Release(true) // meta -1
+
+			return false, false, nil
+		}
+		cachedBlockMetaParent.Release(true) // meta -1
+	}
+
+	return true, true, nil
+}
+
 // solidifyFutureCone updates the solidity of the future cone (blocks approving the given blocks).
 // We keep on walking the future cone, if a block became newly solid during the walk.
 func solidifyFutureCone(
@@ -98,47 +138,18 @@ func solidifyFutureCone(
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 
-				if cachedBlockMeta.Metadata().IsSolid() {
-					// do not walk the future cone if the current block is already solid, except it was the startTx
-					return startBlockID == cachedBlockMeta.Metadata().BlockID(), nil
+				isSolid, newlySolid, err := checkBlockSolid(traverserStorage, cachedBlockMeta.Retain())
+				if err != nil {
+					return false, err
 				}
 
-				// check if current block is solid by checking the solidity of its parents
-				for _, parentBlockID := range cachedBlockMeta.Metadata().Parents() {
-					contains, err := traverserStorage.SolidEntryPointsContain(parentBlockID)
-					if err != nil {
-						return false, err
-					}
-					if contains {
-						// Ignore solid entry points (snapshot milestone included)
-						continue
-					}
-
-					cachedBlockMetaParent, err := traverserStorage.CachedBlockMetadata(parentBlockID) // meta +1
-					if err != nil {
-						return false, err
-					}
-					if cachedBlockMetaParent == nil {
-						// parent is missing => block is not solid
-						// do not walk the future cone if the current block is not solid
-						return false, nil
-					}
-
-					if !cachedBlockMetaParent.Metadata().IsSolid() {
-						// parent is not solid => block is not solid
-						// do not walk the future cone if the current block is not solid
-						cachedBlockMetaParent.Release(true) // meta -1
-
-						return false, nil
-					}
-					cachedBlockMetaParent.Release(true) // meta -1
+				if newlySolid {
+					// mark current block as solid
+					markBlockAsSolidFunc(cachedBlockMeta.Retain()) // meta pass +1
 				}
 
-				// mark current block as solid
-				markBlockAsSolidFunc(cachedBlockMeta.Retain()) // meta pass +1
-
-				// walk the future cone since the block got newly solid
-				return true, nil
+				// only walk the future cone if the current block got newly solid or it is solid and it was the startTx
+				return newlySolid || (isSolid && startBlockID == cachedBlockMeta.Metadata().BlockID()), nil
 			},
 			// consumer
 			// no need to consume here
@@ -172,49 +183,22 @@ func solidifyDirectChildren(
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 
-				if cachedBlockMeta.Metadata().IsSolid() {
-					// we never walk the future cone, except it was the startTx and it was solid
-					return startBlockID == cachedBlockMeta.Metadata().BlockID(), nil
+				isSolid, newlySolid, err := checkBlockSolid(traverserStorage, cachedBlockMeta.Retain())
+				if err != nil {
+					return false, err
 				}
 
-				if startBlockID == cachedBlockMeta.Metadata().BlockID() {
+				if !isSolid && startBlockID == cachedBlockMeta.Metadata().BlockID() {
 					return false, fmt.Errorf("starting block for solidifyDirectChildren was not solid: %s", startBlockID.ToHex())
 				}
 
-				// check if current block is solid by checking the solidity of its parents
-				for _, parentBlockID := range cachedBlockMeta.Metadata().Parents() {
-					contains, err := traverserStorage.SolidEntryPointsContain(parentBlockID)
-					if err != nil {
-						return false, err
-					}
-					if contains {
-						// Ignore solid entry points (snapshot milestone included)
-						continue
-					}
-
-					cachedBlockMetaParent, err := traverserStorage.CachedBlockMetadata(parentBlockID) // meta +1
-					if err != nil {
-						return false, err
-					}
-					if cachedBlockMetaParent == nil {
-						// parent is missing => block is not solid
-						return false, nil
-					}
-
-					if !cachedBlockMetaParent.Metadata().IsSolid() {
-						// parent is not solid => block is not solid
-						cachedBlockMetaParent.Release(true) // meta -1
-
-						return false, nil
-					}
-					cachedBlockMetaParent.Release(true) // meta -1
+				if newlySolid {
+					// mark current block as solid
+					markBlockAsSolidFunc(cachedBlockMeta.Retain()) // meta pass +1
 				}
 
-				// mark current block as solid
-				markBlockAsSolidFunc(cachedBlockMeta.Retain()) // meta pass +1
-
-				// never walk the future cone
-				return false, nil
+				// only walk the future cone if the current block is solid and it was the startTx
+				return isSolid && startBlockID == cachedBlockMeta.Metadata().BlockID(), nil
 			},
 			// consumer
 			// no need to consume here
