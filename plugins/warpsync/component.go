@@ -60,7 +60,7 @@ type dependencies struct {
 
 func configure() error {
 	warpSync = gossip.NewWarpSync(ParamsWarpSync.AdvancementRange)
-	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.SyncManager, deps.Requester, true)
+	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(Plugin.Daemon().ContextStopped(), deps.Storage, deps.SyncManager, deps.Requester, true)
 	configureEvents()
 
 	return nil
@@ -101,8 +101,8 @@ func configureEvents() {
 	onMilestoneSolidificationFailed = events.NewClosure(func(msIndex iotago.MilestoneIndex) {
 		if warpSync.CurrentCheckpoint != 0 && warpSync.CurrentCheckpoint < msIndex {
 			// rerequest since milestone requests could have been lost
-			Plugin.LogInfof("Requesting missing milestones %d - %d", msIndex, msIndex+warpSync.AdvancementRange)
-			warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), warpSync.AdvancementRange, nil)
+			_, msIndexStart, msIndexEnd := warpSyncMilestoneRequester.RequestMilestoneRange(warpSync.AdvancementRange)
+			Plugin.LogInfof("Requesting missing milestones %d - %d", msIndexStart, msIndexEnd)
 		}
 	})
 
@@ -112,7 +112,7 @@ func configureEvents() {
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), advRange, warpSyncMilestoneRequester.RequestMissingMilestoneParents, oldCheckpoint)
+		_, _, _ = warpSyncMilestoneRequester.RequestMilestoneRange(advRange, oldCheckpoint)
 	})
 
 	onWarpSyncTargetUpdated = events.NewClosure(func(checkpoint iotago.MilestoneIndex, newTarget iotago.MilestoneIndex) {
@@ -125,7 +125,7 @@ func configureEvents() {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
 
-		msRequested := warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), advRange, warpSyncMilestoneRequester.RequestMissingMilestoneParents)
+		msRequested, _, _ := warpSyncMilestoneRequester.RequestMilestoneRange(advRange)
 		// if the amount of requested milestones doesn't correspond to the range,
 		// it means we already had the milestones in the database, which suggests
 		// that we should manually kick start the milestone solidifier.
