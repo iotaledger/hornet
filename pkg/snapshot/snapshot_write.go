@@ -347,6 +347,7 @@ func (s *Manager) readSnapshotHeaderFromFullSnapshotFile() (*FullSnapshotHeader,
 }
 
 // creates a snapshot file by streaming data from the database into a snapshot file.
+// the ledger needs to be read locked the whole time to stream the current ledger state into the full snapshot.
 func (s *Manager) createFullSnapshotWithoutLocking(
 	ctx context.Context,
 	targetIndex iotago.MilestoneIndex,
@@ -499,6 +500,10 @@ func (s *Manager) createFullSnapshotWithoutLocking(
 }
 
 // creates a snapshot file by streaming data from the database into a snapshot file.
+// the ledger doesn't need to be read locked to stream the changes into the delta snapshot,
+// because we don't access the latest ledger state, but only the milestone diffs.
+// pruning is also not triggered while the snapshot is ongoing,
+// so there is no risk that milestone diffs are pruned in the meantime.
 func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetIndex iotago.MilestoneIndex) error {
 
 	s.LogInfof("creating %s snapshot for targetIndex %d", snapshotNames[Delta], targetIndex)
@@ -508,11 +513,6 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 	defer s.setIsSnapshotting(false)
 
 	timeStart := time.Now()
-
-	s.utxoManager.ReadLockLedger()
-	defer s.utxoManager.ReadUnlockLedger()
-
-	timeReadLockLedger := time.Now()
 
 	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		// do not create the snapshot if the node was shut down
@@ -531,8 +531,8 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 		false,
 		s.solidEntryPointCheckThresholdPast,
 		s.solidEntryPointCheckThresholdFuture,
-		// if we write the snapshot state to the database, the newly generated snapshot index must be greater than the last snapshot index
-		true); err != nil {
+		true, // if we write the snapshot state to the database, the newly generated snapshot index must be greater than the last snapshot index
+	); err != nil {
 		return err
 	}
 
@@ -639,8 +639,7 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 	s.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	timeSnapshotMilestoneIndexChanged = time.Now()
 
-	snapshotMetrics.DurationReadLockLedger = timeReadLockLedger.Sub(timeStart)
-	snapshotMetrics.DurationInit = timeInit.Sub(timeReadLockLedger)
+	snapshotMetrics.DurationInit = timeInit.Sub(timeStart)
 	snapshotMetrics.DurationSetSnapshotInfo = timeSetSnapshotInfo.Sub(timeStreamSnapshotData)
 	snapshotMetrics.DurationSnapshotMilestoneIndexChanged = timeSnapshotMilestoneIndexChanged.Sub(timeSetSnapshotInfo)
 	snapshotMetrics.DurationTotal = time.Since(timeStart)
