@@ -52,6 +52,16 @@ To run the private tangle you should run:
 This will start the private tangle using a coordinator node and second node.
 You can use `./run.sh 3` or `./run.sh 4` to start the private tangle with additional nodes instead.
 
+## Start the coordinator in case of failure
+
+The `inx-coordinator` container always starts together with the other containers if you execute the `./run.sh` command.
+It may happen that the node startup takes longer than expected due to bigger databases or slow host machines. In that case the `inx-coordinator` container shuts down and won't be restarted automatically for security reasons.
+
+If you want to restart the `inx-coordinator` separately, run the following command:
+```sh
+docker compose start inx-coordinator
+```
+
 ## Access your network
 
 All the information required to access the private tangle is contained inside the `README.md`.

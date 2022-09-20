@@ -78,3 +78,13 @@ The nodes will then be reachable under these ports:
 - inx-dashboard-4:
     - pprof: http://localhost:6034/debug/pprof
     - Prometheus: http://localhost:9334/metrics
+
+## Start the coordinator in case of failure
+
+The `inx-coordinator` container always starts together with the other containers if you execute the `./run.sh` command.
+It may happen that the node startup takes longer than expected due to bigger databases or slow host machines. In that case the `inx-coordinator` container shuts down and won't be restarted automatically for security reasons.
+
+If you want to restart the `inx-coordinator` separately, run the following command:
+```sh
+docker compose start inx-coordinator
+```
