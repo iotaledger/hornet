@@ -245,6 +245,7 @@ services:
     command:
       - "--inx.address=172.18.211.11:9029"
       - "--coordinator.stateFilePath=state/coordinator.state"
+      - "--coordinator.blockBackups.enabled=false"
       - "--profiling.enabled=true"
       - "--profiling.bindAddress=172.18.211.21:6060"
     profiles:
