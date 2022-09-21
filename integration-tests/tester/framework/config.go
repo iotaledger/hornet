@@ -438,6 +438,8 @@ type CoordinatorConfig struct {
 	Bootstrap bool
 	// The interval in which to issue new milestones.
 	IssuanceInterval time.Duration
+	// Block Backups Enabled.
+	BlockBackupsEnabled bool
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -445,6 +447,7 @@ func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
 		fmt.Sprintf("--coordinator.interval=%s", cooConfig.IssuanceInterval),
+		fmt.Sprintf("--coordinator.blockBackups.enabled=%v", cooConfig.BlockBackupsEnabled),
 	}
 }
 
@@ -454,7 +457,8 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 		Bootstrap: true,
 		PrivateKeys: []string{"651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 			"0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"},
-		IssuanceInterval: 10 * time.Second,
+		IssuanceInterval:    10 * time.Second,
+		BlockBackupsEnabled: false,
 	}
 }
 
