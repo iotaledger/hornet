@@ -255,6 +255,8 @@ func (ws *WarpSync) reset() {
 type WarpSyncMilestoneRequester struct {
 	syncutils.Mutex
 
+	// used to cancel the warp sync requester.
+	ctx context.Context
 	// used to access the node storage.
 	storage *storage.Storage
 	// used to determine the sync status of the node.
@@ -269,12 +271,14 @@ type WarpSyncMilestoneRequester struct {
 
 // NewWarpSyncMilestoneRequester creates a new WarpSyncMilestoneRequester instance.
 func NewWarpSyncMilestoneRequester(
+	ctx context.Context,
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	requester *Requester,
 	preventDiscard bool) *WarpSyncMilestoneRequester {
 
 	return &WarpSyncMilestoneRequester{
+		ctx:            ctx,
 		storage:        dbStorage,
 		syncManager:    syncManager,
 		requester:      requester,
@@ -283,13 +287,10 @@ func NewWarpSyncMilestoneRequester(
 	}
 }
 
-// RequestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
+// requestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
 // Already requested milestones or traversed blocks will be ignored, to circumvent requesting
 // the same parents multiple times.
-func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.Context, msIndex iotago.MilestoneIndex) error {
-	w.Lock()
-	defer w.Unlock()
-
+func (w *WarpSyncMilestoneRequester) requestMissingMilestoneParents(msIndex iotago.MilestoneIndex) error {
 	if msIndex <= w.syncManager.ConfirmedMilestoneIndex() {
 		return nil
 	}
@@ -301,7 +302,7 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 	}
 
 	return dag.TraverseParents(
-		ctx,
+		w.ctx,
 		w.storage,
 		milestoneParents,
 		// traversal stops if no more blocks pass the given condition
@@ -345,13 +346,19 @@ func (w *WarpSyncMilestoneRequester) Cleanup() {
 
 // RequestMilestoneRange requests up to N milestones nearest to the current confirmed milestone index.
 // Returns the number of milestones requested.
-func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, rangeToRequest syncmanager.MilestoneIndexDelta, onExistingMilestoneInRange func(ctx context.Context, msIndex iotago.MilestoneIndex) error, from ...iotago.MilestoneIndex) syncmanager.MilestoneIndexDelta {
+func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(rangeToRequest syncmanager.MilestoneIndexDelta, from ...iotago.MilestoneIndex) (syncmanager.MilestoneIndexDelta, iotago.MilestoneIndex, iotago.MilestoneIndex) {
+	w.Lock()
+	defer w.Unlock()
+
 	var requested syncmanager.MilestoneIndexDelta
 
 	startingPoint := w.syncManager.ConfirmedMilestoneIndex()
 	if len(from) > 0 {
 		startingPoint = from[0]
 	}
+
+	startIndex := startingPoint + 1
+	endIndex := startingPoint + rangeToRequest
 
 	var msIndexes []iotago.MilestoneIndex
 	for i := syncmanager.MilestoneIndexDelta(1); i <= rangeToRequest; i++ {
@@ -366,16 +373,10 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 		}
 
 		// milestone already exists
-		if onExistingMilestoneInRange != nil {
-			if err := onExistingMilestoneInRange(ctx, msIndexToRequest); err != nil && errors.Is(err, common.ErrOperationAborted) {
-				// do not proceed if the node was shut down
-				return 0
-			}
+		if err := w.requestMissingMilestoneParents(msIndexToRequest); err != nil && errors.Is(err, common.ErrOperationAborted) {
+			// do not proceed if the node was shut down
+			return 0, 0, 0
 		}
-	}
-
-	if len(msIndexes) == 0 {
-		return requested
 	}
 
 	// enqueue every milestone request to the request queue
@@ -383,5 +384,5 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 		w.requester.Request(msIndex, msIndex)
 	}
 
-	return requested
+	return requested, startIndex, endIndex
 }
