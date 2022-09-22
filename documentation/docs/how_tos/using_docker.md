@@ -37,14 +37,14 @@ HORNET Docker images (amd64/x86_64 and arm64 architecture) are available at the 
 
 ## Requirements
 1. A recent release of Docker enterprise or community edition. You can find installation instructions in the [official Docker documentation](https://docs.docker.com/engine/install/).
-2. [Docker Compose CLI plugin](https://docs.docker.com/compose/install/compose-plugin/).
+2. [Docker Compose CLI plugin](https://docs.docker.com/compose/install/linux/).
 3. A registered domain name pointing to the public IP address of your server. _(optional if not using HTTPS)_
 4. Opening up the following ports in your servers firewall:
    - `15600 TCP` - Used for gossip.
    - `14626 UDP` - Used for autopeering.
    - `80 TCP` - Used for HTTP.
    - `443 TCP` - Used for HTTPS. _(optional if not using HTTPS)_
-5. [CURL](https://curl.se/).
+5. [curl](https://curl.se/).
 
 ## Download the latest release
 
@@ -53,8 +53,8 @@ Once you have completed all the installation [requirements](#requirements), you 
 ```sh
 mkdir hornet
 cd hornet
-curl -L -O "https://github.com/iotaledger/hornet/releases/download/v2.0.0-beta.9/HORNET-2.0.0-beta.9-docker.tar.gz"
-tar -zxf HORNET-2.0.0-beta.9-docker.tar.gz
+curl -L -O "https://github.com/iotaledger/node-docker-setup/releases/download/v1.0.0-beta.1/node-docker-setup-1.0.0-beta.1.tar.gz"
+tar -zxf node-docker-setup-1.0.0-beta.1.tar.gz
 ```
 
 ## Prepare
@@ -212,3 +212,6 @@ docker compose run hornet tool jwt-api --databasePath data/p2pstore
 This setup includes the INX extensions listed at the beginning of this guide.
 If you want to disable certain extensions you can comment out the different services in the `docker-compose.yaml` file and restart HORNET.
 
+# More Information
+
+For more information look at the [Github repository](https://github.com/iotaledger/node-docker-setup)
