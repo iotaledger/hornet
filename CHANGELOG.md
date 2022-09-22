@@ -3,8 +3,27 @@
 All notable changes to this project will be documented in this file.
 
 :warning: :warning: :warning:
-The way the docker setup works was changed. Please perform a fresh install of the docker setup.
+The docker setup was moved to another [repository](https://github.com/iotaledger/node-docker-setup).
 :warning: :warning: :warning:
+
+## [2.0.0-beta.10] - 22.09.2022
+
+### Added
+- Add instructions to the docs how to start the coordinator separately (#1765)
+
+### Changed
+- Do not read lock the ledger during delta snapshots (#1764)
+- Disable coordinator block backups in private_tangle/nest/tests (#1766)
+
+### Fixed
+- Solidify blocks synchronously while they are processed (#1761)
+- Fix gendoc template
+- Fix edge case in warpsync which deadlocks syncing (#1763)
+- Small doku fixes
+
+### Removed
+- Delete docker setups (moved to node-setup-docker repo) (#1767) 
+
 
 ## [2.0.0-beta.9] - 16.09.2022
 
