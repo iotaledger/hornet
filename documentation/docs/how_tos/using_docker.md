@@ -53,8 +53,8 @@ Once you have completed all the installation [requirements](#requirements), you 
 ```sh
 mkdir hornet
 cd hornet
-curl -L -O "https://github.com/iotaledger/node-docker-setup/releases/download/v1.0.0-beta.1/node-docker-setup-1.0.0-beta.1.tar.gz"
-tar -zxf node-docker-setup-1.0.0-beta.1.tar.gz
+curl -L -O "https://github.com/iotaledger/node-docker-setup/releases/download/v1.0.0-rc.1/node-docker-setup-1.0.0-rc.1.tar.gz"
+tar -zxf node-docker-setup-1.0.0-rc.1.tar.gz
 ```
 
 ## Prepare
