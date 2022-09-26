@@ -31,6 +31,7 @@ mainnetdb*/
 p2pstore*/
 alphanet*/
 testnet*/
+shimmer*/
 
 # snapshot dir
 snapshots/

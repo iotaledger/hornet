@@ -29,8 +29,8 @@ const (
 	autopeeringMaxTries = 50
 
 	containerNodeImage           = "hornet:dev"
-	coordinatorImage             = "iotaledger/inx-coordinator:1.0-beta"
-	indexerImage                 = "iotaledger/inx-indexer:1.0-beta"
+	coordinatorImage             = "iotaledger/inx-coordinator:1.0-rc"
+	indexerImage                 = "iotaledger/inx-indexer:1.0-rc"
 	containerWhiteFlagMockServer = "wfmock:latest"
 
 	containerNameTester  = "/tester"

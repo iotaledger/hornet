@@ -123,7 +123,7 @@ Example:
 
 | Name                                         | Description                                             | Type   | Default value     |
 | -------------------------------------------- | ------------------------------------------------------- | ------ | ----------------- |
-| targetNetworkName                            | The initial network name on which this node operates on | string | "testnet"         |
+| targetNetworkName                            | The initial network name on which this node operates on | string | "shimmer"         |
 | milestonePublicKeyCount                      | The amount of public keys in a milestone                | int    | 7                 |
 | [baseToken](#protocol_basetoken)             | Configuration for baseToken                             | object |                   |
 | [publicKeyRanges](#protocol_publickeyranges) | Configuration for publicKeyRanges                       | array  | see example below |
@@ -152,7 +152,7 @@ Example:
 ```json
   {
     "protocol": {
-      "targetNetworkName": "testnet",
+      "targetNetworkName": "shimmer",
       "milestonePublicKeyCount": 7,
       "baseToken": {
         "name": "Shimmer",
@@ -164,52 +164,52 @@ Example:
       },
       "publicKeyRanges": [
         {
-          "key": "13ccdc2f5d3d9a3ebe06074c6b49b49090dd79ca72e04abf20f10f871ad8293b",
+          "key": "dfd9436216ecc6e279e96b973aa9d2e11b73a74e425cce7adbac6156e70341c7",
           "start": 0,
           "end": 0
         },
         {
-          "key": "f18f3f6a2d940b9bacd3084713f6877db22064ada4335cb53ae1da75044f978d",
+          "key": "5b8c574430ad4ff9d2cfee62bed39fea44fdff87b45f475612e85fdb4f892564",
           "start": 0,
           "end": 0
         },
         {
-          "key": "b3b4c920909720ba5f7c30dddc0f9169bf8243b529b601fc4776b8cb0a8ca253",
+          "key": "89509278ee135465659f7ac08e9a3740762760dc1135bcd598b7a1776c7adbab",
           "start": 0,
           "end": 0
         },
         {
-          "key": "bded01e93adf7a623118fd375fd93dc7d7ddf222324239cae33e4e4c47ec3b0e",
+          "key": "5cc55225809283d24ebab2cc03d70bcca98c36b5246e66d793f05f0429230c09",
           "start": 0,
           "end": 0
         },
         {
-          "key": "488ac3fb1b8df5ef8c4acb4ef1f3e3d039c5d7197db87094a61af66320722313",
+          "key": "bdc89ffd26a02d0090635fab73392e42cd997e42bd3be7ee0bddec3c4623465f",
           "start": 0,
           "end": 0
         },
         {
-          "key": "61f95fed30b6e9bf0b2d03938f56d35789ff7f0ea122d01c5c1b7e869525e218",
+          "key": "0570042a5f93db2f6f8aae934d89bb8cd8d60d93c21923628ac873486e6a3ba6",
           "start": 0,
           "end": 0
         },
         {
-          "key": "4587040de05907b70806c8725bdae1f7370785993b2a139208e247885d4ed1f8",
+          "key": "a9a9ac376c3f997c594f142fdc66bce6920b22bcb48e190cb49ceed1574b77a6",
           "start": 0,
           "end": 0
         },
         {
-          "key": "aa6b36116206cc7d6c8f688e22113aa46f0de88d51aa7acf881ec2bd9d015f62",
+          "key": "693030491afa9b96e4bce49f629e4f6ad89584d82e64854f710042c28527cac4",
           "start": 0,
           "end": 0
         },
         {
-          "key": "ede9760c7f2aaa4618a58a1357705cdc1874962ad369309543230394bb77548b",
+          "key": "aa33502799b6a932960374fa8ce42ce89b5d4bb055129580e1e0cfcefb49fb47",
           "start": 0,
           "end": 0
         },
         {
-          "key": "98d1f907caa99f9320f0e0eb64a5cf208751c2171c7938da5659328061e82a8e",
+          "key": "0d1a19fb7920f9d67457f2567dcb0d7590ffc8ee9a19cdc2bf91014e9c5db3d5",
           "start": 0,
           "end": 0
         }
@@ -223,7 +223,7 @@ Example:
 | Name                      | Description                                                                         | Type    | Default value      |
 | ------------------------- | ----------------------------------------------------------------------------------- | ------- | ------------------ |
 | engine                    | The used database engine (pebble/rocksdb/mapdb)                                     | string  | "rocksdb"          |
-| path                      | The path to the database folder                                                     | string  | "testnet/database" |
+| path                      | The path to the database folder                                                     | string  | "shimmer/database" |
 | autoRevalidation          | Whether to automatically start revalidation on startup if the database is corrupted | boolean | false              |
 | checkLedgerStateOnStartup | Whether to check if the ledger state matches the total supply on startup            | boolean | false              |
 
@@ -233,7 +233,7 @@ Example:
   {
     "db": {
       "engine": "rocksdb",
-      "path": "testnet/database",
+      "path": "shimmer/database",
       "autoRevalidation": false,
       "checkLedgerStateOnStartup": false
     }
@@ -279,7 +279,7 @@ Example:
 
 | Name | Description                  | Type   | Default value      |
 | ---- | ---------------------------- | ------ | ------------------ |
-| path | The path to the p2p database | string | "testnet/p2pstore" |
+| path | The path to the p2p database | string | "shimmer/p2pstore" |
 
 ### <a id="p2p_gossip"></a> Gossip
 
@@ -291,13 +291,13 @@ Example:
 
 ### <a id="p2p_autopeering"></a> Autopeering
 
-| Name                 | Description                                                  | Type    | Default value                                                                                                                                                                                                                         |
-| -------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| enabled              | Whether the autopeering plugin is enabled                    | boolean | false                                                                                                                                                                                                                                 |
-| bindAddress          | Bind address for autopeering                                 | string  | "0.0.0.0:14626"                                                                                                                                                                                                                       |
-| entryNodes           | List of autopeering entry nodes to use                       | array   | /dns/entry-hornet-0.h.testnet.shimmer.network/udp/14626/autopeering/ANrRwJv2xs1S7TonyenM9qzkB8hfZ4Y6Gg2xsNUGozTJ<br/>/dns/entry-hornet-1.h.testnet.shimmer.network/udp/14626/autopeering/3bTUFwKXzhHSv2kBs6gja8BbeawHNzMwUdJraXWmLkNk |
-| entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes | boolean | false                                                                                                                                                                                                                                 |
-| runAsEntryNode       | Whether the node should act as an autopeering entry node     | boolean | false                                                                                                                                                                                                                                 |
+| Name                 | Description                                                  | Type    | Default value                                                                                                                                                                                                         |
+| -------------------- | ------------------------------------------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| enabled              | Whether the autopeering plugin is enabled                    | boolean | false                                                                                                                                                                                                                 |
+| bindAddress          | Bind address for autopeering                                 | string  | "0.0.0.0:14626"                                                                                                                                                                                                       |
+| entryNodes           | List of autopeering entry nodes to use                       | array   | /dns/entry-hornet-0.h.shimmer.network/udp/14626/autopeering/HK6EKbNtjwve9HMbL6PH6R3uLXZYQoBoqNPD5LsoWuA6<br/>/dns/entry-hornet-1.h.shimmer.network/udp/14626/autopeering/BT8EiSRXTixnH2wMoy4ecNpVtiAXxfXKfYsJ2KvU3WLx |
+| entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes | boolean | false                                                                                                                                                                                                                 |
+| runAsEntryNode       | Whether the node should act as an autopeering entry node     | boolean | false                                                                                                                                                                                                                 |
 
 Example:
 
@@ -314,7 +314,7 @@ Example:
       },
       "identityPrivateKey": "",
       "db": {
-        "path": "testnet/p2pstore"
+        "path": "shimmer/p2pstore"
       },
       "reconnectInterval": "30s",
       "gossip": {
@@ -326,8 +326,8 @@ Example:
         "enabled": false,
         "bindAddress": "0.0.0.0:14626",
         "entryNodes": [
-          "/dns/entry-hornet-0.h.testnet.shimmer.network/udp/14626/autopeering/ANrRwJv2xs1S7TonyenM9qzkB8hfZ4Y6Gg2xsNUGozTJ",
-          "/dns/entry-hornet-1.h.testnet.shimmer.network/udp/14626/autopeering/3bTUFwKXzhHSv2kBs6gja8BbeawHNzMwUdJraXWmLkNk"
+          "/dns/entry-hornet-0.h.shimmer.network/udp/14626/autopeering/HK6EKbNtjwve9HMbL6PH6R3uLXZYQoBoqNPD5LsoWuA6",
+          "/dns/entry-hornet-1.h.shimmer.network/udp/14626/autopeering/BT8EiSRXTixnH2wMoy4ecNpVtiAXxfXKfYsJ2KvU3WLx"
         ],
         "entryNodesPreferIPv6": false,
         "runAsEntryNode": false
@@ -383,8 +383,8 @@ Example:
 | enabled                                 | Whether to generate snapshot files                                                                                                                                    | boolean | false                                  |
 | depth                                   | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                            | int     | 50                                     |
 | interval                                | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                       | int     | 200                                    |
-| fullPath                                | Path to the full snapshot file                                                                                                                                        | string  | "testnet/snapshots/full_snapshot.bin"  |
-| deltaPath                               | Path to the delta snapshot file                                                                                                                                       | string  | "testnet/snapshots/delta_snapshot.bin" |
+| fullPath                                | Path to the full snapshot file                                                                                                                                        | string  | "shimmer/snapshots/full_snapshot.bin"  |
+| deltaPath                               | Path to the delta snapshot file                                                                                                                                       | string  | "shimmer/snapshots/delta_snapshot.bin" |
 | deltaSizeThresholdPercentage            | Create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history) | float   | 50.0                                   |
 | deltaSizeThresholdMinSize               | The minimum size of the delta snapshot file before the threshold percentage condition is checked (below that size the delta snapshot is always created)               | string  | "50M"                                  |
 | [downloadURLs](#snapshots_downloadurls) | Configuration for downloadURLs                                                                                                                                        | array   | see example below                      |
@@ -404,14 +404,14 @@ Example:
       "enabled": false,
       "depth": 50,
       "interval": 200,
-      "fullPath": "testnet/snapshots/full_snapshot.bin",
-      "deltaPath": "testnet/snapshots/delta_snapshot.bin",
+      "fullPath": "shimmer/snapshots/full_snapshot.bin",
+      "deltaPath": "shimmer/snapshots/delta_snapshot.bin",
       "deltaSizeThresholdPercentage": 50,
       "deltaSizeThresholdMinSize": "50M",
       "downloadURLs": [
         {
-          "full": "https://files.testnet.shimmer.network/snapshots/latest-full_snapshot.bin",
-          "delta": "https://files.testnet.shimmer.network/snapshots/latest-delta_snapshot.bin"
+          "full": "https://files.shimmer.network/snapshots/latest-full_snapshot.bin",
+          "delta": "https://files.shimmer.network/snapshots/latest-delta_snapshot.bin"
         }
       ]
     }

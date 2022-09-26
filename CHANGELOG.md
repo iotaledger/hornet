@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-:warning: :warning: :warning:
-The docker setup was moved to another [repository](https://github.com/iotaledger/node-docker-setup).
-:warning: :warning: :warning:
+## [2.0.0-rc.1] - TBD
+
+
 
 ## [2.0.0-beta.10] - 22.09.2022
 
