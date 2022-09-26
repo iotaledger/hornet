@@ -1,11 +1,11 @@
-FROM iotaledger/hornet:2.0-beta AS hornet
-FROM iotaledger/inx-indexer:1.0-beta AS indexer
-FROM iotaledger/inx-faucet:1.0-beta AS faucet
-FROM iotaledger/inx-dashboard:1.0-beta AS dashboard
-FROM iotaledger/inx-mqtt:1.0-beta AS mqtt
-FROM iotaledger/inx-spammer:1.0-beta AS spammer
-FROM iotaledger/inx-coordinator:1.0-beta AS coordinator
-FROM iotaledger/inx-poi:1.0-beta AS poi
+FROM iotaledger/hornet:2.0-rc AS hornet
+FROM iotaledger/inx-indexer:1.0-rc AS indexer
+FROM iotaledger/inx-faucet:1.0-rc AS faucet
+FROM iotaledger/inx-dashboard:1.0-rc AS dashboard
+FROM iotaledger/inx-mqtt:1.0-rc AS mqtt
+FROM iotaledger/inx-spammer:1.0-rc AS spammer
+FROM iotaledger/inx-coordinator:1.0-rc AS coordinator
+FROM iotaledger/inx-poi:1.0-rc AS poi
 
 FROM debian:11
 

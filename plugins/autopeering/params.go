@@ -13,7 +13,7 @@ type ParametersAutopeering struct {
 	// BindAddress is bind address for autopeering.
 	BindAddress string `default:"0.0.0.0:14626" usage:"bind address for autopeering"`
 	// EntryNodes list of autopeering entry nodes to use.
-	EntryNodes []string `default:"/dns/entry-hornet-0.h.testnet.shimmer.network/udp/14626/autopeering/ANrRwJv2xs1S7TonyenM9qzkB8hfZ4Y6Gg2xsNUGozTJ,/dns/entry-hornet-1.h.testnet.shimmer.network/udp/14626/autopeering/3bTUFwKXzhHSv2kBs6gja8BbeawHNzMwUdJraXWmLkNk" usage:"list of autopeering entry nodes to use"`
+	EntryNodes []string `default:"/dns/entry-hornet-0.h.shimmer.network/udp/14626/autopeering/HK6EKbNtjwve9HMbL6PH6R3uLXZYQoBoqNPD5LsoWuA6,/dns/entry-hornet-1.h.shimmer.network/udp/14626/autopeering/BT8EiSRXTixnH2wMoy4ecNpVtiAXxfXKfYsJ2KvU3WLx" usage:"list of autopeering entry nodes to use"`
 	// EntryNodesPreferIPv6 defines if connecting over IPv6 is preferred for entry nodes.
 	EntryNodesPreferIPv6 bool `default:"false" usage:"defines if connecting over IPv6 is preferred for entry nodes"`
 	// RunAsEntryNode whether the node should act as an autopeering entry node.
