@@ -18,12 +18,15 @@ WORKDIR /scratch
 # Prepare the folder where we are putting all the files
 RUN mkdir /app
 
-# Copy everything from the current directory to the PWD(Present Working Directory) inside the container
-COPY . .
+# Make sure that modules only get pulled when the module file has changed
+COPY go.mod go.sum ./
 
 # Download go modules
 RUN go mod download
 RUN go mod verify
+
+# Copy everything from the current directory to the PWD(Present Working Directory) inside the container
+COPY . .
 
 # Build the binary
 RUN go build -o /app/hornet -a -tags="$BUILD_TAGS" -ldflags='-w -s'
