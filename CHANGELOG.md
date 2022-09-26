@@ -2,462 +2,111 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.0-rc.1] - TBD
+## [2.0.0-rc.1] - 26.09.2022
+
+### Release notes
+
+- First version targeted for the Shimmer network.
+- Implemented full Stardust protocol according to the [Tangle Improvement Proposals](https://github.com/iotaledger/tips).
+- Introduced new `INX` (**I**OTA **N**ode e**X**tension) feature. This allows the core HORNET node to be extended with plugins written in any language supporting gRPC.
+- Several plugins were extracted as INX extensions (Dashboard, MQTT, Coordinator, Participation, Faucet, Spammer).
+- Removed `app.enablePlugins` and `app.disablePlugins` and replaced them with plugin-specific `enabled` settings.
+- Config files now always need to be specified with `-c` flag (even `config.json`), otherwise default parameters are used.
+- Private Tangle is now an easy-to-use docker compose setup.
+- The ledger state is no longer checked per default at startup.
+- Snapshots are now disabled by default.
+- Added hornet-nest docker for developers.
+- Added the possibility to log all REST API requests.
+- Added per endpoint prometheus metrics for the REST API.
+- Added network-bootstrap tool.
+- Block tips are now only refreshed during remote PoW if no parents were given.
+- Added mnemonic parameter to ed25519 key tool.
+- Adapted ed25519-key tool to print mnemonic and derived keys using slip10.
 
 
-
-## [2.0.0-beta.10] - 22.09.2022
+## [1.2.1] - 29.04.2022
 
 ### Added
-- Add instructions to the docs how to start the coordinator separately (#1765)
+    - Added mnemonic parameter to ed25519 key tool (#1449) 
 
 ### Changed
-- Do not read lock the ledger during delta snapshots (#1764)
-- Disable coordinator block backups in private_tangle/nest/tests (#1766)
+    - Added `privateKey` to ed25519 key tool json output (#1449) 
+ 
+### Fixed
+    - Fixed high CPU usage due to missing check if the external PoW context got canceled (#1469)
+
+
+## [1.2.0] - 13.04.2022
+
+_**Note**: due to changes to the internal database structure it is recommended to remove the old `participation` database._
 
 ### Fixed
-- Solidify blocks synchronously while they are processed (#1761)
-- Fix gendoc template
-- Fix edge case in warpsync which deadlocks syncing (#1763)
-- Small doku fixes
+    - Fixed missing error returns in REST API (#1316)
+    - Fixed various memory leaks that could crash the node with OOM when using autopeering or the spammer plugins (#1335, #1372)
+    - Fixed several race conditions in the participation endpoints (#1349)
+    - Fixed dangling open connection to peer which prevented reconnect (#1398)
+    - Fixed version check to only check for updates in the same major version (#1382)
+    - Fixed deadlock while shutting down the node (#1392)
+    - Fixed request queue behavior and test cases (#1403)
+    - Fixed temporary increased memory usage after snapshot creation (#1403)
+
+### Changed
+    - Updated to Go 1.18
+    - Changed how the participation plugin calculates staking rewards. This improves the performance of the node when the plugin is enabled (#1350)
+    - Changed the COO key validity indicator logic (#1373)
+    - Adapted ed25519-key tool to print mnemonic and derived keys using slip10 (#1409)
+
+### Added
+    - Added support for multi-arch docker images (amd64+arm64) (#1240, #1301)
+    - Added JSON output support for the tools and refactoring the tool cli-flag handling (#1289, #1300)
+    - Added `transactionIdSpent` and `milestoneIndexSpent` to the outputs API endpoint (#1302)
+    - Added various new tools to work with database backups (#1326, #1328, #1331, #1332, #1348, #1355)
+    - Added new COO keys (#1375)
+    - Added creating backups of the coordinator and migrator state files (#1381)
+    - Added support for mapdb (in-memory) (#1306)
 
 ### Removed
-- Delete docker setups (moved to node-setup-docker repo) (#1767) 
-
-
-## [2.0.0-beta.9] - 16.09.2022
-
-### Added
-- Add additional docker tags for pre-releases (#1744)
-
-### Changed
-- Separate docker HTTP and HTTPS setups (#1745)
-- Cleanup private tangle (#1746)
-- Bump github.com/iotaledger/hive.go/core (#1747)
-- Bump github.com/iotaledger/inx-app from 1.0.0-beta.12 to 1.0.0-beta.13 (#1748)
-- Add defaults to docker env variables to that no .env file is required (#1751)
-- Use new 1.0-beta tags for inx containers (#1756)
-- Feat/docker fixes (#1754)
-
-### Fixed
-- Fixed /health endpoint when using HTTP docker setup (#1750)
-- Fix stuck peer (#1752)
-
-
-## [2.0.0-beta.8] - 09.09.2022
-
-### Added
-- Drop unhealthy peers (#1736)
-- Add support for inx ListenToNodeStatus (#1737)
-- Drop peers that are below our pruning index (#1739)
-
-### Changed
-- Avoid unnecessary deserialization/serialization when using INX (#1725) 
-- Move protocol and payload checks in attacher (#1729)
-- Adapt to latest hive.go version and update modules (#1735)
-- Updated INX dependencies and adapt to changed params (#1724)
-
-### Fixed
-- Fixing internal private tangle INX ports to use the default 9029 instead of the exposed one
-- Fix order of genesis addresses in snap-gen tool (#1722) 
-- Fix start index of db-verify loop (#1728)
-- Fix index check in CheckSolidityAndComputeWhiteFlagMutations
-
-
-## [2.0.0-beta.7] - 30.08.2022
-
-### Added
-- Added 5 pubkeys to alphanet config (#1704)
-- Add config parameter to disable snapshot file creation
-- Add config parameter to check ledger state on startup
-- Add global flag to db-snap tool (#1713)
-
-### Changed
-- Use CLI flags instead of config files for private tangle (#1695)
-- Store additional peers on startup and fix peering.json ownership (#1696) 
-- Update modules (#1715)
-- Fix new linter warnings (revive, contextcheck) (#1702)
-- Remove BlockID lookup from milestone payloads (#1703)
-- Change private tangle ports and expose INX of all nodes (#1705)
-- Enforce lowercase for Features in API info endpoint (#1714)
-
-### Fixed
-- Do not pass build flag to docker compose
-- Fix several bugs in hornet tools (#1700)
-- Fix INX deadlock (#1707) 
-
-
-## [2.0.0-beta.6] - 16.08.2022
-
-### Removed
-    - Remove chronicle compatibility mode in toolset (#1678) 
-
-### Changed
-    - Fix for the hornet-nest release pipeline
-    - Enable prometheus for inx-dashboard in the docker setup
-    - Fix formatting linter warnings (#1675) 
-    - Fix linter warnings and improve code readability (#1676) 
-    - Add linter ignore rules in the code (#1677) 
-    - Rename prometheus topics to fix linter warnings (#1679) 
-    - Fix forcetypeassert linter warnings (#1680) 
-    - Preallocate slices (#1684) 
-    - Remove unused parameters (#1685) 
-    - Add Grafana dashboard (#1674)
-    - Fix hornet-nest not properly exposing the 9029 INX port
-    - Fix protocol params being loaded twice for the same index in full snapshots (#1672)
-    - Allow targetScore to be zero in attacher (#1689) 
-    - Configuring reviewdog to nag more (#1638)
-
-### Added
-    - Add additional genesisAddresses parameter to snap-gen (#1666)
-
-
-## [2.0.0-beta.5] - 09.08.2022
-
-### Changed
-    - Updated to Go 1.19 (#1659)
-    - Updated hive.go dependency to latest version used by GoShimmer (#1654)
-
-### Added
-    - Added hornet-nest docker for developers (#1655)
-    - Added genesis addresses to snap-gen tool (#1662)
-
-
-## [2.0.0-beta.4] - 04.08.2022
-
-### Changed
-    - Adapt to new INX LedgerUpdate batch API (#1653)
-
-### Added
-    - Added a way to log all REST API requests (#1649)
-    - Added per endpoint prometheus metrics for the REST API (#1651)
-    - Allow MinPoWScore set to zero for tests (#1652)
-
-## [2.0.0-beta.3] - 27.07.2022
-
-:warning: :warning: :warning:
-This release contains a breaking change in the Rest API and INX interface, so you need to update your clients to connect to this node version.
-It also contains a breaking change in the snapshot format. You need to delete old snapshot files before starting your node.
-:warning: :warning: :warning:
-
-### Changed
-    - Updated iota.go with changes to the REST api models. (#1643)
-
-### Fixed
-    - Fix datatypes of milestone diffs in snapshot files (#1635)
-    - Fix adding commit hash when building a local copy of hornet with the scripts (#1646)
-
-
-## [2.0.0-beta.2] - 21.07.2022
-
-### Fixed
-    - Updated iota.go with fixes for transaction validation
-
-
-## [2.0.0-beta.1] - 18.07.2022
-
-### Changed
-    - Initial Stardust beta release.
-
-
-## [2.0.0-alpha.25] - 13.07.2022
-
-### Fixed
-    - Fixed `final ledger index does not match target index` (#1620)
-
-### Changed
-    - Removed `app.enablePlugins` and `app.disablePlugins` and replaced them with plugin-specific `enabled` settings (#1617)
-
-## [2.0.0-alpha.24] - 12.07.2022
-
-### Added
-    - Added Foundry, NativeTokens and NFT whiteflag tests (#1607)
-
-### Fixed
-    - Do not check storage deposits of full snapshot outputs (#1610)
-    - Avoid locking of the p2p Manager while connection attempts are performed (#1614)
-
-### Changed
-    - Renamed `config.json` to `config_alphanet.json` and added `config_defaults.json` (#1613)
-    - Renamed `-docker-example.tar.gz` release to `-docker.tar.gz` (#1615)
-    - Block static peers in autopeering module (#1608)
-
-### Chore
-    -  Update modules (#1606)
-
-## [2.0.0-alpha.23] - 07.07.2022
-
-:warning: :warning: :warning: 
-This release contains a breaking change in the snapshot format.
-:warning: :warning: :warning: 
-
-### Added
-    - Add network-bootstrap tool (#1583)
-    - Add pruning manager (#1591) 
-    - Add snapshot importer (#1593) 
-    - Storing whiteFlagIndex in the BlockMetadata for each referenced block (#1603)
-
-### Changed
-    - Move UTXO tests to own package (#1589)
-    - Rename fields in Output and Spent types (#1590)
-    - Move test util functions to tpkg (#1596)
-    - Store protocol parameter updates for known tangle history (#1600) 
-    - Reorganize documentation (#1597)
-    - Update the Docker example README with a bit more information (#1592) 
-    - Update snapshot format (#1594) 
-    - Improve snapshot tools #1605 
+    - Removed comnet configuration (#1374)
 
 ### Cleanups
-    - Replaced milestone.Index with iotago.MilestoneIndex (#1602) 
+    - Added traverser storage interfaces (#1319)
+    - Cleanup cache object names and comments (#1323)
+    - Update KVStore interface (#1391)
+    - Update gommon and remove replace in go.mod (#1408) 
 
 ### Config file changes
 
 `config.json`
 ```diff
   "protocol": {
-+    "targetNetworkName": "alphanet-8",
--    "parameters": {
--      "version": 2,
--      "networkName": "alphanet-7",
--      "bech32HRP": "rms",
--      "minPoWScore": 1000.0,
--      "belowMaxDepth": 15,
--      "vByteCost": 500,
--      "vByteFactorData": 1,
--      "vByteFactorKey": 10,
--      "tokenSupply": 2779530283277761
--    },
     ...
-  },
-  ...
-  "snapshots": {
-    ...
-     "deltaSizeThresholdPercentage": 50,
-+    "deltaSizeThresholdMinSize": "50M",
-    ...
+    "publicKeyRanges": [
+      ...
+      {
+        "key": "7bac2209b576ea2235539358c7df8ca4d2f2fc35a663c760449e65eba9f8a6e7",
+        "start": 2108160,
+-       "end": 3666260
++       "end": 3359999
+      },
+      {
+        "key": "edd9c639a719325e465346b84133bf94740b7d476dd87fc949c0e8df516f9954",
+        "start": 2888660,
+-       "end": 4443860
++       "end": 3359999
++     },
++     {
++       "key": "47a5098c696e0fb53e6339edac574be4172cb4701a8210c2ae7469b536fd2c59",
++       "start": 3360000,
++       "end": 0
++     },
++     {
++       "key": "ae4e03072b4869e87dd4cd59315291a034493a8c202b43b257f9c07bc86a2f3e",
++       "start": 3360000,
++       "end": 0
+      }
+    ]
   },
 ```
-
-
-## [2.0.0-alpha.22] - 23.06.2022
-
-### Fixed
-    - Fixed a wrong minimum deposit calculation in iota.go after removing the milestone index from timelock and expiration unlock conditions.
-
-
-## [2.0.0-alpha.21] - 21.06.2022
-
-### Changed
-    - Restructures REST API endpoints (#1577)
-    - Removed milestone index from timelock and expiration unlock conditions (#1572)
-    - Disable certain REST endpoints if an unsupported protocol upgrade is detected (#1571)
-    - Changed the docker-example to only require 1 domain
-
-
-## [2.0.0-alpha20] - 17.06.2022
-
-### Fixed
-    - Removes synchronous event handlers between peer manager to gossip service (#1565)
-
-### Changed
-    - Moved dashboard to INX (#1568, #1566)
-    - Adds tip score updates stream to INX (#1563)
-
-
-## [2.0.0-alpha19] - 14.06.2022
-
-### Fixed
-    - Fix INX deadlock #1560
-    - Fix possible data races in INX #1561
-
-### Changed
-    - Adds supported protocol versions to REST API and INX (#1552)
-
-
-## [2.0.0-alpha18] - 08.06.2022
-
-### Fixed
-    - Fix JWT skipping for indexer routes via dashboard API
-    - Fix INX ReadBlockMetadata for solid entry points (#1534)
-    - Send correct error message if a block is submitted without parents and no PoW is enabled (#1536)
-
-### Changed
-    - Rename files from message->block
-    - Remove outdated routes
-    - Move dashboard repository to iotaledger
-    - Update go modules
-
-
-## [2.0.0-alpha17] - 01.06.2022
-
-### Fixed
-    - Fixed libp2p connection issue (#1533)
-
-
-## [2.0.0-alpha16] - 31.05.2022
-
-### Fixed
-    - Removed children API calls from dashboard
-    - Fixed inx-spammer not working in the docker-example
-
-
-## [2.0.0-alpha15] - 31.05.2022
-
-### Changed
-    - Migrated repositories to the iotaledger organization (#1528)
-    - Update INX modules (#1530) 
-    - Updated dashboard (#1527)
-    - Updated protocol parameters data types (#1529)
-
-
-## [2.0.0-alpha14] - 24.05.2022
-
-### Changed
-    - Update INX modules (#1516) 
-    - Remove spammer plugin (#1515)
-    - Feat/inx improvements (#1514)
-    - Extended whiteflag MerkleHasher to do proofs (#1513)
-
-
-## [2.0.0-alpha13] - 19.05.2022
-
-### Changed
-    - Decrease private tangle milestone interval to 5s
-
-### Fixed
-    - Fix snapshot SEP producer deadlock
-    - Fix inx-participation routes
-
-### Documentation
-    - Change `messages` to `blocks` in documentation
-
-
-## [2.0.0-alpha12] - 19.05.2022
-
-### Changed
-    - Don't mount profiles.json in docker-compose.yml
-    - Output metadata & iota.go updates (#1494) 
-    - Move several packages to hive.go (#1495)
-    - Do not load messages on pruning (#1499)
-    - Remove participation plugin (#1501)
-    - Add inx-participation (#1502)
-    - Add reflection based config (#1506)
-    - Rename Messages to Blocks (#1508) 
-    - Use iotago.BlockID instead of hornet.BlockID (#1509) 
-    - Add INX milestone cone functions (#1511)
-    - Code cleanup (#1510)
-    - Moved INX examples to iotaledger/inx repository
-
-### Documentation
-    - Removed APT page (#1490)
-    - Updated API reference links (#1491)
-
-
-## [2.0.0-alpha11] - 03.05.2022
-
-### Changed
-    - Added remote PoW metrics to Prometheus. (#1481)
-    - Updated the whiteflag conflict reasons. (#1484, #1485)
-
-
-## [2.0.0-alpha10] - 29.04.2022
-
-### Changed
-    - AliasID and NFTID are now 32 bytes long instead of 20. (#1475)
-    - Prometheus is not exposing prometheus metrics from other INX plugins anymore. (#1475)
-    - TransactionEssence networkID check is now done during syntactical validation. (#1475)
-
-### Fixed
-    - Check if the external PoW context got cancelled. (#1470)
-    - Fixed dashboard milestone topic not sending the latest milestones. (#1474)
-    - Always allow remote PoW over INX. (#1475)
-    - Do not fully initialize the node (including the Participation database) if the snapshot download and import fails. (#1475)
-
-
-## [2.0.0-alpha9] - 27.04.2022
-
-### Changed
-    - Adapt storage layer to new milestone ID based logic. (#1454)
-    - Handle SolidEntryPoints in solidification logic. (#1454)
-    - Enforce milestone msg nonce zero in attacher. (#1454)
-    - Add new milestone routes. (#1454)
-    - Adapt node info endpoint to latest changes. (#1454)
-    - Added BaseToken to config, restapi and INX. (#1462)
-    - Add check to verify that milestone index and timestamp have increased. (#1463)
-
-### Fixed
-    - Only refresh tips on remote pow if no parents were given. (#1460) 
-    - Fix database tool getMilestonePayloadViaAPI. (#1454)
-
-### Cleanup
-    - Chore/remove deprecated code. (#1461) 
-
-
-## [2.0.0-alpha8] - 26.04.2022
-
-### Changed
-    - Extracted Faucet into a new INX module. (#1451)
-    - Add own DbVersion for every database. (#1446)
-    - Add mnemonic parameter to ed25519 key tool. (#1450)
-    - Updated RocksDB to 7.1.2. (#1455)
-    - Updated Milestone payloads according to TIP-29. (#1456)
-    - Added new protocol parameters to info endpoint and INX. (#1456)
-
-### Fixed
-    - Adapt pruning and snapshotting to new milestone logic. (#1442)
-
-
-## [2.0.0-alpha7] - 21.04.2022
-
-### Changed
-    - Milestone payloads now contain an optional metadata field according to TIP-29. (#1404)
-    - Now using `rms` bech32 prefix according to TIP-31.
-    - Private tangle improvements. (#1390, #1395)
-    - Adapted ed25519-key tool to print mnemonic and derived keys using slip10. (#1407)
-    - Removed coordinator plugin. (#1404)
-    - Encode Messages and Outputs based on the given Accept Header MIME type. (#1427)
-
-### Fixed
-    - Fixed deadlock while shutting down the node. (#1394)
-    - Fixed stale connections to peers when the initial stream establishment fails. (#1395)
-    - Fixed request queue behavior and test cases. (#1412)
-    - Fix wrong timestamp data type. (#1438)
-
-
-## [2.0.0-alpha6] - 30.03.2022
-
-### Changed
-    - Removed built-in INX extensions support. Indexer and MQTT are now external dependencies. Use `docker-compose.yml` as a guide on how to setup your node.
-    - Foundry output supply fields are now part of the token scheme.
-    - Updated dashboard with an initial version supporting the new API routes.
-    - Added various tools ported from mainnet branch.
-
-### Fixed
-    - Ported memory leak fixes from mainnet branch.
-
-
-## [2.0.0-alpha5] - 17.03.2022
-
-### Changed
-    - Changed the snapshot format to simplify parsing for Bee.
-    - Using default keepalive parameters for the Indexer to avoid disconnections due to too many pings.
-
-
-## [2.0.0-alpha4] - 17.03.2022
-
-### Changed
-    - API now using hex-representation for bytes and uint256. Note: `0x` prefix is now required.
-    - Adapted to latest `FoundryOutput` changes according to TIP-18.
-    - Introduced new `INX` (IOTA Node Extension) feature. This allows the core HORNET node to be extended with plugins written in any language supporting gRPC.
-    - Re-implemented Indexer and MQTT plugins as INX extensions. (Note: MQTT over WebSockets is now available under `/api/plugins/mqtt/v1` instead of `/mqtt`)
-    - Implemented new MQTT topics acccording to TIP-28.
-    - Added two new endpoints to the API `/api/v2/outputs/raw` to fetch the raw bytes of an output, and `/api/v2/outputs/metadata` to fetch metadata only.
-
-
-## [2.0.0-alpha3] - 25.02.2022
-
-### Changed
-    - Everything, since we are all stardust. 
 
 
 ## [1.1.3] - 29.12.2021
@@ -484,6 +133,7 @@ This release contains a breaking change in the snapshot format.
   },
 ```
 
+
 ## [1.1.2] - 22.12.2021
 
 ### Changed
@@ -509,7 +159,8 @@ This release contains a breaking change in the snapshot format.
       ],
     }
 ```
-   
+
+
 ## [1.1.1] - 22.12.2021
 
 ### Changed
@@ -531,6 +182,7 @@ This release contains a breaking change in the snapshot format.
        ...
     },
 ```
+
 
 ## [1.1.0] - 10.12.2021
 
@@ -640,6 +292,7 @@ This release contains a breaking change in the snapshot format.
 -      "::1"
 -    ],
 ```
+
 
 ## [1.0.5] - 02.09.2021
 
@@ -786,6 +439,7 @@ This release contains a breaking change in the snapshot format.
   }
 ```
 
+
 ## [1.0.4] - 04.08.2021
 
 ### Added
@@ -834,6 +488,7 @@ This release contains a breaking change in the snapshot format.
   },
 ```
 
+
 ## [1.0.3] - 02.06.2021
 
 ### Added
@@ -842,6 +497,7 @@ This release contains a breaking change in the snapshot format.
 ### Changed
     - Increases the WarpSync advancement range to 10k which allows nodes to resync even if
       they already stored the milestone for which they lacked the applicable public key beforehand.
+
 
 ## [1.0.2] - 28.05.2021
 
@@ -896,6 +552,7 @@ This release contains a breaking change in the snapshot format.
     "pruneReceipts": false
   },
 ```
+
 
 ## [1.0.1] - 28.04.2021
 
