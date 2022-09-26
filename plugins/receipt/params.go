@@ -9,7 +9,7 @@ import (
 // ParametersReceipts contains the definition of the parameters used by receipts.
 type ParametersReceipts struct {
 	// Enabled defines whether the receipts plugin is enabled.
-	Enabled bool `default:"true" usage:"whether the receipts plugin is enabled"`
+	Enabled bool `default:"false" usage:"whether the receipts plugin is enabled"`
 
 	Backup struct {
 		// CfgReceiptsBackupEnabled configures whether receipts are additionally stored in the specified folder.

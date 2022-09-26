@@ -623,7 +623,7 @@ Example:
 
 | Name                             | Description                            | Type    | Default value |
 | -------------------------------- | -------------------------------------- | ------- | ------------- |
-| enabled                          | Whether the receipts plugin is enabled | boolean | true          |
+| enabled                          | Whether the receipts plugin is enabled | boolean | false         |
 | [backup](#receipts_backup)       | Configuration for backup               | object  |               |
 | [validator](#receipts_validator) | Configuration for validator            | object  |               |
 
@@ -662,7 +662,7 @@ Example:
 ```json
   {
     "receipts": {
-      "enabled": true,
+      "enabled": false,
       "backup": {
         "enabled": false,
         "path": "receipts"

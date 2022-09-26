@@ -224,7 +224,7 @@
     }
   },
   "receipts": {
-    "enabled": true,
+    "enabled": false,
     "backup": {
       "enabled": false,
       "path": "receipts"
