@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-rc.2] - 27.09.2022
+
+### Added
+    - Added healthcheck to Dockerfile (#1773)
+
+### Fixed
+    - Do not pass cached objects to inx workers to avoid leaks (#1774)
+
+
 ## [2.0.0-rc.1] - 26.09.2022
 
 ### Release notes
