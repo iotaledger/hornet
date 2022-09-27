@@ -39,7 +39,7 @@ func databaseMerge(args []string) error {
 	databaseEngineSourceFlag := fs.String(FlagToolDatabaseEngineSource, string(database.EngineAuto), "the engine of the source database (optional, values: pebble, rocksdb, auto)")
 	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, string(DefaultValueDatabaseEngine), "the engine of the target database (values: pebble, rocksdb)")
 	targetIndexFlag := fs.Uint32(FlagToolDatabaseTargetIndex, 0, "the target index (optional)")
-	nodeURLFlag := fs.String(FlagToolDatabaseMergeNodeURL, "", "URL of the node (optional)")
+	nodeURLFlag := fs.String(FlagToolNodeURL, "", "URL of the node (optional)")
 	apiParallelismFlag := fs.Uint("apiParallelism", 50, "the amount of concurrent API requests")
 
 	fs.Usage = func() {
@@ -69,7 +69,7 @@ func databaseMerge(args []string) error {
 	}
 	if len(*databasePathSourceFlag) == 0 {
 		if len(*nodeURLFlag) == 0 {
-			return fmt.Errorf("either '%s' or '%s' must be specified", FlagToolDatabasePathSource, FlagToolDatabaseMergeNodeURL)
+			return fmt.Errorf("either '%s' or '%s' must be specified", FlagToolDatabasePathSource, FlagToolNodeURL)
 		}
 	}
 	if len(*databasePathTargetFlag) == 0 {
