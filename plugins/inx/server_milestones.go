@@ -287,6 +287,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 		payload, err := createMilestoneAndProtocolParametersPayloadForMilestone(cachedMilestone.Milestone())
 		if err != nil {
 			Plugin.LogInfof("serialize error: %v", err)
+			cancel()
 
 			return
 		}
