@@ -2,6 +2,7 @@ package inx
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -30,7 +31,10 @@ func (s *Server) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx.Ti
 	}
 
 	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "error selecting tips: %s", err.Error())
+		err = fmt.Errorf("error selecting tips: %w", err)
+		Plugin.LogError(err.Error())
+
+		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 
 	return &inx.TipsResponse{
@@ -60,7 +64,7 @@ func (s *Server) ListenToTipsMetrics(req *inx.TipsMetricRequest, srv inx.INX_Lis
 		}
 
 		if err := srv.Send(metrics); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			innerErr = err
 			cancel()
 		}

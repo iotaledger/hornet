@@ -157,7 +157,7 @@ func (s *Server) ListenToNodeStatus(req *inx.NodeStatusRequest, srv inx.INX_List
 
 		status, ok := task.Param(0).(*inx.NodeStatus)
 		if !ok {
-			Plugin.LogInfof("send error: expected *inx.NodeStatus, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *inx.NodeStatus, got %T", task.Param(0))
 			cancel()
 
 			return

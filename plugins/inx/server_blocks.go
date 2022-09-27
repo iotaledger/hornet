@@ -146,14 +146,14 @@ func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServe
 
 		payload, ok := task.Param(0).(*inx.Block)
 		if !ok {
-			Plugin.LogInfof("send error: expected *inx.Block, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *inx.Block, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 
@@ -187,14 +187,14 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 
 		payload, ok := task.Param(0).(*inx.BlockMetadata)
 		if !ok {
-			Plugin.LogInfof("send error: expected *inx.BlockMetadata, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *inx.BlockMetadata, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 
@@ -205,7 +205,7 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
-			Plugin.LogInfof("serialize error: %v", err)
+			Plugin.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
@@ -235,14 +235,14 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 
 		payload, ok := task.Param(0).(*inx.BlockMetadata)
 		if !ok {
-			Plugin.LogInfof("send error: expected *inx.BlockMetadata, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *inx.BlockMetadata, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 
@@ -253,7 +253,7 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
-			Plugin.LogInfof("serialize error: %v", err)
+			Plugin.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
@@ -283,7 +283,7 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 
 		tip, ok := task.Param(0).(*tipselect.Tip)
 		if !ok {
-			Plugin.LogInfof("send error: expected *tipselect.Tip, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *tipselect.Tip, got %T", task.Param(0))
 			cancel()
 
 			return
@@ -297,13 +297,13 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata(), tip)
 		if err != nil {
-			Plugin.LogInfof("serialize error: %v", err)
+			Plugin.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))

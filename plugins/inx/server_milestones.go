@@ -94,14 +94,14 @@ func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToL
 
 		payload, ok := task.Param(0).(*inx.Milestone)
 		if !ok {
-			Plugin.LogInfof("send error: expected *inx.Milestone, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *inx.Milestone, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 
@@ -231,10 +231,13 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
 		err := sendMilestonesRange(start, end)
 		if err != nil {
-			Plugin.LogInfof("sendMilestonesRange error: %v", err)
+			err := fmt.Errorf("sendMilestonesRange error: %w", err)
+			Plugin.LogError(err.Error())
+
+			return err
 		}
 
-		return err
+		return nil
 	}
 
 	sendFunc := func(task *workerpool.Task, _ iotago.MilestoneIndex) error {
@@ -243,13 +246,16 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 		payload, ok := task.Param(0).(*inx.MilestoneAndProtocolParameters)
 		if !ok {
 			err := fmt.Errorf("expected *inx.MilestoneAndProtocolParameters, got %T", task.Param(0))
-			Plugin.LogInfof("send error: %w", err)
+			Plugin.LogErrorf("send error: %v", err)
 
 			return err
 		}
 
 		if err := srv.Send(payload); err != nil {
-			return fmt.Errorf("send error: %w", err)
+			err := fmt.Errorf("send error: %w", err)
+			Plugin.LogError(err.Error())
+
+			return err
 		}
 
 		return nil
@@ -263,7 +269,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 
 		msIndex, ok := task.Param(1).(iotago.MilestoneIndex)
 		if !ok {
-			Plugin.LogInfof("send error: expected iotago.MilestoneIndex, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected iotago.MilestoneIndex, got %T", task.Param(0))
 			cancel()
 
 			return
@@ -286,7 +292,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 
 		payload, err := createMilestoneAndProtocolParametersPayloadForMilestone(cachedMilestone.Milestone())
 		if err != nil {
-			Plugin.LogInfof("serialize error: %v", err)
+			Plugin.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return

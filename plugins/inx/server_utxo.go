@@ -322,7 +322,7 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 
 	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
 		if err := sendMilestoneDiffsRange(start, end); err != nil {
-			Plugin.LogInfof("sendMilestoneDiffsRange error: %v", err)
+			Plugin.LogErrorf("sendMilestoneDiffsRange error: %v", err)
 
 			return err
 		}
@@ -334,7 +334,7 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 		newOutputs, ok := task.Param(1).(utxo.Outputs)
 		if !ok {
 			err := fmt.Errorf("expected utxo.Outputs, got %T", task.Param(1))
-			Plugin.LogInfof("send error: %w", err)
+			Plugin.LogErrorf("send error: %v", err)
 
 			return err
 		}
@@ -342,13 +342,13 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 		newSpents, ok := task.Param(2).(utxo.Spents)
 		if !ok {
 			err := fmt.Errorf("expected utxo.Spents, got %T", task.Param(2))
-			Plugin.LogInfof("send error: %w", err)
+			Plugin.LogErrorf("send error: %v", err)
 
 			return err
 		}
 
 		if err := createLedgerUpdatePayloadAndSend(index, newOutputs, newSpents); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 
 			return err
 		}
@@ -528,7 +528,7 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
 		err := sendTreasuryUpdatesRange(start, end)
 		if err != nil {
-			Plugin.LogInfof("sendTreasuryUpdatesRange error: %v", err)
+			Plugin.LogErrorf("sendTreasuryUpdatesRange error: %v", err)
 		}
 
 		return err
@@ -538,13 +538,13 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 		tm, ok := task.Param(1).(*utxo.TreasuryMutationTuple)
 		if !ok {
 			err := fmt.Errorf("expected *utxo.TreasuryMutationTuple, got %T", task.Param(1))
-			Plugin.LogInfof("send error: %w", err)
+			Plugin.LogErrorf("send error: %v", err)
 
 			return err
 		}
 
 		if err := createTreasuryUpdatePayloadAndSend(index, tm.NewOutput, tm.SpentOutput); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 
 			return err
 		}
@@ -595,7 +595,7 @@ func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenTo
 
 		receipt, ok := task.Param(0).(*iotago.ReceiptMilestoneOpt)
 		if !ok {
-			Plugin.LogInfof("send error: expected *iotago.ReceiptMilestoneOpt, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *iotago.ReceiptMilestoneOpt, got %T", task.Param(0))
 			cancel()
 
 			return
@@ -603,14 +603,14 @@ func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenTo
 
 		payload, err := inx.WrapReceipt(receipt)
 		if err != nil {
-			Plugin.LogInfof("serialize error: %v", err)
+			Plugin.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 
