@@ -54,7 +54,7 @@ func inxMilestoneForCachedMilestone(ms *storage.CachedMilestone) *inx.Milestone 
 	}
 }
 
-func milestoneForIndex(msIndex iotago.MilestoneIndex) (*inx.Milestone, error) {
+func milestoneForStoredMilestone(msIndex iotago.MilestoneIndex) (*inx.Milestone, error) {
 	cachedMilestone := deps.Storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, status.Errorf(codes.NotFound, "milestone index %d not found", msIndex)
@@ -135,7 +135,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	}
 
 	createMilestonePayloadForIndexAndSend := func(msIndex iotago.MilestoneIndex) error {
-		inxMilestone, err := milestoneForIndex(msIndex)
+		inxMilestone, err := milestoneForStoredMilestone(msIndex)
 		if err != nil {
 			return err
 		}
@@ -157,21 +157,16 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 		return nil
 	}
 
-	createMilestoneAndProtocolParametersPayloadForMilestoneAndSend := func(ms *storage.Milestone) error {
+	createMilestoneAndProtocolParametersPayloadForMilestone := func(ms *storage.Milestone) (*inx.MilestoneAndProtocolParameters, error) {
 		rawParams, err := rawProtocolParametersForIndex(ms.Index())
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		payload := &inx.MilestoneAndProtocolParameters{
+		return &inx.MilestoneAndProtocolParameters{
 			Milestone:                 inxMilestoneForMilestone(ms),
 			CurrentProtocolParameters: rawParams,
-		}
-		if err := srv.Send(payload); err != nil {
-			return fmt.Errorf("send error: %w", err)
-		}
-
-		return nil
+		}, nil
 	}
 
 	sendMilestonesRange := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
@@ -245,18 +240,16 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	sendFunc := func(task *workerpool.Task, _ iotago.MilestoneIndex) error {
 		// no release needed
 
-		milestone, ok := task.Param(0).(*storage.Milestone)
+		payload, ok := task.Param(0).(*inx.MilestoneAndProtocolParameters)
 		if !ok {
-			err := fmt.Errorf("expected *storage.Milestone, got %T", task.Param(0))
+			err := fmt.Errorf("expected *inx.MilestoneAndProtocolParameters, got %T", task.Param(0))
 			Plugin.LogInfof("send error: %w", err)
 
 			return err
 		}
 
-		if err := createMilestoneAndProtocolParametersPayloadForMilestoneAndSend(milestone); err != nil {
-			Plugin.LogInfof("send error: %v", err)
-
-			return err
+		if err := srv.Send(payload); err != nil {
+			return fmt.Errorf("send error: %w", err)
 		}
 
 		return nil
@@ -268,15 +261,15 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
-		milestone, ok := task.Param(0).(*storage.Milestone)
+		msIndex, ok := task.Param(1).(iotago.MilestoneIndex)
 		if !ok {
-			Plugin.LogInfof("send error: expected *storage.Milestone, got %T", task.Param(0))
+			Plugin.LogInfof("send error: expected iotago.MilestoneIndex, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
 
-		done, err := handleRangedSend(&task, milestone.Index(), stream, catchUpFunc, sendFunc)
+		done, err := handleRangedSend(&task, msIndex, stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
@@ -291,7 +284,14 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
 		defer cachedMilestone.Release(true) // milestone -1
 
-		wp.Submit(cachedMilestone.Milestone())
+		payload, err := createMilestoneAndProtocolParametersPayloadForMilestone(cachedMilestone.Milestone())
+		if err != nil {
+			Plugin.LogInfof("serialize error: %v", err)
+
+			return
+		}
+
+		wp.Submit(payload, cachedMilestone.Milestone().Index())
 	})
 
 	wp.Start()

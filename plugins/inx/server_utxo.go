@@ -603,7 +603,7 @@ func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenTo
 
 		payload, err := inx.WrapReceipt(receipt)
 		if err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogInfof("serialize error: %v", err)
 			cancel()
 
 			return

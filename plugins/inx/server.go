@@ -85,7 +85,7 @@ func currentNodeStatus() (*inx.NodeStatus, error) {
 
 	var lmi *inx.Milestone
 	if syncState.LatestMilestoneIndex > pruningIndex {
-		lmi, err = milestoneForIndex(syncState.LatestMilestoneIndex)
+		lmi, err = milestoneForStoredMilestone(syncState.LatestMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +100,7 @@ func currentNodeStatus() (*inx.NodeStatus, error) {
 
 	var cmi *inx.Milestone
 	if syncState.ConfirmedMilestoneIndex > pruningIndex {
-		cmi, err = milestoneForIndex(syncState.ConfirmedMilestoneIndex)
+		cmi, err = milestoneForStoredMilestone(syncState.ConfirmedMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}

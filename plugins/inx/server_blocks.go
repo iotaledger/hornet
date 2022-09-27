@@ -205,7 +205,7 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogInfof("serialize error: %v", err)
 			cancel()
 
 			return
@@ -253,7 +253,7 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogInfof("serialize error: %v", err)
 			cancel()
 
 			return
@@ -297,7 +297,7 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata(), tip)
 		if err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogInfof("serialize error: %v", err)
 			cancel()
 
 			return
