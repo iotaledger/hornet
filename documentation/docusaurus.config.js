@@ -5,18 +5,11 @@ module.exports = {
         [
             '@docusaurus/plugin-content-docs',
             {
-                id: 'hornet-develop',
+                id: 'hornet',
                 path: path.resolve(__dirname, 'docs'),
                 routeBasePath: 'hornet',
                 sidebarPath: path.resolve(__dirname, 'sidebars.js'),
                 editUrl: 'https://github.com/iotaledger/hornet/edit/develop/documentation',
-                versions: {
-                    current: {
-                        label: 'Develop',
-                        path: 'develop',
-                        badge: true
-                    },
-                },
             }
         ],
     ],
