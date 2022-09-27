@@ -144,25 +144,26 @@ func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServe
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
-		cachedBlock, ok := task.Param(0).(*storage.CachedBlock)
+		payload, ok := task.Param(0).(*inx.Block)
 		if !ok {
-			Plugin.LogInfof("send error: expected *storage.CachedBlock, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *inx.Block, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
-		defer cachedBlock.Release(true) // block -1
 
-		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID(), cachedBlock.Block().Data())
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	onReceivedNewBlock := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex) {
-		wp.Submit(cachedBlock)
+		defer cachedBlock.Release(true) // block -1
+
+		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID(), cachedBlock.Block().Data())
+		wp.Submit(payload)
 	})
 
 	wp.Start()
@@ -184,32 +185,33 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
-		blockMeta, ok := task.Param(0).(*storage.CachedMetadata)
+		payload, ok := task.Param(0).(*inx.BlockMetadata)
 		if !ok {
-			Plugin.LogInfof("send error: expected *storage.CachedMetadata, got %T", task.Param(0))
-			cancel()
-
-			return
-		}
-		defer blockMeta.Release(true) // meta -1
-
-		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
-		if err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: expected *inx.BlockMetadata, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	onBlockSolid := events.NewClosure(func(blockMeta *storage.CachedMetadata) {
-		wp.Submit(blockMeta)
+		defer blockMeta.Release(true) // meta -1
+
+		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
+		if err != nil {
+			Plugin.LogErrorf("serialize error: %v", err)
+			cancel()
+
+			return
+		}
+
+		wp.Submit(payload)
 	})
 
 	wp.Start()
@@ -231,31 +233,33 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
-		blockMeta, ok := task.Param(0).(*storage.CachedMetadata)
+		payload, ok := task.Param(0).(*inx.BlockMetadata)
 		if !ok {
-			Plugin.LogInfof("send error: expected *storage.CachedMetadata, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *inx.BlockMetadata, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
-		defer blockMeta.Release(true) // meta -1
 
-		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
-		if err != nil {
-			Plugin.LogInfof("send error: %v", err)
-			cancel()
-
-			return
-		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	onBlockReferenced := events.NewClosure(func(blockMeta *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32) {
-		wp.Submit(blockMeta)
+		defer blockMeta.Release(true) // meta -1
+
+		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
+		if err != nil {
+			Plugin.LogErrorf("serialize error: %v", err)
+			cancel()
+
+			return
+		}
+
+		wp.Submit(payload)
 	})
 
 	wp.Start()
@@ -279,7 +283,7 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 
 		tip, ok := task.Param(0).(*tipselect.Tip)
 		if !ok {
-			Plugin.LogInfof("send error: expected *tipselect.Tip, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *tipselect.Tip, got %T", task.Param(0))
 			cancel()
 
 			return
@@ -293,13 +297,13 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata(), tip)
 		if err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))

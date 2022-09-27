@@ -28,7 +28,19 @@ func cachedMilestoneFromRequestOrNil(req *inx.MilestoneRequest) *storage.CachedM
 	return deps.Storage.CachedMilestoneByIndexOrNil(msIndex)
 }
 
-func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, error) {
+func inxMilestoneForMilestone(ms *storage.Milestone) *inx.Milestone {
+	return &inx.Milestone{
+		MilestoneInfo: inx.NewMilestoneInfo(
+			ms.MilestoneID(),
+			ms.Index(),
+			ms.TimestampUnix()),
+		Milestone: &inx.RawMilestone{
+			Data: ms.Data(),
+		},
+	}
+}
+
+func inxMilestoneForCachedMilestone(ms *storage.CachedMilestone) *inx.Milestone {
 	defer ms.Release(true) // milestone -1
 
 	return &inx.Milestone{
@@ -39,17 +51,17 @@ func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, e
 		Milestone: &inx.RawMilestone{
 			Data: ms.Milestone().Data(),
 		},
-	}, nil
+	}
 }
 
-func milestoneForIndex(msIndex iotago.MilestoneIndex) (*inx.Milestone, error) {
+func milestoneForStoredMilestone(msIndex iotago.MilestoneIndex) (*inx.Milestone, error) {
 	cachedMilestone := deps.Storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, status.Errorf(codes.NotFound, "milestone index %d not found", msIndex)
 	}
 	defer cachedMilestone.Release(true) // milestone -1
 
-	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone + 1
+	return inxMilestoneForCachedMilestone(cachedMilestone.Retain()), nil // milestone + 1
 }
 
 func rawProtocolParametersForIndex(msIndex iotago.MilestoneIndex) (*inx.RawProtocolParameters, error) {
@@ -71,7 +83,7 @@ func (s *Server) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*i
 	}
 	defer cachedMilestone.Release(true) // milestone -1
 
-	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
+	return inxMilestoneForCachedMilestone(cachedMilestone.Retain()), nil // milestone +1
 }
 
 func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
@@ -80,31 +92,26 @@ func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToL
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
-		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
+		payload, ok := task.Param(0).(*inx.Milestone)
 		if !ok {
-			Plugin.LogInfof("send error: expected *storage.CachedMilestone, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected *inx.Milestone, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
-		defer cachedMilestone.Release(true) // milestone -1
 
-		payload, err := milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
-		if err != nil {
-			Plugin.LogInfof("error creating milestone: %v", err)
-			cancel()
-
-			return
-		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("send error: %v", err)
+			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	onLatestMilestoneChanged := events.NewClosure(func(milestone *storage.CachedMilestone) {
-		wp.Submit(milestone)
+	onLatestMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
+		defer cachedMilestone.Release(true) // milestone -1
+
+		payload := inxMilestoneForCachedMilestone(cachedMilestone.Retain())
+		wp.Submit(payload)
 	})
 
 	wp.Start()
@@ -128,7 +135,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	}
 
 	createMilestonePayloadForIndexAndSend := func(msIndex iotago.MilestoneIndex) error {
-		inxMilestone, err := milestoneForIndex(msIndex)
+		inxMilestone, err := milestoneForStoredMilestone(msIndex)
 		if err != nil {
 			return err
 		}
@@ -150,26 +157,16 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 		return nil
 	}
 
-	createMilestonePayloadForCachedMilestoneAndSend := func(ms *storage.CachedMilestone) error {
-		inxMilestone, err := milestoneForCachedMilestone(ms)
+	createMilestoneAndProtocolParametersPayloadForMilestone := func(ms *storage.Milestone) (*inx.MilestoneAndProtocolParameters, error) {
+		rawParams, err := rawProtocolParametersForIndex(ms.Index())
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		rawParams, err := rawProtocolParametersForIndex(ms.Milestone().Index())
-		if err != nil {
-			return err
-		}
-
-		payload := &inx.MilestoneAndProtocolParameters{
-			Milestone:                 inxMilestone,
+		return &inx.MilestoneAndProtocolParameters{
+			Milestone:                 inxMilestoneForMilestone(ms),
 			CurrentProtocolParameters: rawParams,
-		}
-		if err := srv.Send(payload); err != nil {
-			return fmt.Errorf("send error: %w", err)
-		}
-
-		return nil
+		}, nil
 	}
 
 	sendMilestonesRange := func(startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
@@ -234,25 +231,29 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
 		err := sendMilestonesRange(start, end)
 		if err != nil {
-			Plugin.LogInfof("sendMilestonesRange error: %v", err)
+			err := fmt.Errorf("sendMilestonesRange error: %w", err)
+			Plugin.LogError(err.Error())
+
+			return err
 		}
 
-		return err
+		return nil
 	}
 
 	sendFunc := func(task *workerpool.Task, _ iotago.MilestoneIndex) error {
 		// no release needed
 
-		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
+		payload, ok := task.Param(0).(*inx.MilestoneAndProtocolParameters)
 		if !ok {
-			err := fmt.Errorf("expected *storage.CachedMilestone, got %T", task.Param(0))
-			Plugin.LogInfof("send error: %w", err)
+			err := fmt.Errorf("expected *inx.MilestoneAndProtocolParameters, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: %v", err)
 
 			return err
 		}
 
-		if err := createMilestonePayloadForCachedMilestoneAndSend(cachedMilestone.Retain()); err != nil { // milestone +1
-			Plugin.LogInfof("send error: %v", err)
+		if err := srv.Send(payload); err != nil {
+			err := fmt.Errorf("send error: %w", err)
+			Plugin.LogError(err.Error())
 
 			return err
 		}
@@ -266,16 +267,15 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	wp := workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
 
-		cachedMilestone, ok := task.Param(0).(*storage.CachedMilestone)
+		msIndex, ok := task.Param(1).(iotago.MilestoneIndex)
 		if !ok {
-			Plugin.LogInfof("send error: expected *storage.CachedMilestone, got %T", task.Param(0))
+			Plugin.LogErrorf("send error: expected iotago.MilestoneIndex, got %T", task.Param(0))
 			cancel()
 
 			return
 		}
-		defer cachedMilestone.Release(true) // milestone -1
 
-		done, err := handleRangedSend(&task, cachedMilestone.Milestone().Index(), stream, catchUpFunc, sendFunc)
+		done, err := handleRangedSend(&task, msIndex, stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
@@ -288,7 +288,17 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
-		wp.Submit(cachedMilestone)
+		defer cachedMilestone.Release(true) // milestone -1
+
+		payload, err := createMilestoneAndProtocolParametersPayloadForMilestone(cachedMilestone.Milestone())
+		if err != nil {
+			Plugin.LogErrorf("serialize error: %v", err)
+			cancel()
+
+			return
+		}
+
+		wp.Submit(payload, cachedMilestone.Milestone().Index())
 	})
 
 	wp.Start()
