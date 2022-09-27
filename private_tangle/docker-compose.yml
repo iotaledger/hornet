@@ -103,7 +103,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.12
     depends_on:
-      - hornet-1
+      hornet-1:
+        condition: service_healthy
     ulimits:
       nofile:
         soft: 8192
@@ -147,7 +148,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.13
     depends_on:
-      - hornet-1
+      hornet-1:
+        condition: service_healthy
     ulimits:
       nofile:
         soft: 8192
@@ -190,7 +192,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.14
     depends_on:
-      - hornet-1
+      hornet-1:
+        condition: service_healthy
     ulimits:
       nofile:
         soft: 8192
@@ -235,7 +238,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.21
     depends_on:
-      - hornet-1
+      hornet-1:
+        condition: service_healthy
     environment:
       - "COO_PRV_KEYS=651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c,0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"
     ports:
@@ -260,7 +264,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.22
     depends_on:
-      - hornet-1
+      hornet-1:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "9322:9311/tcp"
@@ -291,7 +296,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.23
     depends_on:
-      - hornet-1
+      hornet-1:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "9323:9311/tcp"
@@ -319,8 +325,10 @@ services:
       peering_net:
         ipv4_address: 172.18.211.24
     depends_on:
-      - hornet-1
-      - inx-indexer
+      hornet-1:
+        condition: service_healthy
+      inx-indexer:
+        condition: service_started
     restart: on-failure
     ports:
       - "8091:8091/tcp"
@@ -348,7 +356,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.25
     depends_on:
-      - hornet-1
+      hornet-1:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "9892:9892/tcp"
@@ -373,8 +382,10 @@ services:
       peering_net:
         ipv4_address: 172.18.211.26
     depends_on:
-      - hornet-1
-      - inx-indexer
+      hornet-1:
+        condition: service_healthy
+      inx-indexer:
+        condition: service_started
     restart: on-failure
     ports:
       - "9326:9311/tcp"
@@ -420,7 +431,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.27
     depends_on:
-      - hornet-1
+      hornet-1:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "9687:9687/tcp"
@@ -442,7 +454,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.31
     depends_on:
-      - hornet-1
+      hornet-1:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "9331:9311/tcp"
@@ -473,7 +486,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.32
     depends_on:
-      - hornet-2
+      hornet-2:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "9332:9311/tcp"
@@ -504,7 +518,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.33
     depends_on:
-      - hornet-3
+      hornet-3:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "9333:9311/tcp"
@@ -534,7 +549,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.34
     depends_on:
-      - hornet-4
+      hornet-4:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "9334:9311/tcp"
