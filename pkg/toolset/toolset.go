@@ -50,6 +50,8 @@ const (
 	FlagToolPassword  = "password"
 	FlagToolSalt      = "salt"
 
+	FlagToolNodeURL = "nodeURL"
+
 	FlagToolOutputJSON            = "json"
 	FlagToolDescriptionOutputJSON = "format output as JSON"
 
@@ -61,8 +63,7 @@ const (
 	FlagToolSnapGenMintAddress        = "mintAddress"
 	FlagToolSnapGenTreasuryAllocation = "treasuryAllocation"
 
-	FlagToolDatabaseTargetIndex  = "targetIndex"
-	FlagToolDatabaseMergeNodeURL = "nodeURL"
+	FlagToolDatabaseTargetIndex = "targetIndex"
 )
 
 const (
@@ -85,6 +86,7 @@ const (
 	ToolDatabaseSnapshot       = "db-snapshot"
 	ToolDatabaseVerify         = "db-verify"
 	ToolBootstrapPrivateTangle = "bootstrap-private-tangle"
+	ToolCheckOnline            = "check-online"
 )
 
 const (
@@ -143,6 +145,7 @@ func HandleTools() {
 		ToolDatabaseSnapshot:       databaseSnapshot,
 		ToolDatabaseVerify:         databaseVerify,
 		ToolBootstrapPrivateTangle: networkBootstrap,
+		ToolCheckOnline:            checkOnline,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -185,6 +188,7 @@ func listTools() {
 	fmt.Printf("%-20s creates a full snapshot from a database\n", fmt.Sprintf("%s:", ToolDatabaseSnapshot))
 	fmt.Printf("%-20s verifies a valid ledger state and the existence of all blocks\n", fmt.Sprintf("%s:", ToolDatabaseVerify))
 	fmt.Printf("%-20s bootstraps a private tangle by creating a snapshot, database and coordinator state file\n", fmt.Sprintf("%s:", ToolBootstrapPrivateTangle))
+	fmt.Printf("%-20s checks the info endpoint of a node\n", fmt.Sprintf("%s:", ToolCheckOnline))
 }
 
 func yesOrNo(value bool) string {
