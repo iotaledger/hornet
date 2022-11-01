@@ -9,6 +9,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	coreDatabase "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -44,7 +45,9 @@ func snapshotHash(args []string) error {
 	fullPath := *fullSnapshotPathFlag
 	deltaPath := *deltaSnapshotPathFlag
 
-	targetEngine, err := database.EngineAllowed(database.EnginePebble)
+	allowedEngines := database.AllowedEnginesStorage
+
+	targetEngine, err := hivedb.EngineAllowed(hivedb.EnginePebble, allowedEngines...)
 	if err != nil {
 		return err
 	}
@@ -54,12 +57,12 @@ func snapshotHash(args []string) error {
 		return fmt.Errorf("can't create temp dir: %w", err)
 	}
 
-	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.TangleDatabaseDirectoryName), true, targetEngine)
+	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.TangleDatabaseDirectoryName), true, targetEngine, allowedEngines...)
 	if err != nil {
 		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.TangleDatabaseDirectoryName, err)
 	}
 
-	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.UTXODatabaseDirectoryName), true, targetEngine)
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.UTXODatabaseDirectoryName), true, targetEngine, allowedEngines...)
 	if err != nil {
 		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.UTXODatabaseDirectoryName, err)
 	}

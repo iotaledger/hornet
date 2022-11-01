@@ -6,7 +6,7 @@ replace github.com/iotaledger/hornet/v2 => ../../
 
 require (
 	github.com/iotaledger/hive.go/apputils v1.0.0-rc.1
-	github.com/iotaledger/hive.go/core v1.0.0-rc.1
+	github.com/iotaledger/hive.go/core v1.0.0-rc.1.0.20221101183303-b0ea70bc7047
 	github.com/iotaledger/hornet/v2 v2.0.0-00010101000000-000000000000
 )
 

@@ -2,24 +2,35 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/kvstore/mapdb"
+	"github.com/iotaledger/hive.go/core/kvstore/pebble"
+	"github.com/iotaledger/hive.go/core/kvstore/rocksdb"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 )
 
-type Engine string
+var (
+	AllowedEnginesDefault = []hivedb.Engine{
+		hivedb.EngineAuto,
+		hivedb.EngineMapDB,
+		hivedb.EnginePebble,
+		hivedb.EngineRocksDB,
+	}
 
-const (
-	EngineUnknown Engine = "unknown"
-	EngineAuto    Engine = "auto"
-	EngineRocksDB Engine = "rocksdb"
-	EnginePebble  Engine = "pebble"
-	EngineMapDB   Engine = "mapdb"
+	AllowedEnginesStorage = []hivedb.Engine{
+		hivedb.EnginePebble,
+		hivedb.EngineRocksDB,
+	}
+
+	AllowedEnginesStorageAuto = append(AllowedEnginesStorage, hivedb.EngineAuto)
 )
 
 var (
@@ -67,7 +78,7 @@ type Events struct {
 type Database struct {
 	databaseDir           string
 	store                 kvstore.KVStore
-	engine                Engine
+	engine                hivedb.Engine
 	metrics               *metrics.DatabaseMetrics
 	events                *Events
 	compactionSupported   bool
@@ -75,7 +86,7 @@ type Database struct {
 }
 
 // New creates a new Database instance.
-func New(databaseDirectory string, kvStore kvstore.KVStore, engine Engine, metrics *metrics.DatabaseMetrics, events *Events, compactionSupported bool, compactionRunningFunc func() bool) *Database {
+func New(databaseDirectory string, kvStore kvstore.KVStore, engine hivedb.Engine, metrics *metrics.DatabaseMetrics, events *Events, compactionSupported bool, compactionRunningFunc func() bool) *Database {
 	return &Database{
 		databaseDir:           databaseDirectory,
 		store:                 kvStore,
@@ -93,7 +104,7 @@ func (db *Database) KVStore() kvstore.KVStore {
 }
 
 // Engine returns the database engine.
-func (db *Database) Engine() Engine {
+func (db *Database) Engine() hivedb.Engine {
 	return db.engine
 }
 
@@ -123,10 +134,72 @@ func (db *Database) CompactionRunning() bool {
 
 // Size returns the size of the database.
 func (db *Database) Size() (int64, error) {
-	if db.engine == EngineMapDB {
+	if db.engine == hivedb.EngineMapDB {
 		// in-memory database does not support this method.
 		return 0, nil
 	}
 
 	return ioutils.FolderSize(db.databaseDir)
+}
+
+// CheckEngine is a wrapper around hivedb.CheckEngine to throw a custom error message in case of engine mismatch.
+func CheckEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine hivedb.Engine, allowedEngines ...hivedb.Engine) (hivedb.Engine, error) {
+
+	tmpAllowedEngines := AllowedEnginesDefault
+	if len(allowedEngines) > 0 {
+		tmpAllowedEngines = allowedEngines
+	}
+
+	targetEngine, err := hivedb.CheckEngine(dbPath, createDatabaseIfNotExists, dbEngine, tmpAllowedEngines...)
+	if err != nil {
+		if errors.Is(err, hivedb.ErrEngineMismatch) {
+			//nolint:stylecheck,revive // this error message is shown to the user
+			return hivedb.EngineUnknown, fmt.Errorf(`database (%s) engine does not match the configuration: '%v' != '%v'
+
+			If you want to use another database engine, you can use the tool './hornet tool db-migration' to convert the current database.`, dbPath, targetEngine, dbEngine[0])
+		}
+
+		return hivedb.EngineUnknown, err
+	}
+
+	return targetEngine, nil
+}
+
+// StoreWithDefaultSettings returns a kvstore with default settings.
+// It also checks if the database engine is correct.
+func StoreWithDefaultSettings(path string, createDatabaseIfNotExists bool, dbEngine hivedb.Engine, allowedEngines ...hivedb.Engine) (kvstore.KVStore, error) {
+
+	tmpAllowedEngines := AllowedEnginesDefault
+	if len(allowedEngines) > 0 {
+		tmpAllowedEngines = allowedEngines
+	}
+
+	targetEngine, err := CheckEngine(path, createDatabaseIfNotExists, dbEngine, tmpAllowedEngines...)
+	if err != nil {
+		return nil, err
+	}
+
+	switch targetEngine {
+	case hivedb.EnginePebble:
+		db, err := NewPebbleDB(path, nil, false)
+		if err != nil {
+			return nil, err
+		}
+
+		return pebble.New(db), nil
+
+	case hivedb.EngineRocksDB:
+		db, err := NewRocksDB(path)
+		if err != nil {
+			return nil, err
+		}
+
+		return rocksdb.New(db), nil
+
+	case hivedb.EngineMapDB:
+		return mapdb.NewMapDB(), nil
+
+	default:
+		return nil, fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", dbEngine)
+	}
 }

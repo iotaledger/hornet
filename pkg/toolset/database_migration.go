@@ -10,6 +10,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/database"
@@ -60,18 +61,18 @@ func databaseMigration(args []string) error {
 		return fmt.Errorf("'%s' (%s) already exist", FlagToolDatabasePathTarget, targetPath)
 	}
 
-	targetEngine, err := database.EngineFromStringAllowed(*databaseEngineTargetFlag, database.EnginePebble, database.EngineRocksDB)
+	targetEngine, err := hivedb.EngineFromStringAllowed(*databaseEngineTargetFlag, database.AllowedEnginesStorage...)
 	if err != nil {
 		return err
 	}
 
-	storeSource, err := database.StoreWithDefaultSettings(sourcePath, false)
+	storeSource, err := database.StoreWithDefaultSettings(sourcePath, false, hivedb.EngineAuto, database.AllowedEnginesStorageAuto...)
 	if err != nil {
 		return fmt.Errorf("source database initialization failed: %w", err)
 	}
 	defer func() { _ = storeSource.Close() }()
 
-	storeTarget, err := database.StoreWithDefaultSettings(targetPath, true, targetEngine)
+	storeTarget, err := database.StoreWithDefaultSettings(targetPath, true, targetEngine, database.AllowedEnginesStorage...)
 	if err != nil {
 		return fmt.Errorf("target database initialization failed: %w", err)
 	}

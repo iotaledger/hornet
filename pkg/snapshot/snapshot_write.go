@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/core/contextutils"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -818,7 +819,7 @@ func CreateSnapshotFromStorage(
 
 	// create a temp storage in memory
 	//nolint:contextcheck // false positive
-	utxoStoreTemp, err := database.StoreWithDefaultSettings("", false, database.EngineMapDB)
+	utxoStoreTemp, err := database.StoreWithDefaultSettings("", false, hivedb.EngineMapDB, hivedb.EngineMapDB)
 	if err != nil {
 		return nil, fmt.Errorf("create temp storage failed: %w", err)
 	}
@@ -944,7 +945,9 @@ func CreateSnapshotFromStorage(
 // applying the delta diffs onto it and then writing out the merged state.
 func MergeSnapshotsFiles(ctx context.Context, fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
 
-	targetEngine, err := database.EngineAllowed(database.EnginePebble)
+	allowedEngines := database.AllowedEnginesStorage
+
+	targetEngine, err := hivedb.EngineAllowed(hivedb.EnginePebble, allowedEngines...)
 	if err != nil {
 		return nil, err
 	}
@@ -955,13 +958,13 @@ func MergeSnapshotsFiles(ctx context.Context, fullPath string, deltaPath string,
 	}
 
 	//nolint:contextcheck // false positive
-	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.TangleDatabaseDirectoryName), true, targetEngine)
+	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.TangleDatabaseDirectoryName), true, targetEngine, allowedEngines...)
 	if err != nil {
 		return nil, fmt.Errorf("%s database initialization failed: %w", coreDatabase.TangleDatabaseDirectoryName, err)
 	}
 
 	//nolint:contextcheck // false positive
-	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.UTXODatabaseDirectoryName), true, targetEngine)
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.UTXODatabaseDirectoryName), true, targetEngine, allowedEngines...)
 	if err != nil {
 		return nil, fmt.Errorf("%s database initialization failed: %w", coreDatabase.UTXODatabaseDirectoryName, err)
 	}

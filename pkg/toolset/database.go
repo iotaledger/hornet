@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	databasecore "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/core/protocfg"
@@ -153,13 +154,13 @@ func getTangleStorage(path string,
 	markTainted bool,
 	checkSnapInfo bool) (*storage.Storage, error) {
 
-	dbEngine, err := database.EngineFromStringAllowed(dbEngineStr, database.EnginePebble, database.EngineRocksDB, database.EngineAuto)
+	dbEngine, err := hivedb.EngineFromStringAllowed(dbEngineStr, database.AllowedEnginesStorageAuto...)
 	if err != nil {
 		return nil, err
 	}
 
 	if checkExist {
-		databaseExists, err := database.Exists(path)
+		databaseExists, err := hivedb.Exists(path)
 		if err != nil {
 			return nil, err
 		}
@@ -202,14 +203,16 @@ func checkSnapshotInfo(dbStorage *storage.Storage) error {
 	return nil
 }
 
-func createTangleStorage(name string, tangleDatabasePath string, utxoDatabasePath string, dbEngine ...database.Engine) (*storage.Storage, error) {
+func createTangleStorage(name string, tangleDatabasePath string, utxoDatabasePath string, dbEngine hivedb.Engine) (*storage.Storage, error) {
 
-	storeTangle, err := database.StoreWithDefaultSettings(tangleDatabasePath, true, dbEngine...)
+	allowedEngines := database.AllowedEnginesDefault
+
+	storeTangle, err := database.StoreWithDefaultSettings(tangleDatabasePath, true, dbEngine, allowedEngines...)
 	if err != nil {
 		return nil, fmt.Errorf("%s tangle database initialization failed: %w", name, err)
 	}
 
-	storeUTXO, err := database.StoreWithDefaultSettings(utxoDatabasePath, true, dbEngine...)
+	storeUTXO, err := database.StoreWithDefaultSettings(utxoDatabasePath, true, dbEngine, allowedEngines...)
 	if err != nil {
 		return nil, fmt.Errorf("%s utxo database initialization failed: %w", name, err)
 	}

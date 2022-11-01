@@ -14,7 +14,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
-	"github.com/iotaledger/hornet/v2/pkg/database"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 )
 
 const (
@@ -93,7 +93,7 @@ const (
 	DefaultValueAPIJWTTokenSalt     = "HORNET"
 	DefaultValueMainnetDatabasePath = "mainnetdb"
 	DefaultValueP2PDatabasePath     = "p2pstore"
-	DefaultValueDatabaseEngine      = database.EngineRocksDB
+	DefaultValueDatabaseEngine      = hivedb.EngineRocksDB
 )
 
 const (

@@ -11,6 +11,7 @@ import (
 
 	"github.com/iotaledger/hive.go/core/autopeering/peer"
 	"github.com/iotaledger/hive.go/core/autopeering/peer/service"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 )
@@ -51,7 +52,7 @@ func GetEntryNodeMultiAddress(local *peer.Local) (multiaddr.Multiaddr, error) {
 func NewLocalPeerContainer(p2pServiceKey service.Key,
 	seed []byte,
 	p2pDatabasePath string,
-	dbEngine database.Engine,
+	dbEngine hivedb.Engine,
 	p2pBindMultiAddresses []string,
 	autopeeringBindAddr string,
 	runAsEntryNode bool) (*LocalPeerContainer, error) {
@@ -102,7 +103,7 @@ func NewLocalPeerContainer(p2pServiceKey service.Key,
 		ownServices.Update(p2pServiceKey, "tcp", libp2pBindPort)
 	}
 
-	store, err := database.StoreWithDefaultSettings(filepath.Join(p2pDatabasePath, "autopeering"), true, dbEngine)
+	store, err := database.StoreWithDefaultSettings(filepath.Join(p2pDatabasePath, "autopeering"), true, dbEngine, database.AllowedEnginesDefault...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create autopeering database: %w", err)
 	}

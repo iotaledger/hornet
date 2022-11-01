@@ -10,6 +10,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/core/app"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
@@ -70,18 +71,18 @@ func initConfigPars(c *dig.Container) error {
 
 	type cfgResult struct {
 		dig.Out
-		DatabaseEngine           database.Engine `name:"databaseEngine"`
-		DatabasePath             string          `name:"databasePath"`
-		TangleDatabasePath       string          `name:"tangleDatabasePath"`
-		UTXODatabasePath         string          `name:"utxoDatabasePath"`
-		DeleteDatabaseFlag       bool            `name:"deleteDatabase"`
-		DeleteAllFlag            bool            `name:"deleteAll"`
-		DatabaseDebug            bool            `name:"databaseDebug"`
-		DatabaseAutoRevalidation bool            `name:"databaseAutoRevalidation"`
+		DatabaseEngine           hivedb.Engine `name:"databaseEngine"`
+		DatabasePath             string        `name:"databasePath"`
+		TangleDatabasePath       string        `name:"tangleDatabasePath"`
+		UTXODatabasePath         string        `name:"utxoDatabasePath"`
+		DeleteDatabaseFlag       bool          `name:"deleteDatabase"`
+		DeleteAllFlag            bool          `name:"deleteAll"`
+		DatabaseDebug            bool          `name:"databaseDebug"`
+		DatabaseAutoRevalidation bool          `name:"databaseAutoRevalidation"`
 	}
 
 	if err := c.Provide(func() cfgResult {
-		dbEngine, err := database.EngineFromStringAllowed(ParamsDatabase.Engine)
+		dbEngine, err := hivedb.EngineFromStringAllowed(ParamsDatabase.Engine, database.AllowedEnginesDefault...)
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}
@@ -107,12 +108,12 @@ func provide(c *dig.Container) error {
 
 	type databaseDeps struct {
 		dig.In
-		DeleteDatabaseFlag bool            `name:"deleteDatabase"`
-		DeleteAllFlag      bool            `name:"deleteAll"`
-		DatabaseEngine     database.Engine `name:"databaseEngine"`
-		DatabasePath       string          `name:"databasePath"`
-		UTXODatabasePath   string          `name:"utxoDatabasePath"`
-		TangleDatabasePath string          `name:"tangleDatabasePath"`
+		DeleteDatabaseFlag bool          `name:"deleteDatabase"`
+		DeleteAllFlag      bool          `name:"deleteAll"`
+		DatabaseEngine     hivedb.Engine `name:"databaseEngine"`
+		DatabasePath       string        `name:"databasePath"`
+		UTXODatabasePath   string        `name:"utxoDatabasePath"`
+		TangleDatabasePath string        `name:"tangleDatabasePath"`
 	}
 
 	type databaseOut struct {
@@ -126,7 +127,7 @@ func provide(c *dig.Container) error {
 
 	if err := c.Provide(func(deps databaseDeps) databaseOut {
 
-		checkDatabase := func() database.Engine {
+		checkDatabase := func() hivedb.Engine {
 
 			if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 				// delete old database folder
@@ -135,12 +136,14 @@ func provide(c *dig.Container) error {
 				}
 			}
 
-			tangleTargetEngine, err := database.CheckEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine)
+			allowedEngines := database.AllowedEnginesStorageAuto
+
+			tangleTargetEngine, err := database.CheckEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine, allowedEngines...)
 			if err != nil {
 				CoreComponent.LogPanic(err)
 			}
 
-			utxoTargetEngine, err := database.CheckEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine)
+			utxoTargetEngine, err := database.CheckEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine, allowedEngines...)
 			if err != nil {
 				CoreComponent.LogPanic(err)
 			}
@@ -153,7 +156,7 @@ func provide(c *dig.Container) error {
 		}
 
 		targetEngine := deps.DatabaseEngine
-		if targetEngine != database.EngineMapDB {
+		if targetEngine != hivedb.EngineMapDB {
 			// we only need to check the database engine if we don't use an in-memory database
 			targetEngine = checkDatabase()
 		}
@@ -162,21 +165,21 @@ func provide(c *dig.Container) error {
 		utxoDatabaseMetrics := &metrics.DatabaseMetrics{}
 
 		switch targetEngine {
-		case database.EnginePebble:
+		case hivedb.EnginePebble:
 			return databaseOut{
 				StorageMetrics: &metrics.StorageMetrics{},
 				TangleDatabase: newPebble(deps.TangleDatabasePath, tangleDatabaseMetrics),
 				UTXODatabase:   newPebble(deps.UTXODatabasePath, utxoDatabaseMetrics),
 			}
 
-		case database.EngineRocksDB:
+		case hivedb.EngineRocksDB:
 			return databaseOut{
 				StorageMetrics: &metrics.StorageMetrics{},
 				TangleDatabase: newRocksDB(deps.TangleDatabasePath, tangleDatabaseMetrics),
 				UTXODatabase:   newRocksDB(deps.UTXODatabasePath, utxoDatabaseMetrics),
 			}
 
-		case database.EngineMapDB:
+		case hivedb.EngineMapDB:
 			return databaseOut{
 				StorageMetrics: &metrics.StorageMetrics{},
 				TangleDatabase: newMapDB(tangleDatabaseMetrics),

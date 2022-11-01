@@ -14,6 +14,7 @@ import (
 
 	"github.com/iotaledger/hive.go/core/configuration"
 	"github.com/iotaledger/hive.go/core/crypto"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	databasecore "github.com/iotaledger/hornet/v2/core/database"
@@ -106,7 +107,7 @@ func networkBootstrap(args []string) error {
 		return fmt.Errorf("'%s' (%s) already exists", FlagToolCoordinatorStatePath, cooStatePath)
 	}
 
-	dbEngine, err := database.EngineFromStringAllowed(*databaseEngineFlag, database.EnginePebble, database.EngineRocksDB)
+	dbEngine, err := hivedb.EngineFromStringAllowed(*databaseEngineFlag, database.AllowedEnginesStorage...)
 	if err != nil {
 		return err
 	}

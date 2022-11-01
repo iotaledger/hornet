@@ -18,6 +18,7 @@ import (
 
 	kvstoreds "github.com/iotaledger/go-ds-kvstore"
 	hivecrypto "github.com/iotaledger/hive.go/core/crypto"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/database"
@@ -62,7 +63,7 @@ func (psc *PeerStoreContainer) Close() error {
 }
 
 // NewPeerStoreContainer creates a peerstore using kvstore.
-func NewPeerStoreContainer(peerStorePath string, dbEngine database.Engine, createDatabaseIfNotExists bool) (*PeerStoreContainer, error) {
+func NewPeerStoreContainer(peerStorePath string, dbEngine hivedb.Engine, createDatabaseIfNotExists bool) (*PeerStoreContainer, error) {
 
 	dirPath := filepath.Dir(peerStorePath)
 
@@ -72,7 +73,7 @@ func NewPeerStoreContainer(peerStorePath string, dbEngine database.Engine, creat
 		}
 	}
 
-	store, err := database.StoreWithDefaultSettings(peerStorePath, createDatabaseIfNotExists, dbEngine)
+	store, err := database.StoreWithDefaultSettings(peerStorePath, createDatabaseIfNotExists, dbEngine, database.AllowedEnginesDefault...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize peer store database: %w", err)
 	}

@@ -8,6 +8,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 )
@@ -37,7 +38,7 @@ func databaseHealth(args []string) error {
 
 	checkDatabaseHealth := func(path string, name string, outputJSON bool) error {
 
-		dbExists, err := database.Exists(path)
+		dbExists, err := hivedb.Exists(path)
 		if err != nil {
 			return err
 		}
@@ -48,7 +49,7 @@ func databaseHealth(args []string) error {
 			return nil
 		}
 
-		dbStore, err := database.StoreWithDefaultSettings(path, false)
+		dbStore, err := database.StoreWithDefaultSettings(path, false, hivedb.EngineAuto, database.AllowedEnginesStorageAuto...)
 		if err != nil {
 			return fmt.Errorf("%s database initialization failed: %w", name, err)
 		}
