@@ -27,7 +27,7 @@ require (
 	github.com/prometheus/client_golang v1.13.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/wollac/iota-crypto-demo v0.0.0-20220825203128-7e0bfe13faf6
 	go.uber.org/atomic v1.10.0
 	go.uber.org/dig v1.15.0
