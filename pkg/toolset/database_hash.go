@@ -13,6 +13,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	coreDatabase "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -255,7 +256,7 @@ func databaseLedgerHash(args []string) error {
 		return fmt.Errorf("'%s' (%s) does not exist", FlagToolDatabasePath, databasePath)
 	}
 
-	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.TangleDatabaseDirectoryName), false)
+	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.TangleDatabaseDirectoryName), false, hivedb.EngineAuto, database.AllowedEnginesStorageAuto...)
 	if err != nil {
 		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.TangleDatabaseDirectoryName, err)
 	}
@@ -265,7 +266,7 @@ func databaseLedgerHash(args []string) error {
 		_ = tangleStore.Close()
 	}()
 
-	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.UTXODatabaseDirectoryName), false)
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.UTXODatabaseDirectoryName), false, hivedb.EngineAuto, database.AllowedEnginesStorageAuto...)
 	if err != nil {
 		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.UTXODatabaseDirectoryName, err)
 	}

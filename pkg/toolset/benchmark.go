@@ -14,6 +14,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/tpkg"
@@ -47,7 +48,9 @@ func benchmarkIO(args []string) error {
 	objectCnt := *objectsCountFlag
 	size := *objectsSizeFlag
 
-	dbEngine, err := database.EngineFromStringAllowed(*databaseEngineFlag, database.EnginePebble, database.EngineRocksDB)
+	allowedEngines := database.AllowedEnginesStorage
+
+	dbEngine, err := hivedb.EngineFromStringAllowed(*databaseEngineFlag, allowedEngines...)
 	if err != nil {
 		return err
 	}
@@ -59,7 +62,7 @@ func benchmarkIO(args []string) error {
 
 	defer func() { _ = os.RemoveAll(tempDir) }()
 
-	store, err := database.StoreWithDefaultSettings(tempDir, true, dbEngine)
+	store, err := database.StoreWithDefaultSettings(tempDir, true, dbEngine, allowedEngines...)
 	if err != nil {
 		return fmt.Errorf("database initialization failed: %w", err)
 	}

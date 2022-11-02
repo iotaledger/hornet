@@ -1,6 +1,7 @@
 package database
 
 import (
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/kvstore/pebble"
 	"github.com/iotaledger/hornet/v2/pkg/database"
@@ -30,7 +31,7 @@ func newPebble(path string, metrics *metrics.DatabaseMetrics) *database.Database
 	return database.New(
 		path,
 		pebble.New(db),
-		database.EnginePebble,
+		hivedb.EnginePebble,
 		metrics,
 		dbEvents,
 		true,

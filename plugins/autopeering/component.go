@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/hive.go/core/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/core/autopeering/selection"
 	"github.com/iotaledger/hive.go/core/crypto/ed25519"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/generics/event"
 	databaseCore "github.com/iotaledger/hornet/v2/core/database"
@@ -25,7 +26,6 @@ import (
 	"github.com/iotaledger/hornet/v2/core/snapshot"
 	"github.com/iotaledger/hornet/v2/core/tangle"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
-	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/p2p/autopeering"
 	"github.com/iotaledger/hornet/v2/plugins/coreapi"
@@ -74,12 +74,12 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodePrivateKey            crypto.PrivKey  `name:"nodePrivateKey"`
-	P2PDatabasePath           string          `name:"p2pDatabasePath"`
-	P2PBindMultiAddresses     []string        `name:"p2pBindMultiAddresses"`
-	DatabaseEngine            database.Engine `name:"databaseEngine"`
-	AutopeeringRunAsEntryNode bool            `name:"autopeeringRunAsEntryNode"`
-	PeeringManager            *p2p.Manager    `optional:"true"`
+	NodePrivateKey            crypto.PrivKey `name:"nodePrivateKey"`
+	P2PDatabasePath           string         `name:"p2pDatabasePath"`
+	P2PBindMultiAddresses     []string       `name:"p2pBindMultiAddresses"`
+	DatabaseEngine            hivedb.Engine  `name:"databaseEngine"`
+	AutopeeringRunAsEntryNode bool           `name:"autopeeringRunAsEntryNode"`
+	PeeringManager            *p2p.Manager   `optional:"true"`
 	AutopeeringManager        *autopeering.Manager
 }
 

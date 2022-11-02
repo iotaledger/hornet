@@ -11,10 +11,10 @@ import (
 
 	"github.com/iotaledger/hive.go/core/configuration"
 	"github.com/iotaledger/hive.go/core/contextutils"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
-	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
@@ -36,7 +36,7 @@ func databaseMerge(args []string) error {
 	genesisSnapshotFilePathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the genesis snapshot file (optional)")
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
 	databasePathTargetFlag := fs.String(FlagToolDatabasePathTarget, "", "the path to the target database")
-	databaseEngineSourceFlag := fs.String(FlagToolDatabaseEngineSource, string(database.EngineAuto), "the engine of the source database (optional, values: pebble, rocksdb, auto)")
+	databaseEngineSourceFlag := fs.String(FlagToolDatabaseEngineSource, string(hivedb.EngineAuto), "the engine of the source database (optional, values: pebble, rocksdb, auto)")
 	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, string(DefaultValueDatabaseEngine), "the engine of the target database (values: pebble, rocksdb)")
 	targetIndexFlag := fs.Uint32(FlagToolDatabaseTargetIndex, 0, "the target index (optional)")
 	nodeURLFlag := fs.String(FlagToolNodeURL, "", "URL of the node (optional)")
@@ -52,7 +52,7 @@ func databaseMerge(args []string) error {
 			FlagToolDatabasePathSource,
 			DefaultValueMainnetDatabasePath,
 			FlagToolDatabaseEngineSource,
-			database.EnginePebble,
+			hivedb.EnginePebble,
 			FlagToolDatabasePathTarget,
 			"database_new",
 			FlagToolSnapshotPath,
@@ -660,7 +660,7 @@ func NewProxyStorage(
 	milestoneManager *milestonemanager.MilestoneManager,
 	getBlockFunc GetBlockFunc) (*ProxyStorage, error) {
 
-	storeProxy, err := createTangleStorage("proxy", "", "", database.EngineMapDB)
+	storeProxy, err := createTangleStorage("proxy", "", "", hivedb.EngineMapDB)
 	if err != nil {
 		return nil, err
 	}

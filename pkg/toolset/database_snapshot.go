@@ -8,8 +8,8 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	snapCore "github.com/iotaledger/hornet/v2/core/snapshot"
-	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -55,7 +55,7 @@ func databaseSnapshot(args []string) error {
 	solidEntryPointCheckThresholdPast := belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdPast
 	solidEntryPointCheckThresholdFuture := belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdFuture
 
-	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, true, true, true)
+	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(hivedb.EngineAuto), true, true, true, true)
 	if err != nil {
 		return err
 	}

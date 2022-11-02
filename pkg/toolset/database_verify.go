@@ -11,8 +11,8 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/core/configuration"
+	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
-	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
@@ -60,7 +60,7 @@ func databaseVerify(args []string) error {
 
 	// we don't need to check the health of the source db.
 	// it is fine as long as all blocks in the cone are found.
-	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, false, false, true)
+	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(hivedb.EngineAuto), true, false, false, true)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func verifyDatabase(
 	println(fmt.Sprintf("existing milestone range source database: %d-%d", msIndexStart, msIndexEnd))
 
 	//nolint:contextcheck // false positive
-	tangleStoreTemp, err := createTangleStorage("temp", "", "", database.EngineMapDB)
+	tangleStoreTemp, err := createTangleStorage("temp", "", "", hivedb.EngineMapDB)
 	if err != nil {
 		return err
 	}
