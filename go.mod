@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/blang/vfs v1.0.0
 	github.com/cockroachdb/pebble v0.0.0-20220923162449-829c25fa5db3
-	github.com/docker/docker v20.10.18+incompatible
+	github.com/docker/docker v20.10.21+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
