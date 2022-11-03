@@ -9,8 +9,9 @@ import (
 
 	"github.com/iotaledger/hive.go/core/configuration"
 	hivedb "github.com/iotaledger/hive.go/core/database"
+	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/database"
-	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 )
 
 func databaseHealth(args []string) error {
@@ -55,12 +56,12 @@ func databaseHealth(args []string) error {
 		}
 		defer func() { _ = dbStore.Close() }()
 
-		healthTracker, err := storage.NewStoreHealthTracker(dbStore, storage.DBVersionNone)
+		healthTracker, err := kvstore.NewStoreHealthTracker(dbStore, []byte{common.StorePrefixHealth}, kvstore.StoreVersionNone, nil)
 		if err != nil {
 			return err
 		}
 
-		dbVersion, err := healthTracker.DatabaseVersion()
+		storeVersion, err := healthTracker.StoreVersion()
 		if err != nil {
 			return err
 		}
@@ -84,7 +85,7 @@ func databaseHealth(args []string) error {
 				Tainted  bool   `json:"tainted"`
 			}{
 				Database: name,
-				Version:  dbVersion,
+				Version:  int(storeVersion),
 				Healthy:  !corrupted,
 				Tainted:  tainted,
 			}
@@ -98,7 +99,7 @@ func databaseHealth(args []string) error {
         - Healthy:        %s
         - Tainted:        %s`+"\n\n",
 			name,
-			dbVersion,
+			storeVersion,
 			yesOrNo(!corrupted),
 			yesOrNo(tainted),
 		)

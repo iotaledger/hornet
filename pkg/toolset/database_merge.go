@@ -129,7 +129,7 @@ func databaseMerge(args []string) error {
 
 	// mark the database as corrupted.
 	// this flag will be cleared after the operation finished successfully.
-	if err := tangleStoreTarget.MarkDatabasesCorrupted(); err != nil {
+	if err := tangleStoreTarget.MarkStoresCorrupted(); err != nil {
 		return err
 	}
 
@@ -156,7 +156,7 @@ func databaseMerge(args []string) error {
 	}
 
 	// mark clean shutdown of the database
-	if err := tangleStoreTarget.MarkDatabasesHealthy(); err != nil {
+	if err := tangleStoreTarget.MarkStoresHealthy(); err != nil {
 		return err
 	}
 

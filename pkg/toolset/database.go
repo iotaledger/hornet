@@ -44,14 +44,14 @@ func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.Miles
 
 func checkDatabaseHealth(storage *storage.Storage, markTainted bool) error {
 
-	corrupted, err := storage.AreDatabasesCorrupted()
+	corrupted, err := storage.AreStoresCorrupted()
 	if err != nil {
 		return err
 	}
 
 	if corrupted {
 		if markTainted {
-			if err := storage.MarkDatabasesTainted(); err != nil {
+			if err := storage.MarkStoresTainted(); err != nil {
 				return err
 			}
 		}
@@ -59,7 +59,7 @@ func checkDatabaseHealth(storage *storage.Storage, markTainted bool) error {
 		return errors.New("database is corrupted")
 	}
 
-	tainted, err := storage.AreDatabasesTainted()
+	tainted, err := storage.AreStoresTainted()
 	if err != nil {
 		return err
 	}

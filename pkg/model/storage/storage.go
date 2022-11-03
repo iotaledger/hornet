@@ -8,6 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/objectstorage"
 	"github.com/iotaledger/hive.go/core/syncutils"
+	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/profile"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -92,7 +93,7 @@ type Storage struct {
 	snapshotStore kvstore.KVStore
 
 	// healthTrackers
-	healthTrackers []*StoreHealthTracker
+	healthTrackers []*kvstore.StoreHealthTracker
 
 	// object storages
 	childrenStorage           *objectstorage.ObjectStorage
@@ -119,12 +120,12 @@ type Storage struct {
 
 func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, error) {
 
-	healthTrackerTangle, err := NewStoreHealthTracker(tangleStore, DBVersionTangle)
+	healthTrackerTangle, err := kvstore.NewStoreHealthTracker(tangleStore, []byte{common.StorePrefixHealth}, DBVersionTangle, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	healthTrackerUTXO, err := NewStoreHealthTracker(utxoStore, DBVersionUTXO)
+	healthTrackerUTXO, err := kvstore.NewStoreHealthTracker(utxoStore, []byte{common.StorePrefixHealth}, DBVersionUTXO, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +134,7 @@ func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile .
 		ProtocolStorage: nil,
 		tangleStore:     tangleStore,
 		utxoStore:       utxoStore,
-		healthTrackers: []*StoreHealthTracker{
+		healthTrackers: []*kvstore.StoreHealthTracker{
 			healthTrackerTangle,
 			healthTrackerUTXO,
 		},
