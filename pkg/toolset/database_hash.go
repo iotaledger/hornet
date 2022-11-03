@@ -22,7 +22,7 @@ import (
 
 func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) error {
 
-	correctVersion, err := dbStorage.CheckCorrectDatabasesVersion()
+	correctVersion, err := dbStorage.CheckCorrectStoresVersion()
 	if err != nil {
 		return err
 	}
@@ -31,12 +31,12 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		return fmt.Errorf("database version outdated")
 	}
 
-	corrupted, err := dbStorage.AreDatabasesCorrupted()
+	corrupted, err := dbStorage.AreStoresCorrupted()
 	if err != nil {
 		return err
 	}
 
-	tainted, err := dbStorage.AreDatabasesTainted()
+	tainted, err := dbStorage.AreStoresTainted()
 	if err != nil {
 		return err
 	}

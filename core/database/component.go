@@ -252,13 +252,13 @@ func provide(c *dig.Container) error {
 
 func configure() error {
 
-	correctDatabasesVersion, err := deps.Storage.CheckCorrectDatabasesVersion()
+	correctDatabasesVersion, err := deps.Storage.CheckCorrectStoresVersion()
 	if err != nil {
 		CoreComponent.LogPanic(err)
 	}
 
 	if !correctDatabasesVersion {
-		databaseVersionUpdated, err := deps.Storage.UpdateDatabasesVersion()
+		databaseVersionUpdated, err := deps.Storage.UpdateStoresVersion()
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}
@@ -280,7 +280,7 @@ func configure() error {
 	if err = CoreComponent.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
 		<-ctx.Done()
 
-		if err = deps.Storage.MarkDatabasesHealthy(); err != nil {
+		if err = deps.Storage.MarkStoresHealthy(); err != nil {
 			CoreComponent.LogPanic(err)
 		}
 

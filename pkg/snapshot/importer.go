@@ -71,7 +71,7 @@ func (s *Importer) ImportSnapshots(ctx context.Context) error {
 	}
 
 	if err = s.LoadFullSnapshotFromFile(ctx, s.snapshotFullPath, targetNetworkID); err != nil {
-		_ = s.storage.MarkDatabasesCorrupted()
+		_ = s.storage.MarkStoresCorrupted()
 
 		return err
 	}
@@ -81,7 +81,7 @@ func (s *Importer) ImportSnapshots(ctx context.Context) error {
 	}
 
 	if err = s.LoadDeltaSnapshotFromFile(ctx, s.snapshotDeltaPath); err != nil {
-		_ = s.storage.MarkDatabasesCorrupted()
+		_ = s.storage.MarkStoresCorrupted()
 
 		return err
 	}

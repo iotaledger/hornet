@@ -180,14 +180,14 @@ func configure() error {
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
 	if err := CoreComponent.Daemon().BackgroundWorker("Database Health", func(_ context.Context) {
-		if err := deps.Storage.MarkDatabasesCorrupted(); err != nil {
+		if err := deps.Storage.MarkStoresCorrupted(); err != nil {
 			CoreComponent.LogPanic(err)
 		}
 	}, daemon.PriorityDatabaseHealth); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
-	databaseCorrupted, err := deps.Storage.AreDatabasesCorrupted()
+	databaseCorrupted, err := deps.Storage.AreStoresCorrupted()
 	if err != nil {
 		CoreComponent.LogPanic(err)
 	}
