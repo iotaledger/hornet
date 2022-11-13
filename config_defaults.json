@@ -121,7 +121,9 @@
       "bindAddress": "0.0.0.0:14626",
       "entryNodes": [
         "/dns/entry-hornet-0.h.shimmer.network/udp/14626/autopeering/HK6EKbNtjwve9HMbL6PH6R3uLXZYQoBoqNPD5LsoWuA6",
-        "/dns/entry-hornet-1.h.shimmer.network/udp/14626/autopeering/BT8EiSRXTixnH2wMoy4ecNpVtiAXxfXKfYsJ2KvU3WLx"
+        "/dns/entry-hornet-1.h.shimmer.network/udp/14626/autopeering/BT8EiSRXTixnH2wMoy4ecNpVtiAXxfXKfYsJ2KvU3WLx",
+        "/dns/entry-0.shimmer-mainnet.tanglebay.com/udp/14636/autopeering/22aGL1rL7yh4emm1CSN5XyVXYC15GehZok3hNYHtMMnw",
+        "/dns/entry-1.shimmer-mainnet.tanglebay.com/udp/14636/autopeering/CvF69T6NbVstwu6NfLVQHcDS1Dsd8XxCMTDHNC2rvJTZ"
       ],
       "entryNodesPreferIPv6": false,
       "runAsEntryNode": false
@@ -149,6 +151,10 @@
       {
         "full": "https://files.shimmer.network/snapshots/latest-full_snapshot.bin",
         "delta": "https://files.shimmer.network/snapshots/latest-delta_snapshot.bin"
+      },
+      {
+        "full": "https://cdn.tanglebay.com/snapshots/shimmer-mainnet/full_snapshot.bin",
+        "delta": "https://cdn.tanglebay.com/snapshots/shimmer-mainnet/delta_snapshot.bin"
       }
     ]
   },
