@@ -8,7 +8,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/core/certificate"
 	"github.com/iotaledger/hive.go/core/configuration"
+	hivep2p "github.com/iotaledger/hive.go/core/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/jwt"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
@@ -60,12 +62,17 @@ func generateJWTApiToken(args []string) error {
 		return fmt.Errorf("unable to check private key file (%s): %w", privKeyFilePath, err)
 	}
 
-	privKey, err := p2p.ReadEd25519PrivateKeyFromPEMFile(privKeyFilePath)
+	privKey, err := certificate.ReadEd25519PrivateKeyFromPEMFile(privKeyFilePath)
 	if err != nil {
 		return fmt.Errorf("reading private key file for peer identity failed: %w", err)
 	}
 
-	peerID, err := peer.IDFromPublicKey(privKey.GetPublic())
+	libp2pPrivKey, err := hivep2p.Ed25519PrivateKeyToLibp2pPrivateKey(privKey)
+	if err != nil {
+		return fmt.Errorf("reading private key file for peer identity failed: %w", err)
+	}
+
+	peerID, err := peer.IDFromPublicKey(libp2pPrivKey.GetPublic())
 	if err != nil {
 		return fmt.Errorf("unable to get peer identity from public key: %w", err)
 	}
@@ -74,7 +81,7 @@ func generateJWTApiToken(args []string) error {
 	jwtAuth, err := jwt.NewAuth(salt,
 		0,
 		peerID.String(),
-		privKey,
+		libp2pPrivKey,
 	)
 	if err != nil {
 		return fmt.Errorf("JWT auth initialization failed: %w", err)

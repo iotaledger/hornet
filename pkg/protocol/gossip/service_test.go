@@ -18,6 +18,7 @@ import (
 	"github.com/iotaledger/hive.go/core/configuration"
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/logger"
+	hivep2p "github.com/iotaledger/hive.go/core/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
@@ -73,10 +74,10 @@ func TestServiceEvents(t *testing.T) {
 	}
 	var srvOpts []gossip.ServiceOption
 
-	node1PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("5536d0d7eb7cb3780085d73d55079a373a726df58010d881167add08d7e8108c76d7a7f15c094c292faa22ac81b976034f0b11db86a8863d9a9b0c64820e087d")
+	node1PrvKey, err := hivep2p.ParseLibp2pEd25519PrivateKeyFromString("5536d0d7eb7cb3780085d73d55079a373a726df58010d881167add08d7e8108c76d7a7f15c094c292faa22ac81b976034f0b11db86a8863d9a9b0c64820e087d")
 	require.NoError(t, err)
 
-	node2PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("35764adaa5e02cbd677285ffd90f927644d2010dca7608876dd3ea3a44f8fcb491cdffa377a307e1d16df5c18e4beee9fffbd61998bd1f8c76a616c1b6c7ca7d")
+	node2PrvKey, err := hivep2p.ParseLibp2pEd25519PrivateKeyFromString("35764adaa5e02cbd677285ffd90f927644d2010dca7608876dd3ea3a44f8fcb491cdffa377a307e1d16df5c18e4beee9fffbd61998bd1f8c76a616c1b6c7ca7d")
 	require.NoError(t, err)
 
 	// node 1 <peer.ID 12*rd6tBe>
@@ -202,13 +203,13 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 		gossip.WithUnknownPeersLimit(1),
 	}
 
-	node1PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("5536d0d7eb7cb3780085d73d55079a373a726df58010d881167add08d7e8108c76d7a7f15c094c292faa22ac81b976034f0b11db86a8863d9a9b0c64820e087d")
+	node1PrvKey, err := hivep2p.ParseLibp2pEd25519PrivateKeyFromString("5536d0d7eb7cb3780085d73d55079a373a726df58010d881167add08d7e8108c76d7a7f15c094c292faa22ac81b976034f0b11db86a8863d9a9b0c64820e087d")
 	require.NoError(t, err)
 
-	node2PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("35764adaa5e02cbd677285ffd90f927644d2010dca7608876dd3ea3a44f8fcb491cdffa377a307e1d16df5c18e4beee9fffbd61998bd1f8c76a616c1b6c7ca7d")
+	node2PrvKey, err := hivep2p.ParseLibp2pEd25519PrivateKeyFromString("35764adaa5e02cbd677285ffd90f927644d2010dca7608876dd3ea3a44f8fcb491cdffa377a307e1d16df5c18e4beee9fffbd61998bd1f8c76a616c1b6c7ca7d")
 	require.NoError(t, err)
 
-	node3PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("1d586a941f97be3d8ead709c9ff31579c9677f681ec05cd1e0233d36513b178bd2a54ee6c67c84037ae8da89033c1bcfc2252ecd466f6cf472c22cbe0e9a7842")
+	node3PrvKey, err := hivep2p.ParseLibp2pEd25519PrivateKeyFromString("1d586a941f97be3d8ead709c9ff31579c9677f681ec05cd1e0233d36513b178bd2a54ee6c67c84037ae8da89033c1bcfc2252ecd466f6cf472c22cbe0e9a7842")
 	require.NoError(t, err)
 
 	// node 1 <peer.ID 12*rd6tBe>
