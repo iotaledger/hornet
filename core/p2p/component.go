@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/iotaledger/hive.go/core/app"
 	"github.com/iotaledger/hive.go/core/configuration"
 	hivedb "github.com/iotaledger/hive.go/core/database"
+	hivep2p "github.com/iotaledger/hive.go/core/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
@@ -101,7 +103,7 @@ func provide(c *dig.Container) error {
 		CoreComponent.LogInfof(`WARNING: never share your "%s" folder as it contains your node's private key!`, deps.P2PDatabasePath)
 
 		// load up the previously generated identity or create a new one
-		privKey, newlyCreated, err := p2p.LoadOrCreateIdentityPrivateKey(deps.P2PDatabasePath, ParamsP2P.IdentityPrivateKey)
+		privKey, newlyCreated, err := hivep2p.LoadOrCreateIdentityPrivateKey(path.Join(deps.P2PDatabasePath, p2p.PrivKeyFileName), ParamsP2P.IdentityPrivateKey)
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}

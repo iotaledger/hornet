@@ -7,7 +7,9 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/core/certificate"
 	"github.com/iotaledger/hive.go/core/configuration"
+	hivep2p "github.com/iotaledger/hive.go/core/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
 
@@ -50,10 +52,15 @@ func extractP2PIdentity(args []string) error {
 		return fmt.Errorf("unable to check private key file (%s): %w", privKeyFilePath, err)
 	}
 
-	privKey, err := p2p.ReadEd25519PrivateKeyFromPEMFile(privKeyFilePath)
+	privKey, err := certificate.ReadEd25519PrivateKeyFromPEMFile(privKeyFilePath)
 	if err != nil {
 		return fmt.Errorf("reading private key file for peer identity failed: %w", err)
 	}
 
-	return printP2PIdentity(privKey, privKey.GetPublic(), *outputJSONFlag)
+	libp2pPrivKey, err := hivep2p.Ed25519PrivateKeyToLibp2pPrivateKey(privKey)
+	if err != nil {
+		return err
+	}
+
+	return printP2PIdentity(libp2pPrivKey, libp2pPrivKey.GetPublic(), *outputJSONFlag)
 }
