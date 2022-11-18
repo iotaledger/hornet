@@ -33,7 +33,7 @@ require (
 	go.uber.org/dig v1.15.0
 	golang.org/x/crypto v0.2.0
 	golang.org/x/term v0.2.0
-	google.golang.org/grpc v1.50.1
+	google.golang.org/grpc v1.51.0
 )
 
 require (
