@@ -151,10 +151,6 @@
       {
         "full": "https://files.shimmer.network/snapshots/latest-full_snapshot.bin",
         "delta": "https://files.shimmer.network/snapshots/latest-delta_snapshot.bin"
-      },
-      {
-        "full": "https://cdn.tanglebay.com/snapshots/shimmer-mainnet/full_snapshot.bin",
-        "delta": "https://cdn.tanglebay.com/snapshots/shimmer-mainnet/delta_snapshot.bin"
       }
     ]
   },
