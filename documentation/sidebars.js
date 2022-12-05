@@ -13,7 +13,7 @@ module.exports = {
   docs: [
     {
       type: "category",
-      label: "Template",
+      label: "Hornet",
       link: {type: 'doc', id: 'welcome'},
       collapsed: false,
       items: [
