@@ -24,7 +24,7 @@ It includes everything required to setup a public node accessible by wallets and
 - [Prometheus](https://prometheus.io) - Metrics scraper configured to collect all metrics from HORNET and INX extensions.
 - [Grafana](https://grafana.com) - Data visualizer that can be used to display the metrics collected by Prometheus.
 - [inx-dashboard](https://github.com/iotaledger/inx-dashboard) - Node dashboard.
-- [inx-indexer](https://github.com/iotaledger/inx-dashboard) - Indexer extension for wallets and applications.
+- [inx-indexer](https://github.com/iotaledger/inx-indexer) - Indexer extension for wallets and applications.
 - [inx-mqtt](https://github.com/iotaledger/inx-mqtt) - MQTT extension providing the Event API.
 - [inx-participation](https://github.com/iotaledger/inx-participation) - Participation extension providing on-tangle-voting.
 - [inx-poi](https://github.com/iotaledger/inx-poi) - Extention to generate proofs of inclusion.
