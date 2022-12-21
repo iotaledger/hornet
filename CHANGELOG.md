@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-rc.3] - 21.12.2022
+
+### Fixed
+    - Fixed JWT handling when using deeper regexes for INX plugins exposing APIs (#1802)
+
+### Chore
+    - Update docker setup documentation (#1775)
+    - Remove docs version info (#1776)
+    - Move database package to hive.go (#1785)
+    - Move StoreHealthTracker to hive.go (#1787)
+    - Move p2p identity related stuff to hive.go (#1792)
+    - Enhance documentation sidebar with home (#1795)
+    - Update using_docker.md (#1799) 
+    - Updated dependencies (#1803)
+
+
 ## [2.0.0-rc.2] - 27.09.2022
 
 ### Added
