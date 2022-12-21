@@ -3,8 +3,6 @@ package p2p
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoreds"
@@ -50,15 +48,6 @@ func (psc *PeerStoreContainer) Close() error {
 
 // NewPeerStoreContainer creates a peerstore using kvstore.
 func NewPeerStoreContainer(peerStorePath string, dbEngine hivedb.Engine, createDatabaseIfNotExists bool) (*PeerStoreContainer, error) {
-
-	dirPath := filepath.Dir(peerStorePath)
-
-	if createDatabaseIfNotExists {
-		if err := os.MkdirAll(dirPath, 0700); err != nil {
-			return nil, fmt.Errorf("could not create peer store database dir '%s': %w", dirPath, err)
-		}
-	}
-
 	store, err := database.StoreWithDefaultSettings(peerStorePath, createDatabaseIfNotExists, dbEngine, database.AllowedEnginesDefault...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize peer store database: %w", err)

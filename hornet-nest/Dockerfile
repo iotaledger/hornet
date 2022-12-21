@@ -1,4 +1,4 @@
-FROM iotaledger/hornet:2.0.0-rc.1 AS hornet
+FROM iotaledger/hornet:2.0.0-rc.3 AS hornet
 FROM iotaledger/inx-indexer:1.0-rc AS indexer
 FROM iotaledger/inx-faucet:1.0-rc AS faucet
 FROM iotaledger/inx-dashboard:1.0-rc AS dashboard

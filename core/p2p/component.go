@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -103,7 +102,7 @@ func provide(c *dig.Container) error {
 		CoreComponent.LogInfof(`WARNING: never share your "%s" folder as it contains your node's private key!`, deps.P2PDatabasePath)
 
 		// load up the previously generated identity or create a new one
-		privKey, newlyCreated, err := hivep2p.LoadOrCreateIdentityPrivateKey(path.Join(deps.P2PDatabasePath, p2p.PrivKeyFileName), ParamsP2P.IdentityPrivateKey)
+		privKey, newlyCreated, err := hivep2p.LoadOrCreateIdentityPrivateKey(privKeyFilePath, ParamsP2P.IdentityPrivateKey)
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}
