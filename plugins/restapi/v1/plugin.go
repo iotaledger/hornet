@@ -170,10 +170,10 @@ type dependencies struct {
 	Bech32HRP                             iotago.NetworkPrefix `name:"bech32HRP"`
 	RestAPILimitsMaxResults               int                  `name:"restAPILimitsMaxResults"`
 	RestAPIMetrics                        *metrics.RestAPIMetrics
-	SnapshotsFullPath                     string                 `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath                    string                 `name:"snapshotsDeltaPath"`
-	TipSelector                           *tipselect.TipSelector `optional:"true"`
-	Echo                                  *echo.Echo             `optional:"true"`
+	SnapshotsFullPath                     string                    `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath                    string                    `name:"snapshotsDeltaPath"`
+	TipSelector                           *tipselect.TipSelector    `optional:"true"`
+	RestRouteManager                      *restapi.RestRouteManager `optional:"true"`
 }
 
 func configure() {
@@ -182,7 +182,7 @@ func configure() {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
 	}
 
-	routeGroup := deps.Echo.Group("/api/v1")
+	routeGroup := deps.RestRouteManager.AddRoute("v1")
 
 	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
 	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)

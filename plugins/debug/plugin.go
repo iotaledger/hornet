@@ -83,13 +83,13 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage      *storage.Storage
-	SyncManager  *syncmanager.SyncManager
-	Tangle       *tangle.Tangle
-	RequestQueue gossip.RequestQueue
-	UTXOManager  *utxo.Manager
-	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-	Echo         *echo.Echo                   `optional:"true"`
+	Storage          *storage.Storage
+	SyncManager      *syncmanager.SyncManager
+	Tangle           *tangle.Tangle
+	RequestQueue     gossip.RequestQueue
+	UTXOManager      *utxo.Manager
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	RestRouteManager *restapi.RestRouteManager    `optional:"true"`
 }
 
 func configure() {
@@ -101,7 +101,7 @@ func configure() {
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 
-	routeGroup := deps.Echo.Group("/api/plugins/debug")
+	routeGroup := deps.RestRouteManager.AddRoute("plugins/debug")
 
 	routeGroup.POST(RouteDebugComputeWhiteFlag, func(c echo.Context) error {
 		resp, err := computeWhiteFlagMutations(c)

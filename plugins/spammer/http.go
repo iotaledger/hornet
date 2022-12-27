@@ -11,7 +11,7 @@ import (
 
 const (
 	// RouteSpammer is the route for controlling the integrated spammer.
-	RouteSpammer = "/api/plugins/spammer"
+	RouteSpammer = "plugins/spammer"
 
 	// RouteSpammerStatus is the route to get the status of the spammer.
 	// GET the current status of the spammer.

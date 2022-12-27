@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 	"go.uber.org/dig"
@@ -89,7 +88,7 @@ type dependencies struct {
 	TipSelector      *tipselect.TipSelector       `optional:"true"`
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
-	Echo             *echo.Echo                   `optional:"true"`
+	RestRouteManager *restapi.RestRouteManager    `optional:"true"`
 }
 
 func configure() {
@@ -103,7 +102,7 @@ func configure() {
 		Plugin.LogPanic("URTS plugin needs to be enabled to use the Spammer plugin")
 	}
 
-	setupRoutes(deps.Echo.Group(RouteSpammer))
+	setupRoutes(deps.RestRouteManager.AddRoute(RouteSpammer))
 
 	spammerAvgHeap = utils.NewTimeHeap()
 

@@ -24,12 +24,13 @@ import (
 	"github.com/iotaledger/hornet/pkg/node"
 	"github.com/iotaledger/hornet/pkg/pow"
 	"github.com/iotaledger/hornet/pkg/protocol/gossip"
-	"github.com/iotaledger/hornet/pkg/restapi"
+	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
 	"github.com/iotaledger/hornet/pkg/shutdown"
 	"github.com/iotaledger/hornet/pkg/tangle"
 	"github.com/iotaledger/hornet/pkg/tipselect"
 	"github.com/iotaledger/hornet/pkg/utils"
 	"github.com/iotaledger/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/plugins/restapi"
 	restapiv1 "github.com/iotaledger/hornet/plugins/restapi/v1"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
@@ -72,10 +73,10 @@ type dependencies struct {
 	dig.In
 	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
 	RestAPIBindAddress    string                       `name:"restAPIBindAddress"`
-	FaucetAllowedAPIRoute restapi.AllowedRoute         `name:"faucetAllowedAPIRoute"`
+	FaucetAllowedAPIRoute restapipkg.AllowedRoute      `name:"faucetAllowedAPIRoute"`
 	Faucet                *faucet.Faucet
 	Tangle                *tangle.Tangle
-	Echo                  *echo.Echo
+	RestRouteManager      *restapi.RestRouteManager `optional:"true"`
 	ShutdownHandler       *shutdown.ShutdownHandler
 }
 
@@ -147,7 +148,7 @@ func provide(c *dig.Container) {
 func configure() {
 	restapiv1.AddFeature(Plugin.Name)
 
-	routeGroup := deps.Echo.Group("/api/plugins/faucet")
+	routeGroup := deps.RestRouteManager.AddRoute("plugins/faucet")
 
 	allowedRoutes := map[string][]string{
 		http.MethodGet: {
@@ -200,7 +201,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteFaucetEnqueue, func(c echo.Context) error {
@@ -213,7 +214,7 @@ func configure() {
 			var e *echo.HTTPError
 			if errors.As(err, &e) {
 				statusCode = e.Code
-				if errors.Is(err, restapi.ErrInvalidParameter) {
+				if errors.Is(err, restapipkg.ErrInvalidParameter) {
 					message = strings.Replace(err.Error(), ": "+errors.Unwrap(err).Error(), "", 1)
 				} else {
 					message = err.Error()
@@ -223,10 +224,10 @@ func configure() {
 				message = fmt.Sprintf("internal server error. error: %s", err.Error())
 			}
 
-			return c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
+			return c.JSON(statusCode, restapipkg.HTTPErrorResponseEnvelope{Error: restapipkg.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
 		}
 
-		return restapi.JSONResponse(c, http.StatusAccepted, resp)
+		return restapipkg.JSONResponse(c, http.StatusAccepted, resp)
 	})
 
 	configureEvents()

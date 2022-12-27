@@ -68,6 +68,7 @@ Example:
     "publicRoutes": [
       "/health",
       "/mqtt",
+      "/api/routes",
       "/api/v1/info",
       "/api/v1/tips",
       "/api/v1/messages*",
