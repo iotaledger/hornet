@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile -t hornet:dev .
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile -t hornet:dev .
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile -t hornet:dev .
@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile -t hornet:dev .
@@ -147,7 +147,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile -t hornet:dev .
@@ -180,7 +180,7 @@ jobs:
 #    runs-on: ubuntu-latest
 #    steps:
 #      - name: Check out code into the Go module directory
-#        uses: actions/checkout@v2
+#        uses: actions/checkout@v3
 
 #      - name: Build HORNET image
 #        run: docker build -f docker/Dockerfile -t hornet:dev .
