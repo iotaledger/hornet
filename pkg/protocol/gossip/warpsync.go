@@ -244,6 +244,8 @@ func (ws *WarpSync) reset() {
 type WarpSyncMilestoneRequester struct {
 	syncutils.Mutex
 
+	// used to cancel the warp sync requester.
+	ctx context.Context
 	// used to access the node storage.
 	storage *storage.Storage
 	// used to determine the sync status of the node.
@@ -258,12 +260,14 @@ type WarpSyncMilestoneRequester struct {
 
 // NewWarpSyncMilestoneRequester creates a new WarpSyncMilestoneRequester instance.
 func NewWarpSyncMilestoneRequester(
+	ctx context.Context,
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	requester *Requester,
 	preventDiscard bool) *WarpSyncMilestoneRequester {
 
 	return &WarpSyncMilestoneRequester{
+		ctx:            ctx,
 		storage:        dbStorage,
 		syncManager:    syncManager,
 		requester:      requester,
@@ -272,25 +276,16 @@ func NewWarpSyncMilestoneRequester(
 	}
 }
 
-// RequestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
+// requestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
 // Already requested milestones or traversed messages will be ignored, to circumvent requesting
 // the same parents multiple times.
-func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.Context, cachedMilestone *storage.CachedMilestone) error {
-	defer cachedMilestone.Release(true) // milestone -1
-
-	w.Lock()
-	defer w.Unlock()
-
-	msIndex := cachedMilestone.Milestone().Index
-
+func (w *WarpSyncMilestoneRequester) requestMissingMilestoneParents(msIndex milestone.Index, milestoneMessageID hornet.MessageID) error {
 	if msIndex <= w.syncManager.ConfirmedMilestoneIndex() {
 		return nil
 	}
 
-	milestoneMessageID := cachedMilestone.Milestone().MessageID
-
 	return dag.TraverseParentsOfMessage(
-		ctx,
+		w.ctx,
 		w.storage,
 		milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
@@ -333,7 +328,10 @@ func (w *WarpSyncMilestoneRequester) Cleanup() {
 
 // RequestMilestoneRange requests up to N milestones nearest to the current confirmed milestone index.
 // Returns the number of milestones requested.
-func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, rangeToRequest int, onExistingMilestoneInRange func(ctx context.Context, milestone *storage.CachedMilestone) error, from ...milestone.Index) int {
+func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(rangeToRequest int, from ...milestone.Index) (int, milestone.Index, milestone.Index) {
+	w.Lock()
+	defer w.Unlock()
+
 	var requested int
 
 	startingPoint := w.syncManager.ConfirmedMilestoneIndex()
@@ -341,32 +339,27 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 		startingPoint = from[0]
 	}
 
-	var msIndexes []milestone.Index
-	for i := 1; i <= rangeToRequest; i++ {
-		toReq := startingPoint + milestone.Index(i)
+	startIndex := startingPoint + 1
+	endIndex := startingPoint + milestone.Index(rangeToRequest)
 
-		cachedMilestone := w.storage.CachedMilestoneOrNil(toReq) // milestone +1
+	var msIndexes []milestone.Index
+	for i := milestone.Index(1); i <= milestone.Index(rangeToRequest); i++ {
+		msIndexToRequest := startingPoint + i
+
+		cachedMilestone := w.storage.CachedMilestoneOrNil(msIndexToRequest) // milestone +1
 		if cachedMilestone == nil {
 			// only request if we do not have the milestone
 			requested++
-			msIndexes = append(msIndexes, toReq)
+			msIndexes = append(msIndexes, msIndexToRequest)
 			continue
 		}
+		cachedMilestone.Release(true) // milestone -1
 
 		// milestone already exists
-		if onExistingMilestoneInRange != nil {
-			if err := onExistingMilestoneInRange(ctx, cachedMilestone.Retain()); err != nil && errors.Is(err, common.ErrOperationAborted) { // milestone pass +1
-				// do not proceed if the node was shut down
-				cachedMilestone.Release(true) // milestone -1
-				return 0
-			}
+		if err := w.requestMissingMilestoneParents(msIndexToRequest, cachedMilestone.Milestone().MessageID); err != nil && errors.Is(err, common.ErrOperationAborted) {
+			// do not proceed if the node was shut down
+			return 0, 0, 0
 		}
-
-		cachedMilestone.Release(true) // milestone -1
-	}
-
-	if len(msIndexes) == 0 {
-		return requested
 	}
 
 	// enqueue every milestone request to the request queue
@@ -374,5 +367,5 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 		w.requester.Request(msIndex, msIndex)
 	}
 
-	return requested
+	return requested, startIndex, endIndex
 }
