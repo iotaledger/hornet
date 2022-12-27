@@ -13,10 +13,10 @@ import (
 	"github.com/go-echarts/go-echarts/charts"
 	"github.com/gorilla/websocket"
 
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/iotaledger/hive.go/websockethub"
+	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/plugins/dashboard"
 )
 
 const (

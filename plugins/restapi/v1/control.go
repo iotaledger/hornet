@@ -8,8 +8,8 @@ import (
 	"github.com/labstack/gommon/bytes"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/restapi"
 )
 
 func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {

@@ -6,7 +6,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/core/database"
+	"github.com/iotaledger/hornet/core/database"
 )
 
 func databaseSplit(args []string) error {

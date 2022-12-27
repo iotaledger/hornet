@@ -95,10 +95,10 @@ All installation methods mentioned in this article from this point should be con
 
 :::
 
-1. Download the latest release compiled for your system from [GitHub release assets](https://github.com/gohornet/hornet/releases):
+1. Download the latest release compiled for your system from [GitHub release assets](https://github.com/iotaledger/hornet/releases):
 
    ```bash
-   curl -LO https://github.com/gohornet/hornet/releases/download/v1.0.5/HORNET-1.0.5_Linux_x86_64.tar.gz
+   curl -LO https://github.com/iotaledger/hornet/releases/download/v1.0.5/HORNET-1.0.5_Linux_x86_64.tar.gz
    ```
 
    Please make sure to download the binaries for your system:
@@ -187,7 +187,7 @@ You can find installation instructions in the [official Go documentation](https:
 4. Clone the Hornet source code from GitHub:
    
    ```bash
-   git clone https://github.com/gohornet/hornet.git && cd hornet && git checkout mainnet
+   git clone https://github.com/iotaledger/hornet.git && cd hornet && git checkout mainnet
    ```
 
 5. Build the Hornet:

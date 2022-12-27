@@ -1,6 +1,6 @@
 package participation
 
-import "github.com/gohornet/hornet/pkg/model/milestone"
+import "github.com/iotaledger/hornet/pkg/model/milestone"
 
 // EventsResponse defines the response of a GET RouteParticipationEvents REST API call.
 type EventsResponse struct {

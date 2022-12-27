@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 

@@ -15,7 +15,7 @@ builds:
     flags:
       - -tags=builtin_static,rocksdb
     ldflags:
-      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/iotaledger/hornet/core/cli.AppVersion={{.Version}}
     main: main.go
     goos:
       - linux
@@ -31,7 +31,7 @@ builds:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
     ldflags:
-      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
+      - -s -w -X github.com/iotaledger/hornet/core/cli.AppVersion={{.Version}}
     main: main.go
     goos:
       - linux
@@ -47,7 +47,7 @@ builds:
   #    - CC=/usr/bin/x86_64-w64-mingw32-gcc-posix
   #    - CXX=/usr/bin/x86_64-w64-mingw32-g++-posix
   #  ldflags:
-  #    - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
+  #    - -s -w -X github.com/iotaledger/hornet/core/cli.AppVersion={{.Version}}
   #  main: main.go
   #  goos:
   #    - windows
@@ -93,7 +93,7 @@ nfpms:
     vendor: GoReleaser
     license: Apache 2.0
     maintainer: GoHORNET
-    homepage: https://github.com/gohornet/hornet
+    homepage: https://github.com/iotaledger/hornet
     description: HORNET is a powerful IOTA fullnode software.
     formats:
       - deb
@@ -194,5 +194,5 @@ release:
   prerelease: auto
   name_template: "{{.ProjectName}}-{{.Version}}"
   github:
-    owner: gohornet
+    owner: iotaledger
     name: hornet

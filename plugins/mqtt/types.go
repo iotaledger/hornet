@@ -3,8 +3,8 @@ package mqtt
 import (
 	"encoding/json"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
 )
 
 // milestonePayload defines the payload of the milestone latest and confirmed topics

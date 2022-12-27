@@ -1,8 +1,8 @@
 package debug
 
 import (
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	v1 "github.com/iotaledger/hornet/plugins/restapi/v1"
 )
 
 // computeWhiteFlagMutationsRequest defines the request for a POST debugComputeWhiteFlagMutations REST API call.

@@ -20,4 +20,4 @@ If you can not find your question in the FAQ, feel free to ask in the `#hornet` 
 
 ## Did Something Go Wrong?
 
-Please open a [new issue](https://github.com/gohornet/hornet/issues/new) if you detect an error or crash. You can also submit a PR if you have already fixed it. 
+Please open a [new issue](https://github.com/iotaledger/hornet/issues/new) if you detect an error or crash. You can also submit a PR if you have already fixed it. 

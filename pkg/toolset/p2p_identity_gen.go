@@ -13,8 +13,8 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/crypto"
 
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 func generateP2PIdentity(args []string) error {

@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 const (

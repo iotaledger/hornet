@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/cpu"
 
-	"github.com/gohornet/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/common"
 )
 
 const (

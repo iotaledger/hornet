@@ -21,10 +21,10 @@ import (
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/utils"
 	kvstoreds "github.com/iotaledger/go-ds-kvstore"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 const (

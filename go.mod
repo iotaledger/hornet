@@ -1,8 +1,8 @@
-module github.com/gohornet/hornet
+module github.com/iotaledger/hornet
 
 go 1.18
 
-replace github.com/linxGnu/grocksdb => github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260
+replace github.com/linxGnu/grocksdb => github.com/iotaledger/grocksdb v1.6.38-0.20211012114404-55f425442260
 
 require (
 	github.com/bits-and-blooms/bitset v1.2.2

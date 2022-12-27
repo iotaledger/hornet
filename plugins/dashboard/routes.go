@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 
-	"github.com/gohornet/hornet/pkg/jwt"
+	"github.com/iotaledger/hornet/pkg/jwt"
 )
 
 const (

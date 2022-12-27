@@ -14,9 +14,9 @@ import (
 	"github.com/dustin/go-humanize"
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 func benchmarkIO(args []string) error {

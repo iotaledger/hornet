@@ -7,4 +7,4 @@
 // and any other packr generated files.
 package dashboard
 
-import _ "github.com/gohornet/hornet/plugins/dashboard/packrd"
+import _ "github.com/iotaledger/hornet/plugins/dashboard/packrd"

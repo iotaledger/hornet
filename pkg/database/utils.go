@@ -3,8 +3,8 @@ package database
 import (
 	"fmt"
 
-	"github.com/gohornet/hornet/pkg/utils"
 	hiveutils "github.com/iotaledger/hive.go/kvstore/utils"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 // DatabaseExists checks if the database folder exists and is not empty.

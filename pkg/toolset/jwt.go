@@ -8,8 +8,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/jwt"
-	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/jwt"
+	"github.com/iotaledger/hornet/pkg/p2p"
 )
 
 func generateJWTApiToken(args []string) error {

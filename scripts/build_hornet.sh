@@ -5,4 +5,4 @@
 
 commit_hash=$(git rev-parse --short HEAD)
 
-go build -ldflags="-s -w -X github.com/gohornet/hornet/core/app.Version=$commit_hash"
+go build -ldflags="-s -w -X github.com/iotaledger/hornet/core/app.Version=$commit_hash"

@@ -6,11 +6,11 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/app"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/version"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/hornet/pkg/app"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/version"
 )
 
 func init() {
@@ -39,7 +39,7 @@ type dependencies struct {
 
 func provide(c *dig.Container) {
 	if err := c.Provide(func(appInfo *app.AppInfo) *version.VersionChecker {
-		return version.NewVersionChecker("gohornet", "hornet", appInfo.Version)
+		return version.NewVersionChecker("iotaledger", "hornet", appInfo.Version)
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
@@ -67,7 +67,7 @@ func checkLatestVersion() {
 	}
 
 	if res.Outdated {
-		Plugin.LogInfof("Update to %s available on https://github.com/gohornet/hornet/releases/latest", res.Current)
+		Plugin.LogInfof("Update to %s available on https://github.com/iotaledger/hornet/releases/latest", res.Current)
 		deps.AppInfo.LatestGitHubVersion = res.Current
 	}
 }

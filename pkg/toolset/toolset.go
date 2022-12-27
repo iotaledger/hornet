@@ -15,7 +15,7 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 
-	"github.com/gohornet/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/database"
 )
 
 const (

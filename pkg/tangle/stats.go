@@ -1,7 +1,7 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 func (t *Tangle) LastConfirmedMilestoneMetric() *ConfirmedMilestoneMetric {

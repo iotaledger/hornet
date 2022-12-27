@@ -3,9 +3,9 @@ package dashboard
 import (
 	"github.com/labstack/echo/v4"
 
-	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/websockethub"
+	"github.com/iotaledger/hornet/pkg/jwt"
 )
 
 const (

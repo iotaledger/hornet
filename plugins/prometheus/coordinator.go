@@ -3,7 +3,7 @@ package prometheus
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/gohornet/hornet/pkg/model/coordinator"
+	"github.com/iotaledger/hornet/pkg/model/coordinator"
 
 	"github.com/iotaledger/hive.go/events"
 )

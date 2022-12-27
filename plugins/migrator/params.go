@@ -5,9 +5,9 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/model/migrator"
+	"github.com/iotaledger/hornet/pkg/model/migrator"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/node"
 )
 
 const (

@@ -6,13 +6,13 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -368,12 +368,12 @@ func (pm *ParticipationManager) ApplyNewLedgerUpdate(index milestone.Index, crea
 
 // applyNewUTXOForEvents checks if the new UTXO is part of a participation transaction.
 // The following rules must be satisfied:
-// 	- Must be a value transaction
-// 	- Inputs must all come from the same address. Multiple inputs are allowed.
-// 	- Has a singular output going to the same address as all input addresses.
-// 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
-// 	- The Indexation must match the configured Indexation.
-//  - The participation data must be parseable.
+//   - Must be a value transaction
+//   - Inputs must all come from the same address. Multiple inputs are allowed.
+//   - Has a singular output going to the same address as all input addresses.
+//   - Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
+//   - The Indexation must match the configured Indexation.
+//   - The participation data must be parseable.
 func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, newOutput *utxo.Output, events map[EventID]*Event) error {
 	messageID := newOutput.MessageID()
 
