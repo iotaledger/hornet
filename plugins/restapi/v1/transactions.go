@@ -7,11 +7,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hornet/pkg/restapi"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
+func messageIDByTransactionID(c echo.Context) (hornet.MessageID, error) {
 	transactionID, err := restapi.ParseTransactionIDParam(c)
 	if err != nil {
 		return nil, err
@@ -29,11 +30,5 @@ func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", hex.EncodeToString(transactionID[:]))
 	}
 
-	cachedMsg := deps.Storage.CachedMessageOrNil(output.MessageID()) // message +1
-	if cachedMsg == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", hex.EncodeToString(transactionID[:]))
-	}
-	defer cachedMsg.Release(true) // message -1
-
-	return cachedMsg.Message().Message(), nil
+	return output.MessageID(), nil
 }

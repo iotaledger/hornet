@@ -14,6 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hornet/pkg/common"
 	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hornet/pkg/model/storage"
 	"github.com/iotaledger/hornet/pkg/pow"
@@ -27,15 +28,10 @@ var (
 	messageProcessedTimeout = 1 * time.Second
 )
 
-func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
+func messageMetadataByMessageID(messageID hornet.MessageID) (*messageMetadataResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
-	messageID, err := restapi.ParseMessageIDParam(c)
-	if err != nil {
-		return nil, err
 	}
 
 	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID)
@@ -112,12 +108,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	return messageMetadataResponse, nil
 }
 
-func messageByID(c echo.Context) (*iotago.Message, error) {
-	messageID, err := restapi.ParseMessageIDParam(c)
-	if err != nil {
-		return nil, err
-	}
-
+func messageByMessageID(messageID hornet.MessageID) (*iotago.Message, error) {
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
@@ -127,12 +118,7 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 	return cachedMsg.Message().Message(), nil
 }
 
-func messageBytesByID(c echo.Context) ([]byte, error) {
-	messageID, err := restapi.ParseMessageIDParam(c)
-	if err != nil {
-		return nil, err
-	}
-
+func messageBytesByMessageID(messageID hornet.MessageID) ([]byte, error) {
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
@@ -142,13 +128,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 	return cachedMsg.Message().Data(), nil
 }
 
-func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
-
-	messageID, err := restapi.ParseMessageIDParam(c)
-	if err != nil {
-		return nil, err
-	}
-
+func childrenIDsByMessageID(messageID hornet.MessageID) (*childrenResponse, error) {
 	maxResults := deps.RestAPILimitsMaxResults
 	childrenMessageIDs, err := deps.Storage.ChildrenMessageIDs(messageID, storage.WithIteratorMaxIterations(maxResults))
 	if err != nil {
