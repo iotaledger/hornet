@@ -15,10 +15,10 @@ import (
 
 	"github.com/ipfs/go-datastore/query"
 	badger "github.com/ipfs/go-ds-badger"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/peerstore"
-	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/peerstore"
+	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoreds"
 	"github.com/pkg/errors"
 
 	kvstoreds "github.com/iotaledger/go-ds-kvstore"

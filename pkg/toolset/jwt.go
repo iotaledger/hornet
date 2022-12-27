@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hornet/pkg/jwt"

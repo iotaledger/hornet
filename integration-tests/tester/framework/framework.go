@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hornet/pkg/p2p/autopeering"
