@@ -1,9 +1,9 @@
 # https://hub.docker.com/_/golang
-FROM golang:1.18-bullseye AS build
+FROM golang:1.19-bullseye AS build
 
 ARG BUILD_TAGS=builtin_static,rocksdb
 
-LABEL org.label-schema.description="HORNET - The IOTA community node"
+LABEL org.label-schema.description="HORNET - The IOTA node"
 LABEL org.label-schema.name="iotaledger/hornet"
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.vcs-url="https://github.com/iotaledger/hornet"

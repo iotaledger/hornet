@@ -1,4 +1,4 @@
-# HORNET - The IOTA community node
+# HORNET - The IOTA node
 
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/iotaledger/hornet/Build?style=for-the-badge) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/iotaledger/hornet?style=for-the-badge) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/iotaledger/hornet?style=for-the-badge) ![GitHub](https://img.shields.io/github/license/iotaledger/hornet?style=for-the-badge)
 
@@ -28,7 +28,7 @@ _Table of contents_
 
 <!--ts-->
 
-- [HORNET - The IOTA community node](#hornet---the-iota-community-node)
+- [HORNET - The IOTA node](#hornet---the-iota-node)
   - [Notes](#notes)
   - [Documentation](#documentation)
   - [Contributing](#contributing)

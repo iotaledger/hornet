@@ -1,6 +1,6 @@
 module github.com/iotaledger/hornet
 
-go 1.18
+go 1.19
 
 replace github.com/linxGnu/grocksdb => github.com/iotaledger/grocksdb v1.6.38-0.20211012114404-55f425442260
 
