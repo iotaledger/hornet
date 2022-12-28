@@ -18,7 +18,7 @@ require (
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v3 v3.0.0-rc.1
 	github.com/labstack/echo-contrib v0.13.0
-	github.com/labstack/echo/v4 v4.9.1
+	github.com/labstack/echo/v4 v4.10.0
 	github.com/labstack/gommon v0.4.0
 	github.com/libp2p/go-libp2p v0.24.1
 	github.com/mr-tron/base58 v1.2.0
