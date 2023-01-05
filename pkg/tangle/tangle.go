@@ -193,6 +193,7 @@ func (t *Tangle) SetUpdateSyncedAtStartup(updateSyncedAtStartup bool) {
 func (t *Tangle) ResetMilestoneTimeoutTicker() {
 	if t.milestoneTimeoutTicker != nil {
 		t.milestoneTimeoutTicker.Shutdown()
+		t.milestoneTimeoutTicker.WaitForGracefulShutdown()
 	}
 
 	t.milestoneTimeoutTicker = timeutil.NewTicker(func() {

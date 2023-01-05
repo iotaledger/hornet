@@ -383,7 +383,7 @@ func (s *Service) eventLoop(ctx context.Context) {
 			s.handleInboundStream(inboundStream)
 
 		case connectedMsg := <-s.connectedChan:
-			s.handleConnected(connectedMsg.peer, connectedMsg.conn)
+			s.handleConnected(ctx, connectedMsg.peer, connectedMsg.conn)
 
 		case closeStreamMsg := <-s.closeStreamChan:
 			if err := s.deregisterProtocol(closeStreamMsg.peerID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
@@ -397,7 +397,7 @@ func (s *Service) eventLoop(ctx context.Context) {
 			}
 
 		case relationUpdatedMsg := <-s.relationUpdatedChan:
-			s.handleRelationUpdated(relationUpdatedMsg.peer, relationUpdatedMsg.oldRelation)
+			s.handleRelationUpdated(ctx, relationUpdatedMsg.peer, relationUpdatedMsg.oldRelation)
 
 		case streamReqMsg := <-s.streamReqChan:
 			streamReqMsg.back <- s.proto(streamReqMsg.peerID)
@@ -469,12 +469,12 @@ func (s *Service) closeUnwantedStreamAndClosePeer(stream network.Stream) {
 	// "ClosedStream" notifiee handler fire: this is important, because
 	// we want the remote peer to deregister the stream
 	_ = stream.Reset()
-	s.host.Network().ClosePeer(stream.Conn().RemotePeer())
+	_ = s.host.Network().ClosePeer(stream.Conn().RemotePeer())
 }
 
 // handles the automatic creation of a protocol instance if the given peer
 // was connected outbound and its peer relation allows it.
-func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
+func (s *Service) handleConnected(ctx context.Context, peer *p2p.Peer, conn network.Conn) {
 
 	connect := func() error {
 		// don't create a new protocol if one is already ongoing
@@ -498,14 +498,16 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
 			s.unknownPeers[peer.ID] = struct{}{}
 		}
 
-		stream, err := s.openStream(peer.ID)
+		stream, err := s.openStream(ctx, peer.ID)
 		if err != nil {
 			// close the connection to the peer
 			_ = conn.Close()
+
 			return err
 		}
 
 		s.registerProtocol(peer.ID, stream)
+
 		return nil
 	}
 
@@ -515,17 +517,18 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
 }
 
 // opens up a stream to the given peer.
-func (s *Service) openStream(peerID peer.ID) (network.Stream, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), s.opts.streamConnectTimeout)
-	defer cancel()
+func (s *Service) openStream(ctx context.Context, peerID peer.ID) (network.Stream, error) {
+	ctxNewStream, cancelNewStream := context.WithTimeout(ctx, s.opts.streamConnectTimeout)
+	defer cancelNewStream()
 
-	stream, err := s.host.NewStream(ctx, peerID, s.protocol)
+	stream, err := s.host.NewStream(ctxNewStream, peerID, s.protocol)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create gossip stream to %s: %w", peerID, err)
 	}
 	// now some special sauce to trigger the remote peer's SetStreamHandler
 	// https://github.com/libp2p/go-libp2p/issues/729
 	_, _ = stream.Read(make([]byte, 0))
+
 	return stream, nil
 }
 
@@ -571,7 +574,7 @@ func (s *Service) deregisterProtocol(peerID peer.ID) error {
 // is no longer unknown, a gossip protocol stream is started. likewise, if the
 // relation is "downgraded" to unknown, the ongoing stream is closed if no more
 // unknown peer slots are available.
-func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation) {
+func (s *Service) handleRelationUpdated(ctx context.Context, peer *p2p.Peer, oldRel p2p.PeerRelation) {
 	newRel := peer.Relation
 
 	updateRelation := func() error {
@@ -579,6 +582,7 @@ func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation)
 			if len(s.unknownPeers) >= s.opts.unknownPeersLimit {
 				// close the stream if no more unknown peer slots are available
 				err := s.deregisterProtocol(peer.ID)
+
 				return err
 			}
 			s.unknownPeers[peer.ID] = struct{}{}
@@ -596,7 +600,7 @@ func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation)
 
 		// here we might open a stream even if the connection is inbound:
 		// the service should however take care of duplicated streams
-		stream, err := s.openStream(peer.ID)
+		stream, err := s.openStream(ctx, peer.ID)
 		if err != nil {
 			return err
 		}
