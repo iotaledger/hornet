@@ -18,8 +18,7 @@ import (
 )
 
 var (
-	ErrMilestoneNotFound = errors.New("milestone not found")
-	ErrDivisionByZero    = errors.New("division by zero")
+	ErrDivisionByZero = errors.New("division by zero")
 )
 
 type ConfirmedMilestoneMetric struct {
@@ -428,7 +427,7 @@ func (t *Tangle) calcConfirmedMilestoneMetric(cachedMilestone *storage.CachedMil
 
 	cachedMilestoneOld := t.storage.CachedMilestoneOrNil(milestoneIndexToSolidify - 1) // milestone +1
 	if cachedMilestoneOld == nil {
-		return nil, ErrMilestoneNotFound
+		return nil, storage.ErrMilestoneNotFound
 	}
 	defer cachedMilestoneOld.Release(true) // milestone -1
 

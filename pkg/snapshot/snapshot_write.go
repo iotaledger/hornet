@@ -379,14 +379,15 @@ func (s *SnapshotManager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath
 
 // returns the timestamp of the target milestone.
 func readTargetMilestoneTimestamp(dbStorage *storage.Storage, targetIndex milestone.Index) (time.Time, error) {
-	cachedMilestoneTarget := dbStorage.CachedMilestoneOrNil(targetIndex) // milestone +1
-	if cachedMilestoneTarget == nil {
-		return time.Time{}, errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
+	milestoneTimestamp, err := dbStorage.MilestoneTimestampByIndex(targetIndex)
+	if err != nil {
+		if err == storage.ErrMilestoneNotFound {
+			return time.Time{}, errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
+		}
+		return time.Time{}, errors.Wrap(ErrCritical, err.Error())
 	}
-	defer cachedMilestoneTarget.Release(true) // milestone -1
 
-	ts := cachedMilestoneTarget.Milestone().Timestamp
-	return ts, nil
+	return milestoneTimestamp, nil
 }
 
 // creates a snapshot file by streaming data from the database into a snapshot file.
