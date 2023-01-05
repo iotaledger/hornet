@@ -14,24 +14,17 @@ import (
 func init() {
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
-			Name:     "PoW",
-			DepsFunc: func(cDeps dependencies) { deps = cDeps },
-			Params:   params,
-			Provide:  provide,
-			Run:      run,
+			Name:    "PoW",
+			Params:  params,
+			Provide: provide,
+			Run:     run,
 		},
 	}
 }
 
 var (
 	CorePlugin *node.CorePlugin
-	deps       dependencies
 )
-
-type dependencies struct {
-	dig.In
-	Handler *pow.Handler
-}
 
 func provide(c *dig.Container) {
 

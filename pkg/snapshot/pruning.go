@@ -167,7 +167,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		s.LogPanic("No snapshotInfo found!")
+		return 0, errors.Wrap(common.ErrCritical, common.ErrSnapshotInfoNotFound.Error())
 	}
 
 	//lint:ignore SA5011 nil pointer is already checked before with a panic

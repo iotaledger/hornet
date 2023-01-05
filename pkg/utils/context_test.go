@@ -1,3 +1,4 @@
+//nolint:staticcheck // we can ignore these errors in the test cases
 package utils_test
 
 import (

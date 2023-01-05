@@ -5,6 +5,8 @@ import (
 )
 
 var (
+	// ErrCritical is returned when a critical error stops the execution of a task.
+	ErrCritical = errors.New("critical error")
 	// ErrOperationAborted is returned when the operation was aborted e.g. by a shutdown signal.
 	ErrOperationAborted = errors.New("operation was aborted")
 	// ErrMessageNotFound is returned when a message was not found.
@@ -13,6 +15,8 @@ var (
 	ErrNodeNotSynced = errors.New("node is not synchronized")
 	// ErrNodeLoadTooHigh is returned when the load on the node is too high.
 	ErrNodeLoadTooHigh = errors.New("node load is too high")
+	// ErrSnapshotInfoNotFound is returned when the snapshot info is not found in the database.
+	ErrSnapshotInfoNotFound = errors.New("snapshot info not found")
 )
 
 // CriticalError wraps the given error as a critical error.

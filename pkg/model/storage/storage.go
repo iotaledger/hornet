@@ -238,6 +238,8 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 }
 
 // profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
+//
+//nolint:unused
 func (s *Storage) profileCacheEnabled() *profile.Caches {
 	return &profile.Caches{
 		Addresses: &profile.CacheOpts{
@@ -307,6 +309,8 @@ func (s *Storage) profileCacheEnabled() *profile.Caches {
 }
 
 // profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
+//
+//nolint:unused
 func (s *Storage) profileLeakDetectionEnabled() *profile.Caches {
 	return &profile.Caches{
 		Addresses: &profile.CacheOpts{
