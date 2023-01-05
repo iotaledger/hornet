@@ -23,8 +23,10 @@ func info() (*infoResponse, error) {
 		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
 	}
 
+	syncState := deps.SyncManager.SyncState()
+
 	// latest milestone index
-	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
+	latestMilestoneIndex := syncState.LatestMilestoneIndex
 
 	// latest milestone timestamp
 	var latestMilestoneTimestamp int64 = 0
@@ -35,7 +37,7 @@ func info() (*infoResponse, error) {
 	}
 
 	// confirmed milestone index
-	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := syncState.ConfirmedMilestoneIndex
 
 	// pruning index
 	var pruningIndex milestone.Index
@@ -47,7 +49,7 @@ func info() (*infoResponse, error) {
 	return &infoResponse{
 		Name:                        deps.AppInfo.Name,
 		Version:                     deps.AppInfo.Version,
-		IsHealthy:                   deps.Tangle.IsNodeHealthy(),
+		IsHealthy:                   deps.Tangle.IsNodeHealthy(syncState),
 		NetworkID:                   deps.NetworkIDName,
 		Bech32HRP:                   string(deps.Bech32HRP),
 		MinPoWScore:                 deps.MinPoWScore,

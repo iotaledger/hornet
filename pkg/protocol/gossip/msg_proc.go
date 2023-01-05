@@ -475,18 +475,20 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 		return
 	}
 
-	if !proc.syncManager.IsNodeSyncedWithinBelowMaxDepth() {
+	syncState := proc.syncManager.SyncState()
+
+	if !syncState.NodeSyncedWithinBelowMaxDepth {
 		// no need to broadcast messages if the node is not sync within "below max depth"
 		return
 	}
 
 	// we pass a background context here to not prevent broadcasting messages at shutdown (COO etc).
-	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex()) // meta pass +1
+	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), syncState.ConfirmedMilestoneIndex) // meta pass +1
 	if err != nil {
 		return
 	}
 
-	if (proc.syncManager.LatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
+	if (syncState.LatestMilestoneIndex - ocri) > proc.opts.BelowMaxDepth {
 		// the solid message was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}

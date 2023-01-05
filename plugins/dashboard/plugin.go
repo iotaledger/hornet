@@ -354,14 +354,16 @@ func peerMetrics() []*restapiv1.PeerResponse {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{CMI: deps.SyncManager.ConfirmedMilestoneIndex(), LMI: deps.SyncManager.LatestMilestoneIndex()}
+	syncState := deps.SyncManager.SyncState()
+	return &SyncStatus{CMI: syncState.ConfirmedMilestoneIndex, LMI: syncState.LatestMilestoneIndex}
 }
 
 func currentPublicNodeStatus() *PublicNodeStatus {
 	status := &PublicNodeStatus{}
 
-	status.IsHealthy = deps.Tangle.IsNodeHealthy()
-	status.IsSynced = deps.SyncManager.IsNodeAlmostSynced()
+	syncState := deps.SyncManager.SyncState()
+	status.IsHealthy = deps.Tangle.IsNodeHealthy(syncState)
+	status.IsSynced = syncState.NodeAlmostSynced
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo != nil {

@@ -212,8 +212,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	t.solidifierLock.Lock()
 	defer t.solidifierLock.Unlock()
 
-	currentConfirmedIndex := t.syncManager.ConfirmedMilestoneIndex()
-	latestIndex := t.syncManager.LatestMilestoneIndex()
+	syncState := t.syncManager.SyncState()
+	currentConfirmedIndex := syncState.ConfirmedMilestoneIndex
+	latestIndex := syncState.LatestMilestoneIndex
 
 	if currentConfirmedIndex == latestIndex && latestIndex != 0 {
 		// Latest milestone already solid
@@ -314,7 +315,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 				t.LogPanicf("SetConfirmedMilestoneIndex failed: %s", err)
 			}
 			timeSetConfirmedMilestoneIndex = time.Now()
-			if t.syncManager.IsNodeAlmostSynced() {
+			if syncState.NodeAlmostSynced {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
 				// we can safely ignore errors of the future cone solidifier.
 				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
@@ -385,7 +386,8 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	var rmpsMessage string
 	if metric, err := t.calcConfirmedMilestoneMetric(cachedMilestoneToSolidify.Retain(), confirmedMilestoneStats.Index); err == nil { // milestone pass +1
-		if t.syncManager.IsNodeSynced() {
+		isNodeSynced := t.syncManager.IsNodeSynced()
+		if isNodeSynced {
 			// Only trigger the metrics event if the node is sync (otherwise the MPS and conf.rate is wrong)
 			if t.firstSyncedMilestone == 0 {
 				t.firstSyncedMilestone = confirmedMilestoneStats.Index
@@ -395,7 +397,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			t.firstSyncedMilestone = 0
 		}
 
-		if t.syncManager.IsNodeSynced() && (confirmedMilestoneStats.Index > t.firstSyncedMilestone+1) {
+		if isNodeSynced && (confirmedMilestoneStats.Index > t.firstSyncedMilestone+1) {
 			t.lastConfirmedMilestoneMetricLock.Lock()
 			t.lastConfirmedMilestoneMetric = metric
 			t.lastConfirmedMilestoneMetricLock.Unlock()

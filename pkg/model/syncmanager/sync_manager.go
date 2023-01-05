@@ -14,6 +14,14 @@ const (
 	isNodeAlmostSyncedThreshold = 2
 )
 
+type SyncState struct {
+	NodeSynced                    bool
+	NodeAlmostSynced              bool
+	NodeSyncedWithinBelowMaxDepth bool
+	LatestMilestoneIndex          milestone.Index
+	ConfirmedMilestoneIndex       milestone.Index
+}
+
 type SyncManager struct {
 	utxoManager *utxo.Manager
 	// belowMaxDepth is the maximum allowed delta
@@ -66,6 +74,21 @@ func (s *SyncManager) ResetMilestoneIndexes() {
 
 	s.confirmedMilestoneIndex = 0
 	s.latestMilestoneIndex = 0
+}
+
+func (s *SyncManager) SyncState() *SyncState {
+	s.confirmedMilestoneLock.RLock()
+	s.latestMilestoneLock.RLock()
+	defer s.confirmedMilestoneLock.RUnlock()
+	defer s.latestMilestoneLock.RUnlock()
+
+	return &SyncState{
+		NodeSynced:                    s.isNodeSynced,
+		NodeAlmostSynced:              s.isNodeAlmostSynced,
+		NodeSyncedWithinBelowMaxDepth: s.isNodeSyncedWithinBelowMaxDepth,
+		LatestMilestoneIndex:          s.latestMilestoneIndex,
+		ConfirmedMilestoneIndex:       s.confirmedMilestoneIndex,
+	}
 }
 
 // IsNodeSynced returns whether the node is synced.
@@ -140,6 +163,7 @@ func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex milestone.Ind
 		s.isNodeSynced = false
 		s.isNodeAlmostSynced = false
 		s.isNodeSyncedWithinBelowMaxDepth = false
+
 		return
 	}
 
@@ -164,6 +188,7 @@ func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex milestone.Ind
 	if latestIndex < isNodeAlmostSyncedThreshold {
 		s.isNodeAlmostSynced = true
 		s.isNodeSyncedWithinBelowMaxDepth = true
+
 		return
 	}
 	s.isNodeAlmostSynced = confirmedIndex >= (latestIndex - isNodeAlmostSyncedThreshold)
@@ -171,6 +196,7 @@ func (s *SyncManager) updateNodeSynced(confirmedIndex, latestIndex milestone.Ind
 	// catch overflow
 	if latestIndex < s.belowMaxDepth {
 		s.isNodeSyncedWithinBelowMaxDepth = true
+
 		return
 	}
 	s.isNodeSyncedWithinBelowMaxDepth = confirmedIndex >= (latestIndex - s.belowMaxDepth)
@@ -191,6 +217,7 @@ func (s *SyncManager) SetConfirmedMilestoneIndex(index milestone.Index, updateSy
 	}
 
 	s.updateNodeSynced(index, s.LatestMilestoneIndex())
+
 	return nil
 }
 
@@ -221,6 +248,7 @@ func (s *SyncManager) SetLatestMilestoneIndex(index milestone.Index, updateSynce
 	if s.latestMilestoneIndex >= index {
 		// current LMI is bigger than new LMI => abort
 		s.latestMilestoneLock.Unlock()
+
 		return false
 	}
 

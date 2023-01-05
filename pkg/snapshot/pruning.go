@@ -64,12 +64,13 @@ func (s *SnapshotManager) calcTargetIndexBySize(targetSizeBytes ...int64) (miles
 		return 0, ErrNoPruningNeeded
 	}
 
-	milestoneRange := s.syncManager.ConfirmedMilestoneIndex() - s.storage.SnapshotInfo().PruningIndex
+	confirmedMilestoneIndex := s.syncManager.ConfirmedMilestoneIndex()
+	milestoneRange := confirmedMilestoneIndex - s.storage.SnapshotInfo().PruningIndex
 	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - s.pruningSizeThresholdPercentage) / 100.0)
 	diffPercentage := prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes)
 	milestoneDiff := milestone.Index(math.Ceil(float64(milestoneRange) * diffPercentage))
 
-	return s.syncManager.ConfirmedMilestoneIndex() - milestoneDiff, nil
+	return confirmedMilestoneIndex - milestoneDiff, nil
 }
 
 // pruneUnreferencedMessages prunes all unreferenced messages from the database for the given milestone
