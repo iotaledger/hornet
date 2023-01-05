@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.2] - 28.12.2022
+## [1.2.2] - 09.01.2023
 
 ### Fixed
     - Make event execution async from peer mng to gossip service (#1565)
@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
     - Drop unhealthy peers (#1805)
     - Drop peers that are below our pruning index (#1805)
     - Solidify messages synchronously while they are processed (#1805)
+    - Read info from SyncManager atomically (#1805)
  
 ### Added
     - Add REST API PoW metrics to prometheus (#1480)

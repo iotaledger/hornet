@@ -4,6 +4,11 @@ on:
   pull_request:
     paths-ignore:
       - 'documentation/**'
+      - 'docker/**'
+      - 'nfpm/**'
+      - 'private_tangle/**'
+      - 'scripts/**'
+      - 'tools/**'
 
 jobs:
   golangci-lint:
@@ -16,6 +21,9 @@ jobs:
       - name: golangci-lint
         uses: reviewdog/action-golangci-lint@v2
         with:
+          version: v1.50.1
           github_token: ${{ secrets.GITHUB_TOKEN }}
           golangci_lint_flags: "--timeout=10m"
-          reporter: "github-pr-review"
+          reporter: github-pr-check
+          filter_mode: nofilter
+          fail_on_error: true

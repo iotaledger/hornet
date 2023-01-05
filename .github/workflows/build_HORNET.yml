@@ -4,6 +4,10 @@ on:
   pull_request:
     paths-ignore:
       - 'documentation/**'
+      - 'nfpm/**'
+      - 'private_tangle/**'
+      - 'scripts/**'
+      - 'tools/**'
 
 jobs:
   build:
@@ -11,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v3
         with:
           go-version: 1.19
         id: go
