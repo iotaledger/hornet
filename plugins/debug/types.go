@@ -23,16 +23,18 @@ type milestoneDiffResponse struct {
 
 // request defines an request response.
 type request struct {
-	// The hex encoded block ID of the block.
-	BlockID string `json:"blockId"`
 	// The type of the request.
 	Type string `json:"type"`
-	// Whether the block already exists in the storage layer.
-	BlockExists bool `json:"txExists"`
 	// The time the request was enqueued.
 	EnqueueTimestamp string `json:"enqueueTimestamp"`
 	// The index of the milestone this request belongs to.
 	MilestoneIndex iotago.MilestoneIndex `json:"milestoneIndex"`
+	// The state of the request.
+	State string `json:"state"`
+	// The hex encoded block ID of the block.
+	BlockID string `json:"blockId,omitempty"`
+	// Whether the block already exists in the storage layer.
+	BlockExists *bool `json:"blockExists,omitempty"`
 }
 
 // requestsResponse defines the response of a GET debug requests REST API call.

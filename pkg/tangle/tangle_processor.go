@@ -221,6 +221,7 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 	if !alreadyAdded {
 		t.serverMetrics.NewBlocks.Inc()
 
+		// increase the new block metric for the peer that submitted the block
 		if proto != nil {
 			proto.Metrics.NewBlocks.Inc()
 		}
@@ -260,6 +261,8 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 
 	} else {
 		t.serverMetrics.KnownBlocks.Inc()
+
+		// increase the known block metric for the peer that submitted the block
 		if proto != nil {
 			proto.Metrics.KnownBlocks.Inc()
 		}

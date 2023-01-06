@@ -421,9 +421,27 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 			}
 		}
 
-		wu.requested = requests.HasRequest()
+		// ATTENTION: potential data race, processRequests might be executed several times in parallel for the same WorkUnit.
+		// requested should only be set to true but not to false, even if HasRequest might be false in one run.
+		if requests.HasRequest() {
+			wu.requested = true
+		}
 
 		return requests
+	}
+
+	processBlock := func(block *storage.Block, isMilestonePayload bool, requests Requests, p *Protocol) {
+		// do not process gossip if we are not in sync.
+		// we ignore all received blocks if we didn't request them and it's not a milestone.
+		// otherwise these blocks would get evicted from the cache, and it's heavier to load them
+		// from the storage than to request them again.
+		// ATTENTION: we use requests.HasRequest() here instead of wu.requested because
+		// we only want to trigger the BlockProcessed event with the correct requests.
+		if !requests.HasRequest() && !proc.syncManager.IsNodeAlmostSynced() && !isMilestonePayload {
+			return
+		}
+
+		proc.Events.BlockProcessed.Trigger(block, requests, p)
 	}
 
 	wu.processingLock.Lock()
@@ -447,17 +465,13 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	case wu.Is(Hashed):
 		wu.processingLock.Unlock()
 
+		isMilestonePayload := wu.block.IsMilestone()
+
 		// we need to check for requests here again because there is a race condition
 		// between processing received blocks and enqueuing requests.
-		requests := processRequests(wu, wu.block, wu.block.IsMilestone())
-		if wu.requested {
-			proc.Events.BlockProcessed.Trigger(wu.block, requests, p)
-		}
+		requests := processRequests(wu, wu.block, isMilestonePayload)
 
-		if proc.storage.ContainsBlock(wu.block.BlockID()) {
-			proc.serverMetrics.KnownBlocks.Inc()
-			p.Metrics.KnownBlocks.Inc()
-		}
+		processBlock(wu.block, isMilestonePayload, requests, p)
 
 		return
 	}
@@ -474,7 +488,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		return
 	}
 
-	// check the network ID of the block
+	// check the protocol version of the block
 	if block.ProtocolVersion() != proc.protocolManager.Current().Version {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a block with an invalid protocol version"))
@@ -500,10 +514,11 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	} else {
 		// enforce milestone block nonce == 0
 		if block.Block().Nonce != 0 {
+			wu.UpdateState(Invalid)
 			wu.punish(errors.New("milestone block nonce must be zero"))
-		}
 
-		// TODO: refactor data flow
+			return
+		}
 	}
 
 	// safe to set the block here, because it is protected by the state "Hashing"
@@ -513,15 +528,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// increase the known block count for all other peers
 	wu.increaseKnownTxCount(p)
 
-	// do not process gossip if we are not in sync.
-	// we ignore all received blocks if we didn't request them and it's not a milestone.
-	// otherwise these blocks would get evicted from the cache, and it's heavier to load them
-	// from the storage than to request them again.
-	if !wu.requested && !proc.syncManager.IsNodeAlmostSynced() && !isMilestonePayload {
-		return
-	}
-
-	proc.Events.BlockProcessed.Trigger(block, requests, p)
+	processBlock(block, isMilestonePayload, requests, p)
 }
 
 func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {

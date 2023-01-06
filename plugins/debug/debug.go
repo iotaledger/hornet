@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/hornet/v2/plugins/coreapi"
 	"github.com/iotaledger/inx-app/httpserver"
@@ -199,34 +200,38 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 	queued, pending, processing := deps.RequestQueue.Requests()
 	debugReqs := make([]*request, 0, len(queued)+len(pending)+len(processing))
 
-	for _, req := range queued {
-		debugReqs = append(debugReqs, &request{
-			BlockID:          req.BlockID.ToHex(),
-			Type:             "queued",
-			BlockExists:      deps.Storage.ContainsBlock(req.BlockID),
-			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
-			MilestoneIndex:   req.MilestoneIndex,
-		})
+	appendRequest := func(req *gossip.Request, stateString string) {
+		switch req.RequestType {
+		case gossip.RequestTypeBlockID:
+			blockExists := deps.Storage.ContainsBlock(req.BlockID)
+
+			debugReqs = append(debugReqs, &request{
+				Type:             "block request",
+				EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
+				MilestoneIndex:   req.MilestoneIndex,
+				State:            stateString,
+				BlockID:          req.BlockID.ToHex(),
+				BlockExists:      &blockExists,
+			})
+		case gossip.RequestTypeMilestoneIndex:
+			debugReqs = append(debugReqs, &request{
+				Type:             "milestone request",
+				EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
+				MilestoneIndex:   req.MilestoneIndex,
+				State:            stateString,
+			})
+		}
+
 	}
 
-	for _, req := range pending {
-		debugReqs = append(debugReqs, &request{
-			BlockID:          req.BlockID.ToHex(),
-			Type:             "pending",
-			BlockExists:      deps.Storage.ContainsBlock(req.BlockID),
-			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
-			MilestoneIndex:   req.MilestoneIndex,
-		})
+	for _, request := range queued {
+		appendRequest(request, "queued")
 	}
-
-	for _, req := range processing {
-		debugReqs = append(debugReqs, &request{
-			BlockID:          req.BlockID.ToHex(),
-			Type:             "processing",
-			BlockExists:      deps.Storage.ContainsBlock(req.BlockID),
-			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
-			MilestoneIndex:   req.MilestoneIndex,
-		})
+	for _, request := range pending {
+		appendRequest(request, "pending")
+	}
+	for _, request := range processing {
+		appendRequest(request, "processing")
 	}
 
 	return &requestsResponse{
