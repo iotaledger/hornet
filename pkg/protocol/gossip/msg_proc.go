@@ -379,8 +379,27 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 			}
 		}
 
-		wu.requested = requests.HasRequest()
+		// ATTENTION: potential data race, processRequests might be executed several times in parallel for the same WorkUnit.
+		// requested should only be set to true but not to false, even if HasRequest might be false in one run.
+		if requests.HasRequest() {
+			wu.requested = true
+		}
+
 		return requests
+	}
+
+	processMessage := func(msg *storage.Message, isMilestonePayload bool, requests Requests, p *Protocol) {
+		// do not process gossip if we are not in sync.
+		// we ignore all received messages if we didn't request them and it's not a milestone.
+		// otherwise these messages would get evicted from the cache, and it's heavier to load them
+		// from the storage than to request them again.
+		// ATTENTION: we use requests.HasRequest() here instead of wu.requested because
+		// we only want to trigger the MessageProcessed event with the correct requests.
+		if !requests.HasRequest() && !proc.syncManager.IsNodeAlmostSynced() && !isMilestonePayload {
+			return
+		}
+
+		proc.Events.MessageProcessed.Trigger(msg, requests, p)
 	}
 
 	wu.processingLock.Lock()
@@ -402,17 +421,13 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	case wu.Is(Hashed):
 		wu.processingLock.Unlock()
 
+		isMilestonePayload := wu.msg.IsMilestone()
+
 		// we need to check for requests here again because there is a race condition
 		// between processing received messages and enqueuing requests.
-		requests := processRequests(wu, wu.msg, wu.msg.IsMilestone())
-		if wu.requested {
-			proc.Events.MessageProcessed.Trigger(wu.msg, requests, p)
-		}
+		requests := processRequests(wu, wu.msg, isMilestonePayload)
 
-		if proc.storage.ContainsMessage(wu.msg.MessageID()) {
-			proc.serverMetrics.KnownMessages.Inc()
-			p.Metrics.KnownMessages.Inc()
-		}
+		processMessage(wu.msg, isMilestonePayload, requests, p)
 
 		return
 	}
@@ -454,15 +469,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// increase the known message count for all other peers
 	wu.increaseKnownTxCount(p)
 
-	// do not process gossip if we are not in sync.
-	// we ignore all received messages if we didn't request them and it's not a milestone.
-	// otherwise these messages would get evicted from the cache, and it's heavier to load them
-	// from the storage than to request them again.
-	if !wu.requested && !proc.syncManager.IsNodeAlmostSynced() && !isMilestonePayload {
-		return
-	}
-
-	proc.Events.MessageProcessed.Trigger(msg, requests, p)
+	processMessage(msg, isMilestonePayload, requests, p)
 }
 
 func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {

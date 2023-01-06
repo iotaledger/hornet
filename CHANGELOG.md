@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
     - Block static peers in autopeering module (#1805)
     - Fix stuck peer (#1805)
     - Fix edge case in warpsync which deadlocks syncing (#1805)
+    - Fix syncing issue by preventing requests race condition (#1805) 
 
 ### Changed
     - Drop unhealthy peers (#1805)

@@ -205,6 +205,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 	if !alreadyAdded {
 		t.serverMetrics.NewMessages.Inc()
 
+		// increase the new message metric for the peer that submitted the message
 		if proto != nil {
 			proto.Metrics.NewMessages.Inc()
 		}
@@ -244,6 +245,8 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 
 	} else {
 		t.serverMetrics.KnownMessages.Inc()
+
+		// increase the known message metric for the peer that submitted the message
 		if proto != nil {
 			proto.Metrics.KnownMessages.Inc()
 		}

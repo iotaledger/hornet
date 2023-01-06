@@ -53,16 +53,18 @@ type milestoneDiffResponse struct {
 
 // request defines an request response.
 type request struct {
-	// The hex encoded message ID of the message.
-	MessageID string `json:"messageId"`
 	// The type of the request.
 	Type string `json:"type"`
-	// Whether the message already exists in the storage layer.
-	MessageExists bool `json:"txExists"`
 	// The time the request was enqueued.
 	EnqueueTimestamp string `json:"enqueueTimestamp"`
 	// The index of the milestone this request belongs to.
 	MilestoneIndex milestone.Index `json:"milestoneIndex"`
+	// The state of the request.
+	State string `json:"state"`
+	// The hex encoded message ID of the message.
+	MessageID string `json:"messageId,omitempty"`
+	// Whether the message already exists in the storage layer.
+	MessageExists *bool `json:"messageExists,omitempty"`
 }
 
 // requestsResponse defines the response of a GET debug requests REST API call.
