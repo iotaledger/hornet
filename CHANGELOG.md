@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-rc.4] - 09.01.2023
+
+### Fixed
+    - Fix syncing issue by preventing requests race condition (#1812)
+
+### Added
+    - Add /metadata endpoint to /included-block (#1807)
+
+### Chore
+    - Update modules (#1813)
+
+
 ## [2.0.0-rc.3] - 21.12.2022
 
 ### Fixed
