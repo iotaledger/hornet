@@ -6,4 +6,4 @@
 DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 commit_hash=$(git rev-parse --short HEAD)
-go build -ldflags="-s -w -X github.com/iotaledger/hornet/core/app.Version=$commit_hash" -tags rocksdb
+CGO_ENABLED=1 go build -ldflags="-s -w -X github.com/iotaledger/hornet/core/app.Version=$commit_hash" -tags rocksdb,external_libs
