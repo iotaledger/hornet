@@ -4,8 +4,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/faucet"
-	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/model/faucet"
+	"github.com/iotaledger/hornet/pkg/restapi"
 )
 
 func getFaucetInfo(_ echo.Context) (*faucet.FaucetInfoResponse, error) {

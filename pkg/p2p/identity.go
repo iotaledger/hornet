@@ -8,23 +8,22 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/ipfs/go-datastore/query"
 	badger "github.com/ipfs/go-ds-badger"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/peerstore"
-	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/peerstore"
+	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoreds"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/utils"
 	kvstoreds "github.com/iotaledger/go-ds-kvstore"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 const (
@@ -91,8 +90,8 @@ func NewPeerStoreContainer(peerStorePath string, dbEngine database.Engine, creat
 	}, nil
 }
 
-// parseEd25519PrivateKeyFromString parses an Ed25519 private key from a hex encoded string.
-func parseEd25519PrivateKeyFromString(identityPrivKey string) (crypto.PrivKey, error) {
+// ParseEd25519PrivateKeyFromString parses an Ed25519 private key from a hex encoded string.
+func ParseEd25519PrivateKeyFromString(identityPrivKey string) (crypto.PrivKey, error) {
 	if identityPrivKey == "" {
 		return nil, ErrNoPrivKeyFound
 	}
@@ -181,7 +180,7 @@ func WriteEd25519PrivateKeyToPEMFile(filepath string, privateKey crypto.PrivKey)
 // or creates a new one and stores it as a PEM file in the p2p store folder.
 func LoadOrCreateIdentityPrivateKey(p2pStorePath string, identityPrivKey string) (crypto.PrivKey, bool, error) {
 
-	privKeyFromConfig, err := parseEd25519PrivateKeyFromString(identityPrivKey)
+	privKeyFromConfig, err := ParseEd25519PrivateKeyFromString(identityPrivKey)
 	if err != nil {
 		if errors.Is(err, ErrPrivKeyInvalid) {
 			return nil, false, errors.New("configuration contains an invalid private key")
@@ -301,7 +300,7 @@ func MigrateDeprecatedPeerStore(p2pStorePath string, identityPrivKey string, new
 		return false, err
 	}
 
-	privKey, err := parseEd25519PrivateKeyFromString(identityPrivKey)
+	privKey, err := ParseEd25519PrivateKeyFromString(identityPrivKey)
 	if err != nil {
 		if errors.Is(err, ErrPrivKeyInvalid) {
 			return false, errors.New("configuration contains an invalid private key")
@@ -312,7 +311,7 @@ func MigrateDeprecatedPeerStore(p2pStorePath string, identityPrivKey string, new
 		}
 
 		// there was no private key specified, retrieve it from the peer store with the public key from the deprecated file
-		existingPubKeyBytes, err := ioutil.ReadFile(deprecatedPubKeyFilePath)
+		existingPubKeyBytes, err := os.ReadFile(deprecatedPubKeyFilePath)
 		if err != nil {
 			return false, fmt.Errorf("unable to read deprecated public key file for peer identity: %w", err)
 		}

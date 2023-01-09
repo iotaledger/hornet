@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/shutdown"
 )
 
 var (
@@ -78,10 +78,10 @@ func runDatabaseSizeCollector() {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(ctx context.Context) {
-		deps.TangleDatabase.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
+		deps.TangleDatabase.Events().DatabaseCleanup.Hook(onDatabaseCleanup)
 		defer deps.TangleDatabase.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
 
-		deps.UTXODatabase.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
+		deps.UTXODatabase.Events().DatabaseCleanup.Hook(onDatabaseCleanup)
 		defer deps.UTXODatabase.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
 
 		ticker := timeutil.NewTicker(func() {

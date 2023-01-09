@@ -25,7 +25,7 @@ func configureMigrator() {
 
 	registry.MustRegister(migratorSoftErrEncountered)
 
-	deps.MigratorService.Events.SoftError.Attach(events.NewClosure(func(_ error) {
+	deps.MigratorService.Events.SoftError.Hook(events.NewClosure(func(_ error) {
 		migratorSoftErrEncountered.Inc()
 	}))
 }
@@ -52,7 +52,7 @@ func configureReceipts() {
 	registry.MustRegister(receiptCount)
 	registry.MustRegister(receiptMigrationEntriesApplied)
 
-	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.Receipt) {
+	deps.Tangle.Events.NewReceipt.Hook(events.NewClosure(func(r *iotago.Receipt) {
 		receiptCount.Inc()
 		receiptMigrationEntriesApplied.Add(float64(len(r.Funds)))
 	}))

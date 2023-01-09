@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 09.01.2023
+
+### Fixed
+    - Make event execution async from peer mng to gossip service (#1565)
+    - Fix libp2p connection issue (#1805)
+    - Send correct error message if a block is submitted without parents and no PoW is enabled (#1805)
+    - Avoid locking of the p2p Manager while connection attempts are performed (#1805)
+    - Block static peers in autopeering module (#1805)
+    - Fix stuck peer (#1805)
+    - Fix edge case in warpsync which deadlocks syncing (#1805)
+    - Fix syncing issue by preventing requests race condition (#1805) 
+
+### Changed
+    - Drop unhealthy peers (#1805)
+    - Drop peers that are below our pruning index (#1805)
+    - Solidify messages synchronously while they are processed (#1805)
+    - Read info from SyncManager atomically (#1805)
+ 
+### Added
+    - Add REST API PoW metrics to prometheus (#1480)
+    - Add new /api/routes endpoint (#1805)
+    - Add per-request Rest metrics to prometheus (#1805)
+    - Add new config param to disable snapshot file creation. Defaults to false (#1805)
+    - Add config parameter to control whether the ledger state is checked on startup. Defaults to false (#1805)
+    - Add /metadata, /raw, /children endpoints to /included-message (#1805)
+
+### Chore
+    - Update Tangle Bay urls (#1522)
+    - Update go version to 1.19 (#1805)
+    - Upgrade libp2p to monorepo version (#1805)
+    - Extend dockerignore (#1805)
+    - Github workflow updates (#1805)
+
+
 ## [1.2.1] - 29.04.2022
 
 ### Fixed

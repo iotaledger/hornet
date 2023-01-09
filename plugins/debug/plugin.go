@@ -7,16 +7,16 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	restapipkg "github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/plugins/restapi"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/plugins/restapi"
+	restapiv1 "github.com/iotaledger/hornet/plugins/restapi/v1"
 )
 
 const (
@@ -83,13 +83,13 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage      *storage.Storage
-	SyncManager  *syncmanager.SyncManager
-	Tangle       *tangle.Tangle
-	RequestQueue gossip.RequestQueue
-	UTXOManager  *utxo.Manager
-	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-	Echo         *echo.Echo                   `optional:"true"`
+	Storage          *storage.Storage
+	SyncManager      *syncmanager.SyncManager
+	Tangle           *tangle.Tangle
+	RequestQueue     gossip.RequestQueue
+	UTXOManager      *utxo.Manager
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	RestRouteManager *restapi.RestRouteManager    `optional:"true"`
 }
 
 func configure() {
@@ -101,7 +101,7 @@ func configure() {
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 
-	routeGroup := deps.Echo.Group("/api/plugins/debug")
+	routeGroup := deps.RestRouteManager.AddRoute("plugins/debug")
 
 	routeGroup.POST(RouteDebugComputeWhiteFlag, func(c echo.Context) error {
 		resp, err := computeWhiteFlagMutations(c)

@@ -1,12 +1,12 @@
 package gossip
 
 import (
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hornet/pkg/model/storage"
 )
 
 // WorkUnitState defines the state which a WorkUnit is in.

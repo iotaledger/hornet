@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hornet/pkg/model/participation"
 )
 
 func RandValidAnswer() (*participation.Answer, []byte) {

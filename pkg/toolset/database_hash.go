@@ -13,13 +13,14 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
-	coreDatabase "github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/snapshot"
+	coreDatabase "github.com/iotaledger/hornet/core/database"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/snapshot"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) error {
@@ -101,8 +102,11 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		}
 	}
 
+	var ledgerTokenSupply uint64
 	// write all unspent outputs in lexicographical order
 	for _, output := range outputs {
+		ledgerTokenSupply += output.Amount
+
 		outputBytes, err := output.MarshalBinary()
 		if err != nil {
 			return fmt.Errorf("unable to serialize output %s: %w", hex.EncodeToString(output.OutputID[:]), err)
@@ -111,6 +115,10 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		if err = binary.Write(lsHash, binary.LittleEndian, outputBytes); err != nil {
 			return fmt.Errorf("unable to calculate snapshot hash: %w", err)
 		}
+	}
+
+	if ledgerTokenSupply != iotago.TokenSupply {
+		return errors.Wrapf(ErrCritical, "ledger token supply does not match the total supply: %d vs %d", ledgerTokenSupply, iotago.TokenSupply)
 	}
 
 	// calculate sha256 hash of the current ledger state
@@ -155,6 +163,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			SnapshotIndex          milestone.Index `json:"snapshotIndex"`
 			UTXOsCount             int             `json:"UTXOsCount"`
 			SEPsCount              int             `json:"SEPsCount"`
+			LedgerTokenSupply      uint64          `json:"ledgerTokenSupply"`
 			LedgerStateHash        string          `json:"ledgerStateHash"`
 			LedgerStateHashWithSEP string          `json:"ledgerStateHashWithSEP"`
 		}{
@@ -167,6 +176,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			SnapshotIndex:          snapshotInfo.SnapshotIndex,
 			UTXOsCount:             len(outputs),
 			SEPsCount:              len(solidEntryPoints),
+			LedgerTokenSupply:      ledgerTokenSupply,
 			LedgerStateHash:        hex.EncodeToString(snapshotHashSumWithoutSEPs),
 			LedgerStateHashWithSEP: hex.EncodeToString(snapshotHashSumWithSEPs),
 		}
@@ -184,6 +194,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
         - Snapshot index: %d
         - UTXOs count:    %d
         - SEPs count:     %d
+        - Ledger token supply: %d
         - Ledger state hash (w/o  solid entry points): %s
         - Ledger state hash (with solid entry points): %s`+"\n\n",
 		yesOrNo(!corrupted),
@@ -200,6 +211,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		snapshotInfo.SnapshotIndex,
 		len(outputs),
 		len(solidEntryPoints),
+		ledgerTokenSupply,
 		hex.EncodeToString(snapshotHashSumWithoutSEPs),
 		hex.EncodeToString(snapshotHashSumWithSEPs),
 	)

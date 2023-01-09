@@ -9,11 +9,11 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/app"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/toolset"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hornet/pkg/app"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/toolset"
 )
 
 var (
@@ -21,7 +21,7 @@ var (
 	Name = "HORNET"
 
 	// Version of the app.
-	Version = "1.2.1"
+	Version = "1.2.2"
 )
 
 var (

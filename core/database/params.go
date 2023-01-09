@@ -3,8 +3,8 @@ package database
 import (
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/node"
 )
 
 const (
@@ -16,6 +16,8 @@ const (
 	CfgDatabaseAutoRevalidation = "db.autoRevalidation"
 	// ignore the check for corrupted databases (should only be used for debug reasons).
 	CfgDatabaseDebug = "db.debug"
+	// whether to check if the ledger state matches the total supply on startup
+	CfgCheckLedgerStateOnStartup = "db.checkLedgerStateOnStartup"
 )
 
 var params = &node.PluginParams{
@@ -26,6 +28,7 @@ var params = &node.PluginParams{
 			fs.String(CfgDatabasePath, "mainnetdb", "the path to the database folder")
 			fs.Bool(CfgDatabaseAutoRevalidation, false, "whether to automatically start revalidation on startup if the database is corrupted")
 			fs.Bool(CfgDatabaseDebug, false, "ignore the check for corrupted databases (should only be used for debug reasons)")
+			fs.Bool(CfgCheckLedgerStateOnStartup, false, "whether to check if the ledger state matches the total supply on startup")
 			return fs
 		}(),
 	},

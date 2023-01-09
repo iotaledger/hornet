@@ -11,31 +11,31 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/app"
-	"github.com/gohornet/hornet/pkg/basicauth"
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/jwt"
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	restapipkg "github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/plugins/restapi"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/websockethub"
+	"github.com/iotaledger/hornet/pkg/app"
+	"github.com/iotaledger/hornet/pkg/basicauth"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/jwt"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/plugins/restapi"
+	restapiv1 "github.com/iotaledger/hornet/plugins/restapi/v1"
 )
 
 func init() {
@@ -210,10 +210,10 @@ func run() {
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(ctx context.Context) {
 		go hub.Run(ctx)
-		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
-		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
-		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
+		deps.Tangle.Events.MPSMetricsUpdated.Hook(onMPSMetricsUpdated)
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
+		deps.Tangle.Events.LatestMilestoneIndexChanged.Hook(onLatestMilestoneIndexChanged)
+		deps.Tangle.Events.NewConfirmedMilestoneMetric.Hook(onNewConfirmedMilestoneMetric)
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[WSSend] ...")
 		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
@@ -354,14 +354,16 @@ func peerMetrics() []*restapiv1.PeerResponse {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{CMI: deps.SyncManager.ConfirmedMilestoneIndex(), LMI: deps.SyncManager.LatestMilestoneIndex()}
+	syncState := deps.SyncManager.SyncState()
+	return &SyncStatus{CMI: syncState.ConfirmedMilestoneIndex, LMI: syncState.LatestMilestoneIndex}
 }
 
 func currentPublicNodeStatus() *PublicNodeStatus {
 	status := &PublicNodeStatus{}
 
-	status.IsHealthy = deps.Tangle.IsNodeHealthy()
-	status.IsSynced = deps.SyncManager.IsNodeAlmostSynced()
+	syncState := deps.SyncManager.SyncState()
+	status.IsHealthy = deps.Tangle.IsNodeHealthy(syncState)
+	status.IsSynced = syncState.NodeAlmostSynced
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo != nil {

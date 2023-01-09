@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 

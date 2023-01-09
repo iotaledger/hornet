@@ -3,14 +3,14 @@ package dashboard
 import (
 	"context"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/pkg/whiteflag"
-	coordinatorPlugin "github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/pkg/whiteflag"
+	coordinatorPlugin "github.com/iotaledger/hornet/plugins/coordinator"
 )
 
 const (
@@ -178,23 +178,23 @@ func runVisualizer() {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(ctx context.Context) {
-		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
+		deps.Tangle.Events.ReceivedNewMessage.Hook(onReceivedNewMessage)
 		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
-		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+		deps.Tangle.Events.MessageSolid.Hook(onMessageSolid)
 		defer deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
-		deps.Tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
+		deps.Tangle.Events.ReceivedNewMilestone.Hook(onReceivedNewMilestone)
 		defer deps.Tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
 		if cooEvents := coordinatorPlugin.Events(); cooEvents != nil {
-			cooEvents.IssuedCheckpointMessage.Attach(onIssuedCheckpointMessage)
+			cooEvents.IssuedCheckpointMessage.Hook(onIssuedCheckpointMessage)
 			defer cooEvents.IssuedCheckpointMessage.Detach(onIssuedCheckpointMessage)
 		}
-		deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+		deps.Tangle.Events.MilestoneConfirmed.Hook(onMilestoneConfirmed)
 		defer deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 
 		if deps.TipSelector != nil {
-			deps.TipSelector.Events.TipAdded.Attach(onTipAdded)
+			deps.TipSelector.Events.TipAdded.Hook(onTipAdded)
 			defer deps.TipSelector.Events.TipAdded.Detach(onTipAdded)
-			deps.TipSelector.Events.TipRemoved.Attach(onTipRemoved)
+			deps.TipSelector.Events.TipRemoved.Hook(onTipRemoved)
 			defer deps.TipSelector.Events.TipRemoved.Detach(onTipRemoved)
 		}
 

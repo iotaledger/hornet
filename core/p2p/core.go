@@ -6,19 +6,20 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
-	connmgr "github.com/libp2p/go-libp2p-connmgr"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/shutdown"
 )
 
 func init() {
@@ -144,7 +145,7 @@ Your node identity private key can now be found at "%s".
 		createdHost, err := libp2p.New(libp2p.Identity(privKey),
 			libp2p.ListenAddrStrings(deps.P2PBindMultiAddresses...),
 			libp2p.Peerstore(peerStoreContainer.Peerstore()),
-			libp2p.DefaultTransports,
+			libp2p.Transport(tcp.NewTCPTransport),
 			libp2p.ConnectionManager(connManager),
 			libp2p.NATPortMap(),
 		)

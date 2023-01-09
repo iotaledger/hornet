@@ -6,16 +6,16 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/typeutils"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 const (
@@ -101,11 +101,13 @@ type ManagerEvents struct {
 
 // PeerCaller gets called with a Peer.
 func PeerCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*Peer))(params[0].(*Peer))
 }
 
 // PeerIDCaller gets called with a peer.ID.
 func PeerIDCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(peer.ID))(params[0].(peer.ID))
 }
 
@@ -117,26 +119,31 @@ type PeerOptError struct {
 
 // PeerOptErrorCaller gets called with a Peer and an error.
 func PeerOptErrorCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*PeerOptError))(params[0].(*PeerOptError))
 }
 
 // ManagerStateCaller gets called with a ManagerState.
 func ManagerStateCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(ManagerState))(params[0].(ManagerState))
 }
 
 // PeerDurationCaller gets called with a Peer and a time.Duration.
 func PeerDurationCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*Peer, time.Duration))(params[0].(*Peer), params[1].(time.Duration))
 }
 
 // PeerConnCaller gets called with a Peer and its associated network.Conn.
 func PeerConnCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(*Peer, network.Conn))(params[0].(*Peer), params[1].(network.Conn))
 }
 
 // PeerRelationCaller gets called with a Peer and its old PeerRelation.
 func PeerRelationCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func(p *Peer, old PeerRelation))(params[0].(*Peer), params[1].(PeerRelation))
 }
 
@@ -185,7 +192,9 @@ func (mo *ManagerOptions) apply(opts ...ManagerOption) {
 func (mo *ManagerOptions) reconnectDelay() time.Duration {
 	recInter := mo.reconnectInterval
 	jitter := mo.reconnectIntervalJitter
+	//nolint:gosec // we don't care about weak random numbers here
 	delayJitter := rand.Int63n(int64(jitter))
+
 	return recInter + time.Duration(delayJitter)
 }
 
@@ -210,25 +219,28 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 			StateChange:        events.NewEvent(ManagerStateCaller),
 			Error:              events.NewEvent(events.ErrorCaller),
 		},
-		host:               host,
-		peers:              map[peer.ID]*Peer{},
-		allowedPeers:       map[peer.ID]struct{}{},
-		opts:               mngOpts,
-		stopped:            typeutils.NewAtomicBool(),
-		connectPeerChan:    make(chan *connectpeermsg, 10),
-		disconnectPeerChan: make(chan *disconnectpeermsg, 10),
-		isConnectedReqChan: make(chan *isconnectedrequestmsg, 10),
-		allowPeerChan:      make(chan *allowpeermsg, 10),
-		disallowPeerChan:   make(chan *disallowpeermsg, 10),
-		isAllowedReqChan:   make(chan *isallowedrequestmsg, 10),
-		connectedChan:      make(chan *connectionmsg, 10),
-		disconnectedChan:   make(chan *disconnectmsg, 10),
-		reconnectChan:      make(chan *reconnectmsg, 100),
-		forEachChan:        make(chan *foreachmsg, 10),
-		callChan:           make(chan *callmsg, 10),
+		host:                   host,
+		peers:                  map[peer.ID]*Peer{},
+		allowedPeers:           map[peer.ID]struct{}{},
+		opts:                   mngOpts,
+		stopped:                typeutils.NewAtomicBool(),
+		connectPeerChan:        make(chan *connectpeermsg, 10),
+		connectPeerAttemptChan: make(chan *connectpeerattemptmsg, 10),
+		reconnectChan:          make(chan *reconnectmsg, 100),
+		reconnectAttemptChan:   make(chan *reconnectattemptmsg, 100),
+		disconnectPeerChan:     make(chan *disconnectpeermsg, 10),
+		isConnectedReqChan:     make(chan *isconnectedrequestmsg, 10),
+		allowPeerChan:          make(chan *allowpeermsg, 10),
+		disallowPeerChan:       make(chan *disallowpeermsg, 10),
+		isAllowedReqChan:       make(chan *isallowedrequestmsg, 10),
+		connectedChan:          make(chan *connectionmsg, 10),
+		disconnectedChan:       make(chan *disconnectmsg, 10),
+		forEachChan:            make(chan *foreachmsg, 10),
+		callChan:               make(chan *callmsg, 10),
 	}
 	peeringManager.WrappedLogger = utils.NewWrappedLogger(peeringManager.opts.logger)
 	peeringManager.configureEvents()
+
 	return peeringManager
 }
 
@@ -251,19 +263,21 @@ type Manager struct {
 	// tells whether the manager was shut down.
 	stopped *typeutils.AtomicBool
 	// event loop channels
-	connectPeerChan    chan *connectpeermsg
-	disconnectPeerChan chan *disconnectpeermsg
-	isConnectedReqChan chan *isconnectedrequestmsg
-	allowPeerChan      chan *allowpeermsg
-	disallowPeerChan   chan *disallowpeermsg
-	isAllowedReqChan   chan *isallowedrequestmsg
-	connectedChan      chan *connectionmsg
-	disconnectedChan   chan *disconnectmsg
-	reconnectChan      chan *reconnectmsg
-	forEachChan        chan *foreachmsg
-	callChan           chan *callmsg
+	connectPeerChan        chan *connectpeermsg
+	connectPeerAttemptChan chan *connectpeerattemptmsg
+	reconnectChan          chan *reconnectmsg
+	reconnectAttemptChan   chan *reconnectattemptmsg
+	disconnectPeerChan     chan *disconnectpeermsg
+	isConnectedReqChan     chan *isconnectedrequestmsg
+	allowPeerChan          chan *allowpeermsg
+	disallowPeerChan       chan *disallowpeermsg
+	isAllowedReqChan       chan *isallowedrequestmsg
+	connectedChan          chan *connectionmsg
+	disconnectedChan       chan *disconnectmsg
+	forEachChan            chan *foreachmsg
+	callChan               chan *callmsg
 
-	// closures
+	// closures.
 	onP2PManagerConnect            *events.Closure
 	onP2PManagerConnected          *events.Closure
 	onP2PManagerDisconnect         *events.Closure
@@ -308,13 +322,21 @@ func (m *Manager) shutdown() {
 	m.stopped.Set()
 
 	// drain all outstanding requests of the event loop.
-	// we do not care about correct handling of the channels, because we are shutting down anyway.
+	// we don't care about correct handling of the channels, because we are shutting down anyway.
 drainLoop:
 	for {
 		select {
 		case connectPeerMsg := <-m.connectPeerChan:
 			// do not connect to the peer
 			connectPeerMsg.back <- ErrManagerShutdown
+
+		case connectPeerAttemptMsg := <-m.connectPeerAttemptChan:
+			// do not connect to the peer
+			connectPeerAttemptMsg.back <- ErrManagerShutdown
+
+		case <-m.reconnectChan:
+
+		case <-m.reconnectAttemptChan:
 
 		case disconnectPeerMsg := <-m.disconnectPeerChan:
 			disconnectPeerMsg.back <- ErrManagerShutdown
@@ -334,8 +356,6 @@ drainLoop:
 		case <-m.connectedChan:
 
 		case <-m.disconnectedChan:
-
-		case <-m.reconnectChan:
 
 		case forEachMsg := <-m.forEachChan:
 			forEachMsg.back <- struct{}{}
@@ -363,6 +383,7 @@ func (m *Manager) ConnectPeer(addrInfo *peer.AddrInfo, peerRelation PeerRelation
 	}
 	back := make(chan error)
 	m.connectPeerChan <- &connectpeermsg{addrInfo: addrInfo, peerRelation: peerRelation, back: back, alias: al}
+
 	return <-back
 }
 
@@ -379,6 +400,7 @@ func (m *Manager) DisconnectPeer(peerID peer.ID, disconnectReason ...error) erro
 		reason = disconnectReason[0]
 	}
 	m.disconnectPeerChan <- &disconnectpeermsg{peerID: peerID, reason: reason, back: back}
+
 	return <-back
 }
 
@@ -390,6 +412,7 @@ func (m *Manager) IsConnected(peerID peer.ID) bool {
 
 	back := make(chan bool)
 	m.isConnectedReqChan <- &isconnectedrequestmsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -401,6 +424,7 @@ func (m *Manager) AllowPeer(peerID peer.ID) error {
 
 	back := make(chan error)
 	m.allowPeerChan <- &allowpeermsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -412,6 +436,7 @@ func (m *Manager) DisallowPeer(peerID peer.ID) error {
 
 	back := make(chan error)
 	m.disallowPeerChan <- &disallowpeermsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -423,6 +448,7 @@ func (m *Manager) IsAllowed(peerID peer.ID) bool {
 
 	back := make(chan bool)
 	m.isAllowedReqChan <- &isallowedrequestmsg{peerID: peerID, back: back}
+
 	return <-back
 }
 
@@ -451,8 +477,10 @@ func (m *Manager) ConnectedCount(relation ...PeerRelation) int {
 		if m.host.Network().Connectedness(p.ID) == network.Connected {
 			count++
 		}
+
 		return true
 	}, relation...)
+
 	return count
 }
 
@@ -464,6 +492,7 @@ func (m *Manager) PeerInfoSnapshot(id peer.ID) *PeerInfoSnapshot {
 		info = p.InfoSnapshot()
 		info.Connected = m.host.Network().Connectedness(p.ID) == network.Connected
 	})
+
 	return info
 }
 
@@ -474,8 +503,10 @@ func (m *Manager) PeerInfoSnapshots() []*PeerInfoSnapshot {
 		info := p.InfoSnapshot()
 		info.Connected = m.host.Network().Connectedness(p.ID) == network.Connected
 		infos = append(infos, info)
+
 		return true
 	})
+
 	return infos
 }
 
@@ -499,6 +530,25 @@ type connectpeermsg struct {
 	peerRelation PeerRelation
 	alias        string
 	back         chan error
+}
+
+type connectpeerattemptmsg struct {
+	addrInfo     *peer.AddrInfo
+	peerRelation PeerRelation
+	alias        string
+	back         chan error
+	connect      bool
+	connectErr   error
+}
+
+type reconnectmsg struct {
+	peerID peer.ID
+}
+
+type reconnectattemptmsg struct {
+	peerID     peer.ID
+	reconnect  bool
+	connectErr error
 }
 
 type connectionmsg struct {
@@ -538,10 +588,6 @@ type isallowedrequestmsg struct {
 	back   chan bool
 }
 
-type reconnectmsg struct {
-	peerID peer.ID
-}
-
 type foreachmsg struct {
 	f      PeerForEachFunc
 	back   chan struct{}
@@ -563,18 +609,50 @@ func (m *Manager) eventLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			m.shutdown()
+
 			return
 
 		case connectPeerMsg := <-m.connectPeerChan:
-			err := m.connectPeer(connectPeerMsg.addrInfo, connectPeerMsg.peerRelation, connectPeerMsg.alias)
-			if err != nil {
-				m.Events.Error.Trigger(fmt.Errorf("error connect to %s (%v): %w", connectPeerMsg.addrInfo.ID.ShortString(), connectPeerMsg.addrInfo.Addrs, err))
+			m.connectPeer(ctx, connectPeerMsg)
+
+		case connectPeerAttemptMsg := <-m.connectPeerAttemptChan:
+			if connectPeerAttemptMsg.connectErr != nil {
+				if connectPeerAttemptMsg.connect {
+					// unsuccessful connect:
+					// get rid of the peer instance if the relation is unknown
+					// or initiate a reconnect timer
+					m.cleanupPeerIfNotKnown(connectPeerAttemptMsg.addrInfo.ID)
+					m.scheduleReconnectIfKnown(connectPeerAttemptMsg.addrInfo.ID)
+				}
+
+				m.Events.Error.Trigger(fmt.Errorf("error connect to %s (%v): %w", connectPeerAttemptMsg.addrInfo.ID.ShortString(), connectPeerAttemptMsg.addrInfo.Addrs, connectPeerAttemptMsg.connectErr))
+
+				if errors.Is(connectPeerAttemptMsg.connectErr, ErrPeerInManagerAlready) {
+					m.updateRelation(connectPeerAttemptMsg.addrInfo.ID, connectPeerAttemptMsg.peerRelation)
+					m.updateAlias(connectPeerAttemptMsg.addrInfo.ID, connectPeerAttemptMsg.alias)
+				}
 			}
-			if errors.Is(err, ErrPeerInManagerAlready) {
-				m.updateRelation(connectPeerMsg.addrInfo.ID, connectPeerMsg.peerRelation)
-				m.updateAlias(connectPeerMsg.addrInfo.ID, connectPeerMsg.alias)
+			connectPeerAttemptMsg.back <- connectPeerAttemptMsg.connectErr
+
+		case reconnectMsg := <-m.reconnectChan:
+			m.reconnectPeer(ctx, reconnectMsg.peerID)
+
+		case reconnectAttemptMsg := <-m.reconnectAttemptChan:
+			if reconnectAttemptMsg.connectErr != nil {
+				// unsuccessful connect:
+				// get rid of the peer instance if the relation is unknown
+				// or initiate a reconnect timer
+				m.cleanupPeerIfNotKnown(reconnectAttemptMsg.peerID)
+				m.scheduleReconnectIfKnown(reconnectAttemptMsg.peerID)
+
+				m.Events.Error.Trigger(fmt.Errorf("error reconnect %s: %w", reconnectAttemptMsg.peerID.ShortString(), reconnectAttemptMsg.connectErr))
+
+				continue
 			}
-			connectPeerMsg.back <- err
+			if !reconnectAttemptMsg.reconnect {
+				continue
+			}
+			m.Events.Reconnected.Trigger(m.peers[reconnectAttemptMsg.peerID])
 
 		case disconnectPeerMsg := <-m.disconnectPeerChan:
 			p := m.peers[disconnectPeerMsg.peerID]
@@ -601,17 +679,6 @@ func (m *Manager) eventLoop(ctx context.Context) {
 		case isAllowedReqMsg := <-m.isAllowedReqChan:
 			allowed := m.isAllowed(isAllowedReqMsg.peerID)
 			isAllowedReqMsg.back <- allowed
-
-		case reconnectMsg := <-m.reconnectChan:
-			reconnect, err := m.reconnectPeer(reconnectMsg.peerID)
-			if err != nil {
-				m.Events.Error.Trigger(fmt.Errorf("error reconnect %s: %w", reconnectMsg.peerID.ShortString(), err))
-				continue
-			}
-			if !reconnect {
-				continue
-			}
-			m.Events.Reconnected.Trigger(m.peers[reconnectMsg.peerID])
 
 		case isConnectedReqMsg := <-m.isConnectedReqChan:
 			connected := m.isConnected(isConnectedReqMsg.peerID)
@@ -656,24 +723,110 @@ func (m *Manager) eventLoop(ctx context.Context) {
 
 // connects to the given peer if it isn't already connected and if its relation is PeerRelationKnown,
 // then the connection to the peer is further protected from trimming.
-func (m *Manager) connectPeer(addrInfo *peer.AddrInfo, relation PeerRelation, alias string) error {
-	if _, has := m.peers[addrInfo.ID]; has {
-		return ErrPeerInManagerAlready
+func (m *Manager) connectPeer(ctx context.Context, connectPeerMsg *connectpeermsg) {
+
+	if _, has := m.peers[connectPeerMsg.addrInfo.ID]; has {
+		m.connectPeerAttemptChan <- &connectpeerattemptmsg{
+			addrInfo:     connectPeerMsg.addrInfo,
+			peerRelation: connectPeerMsg.peerRelation,
+			alias:        connectPeerMsg.alias,
+			// pass the error channel of the caller to the connectPeerAttemptChan
+			back:       connectPeerMsg.back,
+			connect:    false,
+			connectErr: ErrPeerInManagerAlready,
+		}
+
+		return
 	}
 
-	if addrInfo.ID == m.host.ID() {
-		return ErrCantConnectToItself
+	if connectPeerMsg.addrInfo.ID == m.host.ID() {
+		m.connectPeerAttemptChan <- &connectpeerattemptmsg{
+			addrInfo:     connectPeerMsg.addrInfo,
+			peerRelation: connectPeerMsg.peerRelation,
+			alias:        connectPeerMsg.alias,
+			// pass the error channel of the caller to the connectPeerAttemptChan
+			back:       connectPeerMsg.back,
+			connect:    false,
+			connectErr: ErrCantConnectToItself,
+		}
+
+		return
 	}
 
-	p := NewPeer(addrInfo.ID, relation, addrInfo.Addrs, alias)
+	p := NewPeer(connectPeerMsg.addrInfo.ID, connectPeerMsg.peerRelation, connectPeerMsg.addrInfo.Addrs, connectPeerMsg.alias)
 	if p.Relation == PeerRelationKnown || p.Relation == PeerRelationAutopeered {
-		m.host.ConnManager().Protect(addrInfo.ID, PeerConnectivityProtectionTag)
+		m.host.ConnManager().Protect(connectPeerMsg.addrInfo.ID, PeerConnectivityProtectionTag)
 	}
 
-	m.peers[addrInfo.ID] = p
+	m.peers[connectPeerMsg.addrInfo.ID] = p
 	m.Events.Connect.Trigger(p)
 
-	return m.connect(*addrInfo)
+	// perform an actual connection attempt to the given peer.
+	// connection attempts should happen in a separate goroutine
+	go func() {
+		ctxConnect, cancelConnect := context.WithTimeout(ctx, connTimeout)
+		defer cancelConnect()
+
+		// if the connection fails, the peer is either cleared from the Manager if its relation is PeerRelationUnknown
+		// or a reconnect attempt is scheduled if it is PeerRelationKnown.
+		// this is done in via the connectPeerAttemptChan.
+		m.connectPeerAttemptChan <- &connectpeerattemptmsg{
+			addrInfo:     connectPeerMsg.addrInfo,
+			peerRelation: connectPeerMsg.peerRelation,
+			alias:        connectPeerMsg.alias,
+			// pass the error channel of the caller to the connectPeerAttemptChan
+			back:       connectPeerMsg.back,
+			connect:    true,
+			connectErr: m.host.Connect(ctxConnect, *connectPeerMsg.addrInfo),
+		}
+	}()
+}
+
+// reconnect peer does a connection attempt to the given peer but only
+// if its relation is PeerRelationKnown.
+func (m *Manager) reconnectPeer(ctx context.Context, peerID peer.ID) {
+	p, has := m.peers[peerID]
+	if !has {
+		// directly return the result of the reconnect attempt
+		m.reconnectAttemptChan <- &reconnectattemptmsg{
+			peerID:     peerID,
+			reconnect:  false,
+			connectErr: nil,
+		}
+
+		return
+	}
+
+	if p.Relation != PeerRelationKnown || p.reconnectTimer == nil {
+		// directly return the result of the reconnect attempt
+		m.reconnectAttemptChan <- &reconnectattemptmsg{
+			peerID:     peerID,
+			reconnect:  false,
+			connectErr: nil,
+		}
+
+		return
+	}
+
+	m.Events.Reconnecting.Trigger(p)
+
+	addrInfo := peer.AddrInfo{ID: peerID, Addrs: p.Addrs}
+
+	// perform an actual connection attempt to the given peer.
+	// connection attempts should happen in a separate goroutine
+	go func() {
+		ctxConnect, cancelConnect := context.WithTimeout(ctx, connTimeout)
+		defer cancelConnect()
+
+		// if the connection fails, the peer is either cleared from the Manager if its relation is PeerRelationUnknown
+		// or a reconnect attempt is scheduled if it is PeerRelationKnown.
+		// this is done in via the reconnectAttemptChan.
+		m.reconnectAttemptChan <- &reconnectattemptmsg{
+			peerID:     peerID,
+			reconnect:  true,
+			connectErr: m.host.Connect(ctxConnect, addrInfo),
+		}
+	}()
 }
 
 // disconnects and removes the given peer from the Manager.
@@ -686,6 +839,7 @@ func (m *Manager) disconnectPeer(peerID peer.ID) (bool, error) {
 	m.host.ConnManager().Unprotect(peerID, PeerConnectivityProtectionTag)
 	delete(m.peers, peerID)
 	m.Events.Disconnect.Trigger(p)
+
 	return true, m.host.Network().ClosePeer(peerID)
 }
 
@@ -718,6 +872,7 @@ func (m *Manager) disallowPeer(peerID peer.ID) {
 // checks whether the given peer is allowed to connect (autopeering).
 func (m *Manager) isAllowed(peerID peer.ID) bool {
 	_, has := m.allowedPeers[peerID]
+
 	return has
 }
 
@@ -730,15 +885,19 @@ func (m *Manager) updateRelation(peerID peer.ID, newRelation PeerRelation) {
 	}
 	oldRelation := p.Relation
 	p.Relation = newRelation
+
 	switch newRelation {
 	case PeerRelationUnknown:
 		p.reconnectTimer.Stop()
 		p.reconnectTimer = nil
+
 	case PeerRelationAutopeered:
 		fallthrough
+
 	case PeerRelationKnown:
 		m.host.ConnManager().Protect(peerID, PeerConnectivityProtectionTag)
 	}
+
 	m.Events.RelationUpdated.Trigger(p, oldRelation)
 }
 
@@ -796,40 +955,6 @@ func (m *Manager) resetReconnect(peerID peer.ID) {
 	}
 }
 
-// reconnect peer does a connection attempt to the given peer but only
-// if its relation is PeerRelationKnown.
-func (m *Manager) reconnectPeer(peerID peer.ID) (bool, error) {
-	p, has := m.peers[peerID]
-	if !has {
-		return false, nil
-	}
-
-	if p.Relation != PeerRelationKnown || p.reconnectTimer == nil {
-		return false, nil
-	}
-
-	m.Events.Reconnecting.Trigger(p)
-	return true, m.connect(peer.AddrInfo{ID: peerID, Addrs: p.Addrs})
-}
-
-// connect does an actual connection attempt to the given peer.
-// if the connection fails, the peer is either cleared from the Manager if its relation is PeerRelationUnknown
-// or a reconnect attempt is scheduled if it is PeerRelationKnown.
-func (m *Manager) connect(addrInfo peer.AddrInfo) error {
-	ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
-	defer cancel()
-
-	err := m.host.Connect(ctx, addrInfo)
-	if err != nil {
-		// unsuccessful connect:
-		// get rid of the peer instance if the relation is unknown
-		// or initiate a reconnect timer
-		m.cleanupPeerIfNotKnown(addrInfo.ID)
-		m.scheduleReconnectIfKnown(addrInfo.ID)
-	}
-	return err
-}
-
 // adds the given connection as peer with PeerRelationUnknown to the Manager's peer set,
 // if the peer isn't already in the set.
 func (m *Manager) addPeerAsUnknownIfAbsent(conn network.Conn) {
@@ -863,6 +988,7 @@ func (m *Manager) isConnected(peerID peer.ID) bool {
 	if _, has := m.peers[peerID]; !has {
 		return false
 	}
+
 	return m.host.Network().Connectedness(peerID) == network.Connected
 }
 
@@ -932,15 +1058,15 @@ func (m *Manager) configureEvents() {
 }
 
 func (m *Manager) attachEvents() {
-	m.Events.Connect.Attach(m.onP2PManagerConnect)
-	m.Events.Connected.Attach(m.onP2PManagerConnected)
-	m.Events.Disconnect.Attach(m.onP2PManagerDisconnect)
-	m.Events.Disconnected.Attach(m.onP2PManagerDisconnected)
-	m.Events.ScheduledReconnect.Attach(m.onP2PManagerScheduledReconnect)
-	m.Events.Reconnecting.Attach(m.onP2PManagerReconnecting)
-	m.Events.RelationUpdated.Attach(m.onP2PManagerRelationUpdated)
-	m.Events.StateChange.Attach(m.onP2PManagerStateChange)
-	m.Events.Error.Attach(m.onP2PManagerError)
+	m.Events.Connect.Hook(m.onP2PManagerConnect)
+	m.Events.Connected.Hook(m.onP2PManagerConnected)
+	m.Events.Disconnect.Hook(m.onP2PManagerDisconnect)
+	m.Events.Disconnected.Hook(m.onP2PManagerDisconnected)
+	m.Events.ScheduledReconnect.Hook(m.onP2PManagerScheduledReconnect)
+	m.Events.Reconnecting.Hook(m.onP2PManagerReconnecting)
+	m.Events.RelationUpdated.Hook(m.onP2PManagerRelationUpdated)
+	m.Events.StateChange.Hook(m.onP2PManagerStateChange)
+	m.Events.Error.Hook(m.onP2PManagerError)
 }
 
 func (m *Manager) detachEvents() {
@@ -960,8 +1086,8 @@ func (m *Manager) detachEvents() {
 // the handlers are called in newly spawned goroutines.
 type netNotifiee Manager
 
-func (m *netNotifiee) Listen(net network.Network, multiaddr multiaddr.Multiaddr)      {}
-func (m *netNotifiee) ListenClose(net network.Network, multiaddr multiaddr.Multiaddr) {}
+func (m *netNotifiee) Listen(_ network.Network, _ multiaddr.Multiaddr)      {}
+func (m *netNotifiee) ListenClose(_ network.Network, _ multiaddr.Multiaddr) {}
 func (m *netNotifiee) Connected(net network.Network, conn network.Conn) {
 	if m.stopped.IsSet() {
 		return
@@ -974,5 +1100,3 @@ func (m *netNotifiee) Disconnected(net network.Network, conn network.Conn) {
 	}
 	m.disconnectedChan <- &disconnectmsg{net: net, conn: conn, reason: errors.New("connection closed by libp2p network event")}
 }
-func (m *netNotifiee) OpenedStream(net network.Network, stream network.Stream) {}
-func (m *netNotifiee) ClosedStream(net network.Network, stream network.Stream) {}

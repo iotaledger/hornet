@@ -6,16 +6,16 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/pkg/whiteflag"
 )
 
 func init() {
@@ -61,7 +61,7 @@ type dependencies struct {
 
 func configure() {
 	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(CfgWarpSyncAdvancementRange))
-	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.SyncManager, deps.Requester, true)
+	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(Plugin.Daemon().ContextStopped(), deps.Storage, deps.SyncManager, deps.Requester, true)
 	configureEvents()
 }
 
@@ -83,7 +83,7 @@ func configureEvents() {
 	})
 
 	onGossipServiceProtocolStarted = events.NewClosure(func(p *gossip.Protocol) {
-		p.Events.HeartbeatUpdated.Attach(onHeartbeatUpdated)
+		p.Events.HeartbeatUpdated.Hook(onHeartbeatUpdated)
 	})
 
 	onGossipServiceProtocolTerminated = events.NewClosure(func(p *gossip.Protocol) {
@@ -98,8 +98,8 @@ func configureEvents() {
 	onMilestoneSolidificationFailed = events.NewClosure(func(msIndex milestone.Index) {
 		if warpSync.CurrentCheckpoint != 0 && warpSync.CurrentCheckpoint < msIndex {
 			// rerequest since milestone requests could have been lost
-			Plugin.LogInfof("Requesting missing milestones %d - %d", msIndex, msIndex+milestone.Index(warpSync.AdvancementRange))
-			warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), warpSync.AdvancementRange, nil)
+			_, msIndexStart, msIndexEnd := warpSyncMilestoneRequester.RequestMilestoneRange(warpSync.AdvancementRange)
+			Plugin.LogInfof("Requesting missing milestones %d - %d", msIndexStart, msIndexEnd)
 		}
 	})
 
@@ -109,7 +109,7 @@ func configureEvents() {
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents, oldCheckpoint)
+		_, _, _ = warpSyncMilestoneRequester.RequestMilestoneRange(int(advRange), oldCheckpoint)
 	})
 
 	onWarpSyncTargetUpdated = events.NewClosure(func(checkpoint milestone.Index, newTarget milestone.Index) {
@@ -122,7 +122,7 @@ func configureEvents() {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
 
-		msRequested := warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents)
+		msRequested, _, _ := warpSyncMilestoneRequester.RequestMilestoneRange(int(advRange))
 		// if the amount of requested milestones doesn't correspond to the range,
 		// it means we already had the milestones in the database, which suggests
 		// that we should manually kick start the milestone solidifier.
@@ -144,14 +144,14 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.GossipService.Events.ProtocolStarted.Attach(onGossipServiceProtocolStarted)
-	deps.GossipService.Events.ProtocolTerminated.Attach(onGossipServiceProtocolTerminated)
-	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
-	deps.Tangle.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
-	warpSync.Events.CheckpointUpdated.Attach(onWarpSyncCheckpointUpdated)
-	warpSync.Events.TargetUpdated.Attach(onWarpSyncTargetUpdated)
-	warpSync.Events.Start.Attach(onWarpSyncStart)
-	warpSync.Events.Done.Attach(onWarpSyncDone)
+	deps.GossipService.Events.ProtocolStarted.Hook(onGossipServiceProtocolStarted)
+	deps.GossipService.Events.ProtocolTerminated.Hook(onGossipServiceProtocolTerminated)
+	deps.Tangle.Events.MilestoneConfirmed.Hook(onMilestoneConfirmed)
+	deps.Tangle.Events.MilestoneSolidificationFailed.Hook(onMilestoneSolidificationFailed)
+	warpSync.Events.CheckpointUpdated.Hook(onWarpSyncCheckpointUpdated)
+	warpSync.Events.TargetUpdated.Hook(onWarpSyncTargetUpdated)
+	warpSync.Events.Start.Hook(onWarpSyncStart)
+	warpSync.Events.Done.Hook(onWarpSyncDone)
 }
 
 func detachEvents() {

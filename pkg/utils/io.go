@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -47,7 +46,7 @@ func WriteToFile(filename string, data interface{}, perm os.FileMode) (err error
 // ReadJSONFromFile uses json.Unmarshal to decode data. Data must be a pointer to a fixed-size value or a slice
 // of fixed-size values.
 func ReadJSONFromFile(filename string, data interface{}) error {
-	jsonData, err := ioutil.ReadFile(filename)
+	jsonData, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("unable to read JSON file %s: %w", filename, err)
 	}
@@ -91,7 +90,7 @@ func WriteJSONToFile(filename string, data interface{}, perm os.FileMode) (err e
 // ReadTOMLFromFile uses toml.Unmarshal to decode data. Data must be a pointer to a fixed-size value or a slice
 // of fixed-size values.
 func ReadTOMLFromFile(filename string, data interface{}) error {
-	tomlData, err := ioutil.ReadFile(filename)
+	tomlData, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("unable to read TOML file %s: %w", filename, err)
 	}

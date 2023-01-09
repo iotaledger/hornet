@@ -7,7 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/gohornet/hornet/pkg/jwt"
+	"github.com/iotaledger/hornet/pkg/jwt"
 )
 
 func compileRouteAsRegex(route string) *regexp.Regexp {
@@ -20,42 +20,50 @@ func compileRouteAsRegex(route string) *regexp.Regexp {
 	if err != nil {
 		return nil
 	}
+
 	return reg
 }
 
 func compileRoutesAsRegexes(routes []string) []*regexp.Regexp {
-	var regexes []*regexp.Regexp
-	for _, route := range routes {
+	regexes := make([]*regexp.Regexp, len(routes))
+	for i, route := range routes {
 		reg := compileRouteAsRegex(route)
 		if reg == nil {
 			Plugin.LogFatalf("Invalid route in config: %s", route)
 			continue
 		}
-		regexes = append(regexes, reg)
+		regexes[i] = reg
 	}
+
 	return regexes
 }
 
 func apiMiddleware() echo.MiddlewareFunc {
 
-	publicRoutes := compileRoutesAsRegexes(deps.NodeConfig.Strings(CfgRestAPIPublicRoutes))
-	protectedRoutes := compileRoutesAsRegexes(deps.NodeConfig.Strings(CfgRestAPIProtectedRoutes))
+	publicRoutesRegEx := compileRoutesAsRegexes(deps.NodeConfig.Strings(CfgRestAPIPublicRoutes))
+	protectedRoutesRegEx := compileRoutesAsRegexes(deps.NodeConfig.Strings(CfgRestAPIProtectedRoutes))
 
 	matchPublic := func(c echo.Context) bool {
-		for _, reg := range publicRoutes {
-			if reg.MatchString(strings.ToLower(c.Path())) {
+		loweredPath := strings.ToLower(c.Request().RequestURI)
+
+		for _, reg := range publicRoutesRegEx {
+			if reg.MatchString(loweredPath) {
 				return true
 			}
 		}
+
 		return false
 	}
 
 	matchExposed := func(c echo.Context) bool {
-		for _, reg := range append(publicRoutes, protectedRoutes...) {
-			if reg.MatchString(strings.ToLower(c.Path())) {
+		loweredPath := strings.ToLower(c.Request().RequestURI)
+
+		for _, reg := range append(publicRoutesRegEx, protectedRoutesRegEx...) {
+			if reg.MatchString(loweredPath) {
 				return true
 			}
 		}
+
 		return false
 	}
 
@@ -63,6 +71,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 	salt := deps.NodeConfig.String(CfgRestAPIJWTAuthSalt)
 	if len(salt) == 0 {
 		Plugin.LogFatalf("'%s' should not be empty", CfgRestAPIJWTAuthSalt)
+		return nil
 	}
 
 	// API tokens do not expire.

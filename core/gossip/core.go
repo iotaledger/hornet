@@ -2,29 +2,30 @@ package gossip
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/pkg/tangle"
 )
 
 const (
@@ -258,43 +259,76 @@ func checkHeartbeats() {
 		return time.Since(proto.HeartbeatSentTime) > heartbeatSentInterval
 	})
 
-	peersToReconnect := make(map[peer.ID]struct{})
+	peersToRemove := make(map[peer.ID]error)
+	peersToReconnect := make(map[peer.ID]error)
+
+	snapshotInfo := deps.Storage.SnapshotInfo()
+	if snapshotInfo == nil {
+		// we can't check the health of the peers without info about pruning index
+		return
+	}
 
 	// check if peers are alive by checking whether we received heartbeats lately
 	deps.GossipService.ForEach(func(proto *gossip.Protocol) bool {
 
-		// use a grace period before the heartbeat check is applied
-		if time.Since(proto.Stream.Stat().Opened) <= checkHeartbeatsInterval ||
-			time.Since(proto.HeartbeatReceivedTime) < heartbeatReceiveTimeout {
+		protoStream := proto.Stream
+		if protoStream == nil {
+			// stream not established yet
 			return true
 		}
 
-		/*
-			// TODO: re-introduce once p2p discovery is implemented
-			// peer is connected but doesn't seem to be alive
-			if p.Autopeering != nil {
-				// it's better to drop the connection to autopeered peers and free the slots for other peers
-				peerIDsToRemove[p.ID] = struct{}{}
-				CorePlugin.LogInfof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
-				return true
-			}
-		*/
+		latestHeatbeat := proto.LatestHeartbeat
+		if latestHeatbeat == nil && time.Since(protoStream.Stat().Opened) <= checkHeartbeatsInterval {
+			// use a grace period before the heartbeat check is applied
+			return true
+		}
 
-		// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
-		CorePlugin.LogInfof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
-		peersToReconnect[proto.PeerID] = struct{}{}
+		var peerRelationKnown bool
+		deps.PeeringManager.Call(proto.PeerID, func(peer *p2p.Peer) {
+			peerRelationKnown = peer.Relation == p2p.PeerRelationKnown
+		})
+
+		var errUnhealthy error
+		switch {
+		case latestHeatbeat == nil:
+			// no heartbeat received in the grace period
+			errUnhealthy = errors.New("no heartbeat received in grace period")
+
+		case time.Since(proto.HeartbeatReceivedTime) > heartbeatReceiveTimeout:
+			// heartbeat outdated
+			errUnhealthy = errors.New("heartbeat outdated")
+
+		case !peerRelationKnown && latestHeatbeat.SolidMilestoneIndex < snapshotInfo.PruningIndex:
+			// peer is unknown or connected via autopeering and its solid milestone index is below our pruning index.
+			// we can't help this neighbor to become sync, so it's better to drop the connection and free the slots for other peers.
+			errUnhealthy = fmt.Errorf("peers solid milestone index is below our pruning index: %d < %d", latestHeatbeat.SolidMilestoneIndex, snapshotInfo.PruningIndex)
+		}
+
+		if errUnhealthy == nil {
+			// peer is healthy
+			return true
+		}
+
+		if peerRelationKnown {
+			// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
+			peersToReconnect[proto.PeerID] = fmt.Errorf("dropping connection to peer %s, error: %w", proto.PeerID.ShortString(), errUnhealthy)
+		} else {
+			// it's better to drop the connection to unknown and autopeered peers and free the slots for other peers
+			peersToRemove[proto.PeerID] = fmt.Errorf("dropping connection to peer %s, error: %w", proto.PeerID.ShortString(), errUnhealthy)
+		}
+
 		return true
 	})
 
-	/*
-		// TODO: re-introduce once p2p discovery is implemented
-		for peerIDToRemove := range peerIDsToRemove {
-			peering.Manager().Remove(peerIDToRemove)
-		}
-	*/
+	// drop the connection to the peers
+	for p, reason := range peersToRemove {
+		_ = deps.PeeringManager.DisconnectPeer(p, reason)
+	}
 
 	// close the connection to the peers to trigger a reconnect
-	for p := range peersToReconnect {
+	for p, reason := range peersToReconnect {
+		CorePlugin.LogWarn(reason.Error())
+
 		conns := deps.Host.Network().ConnsToPeer(p)
 		for _, conn := range conns {
 			_ = conn.Close()
@@ -316,8 +350,8 @@ func configureEvents() {
 			}
 		})
 
-		proto.Events.Errors.Attach(closeConnectionDueToProtocolError)
-		proto.Parser.Events.Error.Attach(closeConnectionDueToProtocolError)
+		proto.Events.Errors.Hook(closeConnectionDueToProtocolError)
+		proto.Parser.Events.Error.Hook(closeConnectionDueToProtocolError)
 
 		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
 			buf := make([]byte, readBufSize)
@@ -340,11 +374,11 @@ func configureEvents() {
 		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
 			// send heartbeat and latest milestone request
 			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
-				latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
-				syncedCount := deps.GossipService.SynchronizedCount(latestMilestoneIndex)
+				syncState := deps.SyncManager.SyncState()
+				syncedCount := deps.GossipService.SynchronizedCount(syncState.LatestMilestoneIndex)
 				connectedCount := deps.PeeringManager.ConnectedCount()
 				// TODO: overflow not handled for synced/connected
-				proto.SendHeartbeat(deps.SyncManager.ConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
+				proto.SendHeartbeat(syncState.ConfirmedMilestoneIndex, snapshotInfo.PruningIndex, syncState.LatestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 				proto.SendLatestMilestoneRequest()
 			}
 
@@ -386,12 +420,12 @@ func configureEvents() {
 }
 
 func attachEventsGossipService() {
-	deps.GossipService.Events.ProtocolStarted.Attach(onGossipServiceProtocolStarted)
-	deps.GossipService.Events.ProtocolTerminated.Attach(onGossipServiceProtocolTerminated)
+	deps.GossipService.Events.ProtocolStarted.Hook(onGossipServiceProtocolStarted)
+	deps.GossipService.Events.ProtocolTerminated.Hook(onGossipServiceProtocolTerminated)
 }
 
 func attachEventsBroadcastQueue() {
-	deps.MessageProcessor.Events.BroadcastMessage.Attach(onMessageProcessorBroadcastMessage)
+	deps.MessageProcessor.Events.BroadcastMessage.Hook(onMessageProcessorBroadcastMessage)
 }
 
 func detachEventsGossipService() {

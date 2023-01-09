@@ -8,8 +8,8 @@ import (
 
 	iotago "github.com/iotaledger/iota.go/v2"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
 )
 
 const (

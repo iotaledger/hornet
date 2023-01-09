@@ -5,15 +5,21 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/profile"
 	iotago "github.com/iotaledger/iota.go/v2"
+)
+
+var (
+	ErrMilestoneNotFound = errors.New("milestone not found")
 )
 
 func databaseKeyForMilestoneIndex(milestoneIndex milestone.Index) []byte {
@@ -147,6 +153,28 @@ func (s *Storage) CachedMilestoneOrNil(milestoneIndex milestone.Index) *CachedMi
 		return nil
 	}
 	return &CachedMilestone{CachedObject: cachedMilestone}
+}
+
+// MilestoneTimestampByIndex returns the timestamp of a milestone.
+func (s *Storage) MilestoneTimestampByIndex(milestoneIndex milestone.Index) (time.Time, error) {
+	cachedMilestone := s.CachedMilestoneOrNil(milestoneIndex) // milestone +1
+	if cachedMilestone == nil {
+		return time.Time{}, ErrMilestoneNotFound
+	}
+	defer cachedMilestone.Release(true) // milestone -1
+
+	return cachedMilestone.Milestone().Timestamp, nil
+}
+
+// MilestoneTimestampUnixByIndex returns the unix timestamp of a milestone.
+func (s *Storage) MilestoneTimestampUnixByIndex(milestoneIndex milestone.Index) (int64, error) {
+	cachedMilestone := s.CachedMilestoneOrNil(milestoneIndex) // milestone +1
+	if cachedMilestone == nil {
+		return 0, ErrMilestoneNotFound
+	}
+	defer cachedMilestone.Release(true) // milestone -1
+
+	return cachedMilestone.Milestone().Timestamp.Unix(), nil
 }
 
 // ContainsMilestone returns if the given milestone exists in the cache/persistence layer.

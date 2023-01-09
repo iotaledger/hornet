@@ -9,18 +9,18 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	mqttpkg "github.com/iotaledger/hornet/pkg/mqtt"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/plugins/restapi"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -331,17 +331,17 @@ func run() {
 	if err := Plugin.Daemon().BackgroundWorker("MQTT Events", func(ctx context.Context) {
 		Plugin.LogInfo("Starting MQTT Events ... done")
 
-		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
-		deps.Tangle.Events.ConfirmedMilestoneChanged.Attach(onConfirmedMilestoneChanged)
+		deps.Tangle.Events.LatestMilestoneChanged.Hook(onLatestMilestoneChanged)
+		deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
 
-		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
-		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
-		deps.Tangle.Events.MessageReferenced.Attach(onMessageReferenced)
+		deps.Tangle.Events.ReceivedNewMessage.Hook(onReceivedNewMessage)
+		deps.Tangle.Events.MessageSolid.Hook(onMessageSolid)
+		deps.Tangle.Events.MessageReferenced.Hook(onMessageReferenced)
 
-		deps.Tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
-		deps.Tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
+		deps.Tangle.Events.NewUTXOOutput.Hook(onUTXOOutput)
+		deps.Tangle.Events.NewUTXOSpent.Hook(onUTXOSpent)
 
-		deps.Tangle.Events.NewReceipt.Attach(onReceipt)
+		deps.Tangle.Events.NewReceipt.Hook(onReceipt)
 
 		messagesWorkerPool.Start()
 		newLatestMilestoneWorkerPool.Start()

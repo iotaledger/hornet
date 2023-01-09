@@ -7,29 +7,26 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
-	connmgr "github.com/libp2p/go-libp2p-connmgr"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
+	connmgr "github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
 )
 
 const protocolID = "/iota/abcdf/1.0.0"
 
-func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.ManagerOption, srvOpts []gossip.ServiceOption) (
+func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.ManagerOption, srvOpts []gossip.ServiceOption, privateKey crypto.PrivKey) (
 	host.Host, *p2p.Manager, *gossip.Service, peer.AddrInfo,
 ) {
-	// we use Ed25519 because otherwise it takes longer as the default is RSA
-	sk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
-	require.NoError(t, err)
-
 	connManager, err := connmgr.NewConnManager(
 		1,
 		100,
@@ -38,8 +35,10 @@ func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.Manag
 	require.NoError(t, err)
 
 	n, err := libp2p.New(
-		libp2p.Identity(sk),
+		libp2p.DefaultListenAddrs,
+		libp2p.Identity(privateKey),
 		libp2p.ConnectionManager(connManager),
+		libp2p.Transport(tcp.NewTCPTransport),
 	)
 	require.NoError(t, err)
 
@@ -71,17 +70,26 @@ func TestServiceEvents(t *testing.T) {
 	}
 	var srvOpts []gossip.ServiceOption
 
-	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, mngOpts, srvOpts)
-	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, mngOpts, srvOpts)
+	node1PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("5536d0d7eb7cb3780085d73d55079a373a726df58010d881167add08d7e8108c76d7a7f15c094c292faa22ac81b976034f0b11db86a8863d9a9b0c64820e087d")
+	require.NoError(t, err)
+
+	node2PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("35764adaa5e02cbd677285ffd90f927644d2010dca7608876dd3ea3a44f8fcb491cdffa377a307e1d16df5c18e4beee9fffbd61998bd1f8c76a616c1b6c7ca7d")
+	require.NoError(t, err)
+
+	// node 1 <peer.ID 12*rd6tBe>
+	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, mngOpts, srvOpts, node1PrvKey)
+
+	// node 2 <peer.ID 12*g1issS>
+	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, mngOpts, srvOpts, node2PrvKey)
 
 	fmt.Println("node 1", node1.ID().ShortString())
 	fmt.Println("node 2", node2.ID().ShortString())
 
 	var protocolStartedCalled1, protocolStartedCalled2 bool
-	node1Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled1 = true
 	}))
-	node2Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node2Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled2 = true
 	}))
 
@@ -111,10 +119,10 @@ func TestServiceEvents(t *testing.T) {
 	require.True(t, protocolStartedCalled2)
 
 	var protocolTerminatedCalled1, protocolTerminatedCalled2 bool
-	node1Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolTerminatedCalled1 = true
 	}))
-	node2Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node2Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolTerminatedCalled2 = true
 	}))
 
@@ -148,10 +156,10 @@ func TestServiceEvents(t *testing.T) {
 
 	protocolStartedCalled1 = false
 	protocolTerminatedCalled1 = false
-	node1Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled1 = true
 	}))
-	node1Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolTerminatedCalled1 = true
 	}))
 
@@ -191,21 +199,35 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 		gossip.WithUnknownPeersLimit(1),
 	}
 
-	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, mngOpts, srvOpts)
-	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, mngOpts, srvOpts)
+	node1PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("5536d0d7eb7cb3780085d73d55079a373a726df58010d881167add08d7e8108c76d7a7f15c094c292faa22ac81b976034f0b11db86a8863d9a9b0c64820e087d")
+	require.NoError(t, err)
+
+	node2PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("35764adaa5e02cbd677285ffd90f927644d2010dca7608876dd3ea3a44f8fcb491cdffa377a307e1d16df5c18e4beee9fffbd61998bd1f8c76a616c1b6c7ca7d")
+	require.NoError(t, err)
+
+	node3PrvKey, err := p2p.ParseEd25519PrivateKeyFromString("1d586a941f97be3d8ead709c9ff31579c9677f681ec05cd1e0233d36513b178bd2a54ee6c67c84037ae8da89033c1bcfc2252ecd466f6cf472c22cbe0e9a7842")
+	require.NoError(t, err)
+
+	// node 1 <peer.ID 12*rd6tBe>
+	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, mngOpts, srvOpts, node1PrvKey)
+
+	// node 2 <peer.ID 12*g1issS>
+	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, mngOpts, srvOpts, node2PrvKey)
+
+	// node 3 <peer.ID 12*e9jADP>
 	node3, node3Manager, node3Service, _ := newNode("node3", ctx, t, mngOpts, []gossip.ServiceOption{
 		gossip.WithUnknownPeersLimit(2),
-	})
+	}, node3PrvKey)
 
 	fmt.Println("node 1", node1.ID().ShortString())
 	fmt.Println("node 2", node2.ID().ShortString())
 	fmt.Println("node 3", node3.ID().ShortString())
 
 	var protocolStartedCalled1, protocolStartedCalled2 bool
-	node1Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled1 = true
 	}))
-	node2Service.Events.ProtocolStarted.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node2Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		protocolStartedCalled2 = true
 	}))
 
@@ -237,7 +259,7 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 	// now lets verify that node 3 can't build a gossip stream to neither node 1 and 2 since both
 	// have their available slots filled
 	var node3ProtocolTerminated int
-	node3Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(_ *gossip.Protocol) {
+	node3Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
 		node3ProtocolTerminated++
 	}))
 

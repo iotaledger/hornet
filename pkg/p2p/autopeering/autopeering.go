@@ -10,13 +10,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/libp2p/go-libp2p-core/crypto"
-	peer2 "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	peer2 "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/mr-tron/base58/base58"
 	"github.com/multiformats/go-multiaddr"
 
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
@@ -27,6 +25,8 @@ import (
 	"github.com/iotaledger/hive.go/iputils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/netutil"
+	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 const (
@@ -386,7 +386,13 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 		return true
 	}
 
-	a.selectionProtocol = selection.New(localPeerContainer.Local(), a.discoveryProtocol, selection.Logger(a.LoggerNamed("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
+	a.selectionProtocol = selection.New(
+		localPeerContainer.Local(),
+		a.discoveryProtocol,
+		selection.Logger(a.LoggerNamed("sel")),
+		selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)),
+		selection.NeighborBlockDuration(0), // disable neighbor block duration (we manually block neighbors)
+	)
 }
 
 func (a *AutopeeringManager) Run(ctx context.Context) {

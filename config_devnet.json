@@ -7,6 +7,7 @@
     "publicRoutes": [
       "/health",
       "/mqtt",
+      "/api/routes",
       "/api/v1/info",
       "/api/v1/tips",
       "/api/v1/messages*",
@@ -45,9 +46,11 @@
   "db": {
     "engine": "rocksdb",
     "path": "devnetdb",
-    "autoRevalidation": false
+    "autoRevalidation": false,
+    "checkLedgerStateOnStartup": false
   },
   "snapshots": {
+    "enabled": false,
     "depth": 50,
     "interval": 200,
     "fullPath": "snapshots/devnet/full_snapshot.bin",

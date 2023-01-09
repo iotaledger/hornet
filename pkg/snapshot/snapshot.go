@@ -10,18 +10,18 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 var (
@@ -72,6 +72,7 @@ type SnapshotManager struct {
 	storage                              *storage.Storage
 	syncManager                          *syncmanager.SyncManager
 	utxoManager                          *utxo.Manager
+	snapshotCreationEnabled              bool
 	networkID                            uint64
 	networkIDSource                      string
 	snapshotFullPath                     string
@@ -108,6 +109,7 @@ func NewSnapshotManager(
 	storage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	utxoManager *utxo.Manager,
+	snapshotCreationEnabled bool,
 	networkID uint64,
 	networkIDSource string,
 	snapshotFullPath string,
@@ -131,6 +133,7 @@ func NewSnapshotManager(
 		WrappedLogger:                        utils.NewWrappedLogger(log),
 		tangleDatabase:                       tangleDatabase,
 		utxoDatabase:                         utxoDatabase,
+		snapshotCreationEnabled:              snapshotCreationEnabled,
 		storage:                              storage,
 		syncManager:                          syncManager,
 		utxoManager:                          utxoManager,
@@ -168,6 +171,9 @@ func (s *SnapshotManager) IsSnapshottingOrPruning() bool {
 }
 
 func (s *SnapshotManager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
+	if !s.snapshotCreationEnabled {
+		return false
+	}
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
@@ -648,12 +654,6 @@ func (s *SnapshotManager) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInf
 	// check that the stored snapshot corresponds to the wanted network ID
 	if snapshotInfo.NetworkID != s.networkID {
 		s.LogPanicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", s.networkID, s.networkIDSource, snapshotInfo.NetworkID)
-	}
-
-	// if we don't enforce loading of a snapshot,
-	// we can check the ledger state of the current database and start the node.
-	if err := s.utxoManager.CheckLedgerState(); err != nil {
-		s.LogFatal(err)
 	}
 
 	return nil

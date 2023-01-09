@@ -3,10 +3,10 @@ package dashboard
 import (
 	"context"
 
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/spammer"
-	spammerplugin "github.com/gohornet/hornet/plugins/spammer"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/spammer"
+	spammerplugin "github.com/iotaledger/hornet/plugins/spammer"
 )
 
 func runSpammerMetricWorker() {
@@ -20,8 +20,8 @@ func runSpammerMetricWorker() {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(ctx context.Context) {
-		spammerplugin.Events.SpamPerformed.Attach(onSpamPerformed)
-		spammerplugin.Events.AvgSpamMetricsUpdated.Attach(onAvgSpamMetricsUpdated)
+		spammerplugin.Events.SpamPerformed.Hook(onSpamPerformed)
+		spammerplugin.Events.AvgSpamMetricsUpdated.Hook(onAvgSpamMetricsUpdated)
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[SpammerMetricUpdater] ...")
 		spammerplugin.Events.SpamPerformed.Detach(onSpamPerformed)

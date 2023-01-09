@@ -3,9 +3,9 @@ package gossip
 import (
 	"context"
 
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/p2p"
 )
 
 // Broadcaster provides functions to broadcast data to gossip streams.
@@ -71,12 +71,13 @@ func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
 		return
 	}
 
-	confirmedMilestoneIndex := b.syncManager.ConfirmedMilestoneIndex() // bee differentiates between solid and confirmed milestone, for hornet it is the same.
+	syncState := b.syncManager.SyncState()
 	connectedCount := b.peeringManager.ConnectedCount()
-	syncedCount := b.service.SynchronizedCount(confirmedMilestoneIndex)
-	// TODO: overflow not handled for synced/connected
 
-	heartbeatMsg, err := NewHeartbeatMsg(confirmedMilestoneIndex, snapshotInfo.PruningIndex, b.syncManager.LatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+	// TODO: overflow not handled for synced/connected
+	syncedCount := b.service.SynchronizedCount(syncState.ConfirmedMilestoneIndex)
+
+	heartbeatMsg, err := NewHeartbeatMsg(syncState.ConfirmedMilestoneIndex, snapshotInfo.PruningIndex, syncState.LatestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 	if err != nil {
 		return
 	}

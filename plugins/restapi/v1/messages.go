@@ -4,22 +4,23 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/pkg/utils"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -27,15 +28,10 @@ var (
 	messageProcessedTimeout = 1 * time.Second
 )
 
-func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
+func messageMetadataByMessageID(messageID hornet.MessageID) (*messageMetadataResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
-	messageID, err := restapi.ParseMessageIDParam(c)
-	if err != nil {
-		return nil, err
 	}
 
 	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID)
@@ -112,12 +108,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	return messageMetadataResponse, nil
 }
 
-func messageByID(c echo.Context) (*iotago.Message, error) {
-	messageID, err := restapi.ParseMessageIDParam(c)
-	if err != nil {
-		return nil, err
-	}
-
+func messageByMessageID(messageID hornet.MessageID) (*iotago.Message, error) {
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
@@ -127,12 +118,7 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 	return cachedMsg.Message().Message(), nil
 }
 
-func messageBytesByID(c echo.Context) ([]byte, error) {
-	messageID, err := restapi.ParseMessageIDParam(c)
-	if err != nil {
-		return nil, err
-	}
-
+func messageBytesByMessageID(messageID hornet.MessageID) ([]byte, error) {
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
@@ -142,13 +128,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 	return cachedMsg.Message().Data(), nil
 }
 
-func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
-
-	messageID, err := restapi.ParseMessageIDParam(c)
-	if err != nil {
-		return nil, err
-	}
-
+func childrenIDsByMessageID(messageID hornet.MessageID) (*childrenResponse, error) {
 	maxResults := deps.RestAPILimitsMaxResults
 	childrenMessageIDs, err := deps.Storage.ChildrenMessageIDs(messageID, storage.WithIteratorMaxIterations(maxResults))
 	if err != nil {
@@ -210,7 +190,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			// bad request
 		}
 
-		bytes, err := ioutil.ReadAll(c.Request().Body)
+		bytes, err := io.ReadAll(c.Request().Body)
 		if err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
@@ -236,17 +216,22 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: no parents given and node tipselection disabled")
 		}
 
+		if !powEnabled {
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: no parents given and node PoW is disabled")
+		}
+
 		tips, err := deps.TipSelector.SelectNonLazyTips()
 		if err != nil {
 			if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
-				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
+				return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "tipselection failed, error: %s", err.Error())
 			}
-			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "tipselection failed, error: %s", err.Error())
 		}
 		msg.Parents = tips.ToSliceOfArrays()
 
 		// this function pointer is used to refresh the tips of a message
 		// if no parents were given and the PoW takes longer than a configured duration.
+		// only allow to update tips during proof of work if no parents were given
 		refreshTipsFunc = deps.TipSelector.SelectNonLazyTips
 	}
 

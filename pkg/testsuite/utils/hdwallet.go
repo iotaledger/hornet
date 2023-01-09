@@ -1,13 +1,13 @@
 package utils
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
+	"github.com/wollac/iota-crypto-demo/pkg/slip10/eddsa"
 
-	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
@@ -41,8 +41,9 @@ func (hd *HDWallet) BookSpents(spentOutputs []*utxo.Output) {
 func (hd *HDWallet) BookSpent(spentOutput *utxo.Output) {
 	newUtxo := make([]*utxo.Output, 0)
 	for _, u := range hd.utxo {
-		if bytes.Equal(u.OutputID()[:], spentOutput.OutputID()[:]) {
+		if u.OutputID() == spentOutput.OutputID() {
 			fmt.Printf("%s spent %s\n", hd.name, u.OutputID().ToHex())
+
 			continue
 		}
 		newUtxo = append(newUtxo, u)
@@ -59,6 +60,7 @@ func (hd *HDWallet) Balance() uint64 {
 	for _, u := range hd.utxo {
 		balance += u.Amount()
 	}
+
 	return balance
 }
 
@@ -77,19 +79,21 @@ func (hd *HDWallet) KeyPair() (ed25519.PrivateKey, ed25519.PublicKey) {
 		panic(err)
 	}
 
-	curve := slip10.Ed25519()
+	curve := eddsa.Ed25519()
 	key, err := slip10.DeriveKeyFromPath(hd.seed, curve, path)
 	if err != nil {
 		panic(err)
 	}
 
-	pubKey, privKey := slip10.Ed25519Key(key)
+	pubKey, privKey := key.Key.(eddsa.Seed).Ed25519Key()
+
 	return ed25519.PrivateKey(privKey), ed25519.PublicKey(pubKey)
 }
 
 func (hd *HDWallet) AddressSigner() iotago.AddressSigner {
 	privKey, pubKey := hd.KeyPair()
 	address := iotago.AddressFromEd25519PubKey(pubKey)
+
 	return iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&address, privKey))
 }
 
@@ -101,6 +105,7 @@ func (hd *HDWallet) Outputs() []*utxo.Output {
 func (hd *HDWallet) Address() *iotago.Ed25519Address {
 	_, pubKey := hd.KeyPair()
 	addr := iotago.AddressFromEd25519PubKey(pubKey)
+
 	return &addr
 }
 

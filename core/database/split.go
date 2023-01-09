@@ -2,14 +2,13 @@ package database
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/database"
+	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/utils"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/database"
 )
 
 const (
@@ -65,16 +64,16 @@ func SplitIntoTangleAndUTXO(databasePath string, dbEngine ...database.Engine) er
 		return err
 	}
 
-	if err := utils.CreateDirectory(tangleDatabasePath, 0700); err != nil {
+	if err := ioutils.CreateDirectory(tangleDatabasePath, 0700); err != nil {
 		return err
 	}
 
-	if err := utils.CreateDirectory(utxoDatabasePath, 0700); err != nil {
+	if err := ioutils.CreateDirectory(utxoDatabasePath, 0700); err != nil {
 		return err
 	}
 
 	// Move the legacy database into the tangle directory
-	files, err := ioutil.ReadDir(legacyDatabasePath)
+	files, err := os.ReadDir(legacyDatabasePath)
 	if err != nil {
 		return err
 	}

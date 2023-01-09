@@ -3,7 +3,7 @@ package restapi
 import (
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/node"
 )
 
 const (
@@ -34,6 +34,7 @@ var params = &node.PluginParams{
 				[]string{
 					"/health",
 					"/mqtt",
+					"/api/routes",
 					"/api/v1/info",
 					"/api/v1/tips",
 					"/api/v1/messages*",

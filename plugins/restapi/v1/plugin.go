@@ -8,21 +8,21 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/app"
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	restapipkg "github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hornet/pkg/app"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	restapipkg "github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/plugins/restapi"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -45,24 +45,36 @@ const (
 
 	// RouteMessageMetadata is the route for getting message metadata by its messageID.
 	// GET returns message metadata (including info about "promotion/reattachment needed").
-	RouteMessageMetadata = "/messages/:" + restapipkg.ParameterMessageID + "/metadata"
+	RouteMessageMetadata = RouteMessageData + "/metadata"
 
 	// RouteMessageBytes is the route for getting message raw data by it's messageID.
 	// GET returns raw message data (bytes).
-	RouteMessageBytes = "/messages/:" + restapipkg.ParameterMessageID + "/raw"
+	RouteMessageBytes = RouteMessageData + "/raw"
 
 	// RouteMessageChildren is the route for getting message IDs of the children of a message, identified by its messageID.
 	// GET returns the message IDs of all children.
-	RouteMessageChildren = "/messages/:" + restapipkg.ParameterMessageID + "/children"
+	RouteMessageChildren = RouteMessageData + "/children"
 
 	// RouteMessages is the route for getting message IDs or creating new messages.
 	// GET with query parameter (mandatory) returns all message IDs that fit these filter criteria (query parameters: "index").
 	// POST creates a single new message and returns the new message ID.
 	RouteMessages = "/messages"
 
-	// RouteTransactionsIncludedMessage is the route for getting the message that was included in the ledger for a given transaction ID.
+	// RouteTransactionsIncludedMessageData is the route for getting the message that was included in the ledger for a given transaction ID.
 	// GET returns message data (json).
-	RouteTransactionsIncludedMessage = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-message"
+	RouteTransactionsIncludedMessageData = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-message"
+
+	// RouteTransactionsIncludedMessageMetadata is the route for getting the message metadata that was included in the ledger for a given transaction ID.
+	// GET returns message metadata (including info about "promotion/reattachment needed").
+	RouteTransactionsIncludedMessageMetadata = RouteTransactionsIncludedMessageData + "/metadata"
+
+	// RouteTransactionsIncludedMessageBytes is the route for getting the message raw data that was included in the ledger for a given transaction ID.
+	// GET returns raw message data (bytes).
+	RouteTransactionsIncludedMessageBytes = RouteTransactionsIncludedMessageData + "/raw"
+
+	// RouteTransactionsIncludedMessageChildren is the route for getting the message IDs of the children of the message that was included in the ledger for a given transaction ID.
+	// GET returns the message IDs of all children.
+	RouteTransactionsIncludedMessageChildren = RouteTransactionsIncludedMessageData + "/children"
 
 	// RouteMilestone is the route for getting a milestone by it's milestoneIndex.
 	// GET returns the milestone.
@@ -70,7 +82,7 @@ const (
 
 	// RouteMilestoneUTXOChanges is the route for getting all UTXO changes of a milestone by its milestoneIndex.
 	// GET returns the output IDs of all UTXO changes.
-	RouteMilestoneUTXOChanges = "/milestones/:" + restapipkg.ParameterMilestoneIndex + "/utxo-changes"
+	RouteMilestoneUTXOChanges = RouteMilestone + "/utxo-changes"
 
 	// RouteOutput is the route for getting outputs by their outputID (transactionHash + outputIndex).
 	// GET returns the output.
@@ -170,10 +182,10 @@ type dependencies struct {
 	Bech32HRP                             iotago.NetworkPrefix `name:"bech32HRP"`
 	RestAPILimitsMaxResults               int                  `name:"restAPILimitsMaxResults"`
 	RestAPIMetrics                        *metrics.RestAPIMetrics
-	SnapshotsFullPath                     string                 `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath                    string                 `name:"snapshotsDeltaPath"`
-	TipSelector                           *tipselect.TipSelector `optional:"true"`
-	Echo                                  *echo.Echo             `optional:"true"`
+	SnapshotsFullPath                     string                    `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath                    string                    `name:"snapshotsDeltaPath"`
+	TipSelector                           *tipselect.TipSelector    `optional:"true"`
+	RestRouteManager                      *restapi.RestRouteManager `optional:"true"`
 }
 
 func configure() {
@@ -182,7 +194,7 @@ func configure() {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
 	}
 
-	routeGroup := deps.Echo.Group("/api/v1")
+	routeGroup := deps.RestRouteManager.AddRoute("v1")
 
 	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
 	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)
@@ -198,6 +210,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
+
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -208,28 +221,46 @@ func configure() {
 			if err != nil {
 				return err
 			}
+
 			return restapipkg.JSONResponse(c, http.StatusOK, resp)
 		})
 	}
 
-	routeGroup.GET(RouteMessageMetadata, func(c echo.Context) error {
-		resp, err := messageMetadataByID(c)
+	routeGroup.GET(RouteMessageData, func(c echo.Context) error {
+		messageID, err := restapipkg.ParseMessageIDParam(c)
 		if err != nil {
 			return err
 		}
+
+		resp, err := messageByMessageID(messageID)
+		if err != nil {
+			return err
+		}
+
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteMessageData, func(c echo.Context) error {
-		resp, err := messageByID(c)
+	routeGroup.GET(RouteMessageMetadata, func(c echo.Context) error {
+		messageID, err := restapipkg.ParseMessageIDParam(c)
 		if err != nil {
 			return err
 		}
+
+		resp, err := messageMetadataByMessageID(messageID)
+		if err != nil {
+			return err
+		}
+
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessageBytes, func(c echo.Context) error {
-		resp, err := messageBytesByID(c)
+		messageID, err := restapipkg.ParseMessageIDParam(c)
+		if err != nil {
+			return err
+		}
+
+		resp, err := messageBytesByMessageID(messageID)
 		if err != nil {
 			return err
 		}
@@ -238,7 +269,12 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteMessageChildren, func(c echo.Context) error {
-		resp, err := childrenIDsByID(c)
+		messageID, err := restapipkg.ParseMessageIDParam(c)
+		if err != nil {
+			return err
+		}
+
+		resp, err := childrenIDsByMessageID(messageID)
 		if err != nil {
 			return err
 		}
@@ -260,12 +296,60 @@ func configure() {
 		if err != nil {
 			return err
 		}
+
 		c.Response().Header().Set(echo.HeaderLocation, resp.MessageID)
 		return restapipkg.JSONResponse(c, http.StatusCreated, resp)
 	})
 
-	routeGroup.GET(RouteTransactionsIncludedMessage, func(c echo.Context) error {
-		resp, err := messageByTransactionID(c)
+	routeGroup.GET(RouteTransactionsIncludedMessageData, func(c echo.Context) error {
+		messageID, err := messageIDByTransactionID(c)
+		if err != nil {
+			return err
+		}
+
+		resp, err := messageByMessageID(messageID)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteTransactionsIncludedMessageMetadata, func(c echo.Context) error {
+		messageID, err := messageIDByTransactionID(c)
+		if err != nil {
+			return err
+		}
+
+		resp, err := messageMetadataByMessageID(messageID)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteTransactionsIncludedMessageBytes, func(c echo.Context) error {
+		messageID, err := messageIDByTransactionID(c)
+		if err != nil {
+			return err
+		}
+
+		resp, err := messageBytesByMessageID(messageID)
+		if err != nil {
+			return err
+		}
+
+		return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
+	})
+
+	routeGroup.GET(RouteTransactionsIncludedMessageChildren, func(c echo.Context) error {
+		messageID, err := messageIDByTransactionID(c)
+		if err != nil {
+			return err
+		}
+
+		resp, err := childrenIDsByMessageID(messageID)
 		if err != nil {
 			return err
 		}

@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
 )
 
 type CachedMessageMetadataFunc func(messageID hornet.MessageID) (*CachedMetadata, error)

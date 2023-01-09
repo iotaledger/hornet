@@ -5,23 +5,23 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/syncmanager"
+	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/profile"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/pow"
 )
@@ -379,8 +379,27 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 			}
 		}
 
-		wu.requested = requests.HasRequest()
+		// ATTENTION: potential data race, processRequests might be executed several times in parallel for the same WorkUnit.
+		// requested should only be set to true but not to false, even if HasRequest might be false in one run.
+		if requests.HasRequest() {
+			wu.requested = true
+		}
+
 		return requests
+	}
+
+	processMessage := func(msg *storage.Message, isMilestonePayload bool, requests Requests, p *Protocol) {
+		// do not process gossip if we are not in sync.
+		// we ignore all received messages if we didn't request them and it's not a milestone.
+		// otherwise these messages would get evicted from the cache, and it's heavier to load them
+		// from the storage than to request them again.
+		// ATTENTION: we use requests.HasRequest() here instead of wu.requested because
+		// we only want to trigger the MessageProcessed event with the correct requests.
+		if !requests.HasRequest() && !proc.syncManager.IsNodeAlmostSynced() && !isMilestonePayload {
+			return
+		}
+
+		proc.Events.MessageProcessed.Trigger(msg, requests, p)
 	}
 
 	wu.processingLock.Lock()
@@ -402,17 +421,13 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	case wu.Is(Hashed):
 		wu.processingLock.Unlock()
 
+		isMilestonePayload := wu.msg.IsMilestone()
+
 		// we need to check for requests here again because there is a race condition
 		// between processing received messages and enqueuing requests.
-		requests := processRequests(wu, wu.msg, wu.msg.IsMilestone())
-		if wu.requested {
-			proc.Events.MessageProcessed.Trigger(wu.msg, requests, p)
-		}
+		requests := processRequests(wu, wu.msg, isMilestonePayload)
 
-		if proc.storage.ContainsMessage(wu.msg.MessageID()) {
-			proc.serverMetrics.KnownMessages.Inc()
-			p.Metrics.KnownMessages.Inc()
-		}
+		processMessage(wu.msg, isMilestonePayload, requests, p)
 
 		return
 	}
@@ -454,15 +469,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// increase the known message count for all other peers
 	wu.increaseKnownTxCount(p)
 
-	// do not process gossip if we are not in sync.
-	// we ignore all received messages if we didn't request them and it's not a milestone.
-	// otherwise these messages would get evicted from the cache, and it's heavier to load them
-	// from the storage than to request them again.
-	if !wu.requested && !proc.syncManager.IsNodeAlmostSynced() && !isMilestonePayload {
-		return
-	}
-
-	proc.Events.MessageProcessed.Trigger(msg, requests, p)
+	processMessage(msg, isMilestonePayload, requests, p)
 }
 
 func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
@@ -475,18 +482,20 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 		return
 	}
 
-	if !proc.syncManager.IsNodeSyncedWithinBelowMaxDepth() {
+	syncState := proc.syncManager.SyncState()
+
+	if !syncState.NodeSyncedWithinBelowMaxDepth {
 		// no need to broadcast messages if the node is not sync within "below max depth"
 		return
 	}
 
 	// we pass a background context here to not prevent broadcasting messages at shutdown (COO etc).
-	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex()) // meta pass +1
+	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), syncState.ConfirmedMilestoneIndex) // meta pass +1
 	if err != nil {
 		return
 	}
 
-	if (proc.syncManager.LatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
+	if (syncState.LatestMilestoneIndex - ocri) > proc.opts.BelowMaxDepth {
 		// the solid message was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}

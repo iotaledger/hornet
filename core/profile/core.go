@@ -7,9 +7,9 @@ import (
 	"github.com/shirou/gopsutil/mem"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/profile"
 )
 
 var (

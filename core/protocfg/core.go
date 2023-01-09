@@ -6,9 +6,9 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/model/coordinator"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hornet/pkg/model/coordinator"
+	"github.com/iotaledger/hornet/pkg/node"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 

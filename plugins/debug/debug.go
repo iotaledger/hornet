@@ -10,16 +10,17 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/pkg/whiteflag"
-	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/protocol/gossip"
+	"github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/whiteflag"
+	v1 "github.com/iotaledger/hornet/plugins/restapi/v1"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -354,34 +355,38 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 	queued, pending, processing := deps.RequestQueue.Requests()
 	debugReqs := make([]*request, 0, len(queued)+len(pending)+len(processing))
 
-	for _, req := range queued {
-		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.ToHex(),
-			Type:             "queued",
-			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
-			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
-			MilestoneIndex:   req.MilestoneIndex,
-		})
+	appendRequest := func(req *gossip.Request, stateString string) {
+		switch req.RequestType {
+		case gossip.RequestTypeMessageID:
+			messageExists := deps.Storage.ContainsMessage(req.MessageID)
+
+			debugReqs = append(debugReqs, &request{
+				Type:             "message request",
+				EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
+				MilestoneIndex:   req.MilestoneIndex,
+				State:            stateString,
+				MessageID:        req.MessageID.ToHex(),
+				MessageExists:    &messageExists,
+			})
+		case gossip.RequestTypeMilestoneIndex:
+			debugReqs = append(debugReqs, &request{
+				Type:             "milestone request",
+				EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
+				MilestoneIndex:   req.MilestoneIndex,
+				State:            stateString,
+			})
+		}
+
 	}
 
-	for _, req := range pending {
-		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.ToHex(),
-			Type:             "pending",
-			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
-			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
-			MilestoneIndex:   req.MilestoneIndex,
-		})
+	for _, request := range queued {
+		appendRequest(request, "queued")
 	}
-
-	for _, req := range processing {
-		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.ToHex(),
-			Type:             "processing",
-			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
-			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
-			MilestoneIndex:   req.MilestoneIndex,
-		})
+	for _, request := range pending {
+		appendRequest(request, "pending")
+	}
+	for _, request := range processing {
+		appendRequest(request, "processing")
 	}
 
 	return &requestsResponse{

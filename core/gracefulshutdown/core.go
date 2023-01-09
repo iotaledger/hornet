@@ -3,8 +3,8 @@ package gracefulshutdown
 import (
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/shutdown"
 )
 
 func init() {

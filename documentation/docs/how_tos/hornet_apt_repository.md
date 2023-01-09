@@ -95,10 +95,10 @@ All installation methods mentioned in this article from this point should be con
 
 :::
 
-1. Download the latest release compiled for your system from [GitHub release assets](https://github.com/gohornet/hornet/releases):
+1. Download the latest release compiled for your system from [GitHub release assets](https://github.com/iotaledger/hornet/releases):
 
    ```bash
-   curl -LO https://github.com/gohornet/hornet/releases/download/v1.0.5/HORNET-1.0.5_Linux_x86_64.tar.gz
+   curl -LO https://github.com/iotaledger/hornet/releases/download/v1.2.2/HORNET-1.2.2_Linux_x86_64.tar.gz
    ```
 
    Please make sure to download the binaries for your system:
@@ -111,7 +111,7 @@ All installation methods mentioned in this article from this point should be con
 2. Extract the files in a folder of your choice (for example `/opt` on Linux):
 
    ```bash
-   tar -xf HORNET-1.0.5_Linux_x86_64.tar.gz
+   tar -xf HORNET-1.2.2_Linux_x86_64.tar.gz
    ```
 
 3. Once you have extracted the files, you get a main executable file. You can also find sample [configuration](post_installation.md) JSON files available in the archive (tar or zip).
@@ -187,12 +187,12 @@ You can find installation instructions in the [official Go documentation](https:
 4. Clone the Hornet source code from GitHub:
    
    ```bash
-   git clone https://github.com/gohornet/hornet.git && cd hornet && git checkout mainnet
+   git clone https://github.com/iotaledger/hornet.git && cd hornet && git checkout mainnet
    ```
 
 5. Build the Hornet:
    ```bash
-   ./scripts/build_hornet_rocksdb_builtin.sh
+   ./scripts/build_hornet_rocksdb.sh
    ```
    * This command will build Hornet based on the latest commit from the currently chosen branch.
    * This may take a couple of minutes.

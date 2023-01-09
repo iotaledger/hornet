@@ -2,7 +2,6 @@ package migrator_test
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,14 +10,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/model/migrator"
+	"github.com/iotaledger/hornet/pkg/model/migrator"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 var stateFileName string
 
 func init() {
-	dir, err := ioutil.TempDir("", "migrator_test")
+	dir, err := os.MkdirTemp("", "migrator_test")
 	if err != nil {
 		log.Fatalf("failed to create temp dir: %s", err)
 	}

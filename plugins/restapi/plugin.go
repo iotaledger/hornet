@@ -9,19 +9,19 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/jwt"
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hornet/pkg/jwt"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/restapi"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/tangle"
 )
 
 func init() {
@@ -40,9 +40,8 @@ func init() {
 }
 
 var (
-	Plugin             *node.Plugin
-	deps               dependencies
-	nodeAPIHealthRoute = "/health"
+	Plugin *node.Plugin
+	deps   dependencies
 
 	jwtAuth *jwt.JWTAuth
 )
@@ -52,11 +51,11 @@ type dependencies struct {
 	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
 	Tangle                *tangle.Tangle               `optional:"true"`
 	Echo                  *echo.Echo
-	RestAPIMetrics        *metrics.RestAPIMetrics
 	Host                  host.Host
 	RestAPIBindAddress    string         `name:"restAPIBindAddress"`
 	NodePrivateKey        crypto.PrivKey `name:"nodePrivateKey"`
 	DashboardAuthUsername string         `name:"dashboardAuthUsername" optional:"true"`
+	RestRouteManager      *RestRouteManager
 }
 
 func initConfigPars(c *dig.Container) {
@@ -96,7 +95,8 @@ func provide(c *dig.Container) {
 
 	type echoDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+		RestAPIMetrics *metrics.RestAPIMetrics
 	}
 
 	type echoResult struct {
@@ -114,11 +114,41 @@ func provide(c *dig.Container) {
 		e.Use(middleware.Gzip())
 		e.Use(middleware.BodyLimit(deps.NodeConfig.String(CfgRestAPILimitsMaxBodyLength)))
 
+		e.HTTPErrorHandler = func(err error, c echo.Context) {
+			Plugin.LogDebugf("HTTP request failed: %s", err)
+			deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
+
+			var statusCode int
+			var message string
+
+			var e *echo.HTTPError
+			if errors.As(err, &e) {
+				statusCode = e.Code
+				message = fmt.Sprintf("%s, error: %s", e.Message, err)
+			} else {
+				statusCode = http.StatusInternalServerError
+				message = fmt.Sprintf("internal server error. error: %s", err)
+			}
+
+			_ = c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
+		}
+
 		return echoResult{
 			Echo:                     e,
 			DashboardAllowedAPIRoute: dashboardAllowedAPIRoute,
 			FaucetAllowedAPIRoute:    faucetAllowedAPIRoute,
 		}
+	}); err != nil {
+		Plugin.LogPanic(err)
+	}
+
+	type proxyDeps struct {
+		dig.In
+		Echo *echo.Echo
+	}
+
+	if err := c.Provide(func(deps proxyDeps) *RestRouteManager {
+		return newRestRouteManager(deps.Echo)
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
@@ -137,11 +167,10 @@ func run() {
 		Plugin.LogInfo("Starting REST-API server ... done")
 
 		bindAddr := deps.RestAPIBindAddress
-		server := &http.Server{Addr: bindAddr, Handler: deps.Echo}
 
 		go func() {
 			Plugin.LogInfof("You can now access the API using: http://%s", bindAddr)
-			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := deps.Echo.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				Plugin.LogWarnf("Stopped REST-API server due to an error (%s)", err)
 			}
 		}()
@@ -149,39 +178,17 @@ func run() {
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping REST-API server ...")
 
-		if server != nil {
-			shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if err := server.Shutdown(shutdownCtx); err != nil {
-				Plugin.LogWarn(err)
-			}
-			shutdownCtxCancel()
+		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCtxCancel()
+
+		//nolint:contextcheck // false positive
+		if err := deps.Echo.Shutdown(shutdownCtx); err != nil {
+			Plugin.LogWarn(err)
 		}
+
 		Plugin.LogInfo("Stopping REST-API server ... done")
 	}, shutdown.PriorityRestAPI); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
-}
 
-func setupRoutes() {
-
-	deps.Echo.HTTPErrorHandler = func(err error, c echo.Context) {
-		Plugin.LogDebugf("HTTP request failed: %s", err)
-		deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
-
-		var statusCode int
-		var message string
-
-		var e *echo.HTTPError
-		if errors.As(err, &e) {
-			statusCode = e.Code
-			message = fmt.Sprintf("%s, error: %s", e.Message, err)
-		} else {
-			statusCode = http.StatusInternalServerError
-			message = fmt.Sprintf("internal server error. error: %s", err)
-		}
-
-		_ = c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
-	}
-
-	setupHealthRoute()
 }

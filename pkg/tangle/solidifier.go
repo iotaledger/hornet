@@ -7,19 +7,18 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/whiteflag"
 )
 
 var (
-	ErrMilestoneNotFound = errors.New("milestone not found")
-	ErrDivisionByZero    = errors.New("division by zero")
+	ErrDivisionByZero = errors.New("division by zero")
 )
 
 type ConfirmedMilestoneMetric struct {
@@ -212,8 +211,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	t.solidifierLock.Lock()
 	defer t.solidifierLock.Unlock()
 
-	currentConfirmedIndex := t.syncManager.ConfirmedMilestoneIndex()
-	latestIndex := t.syncManager.LatestMilestoneIndex()
+	syncState := t.syncManager.SyncState()
+	currentConfirmedIndex := syncState.ConfirmedMilestoneIndex
+	latestIndex := syncState.LatestMilestoneIndex
 
 	if currentConfirmedIndex == latestIndex && latestIndex != 0 {
 		// Latest milestone already solid
@@ -314,7 +314,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 				t.LogPanicf("SetConfirmedMilestoneIndex failed: %s", err)
 			}
 			timeSetConfirmedMilestoneIndex = time.Now()
-			if t.syncManager.IsNodeAlmostSynced() {
+			if syncState.NodeAlmostSynced {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
 				// we can safely ignore errors of the future cone solidifier.
 				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
@@ -385,7 +385,8 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	var rmpsMessage string
 	if metric, err := t.calcConfirmedMilestoneMetric(cachedMilestoneToSolidify.Retain(), confirmedMilestoneStats.Index); err == nil { // milestone pass +1
-		if t.syncManager.IsNodeSynced() {
+		isNodeSynced := t.syncManager.IsNodeSynced()
+		if isNodeSynced {
 			// Only trigger the metrics event if the node is sync (otherwise the MPS and conf.rate is wrong)
 			if t.firstSyncedMilestone == 0 {
 				t.firstSyncedMilestone = confirmedMilestoneStats.Index
@@ -395,7 +396,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			t.firstSyncedMilestone = 0
 		}
 
-		if t.syncManager.IsNodeSynced() && (confirmedMilestoneStats.Index > t.firstSyncedMilestone+1) {
+		if isNodeSynced && (confirmedMilestoneStats.Index > t.firstSyncedMilestone+1) {
 			t.lastConfirmedMilestoneMetricLock.Lock()
 			t.lastConfirmedMilestoneMetric = metric
 			t.lastConfirmedMilestoneMetricLock.Unlock()
@@ -426,7 +427,7 @@ func (t *Tangle) calcConfirmedMilestoneMetric(cachedMilestone *storage.CachedMil
 
 	cachedMilestoneOld := t.storage.CachedMilestoneOrNil(milestoneIndexToSolidify - 1) // milestone +1
 	if cachedMilestoneOld == nil {
-		return nil, ErrMilestoneNotFound
+		return nil, storage.ErrMilestoneNotFound
 	}
 	defer cachedMilestoneOld.Release(true) // milestone -1
 

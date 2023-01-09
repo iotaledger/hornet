@@ -68,6 +68,7 @@ Example:
     "publicRoutes": [
       "/health",
       "/mqtt",
+      "/api/routes",
       "/api/v1/info",
       "/api/v1/tips",
       "/api/v1/messages*",
@@ -125,19 +126,20 @@ Example:
 
 ## 3. DB
 
-| Name             | Description                                                                         | Type   |
-| :--------------- | :---------------------------------------------------------------------------------- | :----- |
-| engine           | The used database engine (pebble/rocksdb/mapdb)                                     | string |
-| path             | The path to the database folder                                                     | string |
-| autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | bool   |
-
+| Name                      | Description                                                                         | Type   |
+| :------------------------ | :---------------------------------------------------------------------------------- | :----- |
+| engine                    | The used database engine (pebble/rocksdb/mapdb)                                     | string |
+| path                      | The path to the database folder                                                     | string |
+| autoRevalidation          | Whether to automatically start revalidation on startup if the database is corrupted | bool   |
+| checkLedgerStateOnStartup | Whether to check if the ledger state matches the total supply on startup            | bool   |
 Example:
 
 ```json
   "db": {
     "engine": "rocksdb",
     "path": "mainnetdb",
-    "autoRevalidation": false
+    "autoRevalidation": false,
+    "checkLedgerStateOnStartup": false
   },
 ```
 
@@ -145,6 +147,7 @@ Example:
 
 | Name                          | Description                                                                                                                                                            | Type             |
 | :---------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| enabled                       | whether to generate snapshot files                                                                                                                                     | bool             |
 | depth                         | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                             | integer          |
 | interval                      | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                        | integer          |
 | fullPath                      | Path to the full snapshot file                                                                                                                                         | string           |
@@ -163,6 +166,7 @@ Example:
 
 ```json
   "snapshots": {
+    "enabled": false,
     "depth": 50,
     "interval": 200,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",

@@ -22,7 +22,8 @@ Hornet uses an embedded database engine that stores its data in a directory in a
 "db": {
     "engine": "rocksdb",
     "path": "mainnetdb",
-    "autoRevalidation": false
+    "autoRevalidation": false,
+    "checkLedgerStateOnStartup": false
   }
 ```
 
@@ -32,6 +33,7 @@ Another important directory is the `snapshots` directory. You can control the `s
 
 ```json
 "snapshots": {
+    "enabled": false,
     "interval": 50,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",
     "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
@@ -111,6 +113,7 @@ Your node's ledger accumulates many messages, which uses a significant disk capa
 
 ```json
  "snapshots": {
+    "enabled": false,
     "interval": 50,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",
     "deltaPath": "snapshots/mainnet/delta_snapshot.bin",

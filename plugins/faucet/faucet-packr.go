@@ -7,4 +7,4 @@
 // and any other packr generated files.
 package faucet
 
-import _ "github.com/gohornet/hornet/plugins/faucet/packrd"
+import _ "github.com/iotaledger/hornet/plugins/faucet/packrd"

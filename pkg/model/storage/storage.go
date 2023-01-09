@@ -3,12 +3,12 @@ package storage
 import (
 	"sync"
 
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/profile"
 )
 
 type packageEvents struct {
@@ -238,6 +238,8 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 }
 
 // profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
+//
+//nolint:unused
 func (s *Storage) profileCacheEnabled() *profile.Caches {
 	return &profile.Caches{
 		Addresses: &profile.CacheOpts{
@@ -307,6 +309,8 @@ func (s *Storage) profileCacheEnabled() *profile.Caches {
 }
 
 // profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
+//
+//nolint:unused
 func (s *Storage) profileLeakDetectionEnabled() *profile.Caches {
 	return &profile.Caches{
 		Addresses: &profile.CacheOpts{

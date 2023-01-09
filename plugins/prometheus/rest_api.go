@@ -3,6 +3,7 @@ package prometheus
 import (
 	"time"
 
+	echoprometheus "github.com/labstack/echo-contrib/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/iotaledger/hive.go/events"
@@ -81,12 +82,20 @@ func configureRestAPI() {
 	registry.MustRegister(restapiPoWMessageSizes)
 	registry.MustRegister(restapiPoWDurations)
 
-	deps.RestAPIMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(messageSize int, duration time.Duration) {
+	deps.RestAPIMetrics.Events.PoWCompleted.Hook(events.NewClosure(func(messageSize int, duration time.Duration) {
 		restapiPoWMessageSizes.Observe(float64(messageSize))
 		restapiPoWDurations.Observe(duration.Seconds())
 	}))
 
 	addCollect(collectRestAPI)
+
+	if deps.Echo != nil {
+		p := echoprometheus.NewPrometheus("iota_restapi", nil)
+		for _, m := range p.MetricsList {
+			registry.MustRegister(m.MetricCollector)
+		}
+		deps.Echo.Use(p.HandlerFunc)
+	}
 }
 
 func collectRestAPI() {

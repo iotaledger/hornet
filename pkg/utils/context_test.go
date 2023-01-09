@@ -1,3 +1,4 @@
+//nolint:staticcheck // we can ignore these errors in the test cases
 package utils_test
 
 import (
@@ -7,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 func TestMergedContextCancel(t *testing.T) {

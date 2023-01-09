@@ -42,4 +42,4 @@ the [roadmap](https://roadmap.iota.org/) for more information.
 
 ## Source Code
 
-The source code of the project is available on [GitHub](https://github.com/gohornet/hornet).
+The source code of the project is available on [GitHub](https://github.com/iotaledger/hornet).

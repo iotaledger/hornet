@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/common"
 )
 
 func TestSoftError_Error(t *testing.T) {

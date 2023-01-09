@@ -6,12 +6,12 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 const (
@@ -37,21 +37,21 @@ var (
 // This way HORNET should be able to re-solidify the existing tangle in the database.
 //
 // Object Storages:
-//		- Milestone							=> will be removed and added again if missing by receiving the msg
-//		- Message							=> will be removed and added again by requesting the msg at solidification
-//		- MessageMetadata   				=> will be removed and added again if missing by receiving the msg
-//		- Children							=> will be removed and added again if missing by receiving the msg
-//		- Indexation						=> will be removed and added again if missing by receiving the msg
-//		- UnreferencedMessage 				=> will be removed at pruning anyway
+//   - Milestone							=> will be removed and added again if missing by receiving the msg
+//   - Message							=> will be removed and added again by requesting the msg at solidification
+//   - MessageMetadata   				=> will be removed and added again if missing by receiving the msg
+//   - Children							=> will be removed and added again if missing by receiving the msg
+//   - Indexation						=> will be removed and added again if missing by receiving the msg
+//   - UnreferencedMessage 				=> will be removed at pruning anyway
 //
 // Database:
-// 		- LedgerState
-//			- Unspent						=> will be removed and loaded again from last snapshot
-//			- Spent							=> will be removed and loaded again from last snapshot
-//			- Balances						=> will be removed and loaded again from last snapshot
-//			- Diffs							=> will be removed and loaded again from last snapshot
-//			- Treasury						=> will be removed and loaded again from last snapshot
-//			- Receipts						=> will be removed and loaded again from last snapshot (if pruneReceipts is enabled)
+//   - LedgerState
+//   - Unspent						=> will be removed and loaded again from last snapshot
+//   - Spent							=> will be removed and loaded again from last snapshot
+//   - Balances						=> will be removed and loaded again from last snapshot
+//   - Diffs							=> will be removed and loaded again from last snapshot
+//   - Treasury						=> will be removed and loaded again from last snapshot
+//   - Receipts						=> will be removed and loaded again from last snapshot (if pruneReceipts is enabled)
 func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, pruneReceipts bool) error {
 
 	// mark the database as tainted forever.

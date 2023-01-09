@@ -7,6 +7,7 @@
     "publicRoutes": [
       "/health",
       "/mqtt",
+      "/api/routes",
       "/api/v1/*",
       "/api/plugins/*"
     ],
@@ -32,9 +33,11 @@
   "db": {
     "engine": "pebble",
     "path": "privatedb",
-    "autoRevalidation": false
+    "autoRevalidation": false,
+    "checkLedgerStateOnStartup": false
   },
   "snapshots": {
+    "enabled": false,
     "depth": 50,
     "interval": 200,
     "fullPath": "snapshots/private_tangle/full_snapshot.bin",

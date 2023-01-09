@@ -6,10 +6,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/tipselect"
 )
 
 //nolint:unparam // even if the error is never used, the structure of all routes should be the same
@@ -23,19 +23,19 @@ func info() (*infoResponse, error) {
 		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
 	}
 
+	syncState := deps.SyncManager.SyncState()
+
 	// latest milestone index
-	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
+	latestMilestoneIndex := syncState.LatestMilestoneIndex
 
 	// latest milestone timestamp
 	var latestMilestoneTimestamp int64 = 0
-	cachedMilestoneLatest := deps.Storage.CachedMilestoneOrNil(latestMilestoneIndex) // milestone +1
-	if cachedMilestoneLatest != nil {
-		latestMilestoneTimestamp = cachedMilestoneLatest.Milestone().Timestamp.Unix()
-		cachedMilestoneLatest.Release(true) // milestone -1
+	if timestamp, err := deps.Storage.MilestoneTimestampUnixByIndex(latestMilestoneIndex); err == nil {
+		latestMilestoneTimestamp = timestamp
 	}
 
 	// confirmed milestone index
-	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := syncState.ConfirmedMilestoneIndex
 
 	// pruning index
 	var pruningIndex milestone.Index
@@ -47,7 +47,7 @@ func info() (*infoResponse, error) {
 	return &infoResponse{
 		Name:                        deps.AppInfo.Name,
 		Version:                     deps.AppInfo.Version,
-		IsHealthy:                   deps.Tangle.IsNodeHealthy(),
+		IsHealthy:                   deps.Tangle.IsNodeHealthy(syncState),
 		NetworkID:                   deps.NetworkIDName,
 		Bech32HRP:                   string(deps.Bech32HRP),
 		MinPoWScore:                 deps.MinPoWScore,

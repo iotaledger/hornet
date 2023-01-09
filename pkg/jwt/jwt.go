@@ -11,7 +11,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 )
 
 // Errors
@@ -84,6 +84,7 @@ func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Conte
 			}
 
 			// use the default JWT middleware to verify and extract the JWT
+			//nolint:staticcheck // TODO: replace with https://github.com/labstack/echo-jwt instead
 			handler := middleware.JWTWithConfig(config)(func(c echo.Context) error {
 				return nil
 			})

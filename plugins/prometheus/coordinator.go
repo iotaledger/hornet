@@ -3,7 +3,7 @@ package prometheus
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/gohornet/hornet/pkg/model/coordinator"
+	"github.com/iotaledger/hornet/pkg/model/coordinator"
 
 	"github.com/iotaledger/hive.go/events"
 )
@@ -71,7 +71,7 @@ func configureCoordinator() {
 	registry.MustRegister(coordinatorQuorumNodesErrorCounters)
 	registry.MustRegister(coordinatorSoftErrEncountered)
 
-	deps.Coordinator.Events.QuorumFinished.Attach(events.NewClosure(func(result *coordinator.QuorumFinishedResult) {
+	deps.Coordinator.Events.QuorumFinished.Hook(events.NewClosure(func(result *coordinator.QuorumFinishedResult) {
 
 		coordinatorQuorumResponseTime.Observe(result.Duration.Seconds())
 		if result.Err != nil {
@@ -99,7 +99,7 @@ func configureCoordinator() {
 		}
 	}))
 
-	deps.Coordinator.Events.SoftError.Attach(events.NewClosure(func(_ error) {
+	deps.Coordinator.Events.SoftError.Hook(events.NewClosure(func(_ error) {
 		coordinatorSoftErrEncountered.Inc()
 	}))
 }

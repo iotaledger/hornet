@@ -1,13 +1,13 @@
 # https://hub.docker.com/_/golang
-FROM golang:1.18-bullseye AS build
+FROM golang:1.19-bullseye AS build
 
 ARG BUILD_TAGS=builtin_static,rocksdb
 
-LABEL org.label-schema.description="HORNET - The IOTA community node"
-LABEL org.label-schema.name="gohornet/hornet"
+LABEL org.label-schema.description="HORNET - The IOTA node"
+LABEL org.label-schema.name="iotaledger/hornet"
 LABEL org.label-schema.schema-version="1.0"
-LABEL org.label-schema.vcs-url="https://github.com/gohornet/hornet"
-LABEL org.label-schema.usage="https://github.com/gohornet/hornet/blob/main/documentation/docs/getting_started/using_docker.md"
+LABEL org.label-schema.vcs-url="https://github.com/iotaledger/hornet"
+LABEL org.label-schema.usage="https://github.com/iotaledger/hornet/blob/main/documentation/docs/getting_started/using_docker.md"
 
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates

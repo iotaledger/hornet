@@ -1,7 +1,7 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hornet/pkg/model/storage"
 )
 
 func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone, requested bool) {

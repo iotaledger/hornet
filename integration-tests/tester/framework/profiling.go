@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,10 +13,10 @@ import (
 	"github.com/go-echarts/go-echarts/charts"
 	"github.com/gorilla/websocket"
 
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/iotaledger/hive.go/websockethub"
+	"github.com/iotaledger/hornet/pkg/tangle"
+	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/plugins/dashboard"
 )
 
 const (
@@ -259,7 +259,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 		return fmt.Errorf("unable to render metrics charts: %w", err)
 	}
 
-	return writeFileInLogDir(fmt.Sprintf("%s_%s_%d.html", n.targetName, metricsChartPrefix, time.Now().Unix()), ioutil.NopCloser(&buf))
+	return writeFileInLogDir(fmt.Sprintf("%s_%s_%d.html", n.targetName, metricsChartPrefix, time.Now().Unix()), io.NopCloser(&buf))
 }
 
 // queries the given pprof URI and returns the profile data.
@@ -280,7 +280,7 @@ func (n *Profiler) query(path string) ([]byte, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	profileBytes, err := ioutil.ReadAll(resp.Body)
+	profileBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read profile from response: %w", err)
 	}
@@ -289,6 +289,6 @@ func (n *Profiler) query(path string) ([]byte, error) {
 
 // writeProfile writes the given profile data to the given file in the log directory.
 func (n *Profiler) writeProfile(fileName string, profileBytes []byte) error {
-	profileReader := ioutil.NopCloser(bytes.NewReader(profileBytes))
+	profileReader := io.NopCloser(bytes.NewReader(profileBytes))
 	return writeFileInLogDir(fileName, profileReader)
 }

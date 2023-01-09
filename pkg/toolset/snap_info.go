@@ -6,7 +6,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/pkg/snapshot"
 )
 
 func snapshotInfo(args []string) error {

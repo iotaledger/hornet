@@ -5,36 +5,37 @@ import (
 	"strings"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/crypto"
-	libp2p "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/network"
+	libp2p "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/crypto/ed25519"
 
-	databaseCore "github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/gossip"
-	"github.com/gohornet/hornet/core/pow"
-	"github.com/gohornet/hornet/core/snapshot"
-	"github.com/gohornet/hornet/core/tangle"
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/p2p/autopeering"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/coordinator"
-	"github.com/gohornet/hornet/plugins/dashboard"
-	"github.com/gohornet/hornet/plugins/debug"
-	"github.com/gohornet/hornet/plugins/faucet"
-	"github.com/gohornet/hornet/plugins/migrator"
-	"github.com/gohornet/hornet/plugins/mqtt"
-	"github.com/gohornet/hornet/plugins/participation"
-	"github.com/gohornet/hornet/plugins/prometheus"
-	"github.com/gohornet/hornet/plugins/receipt"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
-	"github.com/gohornet/hornet/plugins/spammer"
-	"github.com/gohornet/hornet/plugins/urts"
-	"github.com/gohornet/hornet/plugins/warpsync"
+	databaseCore "github.com/iotaledger/hornet/core/database"
+	"github.com/iotaledger/hornet/core/gossip"
+	"github.com/iotaledger/hornet/core/pow"
+	"github.com/iotaledger/hornet/core/snapshot"
+	"github.com/iotaledger/hornet/core/tangle"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/p2p"
+	"github.com/iotaledger/hornet/pkg/p2p/autopeering"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/plugins/coordinator"
+	"github.com/iotaledger/hornet/plugins/dashboard"
+	"github.com/iotaledger/hornet/plugins/debug"
+	"github.com/iotaledger/hornet/plugins/faucet"
+	"github.com/iotaledger/hornet/plugins/migrator"
+	"github.com/iotaledger/hornet/plugins/mqtt"
+	"github.com/iotaledger/hornet/plugins/participation"
+	"github.com/iotaledger/hornet/plugins/prometheus"
+	"github.com/iotaledger/hornet/plugins/receipt"
+	restapiv1 "github.com/iotaledger/hornet/plugins/restapi/v1"
+	"github.com/iotaledger/hornet/plugins/spammer"
+	"github.com/iotaledger/hornet/plugins/urts"
+	"github.com/iotaledger/hornet/plugins/warpsync"
 
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
@@ -70,8 +71,9 @@ var (
 	onSelectionOutgoingPeering *events.Closure
 	onSelectionIncomingPeering *events.Closure
 	onSelectionDropped         *events.Closure
+	onPeerConnected            *events.Closure
 	onPeerDisconnected         *events.Closure
-	onAutopeerBecameKnown      *events.Closure
+	onPeeringRelationUpdated   *events.Closure
 )
 
 type dependencies struct {
@@ -260,29 +262,75 @@ func configureEvents() {
 		Plugin.LogInfof("removed offline: %s / %s", ev.Peer.Address(), peerID.ShortString())
 	})
 
+	onPeerConnected = events.NewClosure(func(p *p2p.Peer, conn network.Conn) {
+
+		if deps.AutopeeringManager.Selection() == nil {
+			return
+		}
+
+		id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf)
+		if id == nil {
+			return
+		}
+
+		// we block peers that are connected via manual peering in the autopeering module.
+		// this ensures that no additional connections are established via autopeering.
+		switch p.Relation {
+		case p2p.PeerRelationKnown, p2p.PeerRelationUnknown:
+			deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
+		}
+	})
+
 	onPeerDisconnected = events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
+
+		if deps.AutopeeringManager.Selection() == nil {
+			return
+		}
+
+		id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peerOptErr.Peer, Plugin.LogWarnf)
+		if id == nil {
+			return
+		}
+
+		// if a peer is disconnected, we need to remove it from the autopeering blacklist
+		// so that former known and unknown peers can be autopeered.
+		deps.AutopeeringManager.Selection().UnblockNeighbor(id.ID())
+
 		if peerOptErr.Peer.Relation != p2p.PeerRelationAutopeered {
 			return
 		}
 
-		if deps.AutopeeringManager.Selection() != nil {
-			if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peerOptErr.Peer, Plugin.LogWarnf); id != nil {
-				Plugin.LogInfof("removing: %s", peerOptErr.Peer.ID.ShortString())
-				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
-			}
-		}
+		Plugin.LogDebugf("removing: %s", peerOptErr.Peer.ID.ShortString())
+		deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 	})
 
-	onAutopeerBecameKnown = events.NewClosure(func(p *p2p.Peer, oldRel p2p.PeerRelation) {
+	onPeeringRelationUpdated = events.NewClosure(func(p *p2p.Peer, oldRel p2p.PeerRelation) {
+
+		if deps.AutopeeringManager.Selection() == nil {
+			return
+		}
+
+		id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf)
+		if id == nil {
+			return
+		}
+
+		// we block peers that are connected via manual peering in the autopeering module.
+		// this ensures that no additional connections are established via autopeering.
+		// if a peer gets updated to autopeered, we need to unblock it.
+		switch p.Relation {
+		case p2p.PeerRelationKnown, p2p.PeerRelationUnknown:
+			deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
+		case p2p.PeerRelationAutopeered:
+			deps.AutopeeringManager.Selection().UnblockNeighbor(id.ID())
+		}
+
 		if oldRel != p2p.PeerRelationAutopeered {
 			return
 		}
-		if deps.AutopeeringManager.Selection() != nil {
-			if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf); id != nil {
-				Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID.ShortString())
-				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
-			}
-		}
+
+		Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID.ShortString())
+		deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 	})
 
 	onSelectionSaltUpdated = events.NewClosure(func(ev *selection.SaltUpdatedEvent) {
@@ -410,18 +458,19 @@ func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
 func attachEvents() {
 
 	if deps.AutopeeringManager.Discovery() != nil {
-		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Attach(onDiscoveryPeerDiscovered)
-		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Attach(onDiscoveryPeerDeleted)
+		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Hook(onDiscoveryPeerDiscovered)
+		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Hook(onDiscoveryPeerDeleted)
 	}
 
 	if deps.AutopeeringManager.Selection() != nil {
 		// notify the selection when a connection is closed or failed.
-		deps.PeeringManager.Events.Disconnected.Attach(onPeerDisconnected)
-		deps.PeeringManager.Events.RelationUpdated.Attach(onAutopeerBecameKnown)
-		deps.AutopeeringManager.Selection().Events().SaltUpdated.Attach(onSelectionSaltUpdated)
-		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Attach(onSelectionOutgoingPeering)
-		deps.AutopeeringManager.Selection().Events().IncomingPeering.Attach(onSelectionIncomingPeering)
-		deps.AutopeeringManager.Selection().Events().Dropped.Attach(onSelectionDropped)
+		deps.PeeringManager.Events.Connected.Hook(onPeerConnected)
+		deps.PeeringManager.Events.Disconnected.Hook(onPeerDisconnected)
+		deps.PeeringManager.Events.RelationUpdated.Hook(onPeeringRelationUpdated)
+		deps.AutopeeringManager.Selection().Events().SaltUpdated.Hook(onSelectionSaltUpdated)
+		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Hook(onSelectionOutgoingPeering)
+		deps.AutopeeringManager.Selection().Events().IncomingPeering.Hook(onSelectionIncomingPeering)
+		deps.AutopeeringManager.Selection().Events().Dropped.Hook(onSelectionDropped)
 	}
 }
 
@@ -433,8 +482,9 @@ func detachEvents() {
 	}
 
 	if deps.AutopeeringManager.Selection() != nil {
+		deps.PeeringManager.Events.Connected.Detach(onPeerConnected)
 		deps.PeeringManager.Events.Disconnected.Detach(onPeerDisconnected)
-		deps.PeeringManager.Events.RelationUpdated.Detach(onAutopeerBecameKnown)
+		deps.PeeringManager.Events.RelationUpdated.Detach(onPeeringRelationUpdated)
 		deps.AutopeeringManager.Selection().Events().SaltUpdated.Detach(onSelectionSaltUpdated)
 		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Detach(onSelectionOutgoingPeering)
 		deps.AutopeeringManager.Selection().Events().IncomingPeering.Detach(onSelectionIncomingPeering)

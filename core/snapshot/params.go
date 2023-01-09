@@ -5,10 +5,12 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hornet/pkg/node"
 )
 
 const (
+	// whether to generate snapshot files.
+	CfgSnapshotsEnabled = "snapshots.enabled"
 	// the depth, respectively the starting point, at which a snapshot of the ledger is generated
 	CfgSnapshotsDepth = "snapshots.depth"
 	// interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)
@@ -42,6 +44,7 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
+			fs.Bool(CfgSnapshotsEnabled, false, "whether to generate snapshot files")
 			fs.Int(CfgSnapshotsDepth, 50, "the depth, respectively the starting point, at which a snapshot of the ledger is generated")
 			fs.Int(CfgSnapshotsInterval, 200, "interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)")
 			fs.String(CfgSnapshotsFullPath, "snapshots/mainnet/full_snapshot.bin", "path to the full snapshot file")

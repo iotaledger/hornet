@@ -3,16 +3,15 @@ package migrator
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -79,7 +78,7 @@ func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(receiptFileName, receiptJSON, os.ModePerm); err != nil {
+	if err := os.WriteFile(receiptFileName, receiptJSON, os.ModePerm); err != nil {
 		return common.CriticalError(fmt.Errorf("unable to persist receipt onto disk: %w", err))
 	}
 	return nil
