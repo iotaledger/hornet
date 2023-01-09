@@ -5,17 +5,16 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
-	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/inx-app/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func storageBlockByTransactionID(c echo.Context) (*storage.Block, error) {
+func blockIDByTransactionID(c echo.Context) (iotago.BlockID, error) {
 
 	transactionID, err := httpserver.ParseTransactionIDParam(c, restapi.ParameterTransactionID)
 	if err != nil {
-		return nil, err
+		return iotago.BlockID{}, err
 	}
 
 	// Get the first output of that transaction (using index 0)
@@ -25,23 +24,22 @@ func storageBlockByTransactionID(c echo.Context) (*storage.Block, error) {
 	output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
-			return nil, errors.WithMessagef(echo.ErrNotFound, "output for transaction not found: %s", transactionID.ToHex())
+			return iotago.BlockID{}, errors.WithMessagef(echo.ErrNotFound, "output for transaction not found: %s", transactionID.ToHex())
 		}
 
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", transactionID.ToHex())
+		return iotago.BlockID{}, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", transactionID.ToHex())
 	}
 
-	cachedBlock := deps.Storage.CachedBlockOrNil(output.BlockID()) // block +1
-	if cachedBlock == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", transactionID.ToHex())
-	}
-	defer cachedBlock.Release(true) // block -1
-
-	return cachedBlock.Block(), nil
+	return output.BlockID(), nil
 }
 
 func blockByTransactionID(c echo.Context) (*iotago.Block, error) {
-	block, err := storageBlockByTransactionID(c)
+	blockID, err := blockIDByTransactionID(c)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := storageBlockByBlockID(blockID)
 	if err != nil {
 		return nil, err
 	}
@@ -50,10 +48,24 @@ func blockByTransactionID(c echo.Context) (*iotago.Block, error) {
 }
 
 func blockBytesByTransactionID(c echo.Context) ([]byte, error) {
-	block, err := storageBlockByTransactionID(c)
+	blockID, err := blockIDByTransactionID(c)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := storageBlockByBlockID(blockID)
 	if err != nil {
 		return nil, err
 	}
 
 	return block.Data(), nil
+}
+
+func blockMetadataByTransactionID(c echo.Context) (*blockMetadataResponse, error) {
+	blockID, err := blockIDByTransactionID(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return blockMetadataByBlockID(blockID)
 }

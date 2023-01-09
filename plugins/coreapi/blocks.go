@@ -21,12 +21,7 @@ var (
 	blockProcessedTimeout = 1 * time.Second
 )
 
-func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
-	blockID, err := httpserver.ParseBlockIDParam(c, restapi.ParameterBlockID)
-	if err != nil {
-		return nil, err
-	}
-
+func blockMetadataByBlockID(blockID iotago.BlockID) (*blockMetadataResponse, error) {
 	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(blockID)
 	if cachedBlockMeta == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
@@ -106,12 +101,7 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 	return response, nil
 }
 
-func storageBlockByID(c echo.Context) (*storage.Block, error) {
-	blockID, err := httpserver.ParseBlockIDParam(c, restapi.ParameterBlockID)
-	if err != nil {
-		return nil, err
-	}
-
+func storageBlockByBlockID(blockID iotago.BlockID) (*storage.Block, error) {
 	cachedBlock := deps.Storage.CachedBlockOrNil(blockID) // block +1
 	if cachedBlock == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
@@ -122,7 +112,12 @@ func storageBlockByID(c echo.Context) (*storage.Block, error) {
 }
 
 func blockByID(c echo.Context) (*iotago.Block, error) {
-	block, err := storageBlockByID(c)
+	blockID, err := httpserver.ParseBlockIDParam(c, restapi.ParameterBlockID)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := storageBlockByBlockID(blockID)
 	if err != nil {
 		return nil, err
 	}
@@ -131,12 +126,26 @@ func blockByID(c echo.Context) (*iotago.Block, error) {
 }
 
 func blockBytesByID(c echo.Context) ([]byte, error) {
-	block, err := storageBlockByID(c)
+	blockID, err := httpserver.ParseBlockIDParam(c, restapi.ParameterBlockID)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := storageBlockByBlockID(blockID)
 	if err != nil {
 		return nil, err
 	}
 
 	return block.Data(), nil
+}
+
+func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
+	blockID, err := httpserver.ParseBlockIDParam(c, restapi.ParameterBlockID)
+	if err != nil {
+		return nil, err
+	}
+
+	return blockMetadataByBlockID(blockID)
 }
 
 func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
