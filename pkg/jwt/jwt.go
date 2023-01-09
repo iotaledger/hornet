@@ -80,6 +80,7 @@ func (j *Auth) Middleware(skipper middleware.Skipper, allow func(c echo.Context,
 			}
 
 			// use the default JWT middleware to verify and extract the JWT
+			//nolint:staticcheck // TODO: replace with https://github.com/labstack/echo-jwt instead
 			handler := middleware.JWTWithConfig(config)(func(c echo.Context) error {
 				return nil
 			})
