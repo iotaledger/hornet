@@ -59,6 +59,10 @@ const (
 	// MIMEVendorIOTASerializer => bytes.
 	RouteTransactionsIncludedBlock = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-block"
 
+	// RouteTransactionsIncludedBlockMetadata is the route for getting the block metadata that was included in the ledger for a given transaction ID.
+	// GET returns block metadata (including info about "promotion/reattachment needed").
+	RouteTransactionsIncludedBlockMetadata = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-block/metadata"
+
 	// RouteMilestoneByID is the route for getting a milestone by its ID.
 	// GET returns the milestone.
 	// MIMEApplicationJSON => json.
@@ -284,6 +288,15 @@ func configure() error {
 			return httpserver.JSONResponse(c, http.StatusOK, resp)
 		}
 	})
+
+	routeGroup.GET(RouteTransactionsIncludedBlockMetadata, func(c echo.Context) error {
+		resp, err := blockMetadataByTransactionID(c)
+		if err != nil {
+			return err
+		}
+
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	}, checkNodeAlmostSynced())
 
 	routeGroup.GET(RouteMilestoneByID, func(c echo.Context) error {
 		mimeType, err := httpserver.GetAcceptHeaderContentType(c, httpserver.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
