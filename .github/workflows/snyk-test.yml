@@ -1,4 +1,4 @@
-name: Test Docker image with Snyk
+name: Test dependencies with Snyk
 
 on:
   # Run this check every day at 03:00 to find potential new vulnerabilities in the develop branch
@@ -17,16 +17,32 @@ jobs:
       - name: Build HORNET Docker image
         run: docker build . --file Dockerfile --tag hornet:latest
 
-      - name: Run Snyk to check for vulnerabilities
+      - name: Run Snyk to check for Golang vulnerabilities
+        uses: snyk/actions/golang@0.3.0
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --org=gohornet --sarif-file-output=snyk-golang.sarif
+
+      - name: Run Snyk to check for Docker image vulnerabilities
         uses: snyk/actions/docker@0.3.0
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           image: hornet:latest
+          # Exclude Go app vulns because those are picked up by the previous scan
+          # For Docker scans, the SARIF is created by default
           args: --org=gohornet --file=Dockerfile --exclude-app-vulns
+      
+      - name: Upload Golang results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: snyk-golang.sarif
+          category: snyk-golang
 
-      - name: Upload results to GitHub Code Scanning
+      - name: Upload Docker results to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: snyk.sarif
