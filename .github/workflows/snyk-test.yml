@@ -8,6 +8,11 @@ on:
 jobs:
   snyk-test:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
