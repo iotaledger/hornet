@@ -1,6 +1,6 @@
 # HORNET - The IOTA node
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/iotaledger/hornet/Build?style=for-the-badge) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/iotaledger/hornet?style=for-the-badge) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/iotaledger/hornet?style=for-the-badge) ![GitHub](https://img.shields.io/github/license/iotaledger/hornet?style=for-the-badge)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/iotaledger/hornet/build_HORNET.yml?style=for-the-badge&branch=develop) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/iotaledger/hornet?style=for-the-badge) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/iotaledger/hornet?style=for-the-badge) ![GitHub](https://img.shields.io/github/license/iotaledger/hornet?style=for-the-badge)
 
 <p align="center"><img src="https://raw.githubusercontent.com/iotaledger/hornet/develop/documentation/static/img/logo/HORNET_logo.svg?sanitize=true" width="600"/></p>
 
