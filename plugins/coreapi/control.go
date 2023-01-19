@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/gommon/bytes"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/inx-app/httpserver"
+	"github.com/iotaledger/inx-app/pkg/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

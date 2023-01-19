@@ -24,7 +24,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	"github.com/iotaledger/hornet/v2/pkg/tipselect"
 	"github.com/iotaledger/hornet/v2/plugins/restapi"
-	"github.com/iotaledger/inx-app/httpserver"
+	"github.com/iotaledger/inx-app/pkg/httpserver"
 )
 
 const (

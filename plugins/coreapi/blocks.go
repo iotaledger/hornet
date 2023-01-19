@@ -13,7 +13,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
-	"github.com/iotaledger/inx-app/httpserver"
+	"github.com/iotaledger/inx-app/pkg/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

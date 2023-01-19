@@ -100,16 +100,22 @@ func (te *TestEnvironment) ReattachBlock(blockID iotago.BlockID, parents ...iota
 		Nonce:           iotaBlock.Nonce,
 	}
 
-	_, err := te.PoWHandler.DoPoW(context.Background(), newBlock, te.protoParams.MinPoWScore, 1, nil)
+	_, err := te.PoWHandler.DoPoW(context.Background(), newBlock, serializer.DeSeriModePerformValidation, te.protoParams, 1, nil)
 	require.NoError(te.TestInterface, err)
 
 	// We brute-force a new nonce until it is different than the original one (this is important when reattaching valid milestones)
-	powMinScore := te.protoParams.MinPoWScore
+	protoParamsData, err := te.protoParams.Serialize(serializer.DeSeriModeNoValidation, nil)
+	require.NoError(te.TestInterface, err)
+
+	protoParamsNew := &iotago.ProtocolParameters{}
+	_, err = protoParamsNew.Deserialize(protoParamsData, serializer.DeSeriModeNoValidation, nil)
+	require.NoError(te.TestInterface, err)
+
 	for newBlock.Nonce == iotaBlock.Nonce {
-		powMinScore += 10.0
+		protoParamsNew.MinPoWScore += 10
 		// Use a higher PowScore on every iteration to force a different nonce
 		handler := pow.New(5 * time.Minute)
-		_, err := handler.DoPoW(context.Background(), newBlock, powMinScore, 1, nil)
+		_, err := handler.DoPoW(context.Background(), newBlock, serializer.DeSeriModePerformValidation, protoParamsNew, 1, nil)
 		require.NoError(te.TestInterface, err)
 	}
 

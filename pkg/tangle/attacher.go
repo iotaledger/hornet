@@ -12,7 +12,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/pow"
-	inxpow "github.com/iotaledger/inx-app/pow"
+	inxpow "github.com/iotaledger/inx-app/pkg/pow"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -87,15 +87,21 @@ func (t *Tangle) BlockAttacher(opts ...BlockAttacherOption) *BlockAttacher {
 
 func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block) (iotago.BlockID, error) {
 
-	if iotaBlock.ProtocolVersion != a.tangle.protocolManager.Current().Version {
+	protoParams := a.tangle.protocolManager.Current()
+
+	if iotaBlock.ProtocolVersion != protoParams.Version {
 		return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, "protocolVersion invalid: %d", iotaBlock.ProtocolVersion)
 	}
 
-	targetScore := a.tangle.protocolManager.Current().MinPoWScore
+	targetScore := protoParams.MinPoWScore
 
 	var tipSelFunc inxpow.RefreshTipsFunc
 
 	if len(iotaBlock.Parents) == 0 {
+		if iotaBlock.Nonce != 0 {
+			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents were given but nonce was != 0")
+		}
+
 		if a.opts.tipSelFunc == nil {
 			return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, "no parents given and node tipselection disabled")
 		}
@@ -124,7 +130,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 	default:
 		switch payload := iotaBlock.Payload.(type) {
 		case *iotago.Transaction:
-			if payload.Essence.NetworkID != a.tangle.protocolManager.Current().NetworkID() {
+			if payload.Essence.NetworkID != protoParams.NetworkID() {
 				return iotago.EmptyBlockID(), errors.WithMessagef(ErrBlockAttacherInvalidBlock, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
 			}
 		}
@@ -149,7 +155,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 				}
 
 				ts := time.Now()
-				blockSize, err := a.opts.powHandler.DoPoW(powCtx, iotaBlock, targetScore, powWorkerCount, tipSelFunc)
+				blockSize, err := a.opts.powHandler.DoPoW(powCtx, iotaBlock, serializer.DeSeriModePerformValidation, protoParams, powWorkerCount, tipSelFunc)
 				if err != nil {
 					return iotago.EmptyBlockID(), err
 				}
@@ -160,7 +166,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 		}
 	}
 
-	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, a.tangle.protocolManager.Current())
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParams)
 	if err != nil {
 		return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, err.Error())
 	}
