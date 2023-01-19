@@ -10,7 +10,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
-	"github.com/iotaledger/inx-app/httpserver"
+	"github.com/iotaledger/inx-app/pkg/httpserver"
 )
 
 // WrapInfoSnapshot wraps the given peer info snapshot with additional metadata, such as gossip protocol information.

@@ -194,7 +194,7 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 		Build()
 	require.NoError(b.te.TestInterface, err)
 
-	_, err = b.te.PoWHandler.DoPoW(context.Background(), iotaBlock, b.te.protoParams.MinPoWScore, 1, nil)
+	_, err = b.te.PoWHandler.DoPoW(context.Background(), iotaBlock, serializer.DeSeriModePerformValidation, b.te.protoParams, 1, nil)
 	require.NoError(b.te.TestInterface, err)
 
 	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, b.te.protoParams)

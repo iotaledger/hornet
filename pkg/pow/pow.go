@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	inxpow "github.com/iotaledger/inx-app/pow"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	inxpow "github.com/iotaledger/inx-app/pkg/pow"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -23,6 +24,6 @@ func New(refreshTipsInterval time.Duration) *Handler {
 
 // DoPoW does the proof-of-work required to hit the target score configured on this Handler.
 // The given iota.Block's nonce is automatically updated.
-func (h *Handler) DoPoW(ctx context.Context, block *iotago.Block, targetScore uint32, parallelism int, refreshTipsFunc inxpow.RefreshTipsFunc) (blockSize int, err error) {
-	return inxpow.DoPoW(ctx, block, float64(targetScore), parallelism, h.refreshTipsInterval, refreshTipsFunc)
+func (h *Handler) DoPoW(ctx context.Context, block *iotago.Block, deSeriMode serializer.DeSerializationMode, protoParams *iotago.ProtocolParameters, parallelism int, refreshTipsFunc inxpow.RefreshTipsFunc) (blockSize int, err error) {
+	return inxpow.DoPoW(ctx, block, deSeriMode, protoParams, parallelism, h.refreshTipsInterval, refreshTipsFunc)
 }

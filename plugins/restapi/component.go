@@ -18,7 +18,7 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/jwt"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
-	"github.com/iotaledger/inx-app/httpserver"
+	"github.com/iotaledger/inx-app/pkg/httpserver"
 )
 
 func init() {

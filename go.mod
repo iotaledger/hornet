@@ -4,16 +4,16 @@ go 1.19
 
 require (
 	github.com/blang/vfs v1.0.0
-	github.com/cockroachdb/pebble v0.0.0-20230106151110-65ff304d3d7a
+	github.com/cockroachdb/pebble v0.0.0-20230118173120-15945a2be184
 	github.com/docker/docker v20.10.22+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/dustin/go-humanize v1.0.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/iotaledger/go-ds-kvstore v1.0.0-rc.1
 	github.com/iotaledger/hive.go/core v1.0.0-rc.2
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-rc.1
-	github.com/iotaledger/inx-app v1.0.0-rc.1
+	github.com/iotaledger/inx-app v1.0.0-rc.2
 	github.com/iotaledger/inx/go v1.0.0-rc.1
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v3 v3.0.0-rc.1
@@ -30,10 +30,10 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/wollac/iota-crypto-demo v0.0.0-20221117162917-b10619eccb98
 	go.uber.org/atomic v1.10.0
-	go.uber.org/dig v1.16.0
+	go.uber.org/dig v1.16.1
 	golang.org/x/crypto v0.5.0
 	golang.org/x/term v0.4.0
-	google.golang.org/grpc v1.51.0
+	google.golang.org/grpc v1.52.0
 )
 
 require (
@@ -46,7 +46,7 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cockroachdb/errors v1.9.0 // indirect
-	github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f // indirect
+	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/containerd/cgroups v1.0.4 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
@@ -63,7 +63,7 @@ require (
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/getsentry/sentry-go v0.16.0 // indirect
+	github.com/getsentry/sentry-go v0.17.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
@@ -74,7 +74,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/pprof v0.0.0-20221219190121-3cb0bae90811 // indirect
+	github.com/google/pprof v0.0.0-20230111200839-76d1ae5aea2b // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
@@ -91,7 +91,7 @@ require (
 	github.com/jellydator/ttlcache/v2 v2.11.1 // indirect
 	github.com/klauspost/compress v1.15.14 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
-	github.com/knadh/koanf v1.4.5 // indirect
+	github.com/knadh/koanf v1.5.0 // indirect
 	github.com/koron/go-ssdp v0.0.3 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -99,7 +99,7 @@ require (
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.2.0 // indirect
-	github.com/libp2p/go-msgio v0.2.0 // indirect
+	github.com/libp2p/go-msgio v0.3.0 // indirect
 	github.com/libp2p/go-nat v0.1.0 // indirect
 	github.com/libp2p/go-netroute v0.2.1 // indirect
 	github.com/libp2p/go-openssl v0.1.0 // indirect
@@ -133,7 +133,7 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oasisprotocol/ed25519 v0.0.0-20210505154701-76d8c688d86e // indirect
-	github.com/onsi/ginkgo/v2 v2.6.1 // indirect
+	github.com/onsi/ginkgo/v2 v2.7.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2 // indirect
@@ -157,10 +157,10 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	go.uber.org/fx v1.19.0 // indirect
+	go.uber.org/fx v1.19.1 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/exp v0.0.0-20230108222341-4b8118a2686a // indirect
+	golang.org/x/exp v0.0.0-20230118134722-a68e582fa157 // indirect
 	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
@@ -169,7 +169,7 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/genproto v0.0.0-20230106154932-a12b697841d9 // indirect
+	google.golang.org/genproto v0.0.0-20230117162540-28d6b9783ac4 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

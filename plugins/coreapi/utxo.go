@@ -9,7 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/restapi"
-	"github.com/iotaledger/inx-app/httpserver"
+	"github.com/iotaledger/inx-app/pkg/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
