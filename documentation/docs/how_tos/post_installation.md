@@ -56,7 +56,7 @@ To generate a JWT-token to be used with the protected routes you can run:
 ./hornet tool jwt-api --databasePath <path to your p2pstore> --salt <restAPI.jwtAuth.salt value from your config.json>
 ```
 
-If you are running our [recommended setup](using_docker.md) then see [here](using_docker.md).
+If you are running our [recommended setup](using_docker.md) then see [here](using_docker.md#tools).
 
 ### Proof-of-Work
 
