@@ -51,7 +51,11 @@ HORNET Docker images (amd64/x86_64 and arm64 architecture) are available at the 
 
 ## Download the latest release
 
-> **NOTE**: The commands assume you are using Linux.
+:::note
+
+The commands assume you are using Linux.
+
+:::
 
 Once you have completed all the installation [requirements](#requirements), you can download the latest release by running:
 
