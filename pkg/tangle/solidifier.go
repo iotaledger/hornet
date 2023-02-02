@@ -457,25 +457,35 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 
 	t.Events.ConfirmationMetricsUpdated.Trigger(confirmationMetrics)
 
-	var rbpsBlock string
-	if metric, err := t.calcConfirmedMilestoneMetric(milestonePayloadToSolidify); err == nil {
-		isNodeSynced := t.syncManager.IsNodeSynced()
-		if isNodeSynced {
-			// Only trigger the metrics event if the node is sync (otherwise the BPS and conf.rate is wrong)
-			if t.firstSyncedMilestone == 0 {
-				t.firstSyncedMilestone = milestoneIndexToSolidify
-			}
-		} else {
-			// reset the variable if unsynced
-			t.firstSyncedMilestone = 0
+	syncState = t.syncManager.SyncState()
+	if syncState.NodeSynced {
+		if t.firstSyncedMilestone == 0 {
+			t.firstSyncedMilestone = milestoneIndexToSolidify
 		}
 
-		if isNodeSynced && (milestoneIndexToSolidify > t.firstSyncedMilestone+1) {
+		// check if the "resync phase" of the node is done
+		if !t.resyncPhaseDone.Load() && milestoneIndexToSolidify > (t.firstSyncedMilestone+iotago.MilestoneIndex(t.protocolManager.Current().BelowMaxDepth)) {
+			t.resyncPhaseDone.Store(true)
+		}
+	} else {
+		// reset the variable if unsynced
+		t.firstSyncedMilestone = 0
+
+		// reset the "resync phase" if the node became out of sync
+		if !syncState.NodeAlmostSynced {
+			t.resyncPhaseDone.Store(false)
+		}
+	}
+
+	var rbpsBlock string
+	if metric, err := t.calcConfirmedMilestoneMetric(milestonePayloadToSolidify); err == nil {
+		// Only calculate the metrics if the node is sync (otherwise the BPS and conf.rate is wrong)
+		// Ignore the first two milestones after node was sync (otherwise the BPS and conf.rate is wrong)
+		if syncState.NodeSynced && (milestoneIndexToSolidify > t.firstSyncedMilestone+1) {
 			t.lastConfirmedMilestoneMetricLock.Lock()
 			t.lastConfirmedMilestoneMetric = metric
 			t.lastConfirmedMilestoneMetricLock.Unlock()
 
-			// Ignore the first two milestones after node was sync (otherwise the BPS and conf.rate is wrong)
 			rbpsBlock = fmt.Sprintf(", %0.2f BPS, %0.2f RBPS, %0.2f%% ref.rate", metric.BPS, metric.RBPS, metric.ReferencedRate)
 		} else {
 			rbpsBlock = fmt.Sprintf(", %0.2f RBPS", metric.RBPS)

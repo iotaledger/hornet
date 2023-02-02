@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/atomic"
+
 	"github.com/iotaledger/hive.go/core/daemon"
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -101,6 +103,8 @@ type Tangle struct {
 
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone iotago.MilestoneIndex
+	// Indicates that the node solidified more milestones than "below max depth" after becoming sync
+	resyncPhaseDone *atomic.Bool
 
 	lastConfirmedMilestoneMetricLock syncutils.RWMutex
 	lastConfirmedMilestoneMetric     *ConfirmedMilestoneMetric
@@ -156,6 +160,7 @@ func New(
 		milestoneSolidifierQueueSize:     2,
 		blockProcessedSyncEvent:          events.NewSyncEvent(),
 		blockSolidSyncEvent:              events.NewSyncEvent(),
+		resyncPhaseDone:                  atomic.NewBool(false),
 		Events: &Events{
 			BPSMetricsUpdated:              events.NewEvent(BPSMetricsCaller),
 			ReceivedNewBlock:               events.NewEvent(storage.NewBlockCaller),
