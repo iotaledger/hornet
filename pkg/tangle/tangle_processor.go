@@ -226,13 +226,22 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 			proto.Metrics.NewBlocks.Inc()
 		}
 
+		hadRequests := false
+
 		// since we only add the parents if there was a source request, we only
 		// request them for blocks which should be part of milestone cones
 		for _, request := range requests {
 			// add this newly received block's parents to the request queue
 			if request.RequestType == gossip.RequestTypeBlockID {
-				t.requester.RequestParents(cachedBlock.Retain(), request.MilestoneIndex, true) // block pass +1
+				t.requester.RequestParents(cachedBlock.Retain(), request.MilestoneIndex, request.PreventDiscard) // block pass +1
+				hadRequests = true
 			}
+		}
+
+		if !hadRequests && syncState.NodeAlmostSynced && !t.resyncPhaseDone.Load() {
+			// request parents of newly seen blocks during resync phase (requests may be discarded).
+			// this is done to solidify blocks in the future cone during resync.
+			t.requester.RequestParents(cachedBlock.Retain(), syncState.LatestMilestoneIndex, false) // block pass +1
 		}
 
 		confirmedMilestoneIndex := syncState.ConfirmedMilestoneIndex

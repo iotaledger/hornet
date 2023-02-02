@@ -188,17 +188,29 @@ func (pq *priorityqueue) Enqueue(request *Request) bool {
 	pq.Lock()
 	defer pq.Unlock()
 
+	updateRequest := func(existingRequest *Request, newRequest *Request) {
+		if !existingRequest.PreventDiscard && newRequest.PreventDiscard {
+			// use the values of the request that should not be discarded (higher priority)
+			existingRequest.EnqueueTime = newRequest.EnqueueTime
+			existingRequest.MilestoneIndex = newRequest.MilestoneIndex
+			existingRequest.PreventDiscard = newRequest.PreventDiscard
+		}
+	}
+
 	requestMapKey := request.MapKey()
 
-	if _, queued := pq.queued[requestMapKey]; queued {
+	if existingRequest, queued := pq.queued[requestMapKey]; queued {
+		updateRequest(existingRequest, request)
 		// do not enqueue because it was already queued.
 		return false
 	}
-	if _, pending := pq.pending[requestMapKey]; pending {
+	if existingRequest, pending := pq.pending[requestMapKey]; pending {
+		updateRequest(existingRequest, request)
 		// do not enqueue because it was already pending.
 		return false
 	}
-	if _, processing := pq.processing[requestMapKey]; processing {
+	if existingRequest, processing := pq.processing[requestMapKey]; processing {
+		updateRequest(existingRequest, request)
 		// do not enqueue because it was already processing.
 		return false
 	}

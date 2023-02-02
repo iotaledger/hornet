@@ -28,7 +28,7 @@ func (ro *RequesterOptions) apply(opts ...RequesterOption) {
 type RequestBackPressureFunc func() bool
 
 var defaultRequesterOpts = []RequesterOption{
-	WithRequesterDiscardRequestsOlderThan(10 * time.Second),
+	WithRequesterDiscardRequestsOlderThan(15 * time.Second),
 	WithRequesterPendingRequestReEnqueueInterval(5 * time.Second),
 }
 
