@@ -16,6 +16,7 @@ import (
 	"github.com/iotaledger/hive.go/core/configuration"
 	hivecrypto "github.com/iotaledger/hive.go/core/crypto"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func generateP2PIdentity(args []string) error {
@@ -79,9 +80,9 @@ func generateP2PIdentity(args []string) error {
 		}
 	}
 
-	libp2pPrivKey, libp2pPubKey, err := crypto.KeyPairFromStdKey(privKey)
+	libp2pPrivKey, libp2pPubKey, err := crypto.KeyPairFromStdKey(&privKey)
 	if err != nil {
-		return fmt.Errorf("unable to convert given private key '%s': %w", *privateKeyFlag, err)
+		return fmt.Errorf("unable to convert given private key '%s': %w", iotago.EncodeHex(privKey), err)
 	}
 
 	if err := certificate.WriteEd25519PrivateKeyToPEMFile(privKeyFilePath, privKey); err != nil {
