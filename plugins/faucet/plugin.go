@@ -3,6 +3,7 @@ package faucet
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -251,6 +252,10 @@ func run() {
 		bindAddr := deps.NodeConfig.String(CfgFaucetWebsiteBindAddress)
 
 		e := echo.New()
+		e.Server.BaseContext = func(l net.Listener) context.Context {
+			// set BaseContext to be the same as the daemon, so that requests being processed don't hang the shutdown procedure
+			return Plugin.Daemon().ContextStopped()
+		}
 		e.HideBanner = true
 		e.Use(middleware.Recover())
 

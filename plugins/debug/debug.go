@@ -98,7 +98,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}()
 
 	// check if all requested parents are solid
-	solid, aborted := deps.Tangle.SolidQueueCheck(Plugin.Daemon().ContextStopped(), memcachedTraverserStorage, request.Index, parents)
+	solid, aborted := deps.Tangle.SolidQueueCheck(c.Request().Context(), memcachedTraverserStorage, request.Index, parents)
 	if aborted {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, common.ErrOperationAborted.Error())
 	}
@@ -120,7 +120,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 
 	// at this point all parents are solid
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), deps.Storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, request.Index, parents, whiteflag.DefaultWhiteFlagTraversalCondition)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(c.Request().Context(), deps.Storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, request.Index, parents, whiteflag.DefaultWhiteFlagTraversalCondition)
 	if err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "failed to compute white flag mutations: %s", err)
@@ -418,7 +418,7 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 	tanglePath := []*messageWithParents{}
 
 	if err := dag.TraverseParentsOfMessage(
-		Plugin.Daemon().ContextStopped(),
+		c.Request().Context(),
 		deps.Storage,
 		messageID,
 		// traversal stops if no more messages pass the given condition

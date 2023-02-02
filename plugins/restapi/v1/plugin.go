@@ -246,7 +246,7 @@ func configure() {
 			return err
 		}
 
-		resp, err := messageMetadataByMessageID(messageID)
+		resp, err := messageMetadataByMessageID(c, messageID)
 		if err != nil {
 			return err
 		}
@@ -321,7 +321,7 @@ func configure() {
 			return err
 		}
 
-		resp, err := messageMetadataByMessageID(messageID)
+		resp, err := messageMetadataByMessageID(c, messageID)
 		if err != nil {
 			return err
 		}
