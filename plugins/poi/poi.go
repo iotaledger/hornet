@@ -64,6 +64,10 @@ func createAuditPath(ctx context.Context, msIndex milestone.Index, milestoneMess
 
 			// if the message is referenced by an older milestone, there is no need to traverse its parents
 			if at < msIndex {
+				if cachedMsgMeta.Metadata().IsMilestone() && bytes.Equal(targetMessageID, cachedMsgMeta.Metadata().MessageID()) {
+					// in case we want to proof the inclusion of a milestone, we need to allow the target milestone.
+					return true, nil
+				}
 				return false, nil
 			}
 
@@ -183,6 +187,12 @@ func createProof(c echo.Context) (*ProofRequestAndResponse, error) {
 	referenced, msIndex := cachedMsg.Metadata().ReferencedWithIndex()
 	if !referenced {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message %s is not referenced by a milestone", messageID.ToHex())
+	}
+
+	if cachedMsg.Metadata().IsMilestone() {
+		// if the message is a milestone itself,
+		// use the next milestone to proof the inclusion of this milestone message.
+		msIndex += 1
 	}
 
 	cachedMsgMilestone := deps.Storage.MilestoneCachedMessageOrNil(msIndex) // message +1
