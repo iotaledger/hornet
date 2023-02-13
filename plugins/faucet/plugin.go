@@ -163,7 +163,7 @@ func configure() {
 			return false
 		}
 
-		path := context.Request().URL.EscapedPath()
+		path := context.Request().RequestURI
 		for _, prefix := range routesForMethod {
 			if strings.HasPrefix(path, prefix) {
 				return true

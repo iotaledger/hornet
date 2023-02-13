@@ -96,7 +96,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 			if deps.DashboardAuthUsername == "" {
 				return false
 			}
-			return claims.VerifySubject(deps.DashboardAuthUsername) && dashboardAllowedAPIRoute(c)
+			return claims.VerifySubject(deps.DashboardAuthUsername) && dashboardAllowedAPIRoute(c.Request().Method, c.Request().RequestURI)
 		}
 
 		return false
@@ -114,7 +114,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 
 			// Check if the route should be exposed (public or protected) or is required by the dashboard
-			if matchExposed(c) || dashboardAllowedAPIRoute(c) {
+			if matchExposed(c) || dashboardAllowedAPIRoute(c.Request().Method, c.Request().RequestURI) {
 				// Apply JWT middleware
 				return jwtMiddlewareHandler(c)
 			}
@@ -156,15 +156,14 @@ var faucetAllowedRoutes = map[string][]string{
 	},
 }
 
-func checkAllowedAPIRoute(context echo.Context, allowedRoutes map[string][]string) bool {
+func checkAllowedAPIRoute(method string, path string, allowedRoutes map[string][]string) bool {
 
 	// Check for which route we will allow to access the API
-	routesForMethod, exists := allowedRoutes[context.Request().Method]
+	routesForMethod, exists := allowedRoutes[method]
 	if !exists {
 		return false
 	}
 
-	path := context.Request().URL.EscapedPath()
 	for _, prefix := range routesForMethod {
 		if strings.HasPrefix(path, prefix) {
 			return true
@@ -174,10 +173,10 @@ func checkAllowedAPIRoute(context echo.Context, allowedRoutes map[string][]strin
 	return false
 }
 
-func dashboardAllowedAPIRoute(context echo.Context) bool {
-	return checkAllowedAPIRoute(context, dashboardAllowedRoutes)
+func dashboardAllowedAPIRoute(method string, path string) bool {
+	return checkAllowedAPIRoute(method, path, dashboardAllowedRoutes)
 }
 
-func faucetAllowedAPIRoute(context echo.Context) bool {
-	return checkAllowedAPIRoute(context, faucetAllowedRoutes)
+func faucetAllowedAPIRoute(method string, path string) bool {
+	return checkAllowedAPIRoute(method, path, faucetAllowedRoutes)
 }
