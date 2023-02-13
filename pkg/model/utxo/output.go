@@ -36,6 +36,7 @@ func (l LexicalOrderedOutputs) Swap(i, j int) {
 }
 
 type Output struct {
+	//nolint:unused
 	kvStorable
 
 	outputID   *iotago.UTXOInputID

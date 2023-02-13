@@ -25,9 +25,8 @@ const (
 
 func createAuditPath(ctx context.Context, msIndex milestone.Index, milestoneMessageID hornet.MessageID, targetMessageID hornet.MessageID) ([]*iotago.Message, error) {
 	var auditPathMessages []*iotago.Message
-	auditPathMessageIDs := make(map[iotago.MessageID]struct{})
+	var auditPathHead hornet.MessageID
 
-	milestonePathFound := false
 	addMessage := func(messageID hornet.MessageID) error {
 		cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
 		if cachedMsg == nil {
@@ -35,19 +34,19 @@ func createAuditPath(ctx context.Context, msIndex milestone.Index, milestoneMess
 		}
 		defer cachedMsg.Release(true) // message -1
 
-		if bytes.Equal(milestoneMessageID, messageID) {
-			// do not add the milestone itself
-			milestonePathFound = true
+		auditPathHead = messageID
+
+		if bytes.Equal(milestoneMessageID, messageID) || bytes.Equal(targetMessageID, messageID) {
+			// do not add the milestone or the target message itself
 			return nil
 		}
 
 		auditPathMessages = append(auditPathMessages, cachedMsg.Message().Message())
-		auditPathMessageIDs[messageID.ToArray()] = struct{}{}
 
 		return nil
 	}
 
-	originFound := false
+	targetFound := false
 	if err := dag.TraverseParentsOfMessage(
 		ctx,
 		deps.Storage,
@@ -57,8 +56,14 @@ func createAuditPath(ctx context.Context, msIndex milestone.Index, milestoneMess
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
+			referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+			if !referenced {
+				// this should never happen
+				return false, errors.New("indirect parents of milestone not referenced by a milestone")
+			}
+
 			// if the message is referenced by an older milestone, there is no need to traverse its parents
-			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); !referenced || (at < msIndex) {
+			if at < msIndex {
 				return false, nil
 			}
 
@@ -68,28 +73,18 @@ func createAuditPath(ctx context.Context, msIndex milestone.Index, milestoneMess
 		func(cachedMsgMeta *storage.CachedMetadata) error {
 			defer cachedMsgMeta.Release(true) // meta -1
 
-			if !originFound && bytes.Equal(cachedMsgMeta.Metadata().MessageID(), targetMessageID) {
-				originFound = true
+			if !targetFound && bytes.Equal(cachedMsgMeta.Metadata().MessageID(), targetMessageID) {
+				targetFound = true
 				return addMessage(cachedMsgMeta.Metadata().MessageID())
 			}
 
-			if originFound {
+			if targetFound {
 				// we need to check if the parents of this message are part of the path
-				parentFound := false
 				for _, parent := range cachedMsgMeta.Metadata().Parents() {
-					if _, exists := auditPathMessageIDs[parent.ToArray()]; !exists {
-						continue
+					if bytes.Equal(auditPathHead, parent) {
+						// parent found
+						return addMessage(cachedMsgMeta.Metadata().MessageID())
 					}
-
-					parentFound = true
-
-					// delete the found parent from the map, so we don't include several paths in the proof
-					// the path may not be the shortest, but its always the same. (will be replaced by stardust PoI anyway)
-					delete(auditPathMessageIDs, parent.ToArray())
-				}
-
-				if parentFound {
-					return addMessage(cachedMsgMeta.Metadata().MessageID())
 				}
 			}
 
@@ -109,16 +104,16 @@ func createAuditPath(ctx context.Context, msIndex milestone.Index, milestoneMess
 		}
 	}
 
-	if !milestonePathFound {
+	if !bytes.Equal(auditPathHead, milestoneMessageID) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "path to milestone %d not found", msIndex)
 	}
 
 	return auditPathMessages, nil
 }
 
-func checkAuditPath(ctx context.Context, auditPathMessages []*iotago.Message, milestoneMsg *iotago.Message, message *iotago.Message) (bool, error) {
+func checkAuditPath(ctx context.Context, auditPathMessages []*iotago.Message, milestoneMessage *iotago.Message, targetMessage *iotago.Message) (bool, error) {
 
-	storedMilestoneMsg, err := storage.NewMessage(milestoneMsg, serializer.DeSeriModePerformValidation)
+	storedMilestoneMsg, err := storage.NewMessage(milestoneMessage, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return false, errors.WithMessage(restapi.ErrInvalidParameter, "invalid milestone message")
 	}
@@ -130,52 +125,46 @@ func checkAuditPath(ctx context.Context, auditPathMessages []*iotago.Message, mi
 	}
 
 	// Hash the contained message to get the ID
-	messageID, err := message.ID()
+	targetMsgID, err := targetMessage.ID()
 	if err != nil {
 		return false, err
 	}
 
-	targetMsgID := *messageID
+	// walk the audit path starting with the target message
+	auditPathHead := *targetMsgID
 
-	// create a map for faster lookup of transactions
-	auditPathMessageIDs := make(map[iotago.MessageID]*iotago.Message)
-	for _, msg := range auditPathMessages {
-		msgID, err := msg.ID()
-		if err != nil {
-			return false, err
+	for _, auditPathMessage := range auditPathMessages {
+		currentMsgFound := false
+
+		for _, parentMsgID := range auditPathMessage.Parents {
+			if parentMsgID == auditPathHead {
+				currentMsgFound = true
+				msgID, err := auditPathMessage.ID()
+				if err != nil {
+					return false, err
+				}
+
+				auditPathHead = *msgID
+				break
+			}
 		}
 
-		m := msg
-		auditPathMessageIDs[*msgID] = m
-	}
-
-	// walk the audit path starting with the milestone
-	currentMsg := milestoneMsg
-	for {
-		parentFound := false
-		for _, parentMsgID := range currentMsg.Parents {
-			parentMsg, exists := auditPathMessageIDs[parentMsgID]
-			if !exists {
-				continue
-			}
-
-			if parentMsgID == targetMsgID {
-				// we found the valid path to the message
-				return true, nil
-			}
-
-			// delete the found parent from the map, so we don't walk the path again
-			parentFound = true
-			currentMsg = parentMsg
-			delete(auditPathMessageIDs, parentMsgID)
-			break
-		}
-
-		if !parentFound {
+		if !currentMsgFound {
 			// audit path invalid
 			return false, nil
 		}
 	}
+
+	// check the milestone parents
+	for _, parentMsgID := range milestoneMessage.Parents {
+		if parentMsgID == auditPathHead {
+			// milestone points to the audit path head
+			// => proof valid
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func createProof(c echo.Context) (*ProofRequestAndResponse, error) {
