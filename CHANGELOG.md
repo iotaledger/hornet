@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.3] - 09.01.2023
+
+### Changed
+    - Move dashboard routes to /dashboard/ (#1840)
+
+
 ## [1.2.2] - 09.01.2023
 
 ### Fixed
