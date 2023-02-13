@@ -46,7 +46,7 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 
 	proxySkipper := func(context echo.Context) bool {
 		// Only proxy allowed routes, skip all others
-		return !deps.FaucetAllowedAPIRoute(context)
+		return !deps.FaucetAllowedAPIRoute(context.Request().Method, context.Request().RequestURI)
 	}
 
 	apiBindAddr := deps.RestAPIBindAddress

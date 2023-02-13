@@ -68,7 +68,7 @@ type HTTPOkResponseEnvelope struct {
 
 type (
 	// AllowedRoute defines a function to allow or disallow routes.
-	AllowedRoute func(echo.Context) bool
+	AllowedRoute func(method string, path string) bool
 )
 
 func ParseMessageIDParam(c echo.Context) (hornet.MessageID, error) {

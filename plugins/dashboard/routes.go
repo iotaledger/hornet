@@ -44,7 +44,7 @@ func appBoxMiddleware() echo.MiddlewareFunc {
 		return func(c echo.Context) (err error) {
 			contentType := calculateMimeType(c)
 
-			path := strings.TrimPrefix(c.Request().URL.Path, "/")
+			path := strings.TrimPrefix(c.Request().URL.Path, "/dashboard/")
 			if len(path) == 0 {
 				path = "index.html"
 				contentType = echo.MIMETextHTMLCharsetUTF8
@@ -82,18 +82,23 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 
 	proxySkipper := func(context echo.Context) bool {
 		// Only proxy allowed routes, skip all others
-		return !deps.DashboardAllowedAPIRoute(context)
+		path := strings.Replace(context.Request().RequestURI, "/dashboard/", "/", 1)
+		return !deps.DashboardAllowedAPIRoute(context.Request().Method, path)
 	}
 
 	apiBindAddr := deps.RestAPIBindAddress
-	_, apiBindPort, err := net.SplitHostPort(apiBindAddr)
+	host, apiBindPort, err := net.SplitHostPort(apiBindAddr)
 	if err != nil {
 		Plugin.LogFatalf("wrong REST API bind address: %s", err)
 	}
 
-	apiURL, err := url.Parse(fmt.Sprintf("http://localhost:%s", apiBindPort))
+	if host == "0.0.0.0" {
+		host = "localhost"
+	}
+
+	apiURL, err := url.Parse(fmt.Sprintf("http://%s:%s", host, apiBindPort))
 	if err != nil {
-		Plugin.LogFatalf("wrong dashboard API url: %s", err)
+		Plugin.LogFatalf("wrong REST API url: %s", err)
 	}
 
 	balancer := middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{
@@ -105,16 +110,19 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 	config := middleware.ProxyConfig{
 		Skipper:  proxySkipper,
 		Balancer: balancer,
+		Rewrite: map[string]string{
+			"/dashboard/*": "/$1",
+		},
 	}
 
-	// Protect this routes with JWT even if the API is not protected
+	// Protect these routes with JWT even if the API is not protected
 	jwtAuthRoutes := []string{
-		"/api/v1/peers",
-		"/api/plugins",
+		"/dashboard/api/v1/peers",
+		"/dashboard/api/plugins",
 	}
 
 	jwtAuthSkipper := func(context echo.Context) bool {
-		path := context.Request().URL.EscapedPath()
+		path := context.Request().RequestURI
 		for _, prefix := range jwtAuthRoutes {
 			if strings.HasPrefix(path, prefix) {
 				return false
@@ -207,16 +215,23 @@ func setupRoutes(e *echo.Echo) {
 	e.Pre(enforceMaxOneDotPerURL)
 	e.Use(middleware.CSRF())
 
+	e.GET("/", func(c echo.Context) error {
+		return c.Redirect(http.StatusPermanentRedirect, "/dashboard/")
+	})
+	e.GET("/dashboard", func(c echo.Context) error {
+		return c.Redirect(http.StatusPermanentRedirect, "/dashboard/")
+	})
+
 	mw := appBoxMiddleware()
 	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
 		mw = devModeReverseProxyMiddleware()
 	}
-	e.Group("/*").Use(mw)
+	e.Group("/dashboard/*").Use(mw)
 
 	// Pass all the explorer request through to the local rest API
-	e.Group("/api", apiMiddlewares()...)
+	e.Group("/dashboard/api", apiMiddlewares()...)
 
-	e.GET("/ws", websocketRoute)
+	e.GET("/dashboard/ws", websocketRoute)
 
 	// Rate-limit the auth endpoint
 	rateLimiterConfig := middleware.RateLimiterConfig{
@@ -227,7 +242,18 @@ func setupRoutes(e *echo.Echo) {
 				ExpiresIn: 5 * time.Minute,
 			},
 		),
+		IdentifierExtractor: func(ctx echo.Context) (string, error) {
+			id := ctx.RealIP()
+
+			return id, nil
+		},
+		ErrorHandler: func(context echo.Context, err error) error {
+			return context.JSON(http.StatusForbidden, nil)
+		},
+		DenyHandler: func(context echo.Context, identifier string, err error) error {
+			return context.JSON(http.StatusTooManyRequests, nil)
+		},
 	}
 
-	e.POST("/auth", authRoute, middleware.RateLimiterWithConfig(rateLimiterConfig))
+	e.POST("/dashboard/auth", authRoute, middleware.RateLimiterWithConfig(rateLimiterConfig))
 }
