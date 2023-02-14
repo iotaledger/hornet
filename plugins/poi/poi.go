@@ -223,7 +223,6 @@ func createProof(c echo.Context) (*ProofRequestAndResponse, error) {
 }
 
 func validateProof(c echo.Context) (*ValidateProofResponse, error) {
-
 	req := &ProofRequestAndResponse{}
 	if err := c.Bind(req); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
@@ -233,11 +232,17 @@ func validateProof(c echo.Context) (*ValidateProofResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: wrong version of proof: %d, supported version: %d", req.Version, ProofVersion)
 	}
 
-	if req.Proof == nil || req.Milestone == nil || req.Message == nil {
+	if req.Milestone == nil || req.Message == nil {
 		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid request")
 	}
 
-	valid, err := checkAuditPath(c.Request().Context(), req.Proof, req.Milestone, req.Message)
+	// if target message is a direct parent of the milestone, the audit path is empty
+	var proof []*iotago.Message
+	if req.Proof != nil {
+		proof = req.Proof
+	}
+
+	valid, err := checkAuditPath(c.Request().Context(), proof, req.Milestone, req.Message)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to check audit path: %s", err)
 

@@ -21,7 +21,8 @@ func setupRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		// we return the plain response without the data container to mimic the stardust behavior
+		return c.JSON(http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteValidateProof, func(c echo.Context) error {
@@ -30,6 +31,7 @@ func setupRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		// we return the plain response without the data container to mimic the stardust behavior
+		return c.JSON(http.StatusOK, resp)
 	})
 }

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.4] - 10.01.2023
+
+### Added
+    - Add proof of inclusion plugin (#1833)
+
+
 ## [1.2.3] - 09.01.2023
 
 ### Changed
