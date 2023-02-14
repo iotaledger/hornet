@@ -34,14 +34,14 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 	var targetIndex milestone.Index
 
 	if request.Index != nil {
-		targetIndex, err = deps.SnapshotManager.PruneDatabaseByTargetIndex(Plugin.Daemon().ContextStopped(), *request.Index)
+		targetIndex, err = deps.SnapshotManager.PruneDatabaseByTargetIndex(c.Request().Context(), *request.Index)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
 	}
 
 	if request.Depth != nil {
-		targetIndex, err = deps.SnapshotManager.PruneDatabaseByDepth(Plugin.Daemon().ContextStopped(), *request.Depth)
+		targetIndex, err = deps.SnapshotManager.PruneDatabaseByDepth(c.Request().Context(), *request.Depth)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
@@ -53,7 +53,7 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
 
-		targetIndex, err = deps.SnapshotManager.PruneDatabaseBySize(Plugin.Daemon().ContextStopped(), pruningTargetDatabaseSizeBytes)
+		targetIndex, err = deps.SnapshotManager.PruneDatabaseBySize(c.Request().Context(), pruningTargetDatabaseSizeBytes)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
@@ -86,7 +86,7 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 		fullIndex = milestone.Index(*request.FullIndex)
 		fullSnapshotFilePath = filepath.Join(filepath.Dir(deps.SnapshotsFullPath), fmt.Sprintf("full_snapshot_%d.bin", fullIndex))
 
-		if err := deps.SnapshotManager.CreateFullSnapshot(Plugin.Daemon().ContextStopped(), fullIndex, fullSnapshotFilePath, false); err != nil {
+		if err := deps.SnapshotManager.CreateFullSnapshot(c.Request().Context(), fullIndex, fullSnapshotFilePath, false); err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating full snapshot failed: %s", err)
 		}
 	}
@@ -96,7 +96,7 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 		deltaSnapshotFilePath = filepath.Join(filepath.Dir(deps.SnapshotsDeltaPath), fmt.Sprintf("delta_snapshot_%d.bin", deltaIndex))
 
 		// if no full snapshot was created, the last existing full snapshot will be used
-		if err := deps.SnapshotManager.CreateDeltaSnapshot(Plugin.Daemon().ContextStopped(), deltaIndex, deltaSnapshotFilePath, false, fullSnapshotFilePath); err != nil {
+		if err := deps.SnapshotManager.CreateDeltaSnapshot(c.Request().Context(), deltaIndex, deltaSnapshotFilePath, false, fullSnapshotFilePath); err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating delta snapshot failed: %s", err)
 		}
 	}

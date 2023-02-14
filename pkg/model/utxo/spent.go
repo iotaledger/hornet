@@ -32,6 +32,7 @@ func (l LexicalOrderedSpents) Swap(i, j int) {
 
 // Spent are already spent TXOs (transaction outputs) per address
 type Spent struct {
+	//nolint:unused
 	kvStorable
 
 	outputID *iotago.UTXOInputID

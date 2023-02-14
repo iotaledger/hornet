@@ -3,6 +3,7 @@ package restapi
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -108,6 +109,10 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps echoDeps) echoResult {
 		e := echo.New()
+		e.Server.BaseContext = func(l net.Listener) context.Context {
+			// set BaseContext to be the same as the daemon, so that requests being processed don't hang the shutdown procedure
+			return Plugin.Daemon().ContextStopped()
+		}
 		e.HideBanner = true
 		e.Use(middleware.Recover())
 		e.Use(middleware.CORS())

@@ -20,6 +20,7 @@ import (
 	"github.com/iotaledger/hornet/plugins/migrator"
 	"github.com/iotaledger/hornet/plugins/mqtt"
 	"github.com/iotaledger/hornet/plugins/participation"
+	"github.com/iotaledger/hornet/plugins/poi"
 	"github.com/iotaledger/hornet/plugins/profiling"
 	"github.com/iotaledger/hornet/plugins/prometheus"
 	"github.com/iotaledger/hornet/plugins/receipt"
@@ -63,6 +64,7 @@ func main() {
 			debug.Plugin,
 			faucet.Plugin,
 			participation.Plugin,
+			poi.Plugin,
 		}...),
 	)
 }

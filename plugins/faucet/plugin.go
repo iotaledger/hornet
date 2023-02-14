@@ -3,6 +3,7 @@ package faucet
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -146,6 +147,11 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Faucet plugin")
+	}
+
 	restapiv1.AddFeature(Plugin.Name)
 
 	routeGroup := deps.RestRouteManager.AddRoute("plugins/faucet")
@@ -251,6 +257,10 @@ func run() {
 		bindAddr := deps.NodeConfig.String(CfgFaucetWebsiteBindAddress)
 
 		e := echo.New()
+		e.Server.BaseContext = func(l net.Listener) context.Context {
+			// set BaseContext to be the same as the daemon, so that requests being processed don't hang the shutdown procedure
+			return Plugin.Daemon().ContextStopped()
+		}
 		e.HideBanner = true
 		e.Use(middleware.Recover())
 

@@ -1,5 +1,6 @@
 package utxo
 
+//nolint:unused
 type kvStorable interface {
 	kvStorableKey() (key []byte)
 	kvStorableValue() (value []byte)

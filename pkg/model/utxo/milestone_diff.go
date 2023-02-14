@@ -14,6 +14,7 @@ import (
 
 // MilestoneDiff represents the generated and spent outputs by a milestone's confirmation.
 type MilestoneDiff struct {
+	//nolint:unused
 	kvStorable
 	// The index of the milestone.
 	Index milestone.Index

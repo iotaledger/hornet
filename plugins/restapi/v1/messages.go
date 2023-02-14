@@ -28,7 +28,7 @@ var (
 	messageProcessedTimeout = 1 * time.Second
 )
 
-func messageMetadataByMessageID(messageID hornet.MessageID) (*messageMetadataResponse, error) {
+func messageMetadataByMessageID(c echo.Context, messageID hornet.MessageID) (*messageMetadataResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
@@ -75,7 +75,7 @@ func messageMetadataByMessageID(messageID hornet.MessageID) (*messageMetadataRes
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
-		ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
+		ycri, ocri, err := dag.ConeRootIndexes(c.Request().Context(), deps.Storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
@@ -246,11 +246,8 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 				return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
 			}
 
-			mergedCtx, mergedCtxCancel := utils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
-			defer mergedCtxCancel()
-
 			ts := time.Now()
-			messageSize, err := deps.PoWHandler.DoPoW(mergedCtx, msg, powWorkerCount, refreshTipsFunc)
+			messageSize, err := deps.PoWHandler.DoPoW(c.Request().Context(), msg, powWorkerCount, refreshTipsFunc)
 			if err != nil {
 				return nil, err
 			}

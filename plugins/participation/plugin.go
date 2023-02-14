@@ -147,6 +147,11 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Participation plugin")
+	}
+
 	restapiv1.AddFeature(Plugin.Name)
 
 	routeGroup := deps.RestRouteManager.AddRoute("plugins/participation")
