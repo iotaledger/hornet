@@ -19,12 +19,12 @@ Once you have deployed Hornet, you can set all the parameters using configuratio
 
 The most important configuration files are:
 
-* `config.json`: includes all configuration flags and their values.
-* `peering.json`: includes all connection details to your static peers (neighbors).
+* `config.json` - Includes all configuration flags and their values.
+* `peering.json` - Includes all connection details to your static peers (neighbors).
 
 :::note
 
-Hornet version 0.5.x targets the legacy IOTA 1.0 network. Hornet version 1.x.x targets the IOTA 1.5 network, also known as [Chrysalis](https://wiki.iota.org/chrysalis-docs/welcome), which is the focus of this documentation.
+Hornet version 0.5.x targets the legacy IOTA 1.0 network. Hornet version 1.x.x targets the IOTA 1.5 network, also known as [Chrysalis](https://wiki.iota.org/introduction/explanations/update/what_is_chrysalis), which is the focus of this documentation.
 
 :::
 
@@ -110,55 +110,37 @@ For the new password to take effect, you must restart Hornet.
 
 ## Configuring HTTP REST API
 
-One of the tasks the the node is responsible for is exposing the [HTTP REST ](../explanations/nodes_101.md#http-rest-api) to clients that would like to interact with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
+One of the tasks the the node is responsible for is exposing [API](../references/api_reference.md) to clients that would like to interact with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
 
-By default, Hornet will publicly expose the [HTTP REST ](../explanations/nodes_101.md#http-rest-api) on port 14265, as it is ready to accept incoming connections from the Internet.
+By default, Hornet will expose the [REST API](../references/api_reference.md) on port `14265`.
+If you use the [recommended setup](using_docker.md) the API will be exposed on the default HTTPS port (`443`) and secured using an SSL certificate.
 
-Since offering the HTTP REST API to the public can consume your node's resources, there are options to restrict which routes can be called and other request limitations.
+Since offering the HTTP REST API to the public can consume your node's resources, there are options to restrict which routes can be called and other request limitations:
 
-You can find the HTTP REST API related options in the `restAPI` section within the `config.json` file:
+### Routes
 
-```json
-  "restAPI": {
-    "jwtAuth": {
-      "salt": "HORNET"
-    },
-    "publicRoutes": [
-      "/health",
-      "/mqtt",
-      "/api/routes",
-      "/api/v1/info",
-      "/api/v1/tips",
-      "/api/v1/messages*",
-      "/api/v1/transactions*",
-      "/api/v1/milestones*",
-      "/api/v1/outputs*",
-      "/api/v1/addresses*",
-      "/api/v1/treasury",
-      "/api/v1/receipts*"
-    ],
-    "protectedRoutes": [
-      "/api/v1/*",
-      "/api/plugins/*"
-    ],
-    "bindAddress": "0.0.0.0:14265",
-    "powEnabled": true,
-    "powWorkerCount": 1,
-    "limits": {
-      "bodyLength": "1M",
-      "maxResults": 1000
-    }
-  }
+* `restAPI.publicRoutes` defines which routes can be called without JWT authorization. 
+* `restAPI.protectedRoutes` defines which routes require JWT authorization.
+* All other routes will not be exposed.
+
+### JWT Auth
+
+To generate a JWT-token to be used with the protected routes you can run:
+
+```sh
+./hornet tool jwt-api --databasePath <path to your p2pstore> --salt <restAPI.jwtAuth.salt value from your config.json>
 ```
 
-If you want to make the HTTP REST API only accessible from localhost, you change the `restAPI.bindAddress` config option accordingly.
+If you are running our [recommended setup](using_docker.md) then see [here](using_docker.md#tools).
 
-`restAPI.publicRoutes` defines which routes can be called without JWT authorization. `restAPI.protectedRoutes` defines which routes require JWT authorization. All other routes will not be exposed.
+### Proof-of-Work
 
-If you are concerned with resource consumption, consider turning off `restAPI.powEnabled`. This way, the clients must perform proof of work locally before submitting a message for broadcast. If you would like to offer proof of work to clients, consider increasing the `restAPI.powWorkerCount` to provide a faster message submission experience.
+If you are concerned with resource consumption, consider turning off `restAPI.pow.enabled`. 
+This way, the clients must perform proof of work locally before submitting a block for broadcast.
+If you would like to offer proof of work to clients, consider increasing the `restAPI.pow.workerCount` to provide a faster block submission experience.
 
+### Reverse Proxy
 We recommend that you provide your HTTP REST API behind a reverse proxy, such as [HAProxy](http://www.haproxy.org/), [Traefik](https://traefik.io/), [Nginx](https://www.nginx.com/), or [Apache](https://www.apache.org/) configured with TLS.
+When using our [recommended setup](using_docker.md) this is done for you automatically.
 
-Please see some of our additional security recommendations in our [Security 101 article](../explanations/security_101.md).
-
-You can explore more details regarding different API calls at the [IOTA client library documentation](https://wiki.iota.org/chrysalis-docs/libraries/client).
+You can explore more details regarding different API calls at the [IOTA client library documentation](https://wiki.iota.org/iota.rs/welcome).
