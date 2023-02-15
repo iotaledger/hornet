@@ -25,7 +25,7 @@ This command starts a local, wiki themed development server and opens up a brows
 
 ## Features And Tools
 
-You can find guidance and an introduction to the needed tools and syntax on [our wiki](https://wiki.iota.org/participate/contribute-to-wiki/for_devs/developer_guide)
+You can find guidance and an introduction to the needed tools and syntax on [our wiki](https://wiki.iota.org/community/contribute-to-wiki/getting_started/developer)
 
 
 ## Default Structure
