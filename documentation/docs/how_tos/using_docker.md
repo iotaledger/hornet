@@ -32,7 +32,7 @@ It includes everything required to setup a public node accessible by wallets and
 - [wasp](https://github.com/iotaledger/wasp) - L2 Node for IOTA Smart Contracts.
 
 We only recommend running a node on hosted servers and not on personal computers.
-Please take into consideration the points explained in the [Security 101](https://wiki.iota.org/nodes/explanations/security_101#securing-your-device).
+Please take into consideration the points explained in the [Security 101](https://wiki.iota.org/shimmer/develop/nodes/explanations/security_101#securing-your-device).
 
 HORNET Docker images (amd64/x86_64 and arm64 architecture) are available at the [iotaledger/hornet](https://hub.docker.com/r/iotaledger/hornet) Docker hub.
 
