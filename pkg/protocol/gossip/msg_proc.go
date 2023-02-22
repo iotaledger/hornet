@@ -8,11 +8,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/objectstorage"
 	"github.com/iotaledger/hive.go/core/protocol/message"
 	"github.com/iotaledger/hive.go/core/syncutils"
 	"github.com/iotaledger/hive.go/core/workerpool"
+	
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"

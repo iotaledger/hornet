@@ -3,7 +3,7 @@ package prometheus
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/iotaledger/hive.go/core/events"
+	
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

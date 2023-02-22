@@ -11,10 +11,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/core/generics/event"
 	"github.com/iotaledger/hive.go/core/timeutil"
+	
+	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"

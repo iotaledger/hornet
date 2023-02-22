@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/kvstore"
-	"github.com/iotaledger/hive.go/core/objectstorage"
-	"github.com/iotaledger/hive.go/core/syncutils"
+	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/kvstore/objectstorage"
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/profile"
@@ -20,7 +20,7 @@ const (
 )
 
 type packageEvents struct {
-	PruningStateChanged *events.Event
+	PruningStateChanged *event.Event1[bool]
 }
 
 type ReadOption = objectstorage.ReadOption
@@ -140,7 +140,7 @@ func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile .
 		},
 		utxoManager: utxo.New(utxoStore),
 		Events: &packageEvents{
-			PruningStateChanged: events.NewEvent(events.BoolCaller),
+			PruningStateChanged: event.New1[bool](),
 		},
 	}
 

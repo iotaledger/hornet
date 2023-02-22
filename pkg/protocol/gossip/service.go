@@ -11,10 +11,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/typeutils"
 	"github.com/iotaledger/hive.go/core/workerpool"
+	
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	iotago "github.com/iotaledger/iota.go/v3"

@@ -6,8 +6,8 @@ import (
 	"github.com/labstack/gommon/bytes"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/app"
+	
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"

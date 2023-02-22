@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/syncutils"
+	
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -16,9 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hive.go/core/configuration"
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/logger"
 	hivep2p "github.com/iotaledger/hive.go/core/p2p"
+	
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"

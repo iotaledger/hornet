@@ -11,8 +11,8 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/workerpool"
+	
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"

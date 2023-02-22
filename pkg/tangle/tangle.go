@@ -9,11 +9,11 @@ import (
 	"go.uber.org/atomic"
 
 	"github.com/iotaledger/hive.go/core/daemon"
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/syncutils"
 	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hive.go/core/workerpool"
+	
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/migrator"
 	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"

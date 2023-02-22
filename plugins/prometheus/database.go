@@ -5,7 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/iotaledger/hive.go/core/events"
+	
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"

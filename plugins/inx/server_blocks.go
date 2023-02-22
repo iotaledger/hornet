@@ -8,8 +8,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/iotaledger/hive.go/core/contextutils"
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/workerpool"
+	
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"

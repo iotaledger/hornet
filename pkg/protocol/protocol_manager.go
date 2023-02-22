@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/iotaledger/hive.go/core/events"
+	
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -14,7 +14,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/core/configuration"
 	hivedb "github.com/iotaledger/hive.go/core/database"
 	hivep2p "github.com/iotaledger/hive.go/core/p2p"

@@ -7,9 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/syncutils"
+	
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	storagepkg "github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"

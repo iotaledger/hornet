@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/core/contextutils"
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hive.go/core/workerpool"
+	
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"

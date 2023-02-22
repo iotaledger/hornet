@@ -3,8 +3,9 @@ package gossip
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/generics/event"
+	
+	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 )
 

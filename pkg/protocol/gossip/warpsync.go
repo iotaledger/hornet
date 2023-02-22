@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/syncutils"
+	
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"

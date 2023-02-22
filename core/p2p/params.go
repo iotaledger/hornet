@@ -3,7 +3,7 @@ package p2p
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/app"
 )
 
 const (

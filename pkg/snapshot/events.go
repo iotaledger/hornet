@@ -1,8 +1,6 @@
 package snapshot
 
-import (
-	"github.com/iotaledger/hive.go/core/events"
-)
+import 
 
 // MetricsCaller is used to signal updated snapshot metrics.
 func MetricsCaller(handler interface{}, params ...interface{}) {

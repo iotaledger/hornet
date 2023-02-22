@@ -8,12 +8,12 @@ import (
 	"github.com/pkg/errors"
 
 	hivedb "github.com/iotaledger/hive.go/core/database"
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/core/kvstore/pebble"
 	"github.com/iotaledger/hive.go/core/kvstore/rocksdb"
+	
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 )
 
