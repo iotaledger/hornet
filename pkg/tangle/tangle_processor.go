@@ -224,8 +224,9 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 
 				if isSolid {
 					// try to solidify the future cone of the block
+					metadata := cachedBlock.CachedMetadata() // meta +1
 					t.futureConeSolidifierWorkerPool.Submit(func() {
-						if err := t.futureConeSolidifier.SolidifyBlockAndFutureCone(t.shutdownCtx, cachedBlock.CachedMetadata()); err != nil {
+						if err := t.futureConeSolidifier.SolidifyBlockAndFutureCone(t.shutdownCtx, metadata); err != nil {
 							t.LogDebugf("SolidifyBlockAndFutureCone failed: %s", err)
 						} // meta pass +1
 					})
