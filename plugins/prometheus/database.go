@@ -5,7 +5,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -44,11 +43,11 @@ func configureStorage(storage *storage.Storage, metrics *metrics.StorageMetrics)
 		},
 	)
 
-	storage.Events.PruningStateChanged.Hook(events.NewClosure(func(running bool) {
+	storage.Events.PruningStateChanged.Hook(func(running bool) {
 		if running {
 			m.pruningCount.Inc()
 		}
-	}))
+	})
 
 	m.pruningRunning = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: "iota",
@@ -95,11 +94,11 @@ func configureDatabase(name string, db *database.Database) {
 		},
 	)
 
-	db.Events().Compaction.Hook(events.NewClosure(func(running bool) {
+	db.Events().Compaction.Hook(func(running bool) {
 		if running {
 			m.compactionCount.Inc()
 		}
-	}))
+	})
 
 	m.compactionRunning = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: "iota",

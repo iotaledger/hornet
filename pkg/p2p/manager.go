@@ -231,7 +231,8 @@ type Manager struct {
 // Start starts the Manager's event loop.
 // This method blocks until the given context is done.
 func (m *Manager) Start(ctx context.Context) {
-	defer m.attachEvents()()
+	unhook := m.hookEvents()
+	defer unhook()
 
 	// manage libp2p network events
 	m.host.Network().Notify((*netNotifiee)(m))
@@ -949,7 +950,7 @@ func (m *Manager) call(peerID peer.ID, f PeerFunc) {
 	f(p)
 }
 
-func (m *Manager) attachEvents() func() {
+func (m *Manager) hookEvents() (unhook func()) {
 	return lo.Batch(
 		// logger
 		m.Events.Connect.Hook(func(p *Peer) {

@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/objectstorage"
+	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hive.go/runtime/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"

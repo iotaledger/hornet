@@ -3,7 +3,6 @@ package prometheus
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -34,8 +33,8 @@ func configureReceipts() {
 	registry.MustRegister(receiptCount)
 	registry.MustRegister(receiptMigrationEntriesApplied)
 
-	deps.Tangle.Events.NewReceipt.Hook(events.NewClosure(func(r *iotago.ReceiptMilestoneOpt) {
+	deps.Tangle.Events.NewReceipt.Hook(func(r *iotago.ReceiptMilestoneOpt) {
 		receiptCount.Inc()
 		receiptMigrationEntriesApplied.Add(float64(len(r.Funds)))
-	}))
+	})
 }

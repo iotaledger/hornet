@@ -40,11 +40,11 @@ func blockMetadataByBlockID(blockID iotago.BlockID) (*blockMetadataResponse, err
 	}
 
 	if metadata.IsMilestone() {
-		cachedBlock := deps.Storage.CachedBlockOrNil(blockID)
+		cachedBlock := deps.Storage.CachedBlockOrNil(blockID) // block +1
 		if cachedBlock == nil {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
 		}
-		defer cachedBlock.Release(true)
+		defer cachedBlock.Release(true) // block -1
 
 		milestone := cachedBlock.Block().Milestone()
 		if milestone == nil {

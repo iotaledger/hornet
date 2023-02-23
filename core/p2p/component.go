@@ -15,7 +15,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/core/configuration"
+	"github.com/iotaledger/hive.go/app/configuration"
 	hivedb "github.com/iotaledger/hive.go/core/database"
 	hivep2p "github.com/iotaledger/hive.go/core/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"

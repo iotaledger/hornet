@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/syncutils"
-	
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -23,10 +23,10 @@ func NewWarpSync(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpoin
 	ws := &WarpSync{
 		AdvancementRange: syncmanager.MilestoneIndexDelta(advRange),
 		Events: &Events{
-			CheckpointUpdated: events.NewEvent(CheckpointCaller),
-			TargetUpdated:     events.NewEvent(TargetCaller),
-			Start:             events.NewEvent(SyncStartCaller),
-			Done:              events.NewEvent(SyncDoneCaller),
+			CheckpointUpdated: event.New4[iotago.MilestoneIndex, iotago.MilestoneIndex, syncmanager.MilestoneIndexDelta, iotago.MilestoneIndex](),
+			TargetUpdated:     event.New2[iotago.MilestoneIndex, iotago.MilestoneIndex](),
+			Start:             event.New3[iotago.MilestoneIndex, iotago.MilestoneIndex, syncmanager.MilestoneIndexDelta](),
+			Done:              event.New3[int, int, time.Duration](),
 		},
 	}
 	if len(advanceCheckpointCriteriaFunc) > 0 {
@@ -38,36 +38,16 @@ func NewWarpSync(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpoin
 	return ws
 }
 
-func SyncStartCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(target iotago.MilestoneIndex, newCheckpoint iotago.MilestoneIndex, msRange syncmanager.MilestoneIndexDelta))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex), params[2].(syncmanager.MilestoneIndexDelta))
-}
-
-func SyncDoneCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(delta int, referencedBlocksTotal int, dur time.Duration))(params[0].(int), params[1].(int), params[2].(time.Duration))
-}
-
-func CheckpointCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(newCheckpoint iotago.MilestoneIndex, oldCheckpoint iotago.MilestoneIndex, msRange syncmanager.MilestoneIndexDelta, target iotago.MilestoneIndex))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex), params[2].(syncmanager.MilestoneIndexDelta), params[3].(iotago.MilestoneIndex))
-}
-
-func TargetCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(checkpoint iotago.MilestoneIndex, target iotago.MilestoneIndex))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneIndex))
-}
-
 // Events holds WarpSync related events.
 type Events struct {
-	// Fired when a new set of milestones should be requested.
-	CheckpointUpdated *events.Event
-	// Fired when the target milestone is updated.
-	TargetUpdated *events.Event
-	// Fired when warp synchronization starts.
-	Start *events.Event
-	// Fired when the warp synchronization is done.
-	Done *events.Event
+	// Fired when a new set of milestones should be requested. newCheckpoint iotago.MilestoneIndex, oldCheckpoint iotago.MilestoneIndex, msRange syncmanager.MilestoneIndexDelta, target iotago.MilestoneIndex
+	CheckpointUpdated *event.Event4[iotago.MilestoneIndex, iotago.MilestoneIndex, syncmanager.MilestoneIndexDelta, iotago.MilestoneIndex]
+	// Fired when the target milestone is updated. checkpoint iotago.MilestoneIndex, target iotago.MilestoneIndex
+	TargetUpdated *event.Event2[iotago.MilestoneIndex, iotago.MilestoneIndex]
+	// Fired when warp synchronization starts. target iotago.MilestoneIndex, newCheckpoint iotago.MilestoneIndex, msRange syncmanager.MilestoneIndexDelta
+	Start *event.Event3[iotago.MilestoneIndex, iotago.MilestoneIndex, syncmanager.MilestoneIndexDelta]
+	// Fired when the warp synchronization is done. delta int, referencedBlocksTotal int, dur time.Duration
+	Done *event.Event3[int, int, time.Duration]
 }
 
 // AdvanceCheckpointCriteria is a function which determines whether the checkpoint should be advanced.

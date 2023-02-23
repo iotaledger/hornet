@@ -9,16 +9,16 @@ import (
 func (t *Tangle) processValidMilestone(blockID iotago.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
 	defer cachedMilestone.Release(true) // milestone -1
 
-	t.Events.ReceivedNewMilestoneBlock.Trigger(blockID)
-
 	confirmedMsIndex := t.syncManager.ConfirmedMilestoneIndex()
 	msIndex := cachedMilestone.Milestone().Index()
 
 	if t.syncManager.SetLatestMilestoneIndex(msIndex) {
-		t.Events.LatestMilestoneChanged.Trigger(cachedMilestone) // milestone pass +1
+		t.Events.LatestMilestoneChanged.Trigger(cachedMilestone.Retain()) // milestone pass +1
 		t.Events.LatestMilestoneIndexChanged.Trigger(msIndex)
 	}
-	t.milestoneSolidifierWorkerPool.TrySubmit(msIndex, false)
+	t.milestoneSolidifierWorkerPool.Submit(func() {
+		t.solidifyMilestone(msIndex, false)
+	})
 
 	if msIndex > confirmedMsIndex {
 		t.LogInfof("Valid milestone detected! Index: %d", msIndex)

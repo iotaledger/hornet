@@ -78,7 +78,7 @@ func initConfigPars(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func() cfgResult {
-		dbEngine, err := hivedb.EngineFromStringAllowed(ParamsDatabase.Engine, database.AllowedEnginesDefault...)
+		dbEngine, err := hivedb.EngineFromStringAllowed(ParamsDatabase.Engine, database.AllowedEnginesDefault)
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}

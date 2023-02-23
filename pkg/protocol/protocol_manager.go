@@ -4,31 +4,26 @@ import (
 	"fmt"
 	"sync"
 
-	
+	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func protoParamsMsOptionCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(protoParamsMsOption *iotago.ProtocolParamsMilestoneOpt))(params[0].(*iotago.ProtocolParamsMilestoneOpt))
-}
-
 // Events are events happening around the Manager.
 type Events struct {
 	// Emits a protocol parameters milestone option for the unsupported milestone one milestone before.
-	NextMilestoneUnsupported *events.Event
+	NextMilestoneUnsupported *event.Event1[*iotago.ProtocolParamsMilestoneOpt]
 	// Emits critical errors.
-	CriticalErrors *events.Event
+	CriticalErrors *event.Event1[error]
 }
 
 // NewManager creates a new Manager.
 func NewManager(storage *storage.Storage, ledgerIndex iotago.MilestoneIndex) (*Manager, error) {
 	manager := &Manager{
 		Events: &Events{
-			NextMilestoneUnsupported: events.NewEvent(protoParamsMsOptionCaller),
-			CriticalErrors:           events.NewEvent(events.ErrorCaller),
+			NextMilestoneUnsupported: event.New1[*iotago.ProtocolParamsMilestoneOpt](),
+			CriticalErrors:           event.New1[error](),
 		},
 		storage: storage,
 		current: nil,

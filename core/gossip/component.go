@@ -12,10 +12,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/core/generics/event"
-	"github.com/iotaledger/hive.go/core/timeutil"
-	
-	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -56,11 +53,6 @@ func init() {
 var (
 	CoreComponent *app.CoreComponent
 	deps          dependencies
-
-	// closures.
-	onGossipServiceProtocolStarted     *events.Closure
-	onGossipServiceProtocolTerminated  *events.Closure
-	onMessageProcessorBroadcastMessage *events.Closure
 )
 
 type dependencies struct {
@@ -191,8 +183,6 @@ func configure() error {
 		return deps.SnapshotManager.IsSnapshotting() || deps.PruningManager.IsPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
 	})
 
-	configureEvents()
-
 	return nil
 }
 
@@ -200,10 +190,10 @@ func run() error {
 
 	if err := CoreComponent.Daemon().BackgroundWorker("GossipService", func(ctx context.Context) {
 		CoreComponent.LogInfo("Running GossipService")
-		attachEventsGossipService()
-		deps.GossipService.Start(ctx)
+		unhook := hookEventsGossipService()
+		defer unhook()
 
-		detachEventsGossipService()
+		deps.GossipService.Start(ctx)
 		CoreComponent.LogInfo("Stopped GossipService")
 	}, daemon.PriorityGossipService); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
@@ -223,10 +213,10 @@ func run() error {
 
 	if err := CoreComponent.Daemon().BackgroundWorker("BroadcastQueue", func(ctx context.Context) {
 		CoreComponent.LogInfo("Running BroadcastQueue")
-		attachEventsBroadcastQueue()
-		deps.Broadcaster.RunBroadcastQueueDrainer(ctx)
+		unhook := hookEventsBroadcastQueue()
+		defer unhook()
 
-		detachEventsBroadcastQueue()
+		deps.Broadcaster.RunBroadcastQueueDrainer(ctx)
 		CoreComponent.LogInfo("Stopped BroadcastQueue")
 	}, daemon.PriorityBroadcastQueue); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
@@ -235,7 +225,6 @@ func run() error {
 	if err := CoreComponent.Daemon().BackgroundWorker("MessageProcessor", func(ctx context.Context) {
 		CoreComponent.LogInfo("Running MessageProcessor")
 		deps.MessageProcessor.Run(ctx)
-
 		CoreComponent.LogInfo("Stopped MessageProcessor")
 	}, daemon.PriorityMessageProcessor); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
@@ -255,7 +244,6 @@ func run() error {
 // whether we received heartbeats from other peers. if a peer didn't send any
 // heartbeat for a defined period of time, then the connection to it is dropped.
 func checkHeartbeats() {
-
 	// send a new heartbeat message to every neighbor at least every heartbeatSentInterval
 	deps.Broadcaster.BroadcastHeartbeat(func(proto *gossip.Protocol) bool {
 		return time.Since(proto.HeartbeatSentTime) > heartbeatSentInterval
@@ -338,10 +326,9 @@ func checkHeartbeats() {
 	}
 }
 
-func configureEvents() {
-
-	onGossipServiceProtocolStarted = events.NewClosure(func(proto *gossip.Protocol) {
-		attachEventsProtocolMessages(proto)
+func hookEventsGossipService() (unhook func()) {
+	return deps.GossipService.Events.ProtocolStarted.Hook(func(proto *gossip.Protocol) {
+		hookEventsProtocolMessages(proto)
 
 		// attach protocol errors
 		closeConnectionDueToProtocolError := func(err error) {
@@ -352,8 +339,8 @@ func configureEvents() {
 			}
 		}
 
-		proto.Events.Errors.Hook(events.NewClosure(closeConnectionDueToProtocolError))
-		proto.Parser.Events.Error.Hook(event.NewClosure(closeConnectionDueToProtocolError))
+		proto.Events.Errors.Hook(closeConnectionDueToProtocolError)
+		proto.Parser.Events.Error.Hook(closeConnectionDueToProtocolError)
 
 		if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
 			buf := make([]byte, readBufSize)
@@ -399,42 +386,9 @@ func configureEvents() {
 		}, daemon.PriorityPeerGossipProtocolWrite); err != nil {
 			CoreComponent.LogWarnf("failed to start worker: %s", err)
 		}
-	})
-
-	onGossipServiceProtocolTerminated = events.NewClosure(func(proto *gossip.Protocol) {
-		if proto == nil {
-			return
-		}
-
-		detachEventsProtocolMessages(proto)
-
-		// detach protocol errors
-		if proto.Events != nil && proto.Events.Errors != nil {
-			proto.Events.Errors.DetachAll()
-		}
-
-		if proto.Parser != nil && proto.Parser.Events.Error != nil {
-			proto.Parser.Events.Error.DetachAll()
-		}
-	})
-
-	onMessageProcessorBroadcastMessage = events.NewClosure(deps.Broadcaster.Broadcast)
+	}).Unhook
 }
 
-func attachEventsGossipService() {
-	deps.GossipService.Events.ProtocolStarted.Hook(onGossipServiceProtocolStarted)
-	deps.GossipService.Events.ProtocolTerminated.Hook(onGossipServiceProtocolTerminated)
-}
-
-func attachEventsBroadcastQueue() {
-	deps.MessageProcessor.Events.BroadcastBlock.Hook(onMessageProcessorBroadcastMessage)
-}
-
-func detachEventsGossipService() {
-	deps.GossipService.Events.ProtocolStarted.Detach(onGossipServiceProtocolStarted)
-	deps.GossipService.Events.ProtocolTerminated.Detach(onGossipServiceProtocolTerminated)
-}
-
-func detachEventsBroadcastQueue() {
-	deps.MessageProcessor.Events.BroadcastBlock.Detach(onMessageProcessorBroadcastMessage)
+func hookEventsBroadcastQueue() (unhook func()) {
+	return deps.MessageProcessor.Events.BroadcastBlock.Hook(deps.Broadcaster.Broadcast).Unhook
 }

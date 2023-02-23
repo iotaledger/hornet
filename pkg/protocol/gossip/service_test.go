@@ -15,10 +15,9 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/hive.go/core/configuration"
+	"github.com/iotaledger/hive.go/app/configuration"
 	"github.com/iotaledger/hive.go/core/logger"
 	hivep2p "github.com/iotaledger/hive.go/core/p2p"
-	
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
@@ -90,12 +89,12 @@ func TestServiceEvents(t *testing.T) {
 	fmt.Println("node 2", node2.ID().ShortString())
 
 	var protocolStartedCalled1, protocolStartedCalled2 bool
-	node1Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolStarted.Hook(func(_ *gossip.Protocol) {
 		protocolStartedCalled1 = true
-	}))
-	node2Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
+	})
+	node2Service.Events.ProtocolStarted.Hook(func(_ *gossip.Protocol) {
 		protocolStartedCalled2 = true
-	}))
+	})
 
 	// connect node 1 and 2 to each other
 	go func() {
@@ -123,12 +122,12 @@ func TestServiceEvents(t *testing.T) {
 	require.True(t, protocolStartedCalled2)
 
 	var protocolTerminatedCalled1, protocolTerminatedCalled2 bool
-	node1Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolTerminated.Hook(func(_ *gossip.Protocol) {
 		protocolTerminatedCalled1 = true
-	}))
-	node2Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
+	})
+	node2Service.Events.ProtocolTerminated.Hook(func(_ *gossip.Protocol) {
 		protocolTerminatedCalled2 = true
-	}))
+	})
 
 	// disconnecting them should also clean up the gossip protocol streams.
 	// we also explicitly disconnect node 1 to remove the relation state
@@ -160,12 +159,12 @@ func TestServiceEvents(t *testing.T) {
 
 	protocolStartedCalled1 = false
 	protocolTerminatedCalled1 = false
-	node1Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolStarted.Hook(func(_ *gossip.Protocol) {
 		protocolStartedCalled1 = true
-	}))
-	node1Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
+	})
+	node1Service.Events.ProtocolTerminated.Hook(func(_ *gossip.Protocol) {
 		protocolTerminatedCalled1 = true
-	}))
+	})
 
 	go func() {
 		_ = node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
@@ -228,12 +227,12 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 	fmt.Println("node 3", node3.ID().ShortString())
 
 	var protocolStartedCalled1, protocolStartedCalled2 bool
-	node1Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
+	node1Service.Events.ProtocolStarted.Hook(func(_ *gossip.Protocol) {
 		protocolStartedCalled1 = true
-	}))
-	node2Service.Events.ProtocolStarted.Hook(events.NewClosure(func(_ *gossip.Protocol) {
+	})
+	node2Service.Events.ProtocolStarted.Hook(func(_ *gossip.Protocol) {
 		protocolStartedCalled2 = true
-	}))
+	})
 
 	// connect node 1 and 2 to each other
 	go func() {
@@ -263,9 +262,9 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 	// now lets verify that node 3 can't build a gossip stream to neither node 1 and 2 since both
 	// have their available slots filled
 	var node3ProtocolTerminated int
-	node3Service.Events.ProtocolTerminated.Hook(events.NewClosure(func(_ *gossip.Protocol) {
+	node3Service.Events.ProtocolTerminated.Hook(func(_ *gossip.Protocol) {
 		node3ProtocolTerminated++
-	}))
+	})
 
 	// reset
 	protocolStartedCalled1, protocolStartedCalled2 = false, false

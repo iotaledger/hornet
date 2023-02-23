@@ -8,7 +8,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
-	
+	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hornet/v2/core/protocfg"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -73,7 +73,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func() *metrics.INXMetrics {
 		return &metrics.INXMetrics{
 			Events: &metrics.INXEvents{
-				PoWCompleted: events.NewEvent(metrics.PoWCompletedCaller),
+				PoWCompleted: event.New2[int, time.Duration](),
 			},
 		}
 	}); err != nil {

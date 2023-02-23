@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -171,11 +170,11 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 		return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, err.Error())
 	}
 
-	blockProcessedChan := a.tangle.RegisterBlockProcessedEvent(block.BlockID())
+	listener := a.tangle.BlockProcessedListener(block.BlockID())
 
 	//nolint:contextcheck // we don't pass a context here to not prevent emitting blocks at shutdown (COO etc).
 	if err := a.tangle.messageProcessor.Emit(block); err != nil {
-		a.tangle.DeregisterBlockProcessedEvent(block.BlockID())
+		listener.Deregister()
 
 		return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, err.Error())
 	}
@@ -184,9 +183,8 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 	ctxBlockProcessed, cancelBlockProcessed := context.WithTimeout(ctx, a.opts.blockProcessedTimeout)
 	defer cancelBlockProcessed()
 
-	if err := events.WaitForChannelClosed(ctxBlockProcessed, blockProcessedChan); errors.Is(err, context.DeadlineExceeded) {
-		a.tangle.DeregisterBlockProcessedEvent(block.BlockID())
-	}
+	// We do not care about the error here
+	listener.Wait(ctxBlockProcessed)
 
 	return block.BlockID(), nil
 }

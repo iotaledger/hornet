@@ -8,8 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/core/logger"
-	"github.com/iotaledger/hive.go/core/syncutils"
-	
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	storagepkg "github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
@@ -106,11 +105,7 @@ func NewSnapshotManager(
 		solidEntryPointCheckThresholdFuture:    solidEntryPointCheckThresholdFuture,
 		snapshotDepth:                          snapshotDepth,
 		snapshotInterval:                       snapshotInterval,
-		Events: &Events{
-			SnapshotMilestoneIndexChanged:         events.NewEvent(storagepkg.MilestoneIndexCaller),
-			HandledConfirmedMilestoneIndexChanged: events.NewEvent(storagepkg.MilestoneIndexCaller),
-			SnapshotMetricsUpdated:                events.NewEvent(MetricsCaller),
-		},
+		Events:                                 newEvents(),
 	}
 }
 

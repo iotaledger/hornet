@@ -8,8 +8,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/iotaledger/hive.go/core/workerpool"
-	
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -89,46 +89,30 @@ func (s *Server) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*i
 func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
 	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToLatestMilestones", workerCount).Start()
+	unhook := deps.Tangle.Events.LatestMilestoneChanged.Hook(func(cachedMilestone *storage.CachedMilestone) {
+		defer cachedMilestone.Release(true) // milestone -1
 
-		payload, ok := task.Param(0).(*inx.Milestone)
-		if !ok {
-			Plugin.LogErrorf("send error: expected *inx.Milestone, got %T", task.Param(0))
-			cancel()
-
-			return
-		}
-
+		payload := inxMilestoneForCachedMilestone(cachedMilestone.Retain())
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
+	}, event.WithWorkerPool(wp)).Unhook
 
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onLatestMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
-		defer cachedMilestone.Release(true) // milestone -1
-
-		payload := inxMilestoneForCachedMilestone(cachedMilestone.Retain())
-		wp.Submit(payload)
-	})
-
-	wp.Start()
-	deps.Tangle.Events.LatestMilestoneChanged.Hook(onLatestMilestoneChanged)
 	<-ctx.Done()
-	deps.Tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return ctx.Err()
 }
 
 func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToConfirmedMilestonesServer) error {
-
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return common.ErrSnapshotInfoNotFound
@@ -240,17 +224,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 		return nil
 	}
 
-	sendFunc := func(task *workerpool.Task, _ iotago.MilestoneIndex) error {
-		// no release needed
-
-		payload, ok := task.Param(0).(*inx.MilestoneAndProtocolParameters)
-		if !ok {
-			err := fmt.Errorf("expected *inx.MilestoneAndProtocolParameters, got %T", task.Param(0))
-			Plugin.LogErrorf("send error: %v", err)
-
-			return err
-		}
-
+	sendFunc := func(index iotago.MilestoneIndex, payload *inx.MilestoneAndProtocolParameters) error {
 		if err := srv.Send(payload); err != nil {
 			err := fmt.Errorf("send error: %w", err)
 			Plugin.LogError(err.Error())
@@ -264,30 +238,9 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	var innerErr error
 	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToConfirmedMilestones", 1).Start()
 
-		msIndex, ok := task.Param(1).(iotago.MilestoneIndex)
-		if !ok {
-			Plugin.LogErrorf("send error: expected iotago.MilestoneIndex, got %T", task.Param(0))
-			cancel()
-
-			return
-		}
-
-		done, err := handleRangedSend(&task, msIndex, stream, catchUpFunc, sendFunc)
-		switch {
-		case err != nil:
-			innerErr = err
-			cancel()
-
-		case done:
-			cancel()
-		}
-
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
+	unhook := deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(func(cachedMilestone *storage.CachedMilestone) {
 		defer cachedMilestone.Release(true) // milestone -1
 
 		payload, err := createMilestoneAndProtocolParametersPayloadForMilestone(cachedMilestone.Milestone())
@@ -298,18 +251,25 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 			return
 		}
 
-		wp.Submit(payload, cachedMilestone.Milestone().Index())
-	})
+		done, err := handleRangedSend1(cachedMilestone.Milestone().Index(), payload, stream, catchUpFunc, sendFunc)
+		switch {
+		case err != nil:
+			innerErr = err
+			cancel()
 
-	wp.Start()
-	deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
+		case done:
+			cancel()
+		}
+	}).Unhook
+
 	<-ctx.Done()
-	deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(onConfirmedMilestoneChanged)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return innerErr
 }
@@ -351,11 +311,11 @@ func (s *Server) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_ReadMi
 	defer cachedMilestone.Release(true) // milestone -1
 
 	return milestoneCone(cachedMilestone.Milestone().Index(), cachedMilestone.Milestone().Parents(), func(metadata *storage.BlockMetadata) error {
-		cachedBlock := deps.Storage.CachedBlockOrNil(metadata.BlockID()) // block + 1
+		cachedBlock := deps.Storage.CachedBlockOrNil(metadata.BlockID()) // block +1
 		if cachedBlock == nil {
 			return status.Errorf(codes.Internal, "block %s not found", metadata.BlockID().ToHex())
 		}
-		defer cachedBlock.Release(true)
+		defer cachedBlock.Release(true) // block -1
 
 		meta, err := NewINXBlockMetadata(Plugin.Daemon().ContextStopped(), metadata.BlockID(), metadata)
 		if err != nil {

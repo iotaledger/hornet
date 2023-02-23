@@ -193,7 +193,7 @@ func configure() error {
 
 func run() error {
 	if err := Plugin.App().Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
-		detach := attachEvents()
+		detach := hookEvents()
 		defer detach()
 		deps.AutopeeringManager.Run(ctx)
 	}, daemon.PriorityAutopeering); err != nil {
@@ -247,10 +247,10 @@ func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
 	}
 }
 
-func attachEvents() (detach func()) {
-	var detachCallbacks []func()
+func hookEvents() (unhook func()) {
+	var unhookCallbacks []func()
 	if deps.AutopeeringManager.Discovery() != nil {
-		detachCallbacks = append(detachCallbacks,
+		unhookCallbacks = append(unhookCallbacks,
 			deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Hook(func(ev *discover.PeerDiscoveredEvent) {
 				peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 				if err != nil {
@@ -275,7 +275,7 @@ func attachEvents() (detach func()) {
 	}
 
 	if deps.AutopeeringManager.Selection() != nil {
-		detachCallbacks = append(detachCallbacks,
+		unhookCallbacks = append(unhookCallbacks,
 			// notify the selection when a connection is closed or failed.
 			deps.PeeringManager.Events.Connected.Hook(func(p *p2p.Peer, conn network.Conn) {
 
@@ -430,5 +430,5 @@ func attachEvents() (detach func()) {
 			}).Unhook,
 		)
 	}
-	return lo.Batch(detachCallbacks...)
+	return lo.Batch(unhookCallbacks...)
 }

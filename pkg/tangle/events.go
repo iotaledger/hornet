@@ -1,7 +1,8 @@
 package tangle
 
 import (
-	
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -13,68 +14,59 @@ type BPSMetrics struct {
 	Outgoing uint32 `json:"outgoing"`
 }
 
-// ConfirmationMetricsCaller is used to signal updated confirmation metrics.
-func ConfirmationMetricsCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(metrics *whiteflag.ConfirmationMetrics))(params[0].(*whiteflag.ConfirmationMetrics))
-}
-
-func BPSMetricsCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(*BPSMetrics))(params[0].(*BPSMetrics))
-}
-
-func LedgerUpdatedCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(iotago.MilestoneIndex, utxo.Outputs, utxo.Spents))(params[0].(iotago.MilestoneIndex), params[1].(utxo.Outputs), params[2].(utxo.Spents))
-}
-
-func TreasuryMutationCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(iotago.MilestoneIndex, *utxo.TreasuryMutationTuple))(params[0].(iotago.MilestoneIndex), params[1].(*utxo.TreasuryMutationTuple))
-}
-
-func ReceiptCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(*iotago.ReceiptMilestoneOpt))(params[0].(*iotago.ReceiptMilestoneOpt))
-}
-
-func ReferencedBlocksCountUpdatedCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(msIndex iotago.MilestoneIndex, referencedBlocksCount int))(params[0].(iotago.MilestoneIndex), params[1].(int))
-}
-
 type Events struct {
 	// block events
-	ReceivedNewBlock          *events.Event
-	BlockSolid                *events.Event
-	ReceivedNewMilestoneBlock *events.Event // remove with dashboard removal PR
+	// ReceivedNewBlock contains the block, the latestMilestoneIndex and the confirmedMilestoneIndex
+	ReceivedNewBlock *event.Event3[*storage.CachedBlock, iotago.MilestoneIndex, iotago.MilestoneIndex]
+	BlockSolid       *event.Event1[*storage.CachedMetadata]
 
 	// milestone events
-	LatestMilestoneChanged        *events.Event
-	LatestMilestoneIndexChanged   *events.Event
-	MilestoneSolidificationFailed *events.Event
-	MilestoneTimeout              *events.Event
+	LatestMilestoneChanged        *event.Event1[*storage.CachedMilestone]
+	LatestMilestoneIndexChanged   *event.Event1[iotago.MilestoneIndex]
+	MilestoneSolidificationFailed *event.Event1[iotago.MilestoneIndex]
+	MilestoneTimeout              *event.Event
 
 	// metrics
-	BPSMetricsUpdated *events.Event
+	BPSMetricsUpdated *event.Event1[*BPSMetrics]
 
 	// Events related to milestone confirmation
 
 	// Hint: Ledger is write locked
-	ConfirmedMilestoneIndexChanged *events.Event
+	ConfirmedMilestoneIndexChanged *event.Event1[iotago.MilestoneIndex]
 	// Hint: Ledger is not locked
-	ConfirmationMetricsUpdated *events.Event // used for prometheus metrics
+	ConfirmationMetricsUpdated *event.Event1[*whiteflag.ConfirmationMetrics] // used for prometheus metrics
 	// Hint: Ledger is not locked
-	ConfirmedMilestoneChanged *events.Event
+	ConfirmedMilestoneChanged *event.Event1[*storage.CachedMilestone]
+
+	// BlockReferenced contains the metadata, the milestone index and the confirmation time.
 	// Hint: Ledger is not locked
-	BlockReferenced *events.Event
+	BlockReferenced *event.Event3[*storage.CachedMetadata, iotago.MilestoneIndex, uint32]
 	// Hint: Ledger is not locked
-	ReferencedBlocksCountUpdated *events.Event
+	ReferencedBlocksCountUpdated *event.Event2[iotago.MilestoneIndex, int]
 	// Hint: Ledger is not locked
-	LedgerUpdated *events.Event
+	LedgerUpdated *event.Event3[iotago.MilestoneIndex, utxo.Outputs, utxo.Spents]
 	// Hint: Ledger is not locked
-	TreasuryMutated *events.Event
+	TreasuryMutated *event.Event2[iotago.MilestoneIndex, *utxo.TreasuryMutationTuple]
 	// Hint: Ledger is not locked
-	NewReceipt *events.Event
+	NewReceipt *event.Event1[*iotago.ReceiptMilestoneOpt]
+}
+
+func newEvents() *Events {
+	return &Events{
+		BPSMetricsUpdated:              event.New1[*BPSMetrics](),
+		ReceivedNewBlock:               event.New3[*storage.CachedBlock, iotago.MilestoneIndex, iotago.MilestoneIndex](),
+		BlockSolid:                     event.New1[*storage.CachedMetadata](),
+		BlockReferenced:                event.New3[*storage.CachedMetadata, iotago.MilestoneIndex, uint32](),
+		LatestMilestoneChanged:         event.New1[*storage.CachedMilestone](),
+		LatestMilestoneIndexChanged:    event.New1[iotago.MilestoneIndex](),
+		ConfirmedMilestoneChanged:      event.New1[*storage.CachedMilestone](),
+		ConfirmedMilestoneIndexChanged: event.New1[iotago.MilestoneIndex](),
+		ConfirmationMetricsUpdated:     event.New1[*whiteflag.ConfirmationMetrics](),
+		ReferencedBlocksCountUpdated:   event.New2[iotago.MilestoneIndex, int](),
+		MilestoneSolidificationFailed:  event.New1[iotago.MilestoneIndex](),
+		MilestoneTimeout:               event.New(),
+		LedgerUpdated:                  event.New3[iotago.MilestoneIndex, utxo.Outputs, utxo.Spents](),
+		TreasuryMutated:                event.New2[iotago.MilestoneIndex, *utxo.TreasuryMutationTuple](),
+		NewReceipt:                     event.New1[*iotago.ReceiptMilestoneOpt](),
+	}
 }

@@ -9,7 +9,6 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
-	
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -181,20 +180,17 @@ func provide(c *dig.Container) error {
 }
 
 func run() error {
-
-	newConfirmedMilestoneSignal := make(chan iotago.MilestoneIndex)
-	onConfirmedMilestoneIndexChanged := events.NewClosure(func(msIndex iotago.MilestoneIndex) {
-		select {
-		case newConfirmedMilestoneSignal <- msIndex:
-		default:
-		}
-	})
-
 	if err := CoreComponent.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting snapshot background worker ... done")
 
-		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
-		defer deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
+		newConfirmedMilestoneSignal := make(chan iotago.MilestoneIndex)
+		unhook := deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(func(msIndex iotago.MilestoneIndex) {
+			select {
+			case newConfirmedMilestoneSignal <- msIndex:
+			default:
+			}
+		}).Unhook
+		defer unhook()
 
 		for {
 			select {

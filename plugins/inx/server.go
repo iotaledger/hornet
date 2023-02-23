@@ -11,8 +11,9 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 
-	"github.com/iotaledger/hive.go/core/workerpool"
-	
+	"github.com/iotaledger/hive.go/lo"
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -68,7 +69,6 @@ func (s *Server) Stop() {
 }
 
 func currentNodeStatus() (*inx.NodeStatus, error) {
-
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return nil, common.ErrSnapshotInfoNotFound
@@ -152,13 +152,12 @@ func (s *Server) ListenToNodeStatus(req *inx.NodeStatusRequest, srv inx.INX_List
 
 	var lastUpdateTimer *time.Timer
 	coolDownDuration := time.Duration(req.GetCooldownInMilliseconds()) * time.Millisecond
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToNodeStatus", workerCount)
 
-		status, ok := task.Param(0).(*inx.NodeStatus)
-		if !ok {
-			Plugin.LogErrorf("send error: expected *inx.NodeStatus, got %T", task.Param(0))
-			cancel()
+	onIndexChange := func(_ iotago.MilestoneIndex) {
+		status, err := currentNodeStatus()
+		if err != nil {
+			Plugin.LogErrorf("error creating inx.NodeStatus: %s", err.Error())
 
 			return
 		}
@@ -181,32 +180,23 @@ func (s *Server) ListenToNodeStatus(req *inx.NodeStatusRequest, srv inx.INX_List
 		}
 
 		sendStatus(status)
-
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onIndexChange := events.NewClosure(func(_ iotago.MilestoneIndex) {
-		status, err := currentNodeStatus()
-		if err != nil {
-			Plugin.LogErrorf("error creating inx.NodeStatus: %s", err.Error())
-
-			return
-		}
-		wp.Submit(status)
-	})
+	}
 
 	wp.Start()
-	deps.Tangle.Events.LatestMilestoneIndexChanged.Hook(onIndexChange)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onIndexChange)
-	deps.PruningManager.Events.PruningMilestoneIndexChanged.Hook(onIndexChange)
+	unhook := lo.Batch(
+		deps.Tangle.Events.LatestMilestoneIndexChanged.Hook(onIndexChange, event.WithWorkerPool(wp)).Unhook,
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onIndexChange, event.WithWorkerPool(wp)).Unhook,
+		deps.PruningManager.Events.PruningMilestoneIndexChanged.Hook(onIndexChange, event.WithWorkerPool(wp)).Unhook,
+	)
+
 	<-ctx.Done()
-	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onIndexChange)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onIndexChange)
-	deps.PruningManager.Events.PruningMilestoneIndexChanged.Detach(onIndexChange)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return ctx.Err()
 }
@@ -273,58 +263,4 @@ func (stream *streamRange) rangeRequested() bool {
 // tells whether the stream is bounded, aka has an end index.
 func (stream *streamRange) isBounded() bool {
 	return stream.end > 0
-}
-
-// handles the sending of data within a streamRange.
-//   - sendFunc gets executed for the given index.
-//   - if data wasn't sent between streamRange.lastSent and the given index, then the given catchUpFunc is executed
-//     with the range from streamRange.lastSent + 1 up to index - 1.
-//   - it is the caller's job to call task.Return(...).
-//   - streamRange.lastSent is auto. updated
-func handleRangedSend(task *workerpool.Task, index iotago.MilestoneIndex, streamRange *streamRange,
-	catchUpFunc func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error,
-	sendFunc func(task *workerpool.Task, index iotago.MilestoneIndex) error,
-) (bool, error) {
-
-	// below requested range
-	if streamRange.rangeRequested() && index < streamRange.start {
-		return false, nil
-	}
-
-	// execute catch up function with missing indices
-	if streamRange.rangeRequested() && index-1 > streamRange.lastSent {
-		startIndex := streamRange.start
-		if startIndex < streamRange.lastSent+1 {
-			startIndex = streamRange.lastSent + 1
-		}
-
-		endIndex := index - 1
-		if streamRange.isBounded() && endIndex > streamRange.end {
-			endIndex = streamRange.end
-		}
-
-		if err := catchUpFunc(startIndex, endIndex); err != nil {
-			return false, err
-		}
-
-		streamRange.lastSent = endIndex
-	}
-
-	// stream finished
-	if streamRange.isBounded() && index > streamRange.end {
-		return true, nil
-	}
-
-	if err := sendFunc(task, index); err != nil {
-		return false, err
-	}
-
-	streamRange.lastSent = index
-
-	// stream finished
-	if streamRange.isBounded() && index >= streamRange.end {
-		return true, nil
-	}
-
-	return false, nil
 }

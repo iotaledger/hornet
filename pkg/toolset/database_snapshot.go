@@ -7,7 +7,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/core/configuration"
+	"github.com/iotaledger/hive.go/app/configuration"
 	hivedb "github.com/iotaledger/hive.go/core/database"
 	snapCore "github.com/iotaledger/hornet/v2/core/snapshot"
 	"github.com/iotaledger/hornet/v2/pkg/snapshot"

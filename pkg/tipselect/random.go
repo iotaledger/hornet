@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/iotaledger/hive.go/core/syncutils"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 )
 
 var (

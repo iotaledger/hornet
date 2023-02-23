@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
-	"github.com/iotaledger/hive.go/core/syncutils"
-	
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -28,18 +28,6 @@ type TipSelectionFunc = func() (iotago.BlockIDs, error)
 type TipSelStats struct {
 	// The duration of the tip-selection for a single tip.
 	Duration time.Duration `json:"duration"`
-}
-
-// TipCaller is used to signal tip events.
-func TipCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(*Tip))(params[0].(*Tip))
-}
-
-// WalkerStatsCaller is used to signal tip selection events.
-func WalkerStatsCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(*TipSelStats))(params[0].(*TipSelStats))
 }
 
 const (
@@ -71,11 +59,19 @@ type Tip struct {
 // Events represents events happening on the tip-selector.
 type Events struct {
 	// TipAdded is fired when a tip is added.
-	TipAdded *events.Event
+	TipAdded *event.Event1[*Tip]
 	// TipRemoved is fired when a tip is removed.
-	TipRemoved *events.Event
+	TipRemoved *event.Event1[*Tip]
 	// TipSelPerformed is fired when a tipselection was performed.
-	TipSelPerformed *events.Event
+	TipSelPerformed *event.Event1[*TipSelStats]
+}
+
+func newEvents() *Events {
+	return &Events{
+		TipAdded:        event.New1[*Tip](),
+		TipRemoved:      event.New1[*Tip](),
+		TipSelPerformed: event.New1[*TipSelStats](),
+	}
 }
 
 // TipSelector manages a list of tips and emits events for their removal and addition.
@@ -148,11 +144,7 @@ func New(
 		maxChildrenSemiLazy:             maxChildrenSemiLazy,
 		nonLazyTipsMap:                  make(map[iotago.BlockID]*Tip),
 		semiLazyTipsMap:                 make(map[iotago.BlockID]*Tip),
-		Events: &Events{
-			TipAdded:        events.NewEvent(TipCaller),
-			TipRemoved:      events.NewEvent(TipCaller),
-			TipSelPerformed: events.NewEvent(WalkerStatsCaller),
-		},
+		Events:                          newEvents(),
 	}
 }
 

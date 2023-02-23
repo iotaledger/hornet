@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iotaledger/hive.go/core/syncutils"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/protocol"
 	iotago "github.com/iotaledger/iota.go/v3"
 )

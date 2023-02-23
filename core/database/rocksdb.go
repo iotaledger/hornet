@@ -2,18 +2,13 @@ package database
 
 import (
 	hivedb "github.com/iotaledger/hive.go/core/database"
-	"github.com/iotaledger/hive.go/core/kvstore/rocksdb"
-	
+	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 )
 
 func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Database {
-
-	dbEvents := &database.Events{
-		Cleanup:    events.NewEvent(database.CleanupCaller),
-		Compaction: events.NewEvent(events.BoolCaller),
-	}
+	dbEvents := database.NewEvents()
 
 	rocksDatabase, err := database.NewRocksDB(path)
 	if err != nil {

@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/iotaledger/hive.go/core/workerpool"
-	
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	inx "github.com/iotaledger/inx/go"
@@ -208,14 +208,12 @@ func (s *Server) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentOutp
 }
 
 func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
-
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return common.ErrSnapshotInfoNotFound
 	}
 
 	createLedgerUpdatePayloadAndSend := func(msIndex iotago.MilestoneIndex, outputs utxo.Outputs, spents utxo.Spents) error {
-
 		// Send Begin
 		if err := srv.Send(NewLedgerUpdateBatchBegin(msIndex, len(outputs), len(spents))); err != nil {
 			return fmt.Errorf("send error: %w", err)
@@ -330,23 +328,7 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 		return nil
 	}
 
-	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
-		newOutputs, ok := task.Param(1).(utxo.Outputs)
-		if !ok {
-			err := fmt.Errorf("expected utxo.Outputs, got %T", task.Param(1))
-			Plugin.LogErrorf("send error: %v", err)
-
-			return err
-		}
-
-		newSpents, ok := task.Param(2).(utxo.Spents)
-		if !ok {
-			err := fmt.Errorf("expected utxo.Spents, got %T", task.Param(2))
-			Plugin.LogErrorf("send error: %v", err)
-
-			return err
-		}
-
+	sendFunc := func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) error {
 		if err := createLedgerUpdatePayloadAndSend(index, newOutputs, newSpents); err != nil {
 			Plugin.LogErrorf("send error: %v", err)
 
@@ -359,10 +341,10 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 	var innerErr error
 	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToLedgerUpdates", workerCount).Start()
 
-		done, err := handleRangedSend(&task, task.Param(0).(iotago.MilestoneIndex), stream, catchUpFunc, sendFunc)
+	unhook := deps.Tangle.Events.LedgerUpdated.Hook(func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+		done, err := handleRangedSend2(index, newOutputs, newSpents, stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
@@ -371,28 +353,21 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 		case done:
 			cancel()
 		}
+	}).Unhook
 
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onLedgerUpdated := events.NewClosure(func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) {
-		wp.Submit(index, newOutputs, newSpents)
-	})
-
-	wp.Start()
-	deps.Tangle.Events.LedgerUpdated.Hook(onLedgerUpdated)
 	<-ctx.Done()
-	deps.Tangle.Events.LedgerUpdated.Detach(onLedgerUpdated)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return innerErr
 }
 
 func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx.INX_ListenToTreasuryUpdatesServer) error {
-
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return common.ErrSnapshotInfoNotFound
@@ -534,16 +509,8 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 		return err
 	}
 
-	sendFunc := func(task *workerpool.Task, index iotago.MilestoneIndex) error {
-		tm, ok := task.Param(1).(*utxo.TreasuryMutationTuple)
-		if !ok {
-			err := fmt.Errorf("expected *utxo.TreasuryMutationTuple, got %T", task.Param(1))
-			Plugin.LogErrorf("send error: %v", err)
-
-			return err
-		}
-
-		if err := createTreasuryUpdatePayloadAndSend(index, tm.NewOutput, tm.SpentOutput); err != nil {
+	sendFunc := func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) error {
+		if err := createTreasuryUpdatePayloadAndSend(index, tuple.NewOutput, tuple.SpentOutput); err != nil {
 			Plugin.LogErrorf("send error: %v", err)
 
 			return err
@@ -555,10 +522,10 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 	var innerErr error
 	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToTreasuryUpdates", workerCount).Start()
 
-		done, err := handleRangedSend(&task, task.Param(0).(iotago.MilestoneIndex), stream, catchUpFunc, sendFunc)
+	unhook := deps.Tangle.Events.TreasuryMutated.Hook(func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) {
+		done, err := handleRangedSend1(index, tuple, stream, catchUpFunc, sendFunc)
 		switch {
 		case err != nil:
 			innerErr = err
@@ -567,22 +534,16 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 		case done:
 			cancel()
 		}
+	}, event.WithWorkerPool(wp)).Unhook
 
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onTreasuryMutated := events.NewClosure(func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) {
-		wp.Submit(index, tuple)
-	})
-
-	wp.Start()
-	deps.Tangle.Events.TreasuryMutated.Hook(onTreasuryMutated)
 	<-ctx.Done()
-	deps.Tangle.Events.TreasuryMutated.Detach(onTreasuryMutated)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return innerErr
 }
@@ -590,17 +551,9 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenToMigrationReceiptsServer) error {
 	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToMigrationReceipts", workerCount).Start()
 
-		receipt, ok := task.Param(0).(*iotago.ReceiptMilestoneOpt)
-		if !ok {
-			Plugin.LogErrorf("send error: expected *iotago.ReceiptMilestoneOpt, got %T", task.Param(0))
-			cancel()
-
-			return
-		}
-
+	unhook := deps.Tangle.Events.NewReceipt.Hook(func(receipt *iotago.ReceiptMilestoneOpt) {
 		payload, err := inx.WrapReceipt(receipt)
 		if err != nil {
 			Plugin.LogErrorf("serialize error: %v", err)
@@ -613,22 +566,16 @@ func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenTo
 			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
+	}, event.WithWorkerPool(wp)).Unhook
 
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onNewReceipt := events.NewClosure(func(receipt *iotago.ReceiptMilestoneOpt) {
-		wp.Submit(receipt)
-	})
-
-	wp.Start()
-	deps.Tangle.Events.NewReceipt.Hook(onNewReceipt)
 	<-ctx.Done()
-	deps.Tangle.Events.NewReceipt.Detach(onNewReceipt)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return ctx.Err()
 }

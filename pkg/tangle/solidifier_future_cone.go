@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/iotaledger/hive.go/core/syncutils"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"

@@ -9,8 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/core/contextutils"
 	"github.com/iotaledger/hive.go/core/logger"
-	"github.com/iotaledger/hive.go/core/syncutils"
-	
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/database"
@@ -95,10 +94,7 @@ func NewPruningManager(
 		pruningSizeThresholdPercentage:       pruningSizeThresholdPercentage,
 		pruningSizeCooldownTime:              pruningSizeCooldownTime,
 		pruneReceipts:                        pruneReceipts,
-		Events: &Events{
-			PruningMilestoneIndexChanged: events.NewEvent(storagepkg.MilestoneIndexCaller),
-			PruningMetricsUpdated:        events.NewEvent(MetricsCaller),
-		},
+		Events:                               newEvents(),
 	}
 }
 
