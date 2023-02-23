@@ -139,5 +139,7 @@ func (m *MilestoneManager) StoreMilestone(cachedBlock *storage.CachedBlock, mile
 		return
 	}
 
-	m.Events.ReceivedValidMilestone.Trigger(cachedBlock.Metadata().BlockID(), cachedMilestone.Retain(), requested) // milestone pass +1
+	m.Events.ReceivedValidMilestone.Trigger(cachedBlock.Metadata().BlockID(), cachedMilestone, requested, func(_ iotago.BlockID, milestone *storage.CachedMilestone, _ bool) {
+		milestone.Retain() // milestone pass +1
+	})
 }

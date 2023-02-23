@@ -233,7 +233,9 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 			}
 		}
 
-		t.Events.ReceivedNewBlock.Trigger(cachedBlock.Retain(), latestMilestoneIndex, confirmedMilestoneIndex) // block +1
+		t.Events.ReceivedNewBlock.Trigger(cachedBlock, latestMilestoneIndex, confirmedMilestoneIndex, func(block *storage.CachedBlock, _ iotago.MilestoneIndex, _ iotago.MilestoneIndex) {
+			block.Retain() // block +1
+		})
 
 	} else {
 		t.serverMetrics.KnownBlocks.Inc()
