@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hive.go/app/configuration"
+	appLogger "github.com/iotaledger/hive.go/app/logger"
 	"github.com/iotaledger/hive.go/core/crypto"
-	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -122,7 +122,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	require.NoError(testInterface, err)
 
 	// no need to check the error, since the global logger could already be initialized
-	_ = logger.InitGlobalLogger(cfg)
+	_ = appLogger.InitGlobalLogger(cfg)
 
 	cooPrvKey1, err := crypto.ParseEd25519PrivateKeyFromString("651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c")
 	require.NoError(te.TestInterface, err)

@@ -184,7 +184,7 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 	defer cancelBlockProcessed()
 
 	// We do not care about the error here
-	listener.Wait(ctxBlockProcessed)
+	_ = listener.Wait(ctxBlockProcessed)
 
 	return block.BlockID(), nil
 }

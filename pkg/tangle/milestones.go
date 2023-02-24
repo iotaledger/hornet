@@ -3,10 +3,9 @@ package tangle
 import (
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func (t *Tangle) processValidMilestone(blockID iotago.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
+func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone, requested bool) {
 	defer cachedMilestone.Release(true) // milestone -1
 
 	confirmedMsIndex := t.syncManager.ConfirmedMilestoneIndex()

@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/blang/vfs/memfs"
 	"github.com/dustin/go-humanize"
@@ -201,7 +200,6 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rand.Seed(time.Now().Unix())
 
 	type test struct {
 		name                          string
@@ -325,7 +323,6 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rand.Seed(time.Now().Unix())
 
 	type test struct {
 		name                         string
@@ -419,7 +416,6 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rand.Seed(time.Now().Unix())
 
 	type test struct {
 		name                          string

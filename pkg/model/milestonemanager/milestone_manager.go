@@ -11,8 +11,8 @@ import (
 )
 
 type packageEvents struct {
-	// ReceivedValidMilestone is called when a valid milestone is received, it contains the blockID, the cachedMilestone and a flag if it was requested
-	ReceivedValidMilestone *event.Event3[iotago.BlockID, *storage.CachedMilestone, bool]
+	// ReceivedValidMilestone is called when a valid milestone is received, it contains the cachedMilestone and a flag if it was requested
+	ReceivedValidMilestone *event.Event2[*storage.CachedMilestone, bool]
 }
 
 // MilestoneManager is used to retrieve, verify and store milestones.
@@ -43,7 +43,7 @@ func New(
 		milestonePublicKeyCount: milestonePublicKeyCount,
 
 		Events: &packageEvents{
-			ReceivedValidMilestone: event.New3[iotago.BlockID, *storage.CachedMilestone, bool](),
+			ReceivedValidMilestone: event.New2[*storage.CachedMilestone, bool](),
 		},
 	}
 
@@ -139,7 +139,7 @@ func (m *MilestoneManager) StoreMilestone(cachedBlock *storage.CachedBlock, mile
 		return
 	}
 
-	m.Events.ReceivedValidMilestone.Trigger(cachedBlock.Metadata().BlockID(), cachedMilestone, requested, func(_ iotago.BlockID, milestone *storage.CachedMilestone, _ bool) {
+	m.Events.ReceivedValidMilestone.Trigger(cachedMilestone, requested, func(milestone *storage.CachedMilestone, _ bool) {
 		milestone.Retain() // milestone pass +1
 	})
 }

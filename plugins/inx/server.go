@@ -20,8 +20,7 @@ import (
 )
 
 const (
-	workerCount     = 1
-	workerQueueSize = 10000
+	workerCount = 1
 )
 
 func newServer() *Server {

@@ -224,7 +224,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 		return nil
 	}
 
-	sendFunc := func(index iotago.MilestoneIndex, payload *inx.MilestoneAndProtocolParameters) error {
+	sendFunc := func(_ iotago.MilestoneIndex, payload *inx.MilestoneAndProtocolParameters) error {
 		if err := srv.Send(payload); err != nil {
 			err := fmt.Errorf("send error: %w", err)
 			Plugin.LogError(err.Error())

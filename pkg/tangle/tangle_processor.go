@@ -104,7 +104,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.LogInfo("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
 		unhookEvents := lo.Batch(
-			t.milestoneManager.Events.ReceivedValidMilestone.Hook(func(blockID iotago.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
+			t.milestoneManager.Events.ReceivedValidMilestone.Hook(func(cachedMilestone *storage.CachedMilestone, requested bool) {
 				if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 					// do not process the milestone if the node was shut down
 					cachedMilestone.Release(true) // milestone -1
@@ -113,7 +113,7 @@ func (t *Tangle) RunTangleProcessor() {
 				}
 
 				t.processValidMilestoneWorkerPool.Submit(func() {
-					t.processValidMilestone(blockID, cachedMilestone, requested) // milestone pass +1
+					t.processValidMilestone(cachedMilestone, requested) // milestone pass +1
 				})
 			}).Unhook,
 

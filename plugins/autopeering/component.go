@@ -430,5 +430,6 @@ func hookEvents() (unhook func()) {
 			}).Unhook,
 		)
 	}
+
 	return lo.Batch(unhookCallbacks...)
 }

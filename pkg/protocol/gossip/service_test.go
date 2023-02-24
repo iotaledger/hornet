@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/iotaledger/hive.go/app/configuration"
+	appLogger "github.com/iotaledger/hive.go/app/logger"
 	"github.com/iotaledger/hive.go/core/logger"
 	hivep2p "github.com/iotaledger/hive.go/core/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -66,7 +67,7 @@ func TestServiceEvents(t *testing.T) {
 	require.NoError(t, err)
 
 	// no need to check the error, since the global logger could already be initialized
-	_ = logger.InitGlobalLogger(cfg)
+	_ = appLogger.InitGlobalLogger(cfg)
 
 	mngOpts := []p2p.ManagerOption{
 		p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond),
@@ -193,7 +194,7 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 	require.NoError(t, err)
 
 	// no need to check the error, since the global logger could already be initialized
-	_ = logger.InitGlobalLogger(cfg)
+	_ = appLogger.InitGlobalLogger(cfg)
 
 	mngOpts := []p2p.ManagerOption{
 		p2p.WithManagerReconnectInterval(2*time.Second, 500*time.Millisecond),
