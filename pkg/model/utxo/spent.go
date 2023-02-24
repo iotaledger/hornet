@@ -29,8 +29,6 @@ func (l LexicalOrderedSpents) Swap(i, j int) {
 
 // Spent are already spent TXOs (transaction outputs).
 type Spent struct {
-	kvStorable
-
 	outputID iotago.OutputID
 	// the ID of the transaction that spent the output
 	transactionIDSpent iotago.TransactionID
@@ -191,3 +189,6 @@ func storeSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(spent.KVStorableKey())
 }
+
+// code guards.
+var _ kvStorable = &Spent{}

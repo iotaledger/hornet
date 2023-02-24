@@ -28,8 +28,6 @@ func (l LexicalOrderedOutputs) Swap(i, j int) {
 }
 
 type Output struct {
-	kvStorable
-
 	outputID          iotago.OutputID
 	blockID           iotago.BlockID
 	msIndexBooked     iotago.MilestoneIndex
@@ -247,9 +245,11 @@ func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID iotago.Out
 }
 
 func (u *Manager) ReadOutputByOutputID(outputID iotago.OutputID) (*Output, error) {
-
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()
 
 	return u.ReadOutputByOutputIDWithoutLocking(outputID)
 }
+
+// code guards.
+var _ kvStorable = &Output{}

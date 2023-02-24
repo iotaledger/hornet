@@ -13,7 +13,6 @@ import (
 
 // MilestoneDiff represents the generated and spent outputs by a milestone's confirmation.
 type MilestoneDiff struct {
-	kvStorable
 	// The index of the milestone.
 	Index iotago.MilestoneIndex
 	// The outputs newly generated with this diff.
@@ -223,3 +222,6 @@ func (u *Manager) MilestoneDiff(msIndex iotago.MilestoneIndex) (*MilestoneDiff, 
 
 	return u.MilestoneDiffWithoutLocking(msIndex)
 }
+
+// code guards.
+var _ kvStorable = &MilestoneDiff{}

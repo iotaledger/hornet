@@ -74,7 +74,7 @@ func (t *TreasuryOutput) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-func (t *TreasuryOutput) kvStorableKey() (key []byte) {
+func (t *TreasuryOutput) KVStorableKey() (key []byte) {
 	return marshalutil.New(34).
 		WriteByte(UTXOStoreKeyPrefixTreasuryOutput). // 1 byte
 		WriteBool(t.Spent).                          // 1 byte
@@ -82,7 +82,7 @@ func (t *TreasuryOutput) kvStorableKey() (key []byte) {
 		Bytes()
 }
 
-func (t *TreasuryOutput) kvStorableValue() (value []byte) {
+func (t *TreasuryOutput) KVStorableValue() (value []byte) {
 	return marshalutil.New(8).
 		WriteUint64(t.Amount). // 8 bytes
 		Bytes()
@@ -119,36 +119,36 @@ func (t *TreasuryOutput) kvStorableLoad(_ *Manager, key []byte, value []byte) er
 
 // stores the given treasury output.
 func storeTreasuryOutput(output *TreasuryOutput, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(output.kvStorableKey(), output.kvStorableValue())
+	return mutations.Set(output.KVStorableKey(), output.KVStorableValue())
 }
 
 // deletes the given treasury output.
 func deleteTreasuryOutput(output *TreasuryOutput, mutations kvstore.BatchedMutations) error {
-	return mutations.Delete(output.kvStorableKey())
+	return mutations.Delete(output.KVStorableKey())
 }
 
 // marks the given treasury output as spent.
 func markTreasuryOutputAsSpent(output *TreasuryOutput, mutations kvstore.BatchedMutations) error {
 	outputCopy := *output
 	outputCopy.Spent = false
-	if err := mutations.Delete(outputCopy.kvStorableKey()); err != nil {
+	if err := mutations.Delete(outputCopy.KVStorableKey()); err != nil {
 		return err
 	}
 	outputCopy.Spent = true
 
-	return mutations.Set(outputCopy.kvStorableKey(), outputCopy.kvStorableValue())
+	return mutations.Set(outputCopy.KVStorableKey(), outputCopy.KVStorableValue())
 }
 
 // marks the given treasury output as unspent.
 func markTreasuryOutputAsUnspent(output *TreasuryOutput, mutations kvstore.BatchedMutations) error {
 	outputCopy := *output
 	outputCopy.Spent = true
-	if err := mutations.Delete(outputCopy.kvStorableKey()); err != nil {
+	if err := mutations.Delete(outputCopy.KVStorableKey()); err != nil {
 		return err
 	}
 	outputCopy.Spent = false
 
-	return mutations.Set(outputCopy.kvStorableKey(), outputCopy.kvStorableValue())
+	return mutations.Set(outputCopy.KVStorableKey(), outputCopy.KVStorableValue())
 }
 
 func (u *Manager) readSpentTreasuryOutputWithoutLocking(msHash []byte) (*TreasuryOutput, error) {
@@ -193,14 +193,14 @@ func (u *Manager) StoreUnspentTreasuryOutput(to *TreasuryOutput) error {
 
 	existing, err := u.UnspentTreasuryOutputWithoutLocking()
 	if err == nil {
-		if err = mutations.Delete(existing.kvStorableKey()); err != nil {
+		if err = mutations.Delete(existing.KVStorableKey()); err != nil {
 			mutations.Cancel()
 
 			return err
 		}
 	}
 
-	if err := mutations.Set(to.kvStorableKey(), to.kvStorableValue()); err != nil {
+	if err := mutations.Set(to.KVStorableKey(), to.KVStorableValue()); err != nil {
 		mutations.Cancel()
 
 		return err
@@ -314,3 +314,6 @@ func (u *Manager) ForEachSpentTreasuryOutput(consumer TreasuryOutputConsumer, op
 
 	return innerErr
 }
+
+// code guards.
+var _ kvStorable = &TreasuryOutput{}
