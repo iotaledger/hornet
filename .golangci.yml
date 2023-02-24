@@ -1,5 +1,7 @@
 run:
     tests: true
+    build-tags:
+        - rocksdb
 
 linters-settings:
     gofmt:
