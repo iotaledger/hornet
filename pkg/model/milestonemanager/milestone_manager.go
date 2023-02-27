@@ -43,7 +43,9 @@ func New(
 		milestonePublicKeyCount: milestonePublicKeyCount,
 
 		Events: &packageEvents{
-			ReceivedValidMilestone: event.New2[*storage.CachedMilestone, bool](),
+			ReceivedValidMilestone: event.New2[*storage.CachedMilestone, bool](event.WithPreTriggerFunc(func(milestone *storage.CachedMilestone, _ bool) {
+				milestone.Retain() // milestone pass +1
+			})),
 		},
 	}
 
@@ -139,7 +141,5 @@ func (m *MilestoneManager) StoreMilestone(cachedBlock *storage.CachedBlock, mile
 		return
 	}
 
-	m.Events.ReceivedValidMilestone.Trigger(cachedMilestone, requested, func(milestone *storage.CachedMilestone, _ bool) {
-		milestone.Retain() // milestone pass +1
-	})
+	m.Events.ReceivedValidMilestone.Trigger(cachedMilestone, requested)
 }

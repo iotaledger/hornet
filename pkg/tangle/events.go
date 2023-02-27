@@ -53,13 +53,23 @@ type Events struct {
 
 func newEvents() *Events {
 	return &Events{
-		BPSMetricsUpdated:              event.New1[*BPSMetrics](),
-		ReceivedNewBlock:               event.New3[*storage.CachedBlock, iotago.MilestoneIndex, iotago.MilestoneIndex](),
-		BlockSolid:                     event.New1[*storage.CachedMetadata](),
-		BlockReferenced:                event.New3[*storage.CachedMetadata, iotago.MilestoneIndex, uint32](),
-		LatestMilestoneChanged:         event.New1[*storage.CachedMilestone](),
-		LatestMilestoneIndexChanged:    event.New1[iotago.MilestoneIndex](),
-		ConfirmedMilestoneChanged:      event.New1[*storage.CachedMilestone](),
+		BPSMetricsUpdated: event.New1[*BPSMetrics](),
+		ReceivedNewBlock: event.New3[*storage.CachedBlock, iotago.MilestoneIndex, iotago.MilestoneIndex](event.WithPreTriggerFunc(func(block *storage.CachedBlock, _ iotago.MilestoneIndex, _ iotago.MilestoneIndex) {
+			block.Retain() // block +1
+		})),
+		BlockSolid: event.New1[*storage.CachedMetadata](event.WithPreTriggerFunc(func(metadata *storage.CachedMetadata) {
+			metadata.Retain() // meta pass +1
+		})),
+		BlockReferenced: event.New3[*storage.CachedMetadata, iotago.MilestoneIndex, uint32](event.WithPreTriggerFunc(func(metadata *storage.CachedMetadata, _ iotago.MilestoneIndex, _ uint32) {
+			metadata.Retain() // meta pass +1
+		})),
+		LatestMilestoneChanged: event.New1[*storage.CachedMilestone](event.WithPreTriggerFunc(func(milestone *storage.CachedMilestone) {
+			milestone.Retain() // milestone pass +1
+		})),
+		LatestMilestoneIndexChanged: event.New1[iotago.MilestoneIndex](),
+		ConfirmedMilestoneChanged: event.New1[*storage.CachedMilestone](event.WithPreTriggerFunc(func(milestone *storage.CachedMilestone) {
+			milestone.Retain() // milestone pass +1
+		})),
 		ConfirmedMilestoneIndexChanged: event.New1[iotago.MilestoneIndex](),
 		ConfirmationMetricsUpdated:     event.New1[*whiteflag.ConfirmationMetrics](),
 		ReferencedBlocksCountUpdated:   event.New2[iotago.MilestoneIndex, int](),

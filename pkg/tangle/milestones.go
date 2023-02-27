@@ -12,9 +12,7 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone,
 	msIndex := cachedMilestone.Milestone().Index()
 
 	if t.syncManager.SetLatestMilestoneIndex(msIndex) {
-		t.Events.LatestMilestoneChanged.Trigger(cachedMilestone, func(milestone *storage.CachedMilestone) {
-			milestone.Retain() // milestone pass +1
-		})
+		t.Events.LatestMilestoneChanged.Trigger(cachedMilestone)
 		t.Events.LatestMilestoneIndexChanged.Trigger(msIndex)
 	}
 	t.milestoneSolidifierWorkerPool.Submit(func() {

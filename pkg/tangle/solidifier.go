@@ -42,9 +42,7 @@ func (t *Tangle) markBlockAsSolid(cachedBlockMeta *storage.CachedMetadata) {
 	// update the solidity flags of this block
 	cachedBlockMeta.Metadata().SetSolid(true)
 
-	t.Events.BlockSolid.Trigger(cachedBlockMeta, func(metadata *storage.CachedMetadata) {
-		metadata.Retain() // meta pass +1
-	})
+	t.Events.BlockSolid.Trigger(cachedBlockMeta)
 	t.blockSolidNotifier.Notify(cachedBlockMeta.Metadata().BlockID())
 }
 
@@ -435,9 +433,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 	}
 
 	timeConfirmedMilestoneChangedStart = time.Now()
-	t.Events.ConfirmedMilestoneChanged.Trigger(cachedMilestoneToSolidify, func(milestone *storage.CachedMilestone) {
-		milestone.Retain() // milestone pass +1
-	})
+	t.Events.ConfirmedMilestoneChanged.Trigger(cachedMilestoneToSolidify)
 	timeConfirmedMilestoneChangedEnd = time.Now()
 
 	if newConfirmation != nil {
