@@ -44,7 +44,7 @@ func appBoxMiddleware() echo.MiddlewareFunc {
 		return func(c echo.Context) (err error) {
 			contentType := calculateMimeType(c)
 
-			path := strings.TrimPrefix(c.Request().URL.Path, "/dashboard/")
+			path := strings.TrimPrefix(c.Request().RequestURI, "/dashboard/")
 			if len(path) == 0 {
 				path = "index.html"
 				contentType = echo.MIMETextHTMLCharsetUTF8
@@ -168,7 +168,7 @@ func calculateMimeType(e echo.Context) string {
 
 func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		if strings.Count(c.Request().URL.Path, "..") != 0 {
+		if strings.Count(c.Request().RequestURI, "..") != 0 {
 			return c.String(http.StatusForbidden, "path not allowed")
 		}
 		return next(c)
@@ -246,12 +246,6 @@ func setupRoutes(e *echo.Echo) {
 			id := ctx.RealIP()
 
 			return id, nil
-		},
-		ErrorHandler: func(context echo.Context, err error) error {
-			return context.JSON(http.StatusForbidden, nil)
-		},
-		DenyHandler: func(context echo.Context, identifier string, err error) error {
-			return context.JSON(http.StatusTooManyRequests, nil)
 		},
 	}
 

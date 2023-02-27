@@ -22,7 +22,7 @@ func appBoxMiddleware() echo.MiddlewareFunc {
 		return func(c echo.Context) (err error) {
 			contentType := calculateMimeType(c)
 
-			path := strings.TrimPrefix(c.Request().URL.Path, "/")
+			path := strings.TrimPrefix(c.Request().RequestURI, "/")
 			if len(path) == 0 {
 				path = "index.html"
 				contentType = echo.MIMETextHTMLCharsetUTF8
@@ -99,7 +99,7 @@ func calculateMimeType(e echo.Context) string {
 
 func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		if strings.Count(c.Request().URL.Path, "..") != 0 {
+		if strings.Count(c.Request().RequestURI, "..") != 0 {
 			return c.String(http.StatusForbidden, "path not allowed")
 		}
 		return next(c)
