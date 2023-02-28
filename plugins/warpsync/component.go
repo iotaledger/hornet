@@ -2,11 +2,14 @@ package warpsync
 
 import (
 	"context"
+	"sync"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/ds/shrinkingmap"
 	"github.com/iotaledger/hive.go/lo"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -37,6 +40,9 @@ var (
 
 	warpSync                   *gossip.WarpSync
 	warpSyncMilestoneRequester *gossip.WarpSyncMilestoneRequester
+
+	heartbeatHooks       *shrinkingmap.ShrinkingMap[peer.ID, func()]
+	heartbeatsHooksMutex sync.Mutex
 )
 
 type dependencies struct {
@@ -53,6 +59,8 @@ func configure() error {
 	warpSync = gossip.NewWarpSync(ParamsWarpSync.AdvancementRange)
 	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(Plugin.Daemon().ContextStopped(), deps.Storage, deps.SyncManager, deps.Requester, true)
 
+	heartbeatHooks = shrinkingmap.New[peer.ID, func()]()
+
 	return nil
 }
 
@@ -68,21 +76,47 @@ func run() error {
 	return nil
 }
 
-func hookEvents() (detach func()) {
-	var heartbeakUnhook func()
-	return lo.Batch(
-		deps.GossipService.Events.ProtocolStarted.Hook(func(p *gossip.Protocol) {
-			heartbeakUnhook = p.Events.HeartbeatUpdated.Hook(func(hb *gossip.Heartbeat) {
-				warpSync.UpdateCurrentConfirmedMilestone(deps.SyncManager.ConfirmedMilestoneIndex())
-				warpSync.UpdateTargetMilestone(hb.SolidMilestoneIndex)
-			}).Unhook
-		}).Unhook,
+func hookHeartbeatEvents(p *gossip.Protocol) {
+	heartbeatsHooksMutex.Lock()
+	defer heartbeatsHooksMutex.Unlock()
 
-		deps.GossipService.Events.ProtocolTerminated.Hook(func(p *gossip.Protocol) {
-			if heartbeakUnhook != nil {
-				heartbeakUnhook()
-			}
-		}).Unhook,
+	if unhook, exists := heartbeatHooks.Get(p.PeerID); exists {
+		unhook()
+		heartbeatHooks.Delete(p.PeerID)
+	}
+
+	heartbeatHooks.Set(p.PeerID, p.Events.HeartbeatUpdated.Hook(func(hb *gossip.Heartbeat) {
+		warpSync.UpdateCurrentConfirmedMilestone(deps.SyncManager.ConfirmedMilestoneIndex())
+		warpSync.UpdateTargetMilestone(hb.SolidMilestoneIndex)
+	}).Unhook)
+}
+
+func unhookHeartbeatEvents(p *gossip.Protocol) {
+	heartbeatsHooksMutex.Lock()
+	defer heartbeatsHooksMutex.Unlock()
+
+	if unhook, exists := heartbeatHooks.Get(p.PeerID); exists {
+		unhook()
+		heartbeatHooks.Delete(p.PeerID)
+	}
+}
+
+func unhookAllHeartbeatEvents() {
+	heartbeatsHooksMutex.Lock()
+	defer heartbeatsHooksMutex.Unlock()
+
+	heartbeatHooks.ForEach(func(id peer.ID, unhook func()) bool {
+		unhook()
+		heartbeatHooks.Delete(id)
+		return true
+	})
+}
+
+func hookEvents() (detach func()) {
+	return lo.Batch(
+		deps.GossipService.Events.ProtocolStarted.Hook(hookHeartbeatEvents).Unhook,
+		deps.GossipService.Events.ProtocolTerminated.Hook(unhookHeartbeatEvents).Unhook,
+		unhookAllHeartbeatEvents,
 
 		deps.Tangle.Events.ReferencedBlocksCountUpdated.Hook(func(msIndex iotago.MilestoneIndex, referencedBlocksCount int) {
 			warpSync.AddReferencedBlocksCount(referencedBlocksCount)
