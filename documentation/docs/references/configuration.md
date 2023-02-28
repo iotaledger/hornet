@@ -73,15 +73,22 @@ Example:
 
 ## <a id="logger"></a> 2. Logger
 
-| Name              | Description                                                                 | Type    | Default value |
-| ----------------- | --------------------------------------------------------------------------- | ------- | ------------- |
-| level             | The minimum enabled logging level                                           | string  | "info"        |
-| disableCaller     | Stops annotating logs with the calling function's file name and line number | boolean | true          |
-| disableStacktrace | Disables automatic stacktrace capturing                                     | boolean | false         |
-| stacktraceLevel   | The level stacktraces are captured and above                                | string  | "panic"       |
-| encoding          | The logger's encoding (options: "json", "console")                          | string  | "console"     |
-| outputPaths       | A list of URLs, file paths or stdout/stderr to write logging output to      | array   | stdout        |
-| disableEvents     | Prevents log messages from being raced as events                            | boolean | true          |
+| Name                                     | Description                                                                 | Type    | Default value |
+| ---------------------------------------- | --------------------------------------------------------------------------- | ------- | ------------- |
+| level                                    | The minimum enabled logging level                                           | string  | "info"        |
+| disableCaller                            | Stops annotating logs with the calling function's file name and line number | boolean | true          |
+| disableStacktrace                        | Disables automatic stacktrace capturing                                     | boolean | false         |
+| stacktraceLevel                          | The level stacktraces are captured and above                                | string  | "panic"       |
+| encoding                                 | The logger's encoding (options: "json", "console")                          | string  | "console"     |
+| [encodingConfig](#logger_encodingconfig) | Configuration for encodingConfig                                            | object  |               |
+| outputPaths                              | A list of URLs, file paths or stdout/stderr to write logging output to      | array   | stdout        |
+| disableEvents                            | Prevents log messages from being raced as events                            | boolean | true          |
+
+### <a id="logger_encodingconfig"></a> EncodingConfig
+
+| Name        | Description                                                                                                | Type   | Default value |
+| ----------- | ---------------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| timeEncoder | Sets the logger's timestamp encoding. (options: "nanos", "millis", "iso8601", "rfc3339" and "rfc3339nano") | string | "rfc3339"     |
 
 Example:
 
@@ -93,6 +100,9 @@ Example:
       "disableStacktrace": false,
       "stacktraceLevel": "panic",
       "encoding": "console",
+      "encodingConfig": {
+        "timeEncoder": "rfc3339"
+      },
       "outputPaths": [
         "stdout"
       ],

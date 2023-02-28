@@ -15,6 +15,9 @@
     "disableStacktrace": false,
     "stacktraceLevel": "panic",
     "encoding": "console",
+    "encodingConfig": {
+      "timeEncoder": "rfc3339"
+    },
     "outputPaths": [
       "stdout"
     ],
