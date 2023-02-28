@@ -91,13 +91,13 @@ func configure() error {
 
 func run() error {
 	if err := Plugin.Daemon().BackgroundWorker("DashboardMetricsUpdater", func(ctx context.Context) {
-		unhookEvents := deps.Tangle.Events.BPSMetricsUpdated.Hook(func(gossipMetrics *tangle.BPSMetrics) {
+		unhook := deps.Tangle.Events.BPSMetricsUpdated.Hook(func(gossipMetrics *tangle.BPSMetrics) {
 			lastGossipMetricsLock.Lock()
 			defer lastGossipMetricsLock.Unlock()
 
 			lastGossipMetrics = gossipMetrics
 		}).Unhook
-		defer unhookEvents()
+		defer unhook()
 		<-ctx.Done()
 	}, daemon.PriorityMetricsUpdater); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)

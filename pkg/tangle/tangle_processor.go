@@ -52,21 +52,21 @@ func (t *Tangle) RunTangleProcessor() {
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(ctx context.Context) {
-		unhookEvents := t.Events.BPSMetricsUpdated.Hook(func(bpsMetrics *BPSMetrics) {
+		unhook := t.Events.BPSMetricsUpdated.Hook(func(bpsMetrics *BPSMetrics) {
 			t.lastIncomingBPS = bpsMetrics.Incoming
 			t.lastNewBPS = bpsMetrics.New
 			t.lastOutgoingBPS = bpsMetrics.Outgoing
 		}).Unhook
 		t.startWaitGroup.Done()
 		<-ctx.Done()
-		unhookEvents()
+		unhook()
 	}, daemon.PriorityMetricsUpdater); err != nil {
 		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(ctx context.Context) {
 		t.LogInfo("Starting TangleProcessor[ReceiveTx] ... done")
-		unhookEvents := lo.Batch(
+		unhook := lo.Batch(
 			t.messageProcessor.Events.BlockProcessed.Hook(t.processIncomingTx, event.WithWorkerPool(t.receiveBlockWorkerPool)).Unhook,
 
 			// send all solid blocks back to the block processor, which broadcasts them to other nodes
@@ -79,7 +79,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.startWaitGroup.Done()
 		<-ctx.Done()
 		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ...")
-		unhookEvents()
+		unhook()
 		t.receiveBlockWorkerPool.Shutdown()
 		t.receiveBlockWorkerPool.ShutdownComplete.Wait()
 		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ... done")
@@ -103,7 +103,7 @@ func (t *Tangle) RunTangleProcessor() {
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(ctx context.Context) {
 		t.LogInfo("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
-		unhookEvents := lo.Batch(
+		unhook := lo.Batch(
 			t.milestoneManager.Events.ReceivedValidMilestone.Hook(func(cachedMilestone *storage.CachedMilestone, requested bool) {
 				if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 					// do not process the milestone if the node was shut down
@@ -134,7 +134,7 @@ func (t *Tangle) RunTangleProcessor() {
 		<-ctx.Done()
 		t.LogInfo("Stopping TangleProcessor[ProcessMilestone] ...")
 		t.StopMilestoneTimeoutTicker()
-		unhookEvents()
+		unhook()
 		t.processValidMilestoneWorkerPool.Shutdown()
 		t.processValidMilestoneWorkerPool.ShutdownComplete.Wait()
 		t.LogInfo("Stopping TangleProcessor[ProcessMilestone] ... done")
@@ -224,9 +224,9 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 
 				if isSolid {
 					// try to solidify the future cone of the block
-					metadata := cachedBlock.CachedMetadata() // meta +1
+					cachedMeta := cachedBlock.CachedMetadata() // meta +1
 					t.futureConeSolidifierWorkerPool.Submit(func() {
-						if err := t.futureConeSolidifier.SolidifyBlockAndFutureCone(t.shutdownCtx, metadata); err != nil {
+						if err := t.futureConeSolidifier.SolidifyBlockAndFutureCone(t.shutdownCtx, cachedMeta); err != nil {
 							t.LogDebugf("SolidifyBlockAndFutureCone failed: %s", err)
 						} // meta pass +1
 					})

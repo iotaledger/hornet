@@ -107,7 +107,7 @@ func run() error {
 	if err := CoreComponent.Daemon().BackgroundWorker("Pruning", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting pruning background worker ... done")
 		unhookEvent := deps.SnapshotManager.Events.HandledConfirmedMilestoneIndexChanged.Hook(func(confirmedMilestoneIndex iotago.MilestoneIndex) {
-			deps.PruningManager.HandleNewConfirmedMilestoneEvent(CoreComponent.Daemon().ContextStopped(), confirmedMilestoneIndex)
+			deps.PruningManager.HandleNewConfirmedMilestoneEvent(ctx, confirmedMilestoneIndex)
 		}).Unhook
 		defer unhookEvent()
 

@@ -222,8 +222,8 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 
 func run() error {
 	if err := CoreComponent.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(ctx context.Context) {
-		detach := attachHeartbeatEvents()
-		defer detach()
+		unhook := attachHeartbeatEvents()
+		defer unhook()
 		<-ctx.Done()
 	}, daemon.PriorityHeartbeats); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
