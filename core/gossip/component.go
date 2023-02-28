@@ -12,6 +12,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/lo"
 	"github.com/iotaledger/hive.go/runtime/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -177,7 +178,6 @@ func provide(c *dig.Container) error {
 }
 
 func configure() error {
-
 	// don't re-enqueue pending requests in case the node is running hot
 	deps.Requester.AddBackPressureFunc(func() bool {
 		return deps.SnapshotManager.IsSnapshotting() || deps.PruningManager.IsPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
@@ -187,7 +187,6 @@ func configure() error {
 }
 
 func run() error {
-
 	if err := CoreComponent.Daemon().BackgroundWorker("GossipService", func(ctx context.Context) {
 		CoreComponent.LogInfo("Running GossipService")
 		unhook := hookEventsGossipService()
@@ -327,66 +326,58 @@ func checkHeartbeats() {
 }
 
 func hookEventsGossipService() (unhook func()) {
-	return deps.GossipService.Events.ProtocolStarted.Hook(func(proto *gossip.Protocol) {
-		hookEventsProtocolMessages(proto)
+	return lo.Batch(
+		deps.GossipService.Events.ProtocolStarted.Hook(hookGossipProtocolEvents).Unhook,
+		deps.GossipService.Events.ProtocolTerminated.Hook(unhookGossipProtocolEvents).Unhook,
+		unhookAllGossipProtocolEvents,
 
-		// attach protocol errors
-		closeConnectionDueToProtocolError := func(err error) {
-			CoreComponent.LogWarnf("closing connection to peer %s because of a protocol error: %s", proto.PeerID.ShortString(), err.Error())
-
-			if err := deps.GossipService.CloseStream(proto.PeerID); err != nil {
-				CoreComponent.LogWarnf("closing connection to peer %s failed, error: %s", proto.PeerID.ShortString(), err.Error())
-			}
-		}
-
-		proto.Events.Errors.Hook(closeConnectionDueToProtocolError)
-		proto.Parser.Events.Error.Hook(closeConnectionDueToProtocolError)
-
-		if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
-			buf := make([]byte, readBufSize)
-			// only way to break out is to Reset() the stream
-			for {
-				r, err := proto.Read(buf)
-				if err != nil {
-					// proto.Events.Error is already triggered inside Read
-					return
-				}
-				if _, err := proto.Parser.Read(buf[:r]); err != nil {
-					// proto.Events.Error is already triggered inside Read
-					return
-				}
-			}
-		}, daemon.PriorityPeerGossipProtocolRead); err != nil {
-			CoreComponent.LogWarnf("failed to start worker: %s", err)
-		}
-
-		if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
-			// send heartbeat and latest milestone request
-			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
-				syncState := deps.SyncManager.SyncState()
-				syncedCount := deps.GossipService.SynchronizedCount(syncState.LatestMilestoneIndex)
-				connectedCount := deps.PeeringManager.ConnectedCount()
-				// TODO: overflow not handled for synced/connected
-				proto.SendHeartbeat(syncState.ConfirmedMilestoneIndex, snapshotInfo.PruningIndex(), syncState.LatestMilestoneIndex, byte(connectedCount), byte(syncedCount))
-				proto.SendLatestMilestoneRequest()
-			}
-
-			for {
-				select {
-				case <-proto.Terminated():
-					return
-				case <-ctx.Done():
-					return
-				case data := <-proto.SendQueue:
-					if err := proto.Send(data); err != nil {
+		deps.GossipService.Events.ProtocolStarted.Hook(func(proto *gossip.Protocol) {
+			if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
+				buf := make([]byte, readBufSize)
+				// only way to break out is to Reset() the stream
+				for {
+					r, err := proto.Read(buf)
+					if err != nil {
+						// proto.Events.Error is already triggered inside Read
+						return
+					}
+					if _, err := proto.Parser.Read(buf[:r]); err != nil {
+						// proto.Events.Error is already triggered inside Read
 						return
 					}
 				}
+			}, daemon.PriorityPeerGossipProtocolRead); err != nil {
+				CoreComponent.LogWarnf("failed to start worker: %s", err)
 			}
-		}, daemon.PriorityPeerGossipProtocolWrite); err != nil {
-			CoreComponent.LogWarnf("failed to start worker: %s", err)
-		}
-	}).Unhook
+
+			if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
+				// send heartbeat and latest milestone request
+				if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
+					syncState := deps.SyncManager.SyncState()
+					syncedCount := deps.GossipService.SynchronizedCount(syncState.LatestMilestoneIndex)
+					connectedCount := deps.PeeringManager.ConnectedCount()
+					// TODO: overflow not handled for synced/connected
+					proto.SendHeartbeat(syncState.ConfirmedMilestoneIndex, snapshotInfo.PruningIndex(), syncState.LatestMilestoneIndex, byte(connectedCount), byte(syncedCount))
+					proto.SendLatestMilestoneRequest()
+				}
+
+				for {
+					select {
+					case <-proto.Terminated():
+						return
+					case <-ctx.Done():
+						return
+					case data := <-proto.SendQueue:
+						if err := proto.Send(data); err != nil {
+							return
+						}
+					}
+				}
+			}, daemon.PriorityPeerGossipProtocolWrite); err != nil {
+				CoreComponent.LogWarnf("failed to start worker: %s", err)
+			}
+		}).Unhook,
+	)
 }
 
 func hookEventsBroadcastQueue() (unhook func()) {
