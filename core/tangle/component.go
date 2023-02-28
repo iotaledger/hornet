@@ -9,9 +9,9 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/timeutil"
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/lo"
+	"github.com/iotaledger/hive.go/runtime/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -61,10 +61,6 @@ var (
 	//
 	//nolint:revive // this error message is shown to the user
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new snapshot.")
-
-	onConfirmedMilestoneIndexChanged *events.Closure
-	onPruningMilestoneIndexChanged   *events.Closure
-	onLatestMilestoneIndexChanged    *events.Closure
 )
 
 type dependencies struct {
@@ -219,18 +215,16 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 		CoreComponent.LogInfo("database revalidation successful")
 	}
 
-	configureEvents()
 	deps.Tangle.ConfigureTangleProcessor()
 
 	return nil
 }
 
 func run() error {
-
 	if err := CoreComponent.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(ctx context.Context) {
-		attachHeartbeatEvents()
+		unhook := attachHeartbeatEvents()
+		defer unhook()
 		<-ctx.Done()
-		detachHeartbeatEvents()
 	}, daemon.PriorityHeartbeats); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
@@ -260,32 +254,22 @@ func run() error {
 	return nil
 }
 
-func configureEvents() {
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
-		// notify peers about our new solid milestone index
-		// bee differentiates between solid and confirmed milestone, for hornet it is the same.
-		deps.Broadcaster.BroadcastHeartbeat(nil)
-	})
+func attachHeartbeatEvents() (detach func()) {
+	return lo.Batch(
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(func(_ iotago.MilestoneIndex) {
+			// notify peers about our new solid milestone index
+			// bee differentiates between solid and confirmed milestone, for hornet it is the same.
+			deps.Broadcaster.BroadcastHeartbeat(nil)
+		}).Unhook,
 
-	onPruningMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
-		// notify peers about our new pruning milestone index
-		deps.Broadcaster.BroadcastHeartbeat(nil)
-	})
+		deps.PruningManager.Events.PruningMilestoneIndexChanged.Hook(func(_ iotago.MilestoneIndex) {
+			// notify peers about our new pruning milestone index
+			deps.Broadcaster.BroadcastHeartbeat(nil)
+		}).Unhook,
 
-	onLatestMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
-		// notify peers about our new latest milestone index
-		deps.Broadcaster.BroadcastHeartbeat(nil)
-	})
-}
-
-func attachHeartbeatEvents() {
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
-	deps.PruningManager.Events.PruningMilestoneIndexChanged.Hook(onPruningMilestoneIndexChanged)
-	deps.Tangle.Events.LatestMilestoneIndexChanged.Hook(onLatestMilestoneIndexChanged)
-}
-
-func detachHeartbeatEvents() {
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
-	deps.PruningManager.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
-	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+		deps.Tangle.Events.LatestMilestoneIndexChanged.Hook(func(_ iotago.MilestoneIndex) {
+			// notify peers about our new latest milestone index
+			deps.Broadcaster.BroadcastHeartbeat(nil)
+		}).Unhook,
+	)
 }

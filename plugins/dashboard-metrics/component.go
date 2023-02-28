@@ -8,8 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
@@ -91,18 +90,15 @@ func configure() error {
 }
 
 func run() error {
-
-	onBPSMetricsUpdated := events.NewClosure(func(gossipMetrics *tangle.BPSMetrics) {
-		lastGossipMetricsLock.Lock()
-		defer lastGossipMetricsLock.Unlock()
-
-		lastGossipMetrics = gossipMetrics
-	})
-
 	if err := Plugin.Daemon().BackgroundWorker("DashboardMetricsUpdater", func(ctx context.Context) {
-		deps.Tangle.Events.BPSMetricsUpdated.Hook(onBPSMetricsUpdated)
+		unhook := deps.Tangle.Events.BPSMetricsUpdated.Hook(func(gossipMetrics *tangle.BPSMetrics) {
+			lastGossipMetricsLock.Lock()
+			defer lastGossipMetricsLock.Unlock()
+
+			lastGossipMetrics = gossipMetrics
+		}).Unhook
+		defer unhook()
 		<-ctx.Done()
-		deps.Tangle.Events.BPSMetricsUpdated.Detach(onBPSMetricsUpdated)
 	}, daemon.PriorityMetricsUpdater); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}

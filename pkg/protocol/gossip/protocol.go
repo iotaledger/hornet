@@ -9,9 +9,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/atomic"
 
-	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/protocol"
+	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/protocol"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -24,35 +24,35 @@ const (
 // ProtocolEvents happening on a Protocol.
 type ProtocolEvents struct {
 	// Fired when the heartbeat message state on the peer has been updated.
-	HeartbeatUpdated *events.Event
+	HeartbeatUpdated *event.Event1[*Heartbeat]
 	// Fired when a message of the given type is sent.
 	// This exists solely because protocol.Protocol in hive.go doesn't
 	// emit events anymore for sent messages, as it is solely a parser.
-	Sent []*events.Event
+	Sent []*event.Event
 	// Fired when an error occurs on the protocol.
-	Errors *events.Event
+	Errors *event.Event1[error]
 }
 
 // NewProtocol creates a new gossip protocol instance associated to the given peer.
 func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readTimeout, writeTimeout time.Duration, serverMetrics *metrics.ServerMetrics) *Protocol {
 	defs := gossipMessageRegistry.Definitions()
-	sentEvents := make([]*events.Event, len(defs))
+	sentEvents := make([]*event.Event, len(defs))
 	for i, def := range defs {
 		if def == nil {
 			continue
 		}
-		sentEvents[i] = events.NewEvent(events.VoidCaller)
+		sentEvents[i] = event.New()
 	}
 
 	return &Protocol{
 		Parser: protocol.New(gossipMessageRegistry),
 		PeerID: peerID,
 		Events: &ProtocolEvents{
-			HeartbeatUpdated: events.NewEvent(heartbeatCaller),
+			HeartbeatUpdated: event.New1[*Heartbeat](),
 			// we need this because protocol.Protocol doesn't emit
 			// events for sent messages anymore.
 			Sent:   sentEvents,
-			Errors: events.NewEvent(events.ErrorCaller),
+			Errors: event.New1[error](),
 		},
 		Stream:         stream,
 		terminatedChan: make(chan struct{}),

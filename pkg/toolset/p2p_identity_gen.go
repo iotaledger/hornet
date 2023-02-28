@@ -12,8 +12,8 @@ import (
 	"github.com/mr-tron/base58"
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/app/configuration"
 	"github.com/iotaledger/hive.go/core/certificate"
-	"github.com/iotaledger/hive.go/core/configuration"
 	hivecrypto "github.com/iotaledger/hive.go/core/crypto"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	iotago "github.com/iotaledger/iota.go/v3"

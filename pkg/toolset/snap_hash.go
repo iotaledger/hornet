@@ -8,7 +8,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/core/configuration"
+	"github.com/iotaledger/hive.go/app/configuration"
 	hivedb "github.com/iotaledger/hive.go/core/database"
 	coreDatabase "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/pkg/database"
@@ -47,7 +47,7 @@ func snapshotHash(args []string) error {
 
 	allowedEngines := database.AllowedEnginesStorage
 
-	targetEngine, err := hivedb.EngineAllowed(hivedb.EnginePebble, allowedEngines...)
+	targetEngine, err := hivedb.EngineAllowed(hivedb.EnginePebble, allowedEngines)
 	if err != nil {
 		return err
 	}

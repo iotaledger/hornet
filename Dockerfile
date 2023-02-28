@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/golang
-FROM golang:1.19-bullseye AS build
+FROM golang:1.20-bullseye AS build
 
 ARG BUILD_TAGS=rocksdb
 

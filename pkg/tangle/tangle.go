@@ -8,12 +8,12 @@ import (
 
 	"go.uber.org/atomic"
 
-	"github.com/iotaledger/hive.go/core/daemon"
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/app/daemon"
 	"github.com/iotaledger/hive.go/core/logger"
-	"github.com/iotaledger/hive.go/core/syncutils"
-	"github.com/iotaledger/hive.go/core/timeutil"
-	"github.com/iotaledger/hive.go/core/workerpool"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
+	"github.com/iotaledger/hive.go/runtime/timeutil"
+	"github.com/iotaledger/hive.go/runtime/valuenotifier"
+	"github.com/iotaledger/hive.go/runtime/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/migrator"
 	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"
@@ -67,15 +67,12 @@ type Tangle struct {
 
 	futureConeSolidifierWorkerPool  *workerpool.WorkerPool
 	futureConeSolidifierWorkerCount int
-	futureConeSolidifierQueueSize   int
 
 	processValidMilestoneWorkerPool  *workerpool.WorkerPool
 	processValidMilestoneWorkerCount int
-	processValidMilestoneQueueSize   int
 
 	milestoneSolidifierWorkerPool  *workerpool.WorkerPool
 	milestoneSolidifierWorkerCount int
-	milestoneSolidifierQueueSize   int
 
 	lastIncomingBlocksCount    uint32
 	lastIncomingNewBlocksCount uint32
@@ -87,8 +84,8 @@ type Tangle struct {
 
 	startWaitGroup sync.WaitGroup
 
-	blockProcessedSyncEvent *events.SyncEvent
-	blockSolidSyncEvent     *events.SyncEvent
+	blockProcessedNotifier *valuenotifier.Notifier[iotago.BlockID]
+	blockSolidNotifier     *valuenotifier.Notifier[iotago.BlockID]
 
 	milestoneSolidificationCtxLock    syncutils.Mutex
 	milestoneSolidificationCancelFunc context.CancelFunc
@@ -153,32 +150,12 @@ func New(
 		receiveBlockWorkerCount:          2 * runtime.NumCPU(),
 		receiveBlockQueueSize:            10000,
 		futureConeSolidifierWorkerCount:  1, // must be one, so there are no parallel solidifications of the same cone
-		futureConeSolidifierQueueSize:    10000,
 		processValidMilestoneWorkerCount: 1, // must be one, so there are no parallel validations
-		processValidMilestoneQueueSize:   1000,
 		milestoneSolidifierWorkerCount:   2, // must be two, so a new request can abort another, in case it is an older milestone
-		milestoneSolidifierQueueSize:     2,
-		blockProcessedSyncEvent:          events.NewSyncEvent(),
-		blockSolidSyncEvent:              events.NewSyncEvent(),
+		blockProcessedNotifier:           valuenotifier.New[iotago.BlockID](),
+		blockSolidNotifier:               valuenotifier.New[iotago.BlockID](),
 		resyncPhaseDone:                  atomic.NewBool(false),
-		Events: &Events{
-			BPSMetricsUpdated:              events.NewEvent(BPSMetricsCaller),
-			ReceivedNewBlock:               events.NewEvent(storage.NewBlockCaller),
-			BlockSolid:                     events.NewEvent(storage.BlockMetadataCaller),
-			BlockReferenced:                events.NewEvent(storage.BlockReferencedCaller),
-			ReceivedNewMilestoneBlock:      events.NewEvent(storage.BlockIDCaller),
-			LatestMilestoneChanged:         events.NewEvent(storage.MilestoneCaller),
-			LatestMilestoneIndexChanged:    events.NewEvent(storage.MilestoneIndexCaller),
-			ConfirmedMilestoneChanged:      events.NewEvent(storage.MilestoneCaller),
-			ConfirmedMilestoneIndexChanged: events.NewEvent(storage.MilestoneIndexCaller),
-			ConfirmationMetricsUpdated:     events.NewEvent(ConfirmationMetricsCaller),
-			ReferencedBlocksCountUpdated:   events.NewEvent(ReferencedBlocksCountUpdatedCaller),
-			MilestoneSolidificationFailed:  events.NewEvent(storage.MilestoneIndexCaller),
-			MilestoneTimeout:               events.NewEvent(events.VoidCaller),
-			LedgerUpdated:                  events.NewEvent(LedgerUpdatedCaller),
-			TreasuryMutated:                events.NewEvent(TreasuryMutationCaller),
-			NewReceipt:                     events.NewEvent(ReceiptCaller),
-		},
+		Events:                           newEvents(),
 	}
 	t.futureConeSolidifier = NewFutureConeSolidifier(t.storage, t.markBlockAsSolid)
 	t.ResetMilestoneTimeoutTicker()

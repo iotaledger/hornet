@@ -8,12 +8,12 @@ import (
 	"github.com/pkg/errors"
 
 	hivedb "github.com/iotaledger/hive.go/core/database"
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/ioutils"
-	"github.com/iotaledger/hive.go/core/kvstore"
-	"github.com/iotaledger/hive.go/core/kvstore/mapdb"
-	"github.com/iotaledger/hive.go/core/kvstore/pebble"
-	"github.com/iotaledger/hive.go/core/kvstore/rocksdb"
+	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/kvstore/mapdb"
+	"github.com/iotaledger/hive.go/kvstore/pebble"
+	"github.com/iotaledger/hive.go/kvstore/rocksdb"
+	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 )
 
@@ -64,14 +64,16 @@ func (c *Cleanup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(cleanup)
 }
 
-func CleanupCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(*Cleanup))(params[0].(*Cleanup))
+type Events struct {
+	Cleanup    *event.Event1[*Cleanup]
+	Compaction *event.Event1[bool]
 }
 
-type Events struct {
-	Cleanup    *events.Event
-	Compaction *events.Event
+func NewEvents() *Events {
+	return &Events{
+		Cleanup:    event.New1[*Cleanup](),
+		Compaction: event.New1[bool](),
+	}
 }
 
 // Database holds the underlying KVStore and database specific functions.
@@ -150,7 +152,7 @@ func CheckEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine hivedb.
 		tmpAllowedEngines = allowedEngines
 	}
 
-	targetEngine, err := hivedb.CheckEngine(dbPath, createDatabaseIfNotExists, dbEngine, tmpAllowedEngines...)
+	targetEngine, err := hivedb.CheckEngine(dbPath, createDatabaseIfNotExists, dbEngine, tmpAllowedEngines)
 	if err != nil {
 		if errors.Is(err, hivedb.ErrEngineMismatch) {
 			//nolint:stylecheck,revive // this error message is shown to the user

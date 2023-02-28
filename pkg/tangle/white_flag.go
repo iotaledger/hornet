@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/runtime/valuenotifier"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -40,9 +40,9 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 
 	// register all parents for block solid events
 	// this has to be done, even if the parents may be solid already, to prevent race conditions
-	blockSolidEventChans := make([]chan struct{}, len(parents))
-	for i, parent := range parents {
-		blockSolidEventChans[i] = t.RegisterBlockSolidEvent(parent)
+	blockSolidEventListeners := make(map[iotago.BlockID]*valuenotifier.Listener, len(parents))
+	for _, parent := range parents {
+		blockSolidEventListeners[parent] = t.BlockSolidListener(parent)
 	}
 
 	// check all parents for solidity
@@ -54,8 +54,8 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 				return nil, err
 			}
 			if contains {
-				// deregister the event, because the parent is already solid (this also fires the event)
-				t.DeregisterBlockSolidEvent(parent)
+				// notify the listener manually, because the parent is already solid.
+				t.blockSolidNotifier.Notify(parent)
 			}
 
 			continue
@@ -66,8 +66,8 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 				return
 			}
 
-			// deregister the event, because the parent is already solid (this also fires the event)
-			t.DeregisterBlockSolidEvent(parent)
+			// notify the listener manually, because the parent is already solid.
+			t.blockSolidNotifier.Notify(parent)
 		})
 	}
 
@@ -77,8 +77,8 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 
 	defer func() {
 		// deregister the events to free the memory
-		for _, parent := range parents {
-			t.DeregisterBlockSolidEvent(parent)
+		for _, listener := range blockSolidEventListeners {
+			listener.Deregister()
 		}
 
 		// all releases are forced since the cone is referenced and not needed anymore
@@ -105,9 +105,9 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		ctx, cancel := context.WithTimeout(ctx, t.whiteFlagParentsSolidTimeout)
 		defer cancel()
 
-		for _, blockSolidEventChan := range blockSolidEventChans {
+		for _, blockSolidEventListener := range blockSolidEventListeners {
 			// wait until the block is solid
-			if err := events.WaitForChannelClosed(ctx, blockSolidEventChan); err != nil {
+			if err := blockSolidEventListener.Wait(ctx); err != nil {
 				return nil, ErrParentsNotSolid
 			}
 		}

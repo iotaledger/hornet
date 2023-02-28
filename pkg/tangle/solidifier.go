@@ -31,7 +31,9 @@ type ConfirmedMilestoneMetric struct {
 
 // TriggerSolidifier can be used to manually trigger the solidifier from other plugins.
 func (t *Tangle) TriggerSolidifier() {
-	t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
+	t.milestoneSolidifierWorkerPool.Submit(func() {
+		t.solidifyMilestone(SolidifierTriggerSignal, true)
+	})
 }
 
 func (t *Tangle) markBlockAsSolid(cachedBlockMeta *storage.CachedMetadata) {
@@ -41,7 +43,7 @@ func (t *Tangle) markBlockAsSolid(cachedBlockMeta *storage.CachedMetadata) {
 	cachedBlockMeta.Metadata().SetSolid(true)
 
 	t.Events.BlockSolid.Trigger(cachedBlockMeta)
-	t.blockSolidSyncEvent.Trigger(cachedBlockMeta.Metadata().BlockID())
+	t.blockSolidNotifier.Notify(cachedBlockMeta.Metadata().BlockID())
 }
 
 // SolidQueueCheck traverses a milestone and checks if it is solid.
@@ -172,7 +174,6 @@ func (t *Tangle) AbortMilestoneSolidification() {
 
 // solidifyMilestone tries to solidify the next known non-solid milestone and requests missing block.
 func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, force bool) {
-
 	/* How milestone solidification works:
 
 	- A Milestone comes in and gets validated
@@ -315,7 +316,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		}
 		// rerun to solidify the older one
 		t.setSolidifierMilestoneIndex(0)
-		t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, true)
+		t.TriggerSolidifier()
 
 		return
 	}
@@ -432,7 +433,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 	}
 
 	timeConfirmedMilestoneChangedStart = time.Now()
-	t.Events.ConfirmedMilestoneChanged.Trigger(cachedMilestoneToSolidify) // milestone pass +1
+	t.Events.ConfirmedMilestoneChanged.Trigger(cachedMilestoneToSolidify)
 	timeConfirmedMilestoneChangedEnd = time.Now()
 
 	if newConfirmation != nil {
@@ -502,7 +503,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex iotago.MilestoneIndex, forc
 		return
 	}
 
-	t.milestoneSolidifierWorkerPool.TrySubmit(SolidifierTriggerSignal, false)
+	t.milestoneSolidifierWorkerPool.Submit(func() {
+		t.solidifyMilestone(SolidifierTriggerSignal, false)
+	})
 }
 
 func (t *Tangle) calcConfirmedMilestoneMetric(milestonePayloadToSolidify *iotago.Milestone) (*ConfirmedMilestoneMetric, error) {

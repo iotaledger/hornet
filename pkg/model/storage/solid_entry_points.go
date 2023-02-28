@@ -8,7 +8,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/iotaledger/hive.go/core/syncutils"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

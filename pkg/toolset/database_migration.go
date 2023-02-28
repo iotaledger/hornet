@@ -9,10 +9,10 @@ import (
 	"github.com/dustin/go-humanize"
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/core/configuration"
+	"github.com/iotaledger/hive.go/app/configuration"
 	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/ioutils"
-	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/utils"
 )
@@ -61,7 +61,7 @@ func databaseMigration(args []string) error {
 		return fmt.Errorf("'%s' (%s) already exist", FlagToolDatabasePathTarget, targetPath)
 	}
 
-	targetEngine, err := hivedb.EngineFromStringAllowed(*databaseEngineTargetFlag, database.AllowedEnginesStorage...)
+	targetEngine, err := hivedb.EngineFromStringAllowed(*databaseEngineTargetFlag, database.AllowedEnginesStorage)
 	if err != nil {
 		return err
 	}

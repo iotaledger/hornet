@@ -7,9 +7,8 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/app/pkg/shutdown"
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/shutdown"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
@@ -50,7 +49,6 @@ type dependencies struct {
 }
 
 func initConfigPars(c *dig.Container) error {
-
 	if err := c.Provide(func() string {
 		return ParamsProtocol.TargetNetworkName
 	}, dig.Name("targetNetworkName")); err != nil {
@@ -107,7 +105,6 @@ func initConfigPars(c *dig.Container) error {
 }
 
 func provide(c *dig.Container) error {
-
 	type protocolManagerDeps struct {
 		dig.In
 		Storage     *storage.Storage
@@ -138,23 +135,20 @@ func provide(c *dig.Container) error {
 }
 
 func configure() error {
-
-	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
+	deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(func(cachedMilestone *storage.CachedMilestone) {
 		defer cachedMilestone.Release(true) // milestone -1
 
 		deps.ProtocolManager.HandleConfirmedMilestone(cachedMilestone.Milestone().Milestone())
 	})
-	deps.Tangle.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
 
-	onNextMilestoneUnsupported := events.NewClosure(func(unsupportedProtoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) {
+	deps.ProtocolManager.Events.NextMilestoneUnsupported.Hook(func(unsupportedProtoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) {
 		unsupportedVersion := unsupportedProtoParamsMsOption.ProtocolVersion
 		CoreComponent.LogWarnf("next milestone will run under unsupported protocol version %d!", unsupportedVersion)
 	})
-	deps.ProtocolManager.Events.NextMilestoneUnsupported.Hook(onNextMilestoneUnsupported)
 
-	deps.ProtocolManager.Events.CriticalErrors.Hook(events.NewClosure(func(err error) {
+	deps.ProtocolManager.Events.CriticalErrors.Hook(func(err error) {
 		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("protocol manager hit a critical error: %s", err), true)
-	}))
+	})
 
 	return nil
 }

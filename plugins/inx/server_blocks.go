@@ -8,8 +8,9 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/iotaledger/hive.go/core/contextutils"
-	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/workerpool"
+	"github.com/iotaledger/hive.go/lo"
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/workerpool"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -41,11 +42,11 @@ func NewINXBlockMetadata(ctx context.Context, blockID iotago.BlockID, metadata *
 		m.LedgerInclusionState = inclusionState
 
 		if metadata.IsMilestone() {
-			cachedBlock := deps.Storage.CachedBlockOrNil(blockID)
+			cachedBlock := deps.Storage.CachedBlockOrNil(blockID) // block +1
 			if cachedBlock == nil {
 				return nil, status.Errorf(codes.NotFound, "block not found: %s", blockID.ToHex())
 			}
-			defer cachedBlock.Release(true)
+			defer cachedBlock.Release(true) // block -1
 
 			milestone := cachedBlock.Block().Milestone()
 			if milestone == nil {
@@ -141,40 +142,26 @@ func (s *Server) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (*in
 func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServer) error {
 	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToBlocks", workerCount).Start()
 
-		payload, ok := task.Param(0).(*inx.Block)
-		if !ok {
-			Plugin.LogErrorf("send error: expected *inx.Block, got %T", task.Param(0))
-			cancel()
+	unhook := deps.Tangle.Events.ReceivedNewBlock.Hook(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex) {
+		defer cachedBlock.Release(true) // block -1
 
-			return
-		}
-
+		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID(), cachedBlock.Block().Data())
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
+	}, event.WithWorkerPool(wp)).Unhook
 
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onReceivedNewBlock := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex) {
-		defer cachedBlock.Release(true) // block -1
-
-		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID(), cachedBlock.Block().Data())
-		wp.Submit(payload)
-	})
-
-	wp.Start()
-	deps.Tangle.Events.ReceivedNewBlock.Hook(onReceivedNewBlock)
 	<-ctx.Done()
-	deps.Tangle.Events.ReceivedNewBlock.Detach(onReceivedNewBlock)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return ctx.Err()
 }
@@ -182,25 +169,9 @@ func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServe
 func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidBlocksServer) error {
 	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToSolidBlocks", workerCount).Start()
 
-		payload, ok := task.Param(0).(*inx.BlockMetadata)
-		if !ok {
-			Plugin.LogErrorf("send error: expected *inx.BlockMetadata, got %T", task.Param(0))
-			cancel()
-
-			return
-		}
-
-		if err := srv.Send(payload); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
-			cancel()
-		}
-
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onBlockSolid := events.NewClosure(func(blockMeta *storage.CachedMetadata) {
+	unhook := deps.Tangle.Events.BlockSolid.Hook(func(blockMeta *storage.CachedMetadata) {
 		defer blockMeta.Release(true) // meta -1
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
@@ -211,18 +182,20 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 			return
 		}
 
-		wp.Submit(payload)
-	})
+		if err := srv.Send(payload); err != nil {
+			Plugin.LogErrorf("send error: %v", err)
+			cancel()
+		}
+	}, event.WithWorkerPool(wp)).Unhook
 
-	wp.Start()
-	deps.Tangle.Events.BlockSolid.Hook(onBlockSolid)
 	<-ctx.Done()
-	deps.Tangle.Events.BlockSolid.Detach(onBlockSolid)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return ctx.Err()
 }
@@ -230,25 +203,9 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToReferencedBlocksServer) error {
 	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToReferencedBlocks", workerCount).Start()
 
-		payload, ok := task.Param(0).(*inx.BlockMetadata)
-		if !ok {
-			Plugin.LogErrorf("send error: expected *inx.BlockMetadata, got %T", task.Param(0))
-			cancel()
-
-			return
-		}
-
-		if err := srv.Send(payload); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
-			cancel()
-		}
-
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onBlockReferenced := events.NewClosure(func(blockMeta *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32) {
+	unhook := deps.Tangle.Events.BlockReferenced.Hook(func(blockMeta *storage.CachedMetadata, index iotago.MilestoneIndex, confTime uint32) {
 		defer blockMeta.Release(true) // meta -1
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
@@ -259,18 +216,20 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 			return
 		}
 
-		wp.Submit(payload)
-	})
+		if err := srv.Send(payload); err != nil {
+			Plugin.LogErrorf("send error: %v", err)
+			cancel()
+		}
+	}, event.WithWorkerPool(wp)).Unhook
 
-	wp.Start()
-	deps.Tangle.Events.BlockReferenced.Hook(onBlockReferenced)
 	<-ctx.Done()
-	deps.Tangle.Events.BlockReferenced.Detach(onBlockReferenced)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return ctx.Err()
 }
@@ -278,17 +237,9 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTipScoreUpdatesServer) error {
 	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
 
-	wp := workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
+	wp := workerpool.New("ListenToTipScoreUpdates", workerCount).Start()
 
-		tip, ok := task.Param(0).(*tipselect.Tip)
-		if !ok {
-			Plugin.LogErrorf("send error: expected *tipselect.Tip, got %T", task.Param(0))
-			cancel()
-
-			return
-		}
-
+	onTipAddedOrRemoved := func(tip *tipselect.Tip) {
 		blockMeta := deps.Storage.CachedBlockMetadataOrNil(tip.BlockID)
 		if blockMeta == nil {
 			return
@@ -306,23 +257,22 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 			Plugin.LogErrorf("send error: %v", err)
 			cancel()
 		}
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-
-	onTipAddedOrRemoved := events.NewClosure(func(tip *tipselect.Tip) {
-		wp.Submit(tip)
-	})
+	}
 
 	wp.Start()
-	deps.TipSelector.Events.TipAdded.Hook(onTipAddedOrRemoved)
-	deps.TipSelector.Events.TipRemoved.Hook(onTipAddedOrRemoved)
+	unhook := lo.Batch(
+		deps.TipSelector.Events.TipAdded.Hook(onTipAddedOrRemoved, event.WithWorkerPool(wp)).Unhook,
+		deps.TipSelector.Events.TipRemoved.Hook(onTipAddedOrRemoved, event.WithWorkerPool(wp)).Unhook,
+	)
+
 	<-ctx.Done()
-	deps.TipSelector.Events.TipAdded.Detach(onTipAddedOrRemoved)
-	deps.TipSelector.Events.TipRemoved.Detach(onTipAddedOrRemoved)
+	unhook()
 
 	// We need to wait until all tasks are done, otherwise we might call
 	// "SendMsg" and "CloseSend" in parallel on the grpc stream, which is
 	// not safe according to the grpc docs.
-	wp.StopAndWait()
+	wp.Shutdown()
+	wp.ShutdownComplete.Wait()
 
 	return ctx.Err()
 }

@@ -3,7 +3,7 @@ package pruning
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/app"
 )
 
 // ParametersPruning contains the definition of the parameters used by pruning.

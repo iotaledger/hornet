@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/jwt"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -80,7 +80,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func() *metrics.RestAPIMetrics {
 		return &metrics.RestAPIMetrics{
 			Events: &metrics.RestAPIEvents{
-				PoWCompleted: events.NewEvent(metrics.PoWCompletedCaller),
+				PoWCompleted: event.New2[int, time.Duration](),
 			},
 		}
 	}); err != nil {

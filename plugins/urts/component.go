@@ -7,9 +7,9 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/app/pkg/shutdown"
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/shutdown"
+	"github.com/iotaledger/hive.go/lo"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -23,12 +23,11 @@ import (
 func init() {
 	Plugin = &app.Plugin{
 		Component: &app.Component{
-			Name:      "URTS",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:     "URTS",
+			DepsFunc: func(cDeps dependencies) { deps = cDeps },
+			Params:   params,
+			Provide:  provide,
+			Run:      run,
 		},
 		IsEnabled: func() bool {
 			return ParamsTipsel.Enabled
@@ -39,10 +38,6 @@ func init() {
 var (
 	Plugin *app.Plugin
 	deps   dependencies
-
-	// closures.
-	onBlockSolid                     *events.Closure
-	onConfirmedMilestoneIndexChanged *events.Closure
 )
 
 type dependencies struct {
@@ -84,18 +79,11 @@ func provide(c *dig.Container) error {
 	return nil
 }
 
-func configure() error {
-	configureEvents()
-
-	return nil
-}
-
 func run() error {
-
 	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(ctx context.Context) {
-		attachEvents()
+		unhook := hookEvents()
+		defer unhook()
 		<-ctx.Done()
-		detachEvents()
 	}, daemon.PriorityTipselection); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
@@ -118,39 +106,31 @@ func run() error {
 	return nil
 }
 
-func configureEvents() {
-	onBlockSolid = events.NewClosure(func(cachedBlockMeta *storage.CachedMetadata) {
-		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
-			// do not add tips during syncing, because it is not needed at all
+func hookEvents() (unhook func()) {
+	return lo.Batch(
+		deps.Tangle.Events.BlockSolid.Hook(func(cachedBlockMeta *storage.CachedMetadata) {
+			cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
+				// do not add tips during syncing, because it is not needed at all
+				if !deps.SyncManager.IsNodeAlmostSynced() {
+					return
+				}
+
+				deps.TipSelector.AddTip(metadata)
+			})
+		}).Unhook,
+
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(func(_ iotago.MilestoneIndex) {
+			// do not update tip scores during syncing, because it is not needed at all
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
 
-			deps.TipSelector.AddTip(metadata)
-		})
-	})
-
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ iotago.MilestoneIndex) {
-		// do not update tip scores during syncing, because it is not needed at all
-		if !deps.SyncManager.IsNodeAlmostSynced() {
-			return
-		}
-
-		ts := time.Now()
-		removedTipCount, err := deps.TipSelector.UpdateScores()
-		if err != nil && err != common.ErrOperationAborted {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("urts tipselection plugin hit a critical error while updating scores: %s", err), true)
-		}
-		Plugin.LogDebugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
-	})
-}
-
-func attachEvents() {
-	deps.Tangle.Events.BlockSolid.Hook(onBlockSolid)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(onConfirmedMilestoneIndexChanged)
-}
-
-func detachEvents() {
-	deps.Tangle.Events.BlockSolid.Detach(onBlockSolid)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
+			ts := time.Now()
+			removedTipCount, err := deps.TipSelector.UpdateScores()
+			if err != nil && err != common.ErrOperationAborted {
+				deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("urts tipselection plugin hit a critical error while updating scores: %s", err), true)
+			}
+			Plugin.LogDebugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+		}).Unhook,
+	)
 }

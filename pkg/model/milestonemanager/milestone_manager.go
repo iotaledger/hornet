@@ -3,7 +3,7 @@ package milestonemanager
 import (
 	"math"
 
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -11,7 +11,8 @@ import (
 )
 
 type packageEvents struct {
-	ReceivedValidMilestone *events.Event
+	// ReceivedValidMilestone is called when a valid milestone is received, it contains the cachedMilestone and a flag if it was requested
+	ReceivedValidMilestone *event.Event2[*storage.CachedMilestone, bool]
 }
 
 // MilestoneManager is used to retrieve, verify and store milestones.
@@ -42,7 +43,9 @@ func New(
 		milestonePublicKeyCount: milestonePublicKeyCount,
 
 		Events: &packageEvents{
-			ReceivedValidMilestone: events.NewEvent(storage.MilestoneWithBlockIDAndRequestedCaller),
+			ReceivedValidMilestone: event.New2[*storage.CachedMilestone, bool](event.WithPreTriggerFunc(func(milestone *storage.CachedMilestone, _ bool) {
+				milestone.Retain() // milestone pass +1
+			})),
 		},
 	}
 
@@ -138,5 +141,5 @@ func (m *MilestoneManager) StoreMilestone(cachedBlock *storage.CachedBlock, mile
 		return
 	}
 
-	m.Events.ReceivedValidMilestone.Trigger(cachedBlock.Metadata().BlockID(), cachedMilestone, requested) // milestone pass +1
+	m.Events.ReceivedValidMilestone.Trigger(cachedMilestone, requested)
 }

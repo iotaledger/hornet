@@ -3,9 +3,9 @@ package utxo
 import (
 	"encoding/binary"
 
-	"github.com/iotaledger/hive.go/core/kvstore"
-	"github.com/iotaledger/hive.go/core/marshalutil"
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	"github.com/iotaledger/hive.go/serializer/v2/marshalutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -18,7 +18,7 @@ type ReceiptTuple struct {
 	MilestoneIndex iotago.MilestoneIndex `json:"milestoneIndex"`
 }
 
-func (rt *ReceiptTuple) kvStorableKey() (key []byte) {
+func (rt *ReceiptTuple) KVStorableKey() (key []byte) {
 	return marshalutil.New(9).
 		WriteByte(UTXOStoreKeyPrefixReceipts).
 		WriteUint32(rt.Receipt.MigratedAt).
@@ -26,7 +26,7 @@ func (rt *ReceiptTuple) kvStorableKey() (key []byte) {
 		Bytes()
 }
 
-func (rt *ReceiptTuple) kvStorableValue() (value []byte) {
+func (rt *ReceiptTuple) KVStorableValue() (value []byte) {
 	receiptBytes, err := rt.Receipt.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		panic(err)
@@ -66,12 +66,12 @@ func (rt *ReceiptTuple) kvStorableLoad(_ *Manager, key []byte, value []byte) err
 
 // adds a receipt store instruction to the given mutations.
 func storeReceipt(rt *ReceiptTuple, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(rt.kvStorableKey(), rt.kvStorableValue())
+	return mutations.Set(rt.KVStorableKey(), rt.KVStorableValue())
 }
 
 // adds a receipt delete instruction to the given mutations.
 func deleteReceipt(rt *ReceiptTuple, mutations kvstore.BatchedMutations) error {
-	return mutations.Delete(rt.kvStorableKey())
+	return mutations.Delete(rt.KVStorableKey())
 }
 
 // SearchHighestReceiptMigratedAtIndex searches the highest migratedAt of all stored receipts.
@@ -211,3 +211,6 @@ func ReceiptToTreasuryMutation(r *iotago.ReceiptMilestoneOpt, unspentTreasuryOut
 		SpentOutput: unspentTreasuryOutput,
 	}, nil
 }
+
+// code guards.
+var _ kvStorable = &ReceiptTuple{}

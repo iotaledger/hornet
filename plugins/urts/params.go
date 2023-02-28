@@ -3,7 +3,7 @@ package urts
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/app"
 )
 
 // ParametersTipsel contains the definition of the parameters used by Tipselection.

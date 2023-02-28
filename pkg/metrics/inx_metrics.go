@@ -5,12 +5,12 @@ import (
 
 	"go.uber.org/atomic"
 
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/runtime/event"
 )
 
 type INXEvents struct {
-	// PoWCompleted is fired when a PoW request is completed.
-	PoWCompleted *events.Event
+	// PoWCompleted is fired when a PoW request is completed. It contains the block size and the duration.
+	PoWCompleted *event.Event2[int, time.Duration]
 }
 
 // INXMetrics defines INX metrics over the entire runtime of the node.

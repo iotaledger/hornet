@@ -3,7 +3,7 @@ package database
 import (
 	"runtime"
 
-	"github.com/iotaledger/hive.go/core/kvstore/rocksdb"
+	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 )
 
 // NewRocksDB creates a new RocksDB instance.

@@ -8,13 +8,12 @@ import (
 	"math/rand"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/blang/vfs/memfs"
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/hive.go/core/kvstore/mapdb"
+	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
@@ -201,7 +200,6 @@ func TestStreamFullSnapshotDataToAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rand.Seed(time.Now().Unix())
 
 	type test struct {
 		name                          string
@@ -325,7 +323,6 @@ func TestStreamDeltaSnapshotDataToAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rand.Seed(time.Now().Unix())
 
 	type test struct {
 		name                         string
@@ -419,7 +416,6 @@ func TestStreamDeltaSnapshotDataToExistingAndFrom(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rand.Seed(time.Now().Unix())
 
 	type test struct {
 		name                          string

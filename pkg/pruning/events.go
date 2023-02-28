@@ -1,16 +1,18 @@
 package pruning
 
 import (
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/runtime/event"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// MetricsCaller is used to signal updated pruning metrics.
-func MetricsCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(metrics *Metrics))(params[0].(*Metrics))
+type Events struct {
+	PruningMilestoneIndexChanged *event.Event1[iotago.MilestoneIndex]
+	PruningMetricsUpdated        *event.Event1[*Metrics]
 }
 
-type Events struct {
-	PruningMilestoneIndexChanged *events.Event
-	PruningMetricsUpdated        *events.Event
+func newEvents() *Events {
+	return &Events{
+		PruningMilestoneIndexChanged: event.New1[iotago.MilestoneIndex](),
+		PruningMetricsUpdated:        event.New1[*Metrics](),
+	}
 }

@@ -9,9 +9,8 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/app"
 	hivedb "github.com/iotaledger/hive.go/core/database"
-	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -54,9 +53,6 @@ var (
 
 	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
 	deleteAll      = flag.Bool(CfgTangleDeleteAll, false, "whether to delete the database and snapshots at startup")
-
-	// closures.
-	onPruningStateChanged *events.Closure
 )
 
 type dependencies struct {
@@ -82,7 +78,7 @@ func initConfigPars(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func() cfgResult {
-		dbEngine, err := hivedb.EngineFromStringAllowed(ParamsDatabase.Engine, database.AllowedEnginesDefault...)
+		dbEngine, err := hivedb.EngineFromStringAllowed(ParamsDatabase.Engine, database.AllowedEnginesDefault)
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}
@@ -293,36 +289,22 @@ func configure() error {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
-	configureEvents()
-
 	return nil
 }
 
 func run() error {
 	if err := CoreComponent.Daemon().BackgroundWorker("Database[Events]", func(ctx context.Context) {
-		attachEvents()
+		hook := deps.Storage.Events.PruningStateChanged.Hook(func(running bool) {
+			deps.StorageMetrics.PruningRunning.Store(running)
+			if running {
+				deps.StorageMetrics.Prunings.Inc()
+			}
+		})
+		defer hook.Unhook()
 		<-ctx.Done()
-		detachEvents()
 	}, daemon.PriorityMetricsUpdater); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
-}
-
-func configureEvents() {
-	onPruningStateChanged = events.NewClosure(func(running bool) {
-		deps.StorageMetrics.PruningRunning.Store(running)
-		if running {
-			deps.StorageMetrics.Prunings.Inc()
-		}
-	})
-}
-
-func attachEvents() {
-	deps.Storage.Events.PruningStateChanged.Hook(onPruningStateChanged)
-}
-
-func detachEvents() {
-	deps.Storage.Events.PruningStateChanged.Detach(onPruningStateChanged)
 }

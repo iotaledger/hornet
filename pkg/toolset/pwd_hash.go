@@ -12,8 +12,8 @@ import (
 	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
 
+	"github.com/iotaledger/hive.go/app/configuration"
 	"github.com/iotaledger/hive.go/core/basicauth"
-	"github.com/iotaledger/hive.go/core/configuration"
 	"github.com/iotaledger/hornet/v2/pkg/utils"
 )
 

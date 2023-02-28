@@ -1,7 +1,7 @@
 package prometheus
 
 import (
-	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/app"
 )
 
 // ParametersPrometheus contains the definition of the parameters used by Prometheus.

@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/protocol/message"
-	"github.com/iotaledger/hive.go/core/protocol/tlv"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/protocol/message"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/protocol/tlv"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -172,9 +172,4 @@ func ParseHeartbeat(data []byte) *Heartbeat {
 		ConnectedPeers:       int(data[12]),
 		SyncedPeers:          int(data[13]),
 	}
-}
-
-func heartbeatCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(heartbeat *Heartbeat))(params[0].(*Heartbeat))
 }

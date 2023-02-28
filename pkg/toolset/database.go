@@ -154,7 +154,7 @@ func getTangleStorage(path string,
 	markTainted bool,
 	checkSnapInfo bool) (*storage.Storage, error) {
 
-	dbEngine, err := hivedb.EngineFromStringAllowed(dbEngineStr, database.AllowedEnginesStorageAuto...)
+	dbEngine, err := hivedb.EngineFromStringAllowed(dbEngineStr, database.AllowedEnginesStorageAuto)
 	if err != nil {
 		return nil, err
 	}

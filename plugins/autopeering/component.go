@@ -10,14 +10,13 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/autopeering/discover"
-	"github.com/iotaledger/hive.go/core/autopeering/peer/service"
-	"github.com/iotaledger/hive.go/core/autopeering/selection"
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/autopeering/discover"
+	"github.com/iotaledger/hive.go/autopeering/peer/service"
+	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/core/crypto/ed25519"
 	hivedb "github.com/iotaledger/hive.go/core/database"
-	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/generics/event"
+	"github.com/iotaledger/hive.go/lo"
 	databaseCore "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/core/gossip"
 	"github.com/iotaledger/hornet/v2/core/pow"
@@ -60,16 +59,6 @@ var (
 	deps   dependencies
 
 	localPeerContainer *autopeering.LocalPeerContainer
-
-	onDiscoveryPeerDiscovered  *event.Closure[*discover.PeerDiscoveredEvent]
-	onDiscoveryPeerDeleted     *event.Closure[*discover.PeerDeletedEvent]
-	onSelectionSaltUpdated     *event.Closure[*selection.SaltUpdatedEvent]
-	onSelectionOutgoingPeering *event.Closure[*selection.PeeringEvent]
-	onSelectionIncomingPeering *event.Closure[*selection.PeeringEvent]
-	onSelectionDropped         *event.Closure[*selection.DroppedEvent]
-	onPeerConnected            *events.Closure
-	onPeerDisconnected         *events.Closure
-	onPeeringRelationUpdated   *events.Closure
 )
 
 type dependencies struct {
@@ -198,200 +187,20 @@ func configure() error {
 	initSelection := deps.PeeringManager != nil
 
 	deps.AutopeeringManager.Init(localPeerContainer, initSelection)
-	configureEvents()
 
 	return nil
 }
 
 func run() error {
 	if err := Plugin.App().Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
-		attachEvents()
+		detach := hookEvents()
+		defer detach()
 		deps.AutopeeringManager.Run(ctx)
-		detachEvents()
 	}, daemon.PriorityAutopeering); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
-}
-
-func configureEvents() {
-
-	onDiscoveryPeerDiscovered = event.NewClosure(func(ev *discover.PeerDiscoveredEvent) {
-		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
-		if err != nil {
-			Plugin.LogWarnf("unable to convert discovered autopeering peer to peerID: %s", err)
-
-			return
-		}
-
-		Plugin.LogInfof("discovered: %s / %s", ev.Peer.Address(), peerID.ShortString())
-	})
-
-	onDiscoveryPeerDeleted = event.NewClosure(func(ev *discover.PeerDeletedEvent) {
-		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
-		if err != nil {
-			Plugin.LogWarnf("unable to convert deleted autopeering peer to peerID: %s", err)
-
-			return
-		}
-
-		Plugin.LogInfof("removed offline: %s / %s", ev.Peer.Address(), peerID.ShortString())
-	})
-
-	onPeerConnected = events.NewClosure(func(p *p2p.Peer, conn network.Conn) {
-
-		if deps.AutopeeringManager.Selection() == nil {
-			return
-		}
-
-		id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf)
-		if id == nil {
-			return
-		}
-
-		// we block peers that are connected via manual peering in the autopeering module.
-		// this ensures that no additional connections are established via autopeering.
-		switch p.Relation {
-		case p2p.PeerRelationKnown, p2p.PeerRelationUnknown:
-			deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
-		}
-	})
-
-	onPeerDisconnected = events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
-
-		if deps.AutopeeringManager.Selection() == nil {
-			return
-		}
-
-		id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peerOptErr.Peer, Plugin.LogWarnf)
-		if id == nil {
-			return
-		}
-
-		// if a peer is disconnected, we need to remove it from the autopeering blacklist
-		// so that former known and unknown peers can be autopeered.
-		deps.AutopeeringManager.Selection().UnblockNeighbor(id.ID())
-
-		if peerOptErr.Peer.Relation != p2p.PeerRelationAutopeered {
-			return
-		}
-
-		Plugin.LogDebugf("removing: %s", peerOptErr.Peer.ID.ShortString())
-		deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
-	})
-
-	onPeeringRelationUpdated = events.NewClosure(func(p *p2p.Peer, oldRel p2p.PeerRelation) {
-
-		if deps.AutopeeringManager.Selection() == nil {
-			return
-		}
-
-		id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf)
-		if id == nil {
-			return
-		}
-
-		// we block peers that are connected via manual peering in the autopeering module.
-		// this ensures that no additional connections are established via autopeering.
-		// if a peer gets updated to autopeered, we need to unblock it.
-		switch p.Relation {
-		case p2p.PeerRelationKnown, p2p.PeerRelationUnknown:
-			deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
-		case p2p.PeerRelationAutopeered:
-			deps.AutopeeringManager.Selection().UnblockNeighbor(id.ID())
-		}
-
-		if oldRel != p2p.PeerRelationAutopeered {
-			return
-		}
-
-		Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID.ShortString())
-		deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
-	})
-
-	onSelectionSaltUpdated = event.NewClosure(func(ev *selection.SaltUpdatedEvent) {
-		Plugin.LogInfof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
-	})
-
-	onSelectionOutgoingPeering = event.NewClosure(func(ev *selection.PeeringEvent) {
-		if !ev.Status {
-			return
-		}
-
-		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
-		if err != nil {
-			Plugin.LogWarnf("unable to convert outgoing selection autopeering peer to addr info: %s", err)
-
-			return
-		}
-
-		Plugin.LogInfof("[outgoing peering] adding autopeering peer %s", addrInfo.ID.ShortString())
-
-		handleSelection(ev, addrInfo, func() {
-			Plugin.LogInfof("connecting to %s", addrInfo.ID.ShortString())
-			if err := deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
-				Plugin.LogWarnf("couldn't add autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
-			}
-		})
-	})
-
-	onSelectionIncomingPeering = event.NewClosure(func(ev *selection.PeeringEvent) {
-		if !ev.Status {
-			return
-		}
-
-		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
-		if err != nil {
-			Plugin.LogWarnf("unable to convert incoming selection autopeering peer to addr info: %s", err)
-
-			return
-		}
-
-		Plugin.LogInfof("[incoming peering] allow autopeering peer %s", addrInfo.ID.ShortString())
-
-		handleSelection(ev, addrInfo, func() {
-			if err := deps.PeeringManager.AllowPeer(addrInfo.ID); err != nil {
-				Plugin.LogWarnf("couldn't allow autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
-			}
-		})
-	})
-
-	onSelectionDropped = event.NewClosure(func(ev *selection.DroppedEvent) {
-		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
-		if err != nil {
-			Plugin.LogWarnf("unable to convert dropped autopeering peer to peerID: %s", err)
-
-			return
-		}
-
-		Plugin.LogInfof("[dropped event] disconnecting %s / %s", ev.Peer.Address(), peerID.ShortString())
-
-		if err := deps.PeeringManager.DisallowPeer(peerID); err != nil {
-			Plugin.LogWarnf("couldn't disallow autopeering peer %s: %s", peerID.ShortString(), err)
-		}
-
-		var peerRelation p2p.PeerRelation
-		deps.PeeringManager.Call(peerID, func(p *p2p.Peer) {
-			peerRelation = p.Relation
-		})
-
-		if len(peerRelation) == 0 {
-			Plugin.LogWarnf("didn't find autopeered peer %s for disconnecting", peerID.ShortString())
-
-			return
-		}
-
-		if peerRelation != p2p.PeerRelationAutopeered {
-			Plugin.LogWarnf("won't disconnect %s as its relation is not '%s' but '%s'", peerID.ShortString(), p2p.PeerRelationAutopeered, peerRelation)
-
-			return
-		}
-
-		if err := deps.PeeringManager.DisconnectPeer(peerID, errors.New("removed via autopeering selection")); err != nil {
-			Plugin.LogWarnf("couldn't disconnect selection dropped autopeer %s: %s", peerID.ShortString(), err)
-		}
-	})
 }
 
 // handles a peer gotten from the autopeering selection according to its existing relation.
@@ -438,39 +247,189 @@ func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
 	}
 }
 
-func attachEvents() {
-
+func hookEvents() (unhook func()) {
+	var unhookCallbacks []func()
 	if deps.AutopeeringManager.Discovery() != nil {
-		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Hook(onDiscoveryPeerDiscovered)
-		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Hook(onDiscoveryPeerDeleted)
+		unhookCallbacks = append(unhookCallbacks,
+			deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Hook(func(ev *discover.PeerDiscoveredEvent) {
+				peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
+				if err != nil {
+					Plugin.LogWarnf("unable to convert discovered autopeering peer to peerID: %s", err)
+
+					return
+				}
+
+				Plugin.LogInfof("discovered: %s / %s", ev.Peer.Address(), peerID.ShortString())
+			}).Unhook,
+			deps.AutopeeringManager.Discovery().Events().PeerDeleted.Hook(func(ev *discover.PeerDeletedEvent) {
+				peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
+				if err != nil {
+					Plugin.LogWarnf("unable to convert deleted autopeering peer to peerID: %s", err)
+
+					return
+				}
+
+				Plugin.LogInfof("removed offline: %s / %s", ev.Peer.Address(), peerID.ShortString())
+			}).Unhook,
+		)
 	}
 
 	if deps.AutopeeringManager.Selection() != nil {
-		// notify the selection when a connection is closed or failed.
-		deps.PeeringManager.Events.Connected.Hook(onPeerConnected)
-		deps.PeeringManager.Events.Disconnected.Hook(onPeerDisconnected)
-		deps.PeeringManager.Events.RelationUpdated.Hook(onPeeringRelationUpdated)
-		deps.AutopeeringManager.Selection().Events().SaltUpdated.Hook(onSelectionSaltUpdated)
-		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Hook(onSelectionOutgoingPeering)
-		deps.AutopeeringManager.Selection().Events().IncomingPeering.Hook(onSelectionIncomingPeering)
-		deps.AutopeeringManager.Selection().Events().Dropped.Hook(onSelectionDropped)
-	}
-}
+		unhookCallbacks = append(unhookCallbacks,
+			// notify the selection when a connection is closed or failed.
+			deps.PeeringManager.Events.Connected.Hook(func(p *p2p.Peer, conn network.Conn) {
 
-func detachEvents() {
+				if deps.AutopeeringManager.Selection() == nil {
+					return
+				}
 
-	if deps.AutopeeringManager.Discovery() != nil {
-		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Detach(onDiscoveryPeerDiscovered)
-		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Detach(onDiscoveryPeerDeleted)
+				id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf)
+				if id == nil {
+					return
+				}
+
+				// we block peers that are connected via manual peering in the autopeering module.
+				// this ensures that no additional connections are established via autopeering.
+				switch p.Relation {
+				case p2p.PeerRelationKnown, p2p.PeerRelationUnknown:
+					deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
+				}
+			}).Unhook,
+
+			deps.PeeringManager.Events.Disconnected.Hook(func(peer *p2p.Peer, err error) {
+				if deps.AutopeeringManager.Selection() == nil {
+					return
+				}
+
+				id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peer, Plugin.LogWarnf)
+				if id == nil {
+					return
+				}
+
+				// if a peer is disconnected, we need to remove it from the autopeering blacklist
+				// so that former known and unknown peers can be autopeered.
+				deps.AutopeeringManager.Selection().UnblockNeighbor(id.ID())
+
+				if peer.Relation != p2p.PeerRelationAutopeered {
+					return
+				}
+
+				Plugin.LogDebugf("removing: %s", peer.ID.ShortString())
+				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
+			}).Unhook,
+
+			deps.PeeringManager.Events.RelationUpdated.Hook(func(p *p2p.Peer, oldRel p2p.PeerRelation) {
+				if deps.AutopeeringManager.Selection() == nil {
+					return
+				}
+
+				id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf)
+				if id == nil {
+					return
+				}
+
+				// we block peers that are connected via manual peering in the autopeering module.
+				// this ensures that no additional connections are established via autopeering.
+				// if a peer gets updated to autopeered, we need to unblock it.
+				switch p.Relation {
+				case p2p.PeerRelationKnown, p2p.PeerRelationUnknown:
+					deps.AutopeeringManager.Selection().BlockNeighbor(id.ID())
+				case p2p.PeerRelationAutopeered:
+					deps.AutopeeringManager.Selection().UnblockNeighbor(id.ID())
+				}
+
+				if oldRel != p2p.PeerRelationAutopeered {
+					return
+				}
+
+				Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID.ShortString())
+				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
+			}).Unhook,
+
+			deps.AutopeeringManager.Selection().Events().SaltUpdated.Hook(func(ev *selection.SaltUpdatedEvent) {
+				Plugin.LogInfof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
+			}).Unhook,
+
+			deps.AutopeeringManager.Selection().Events().OutgoingPeering.Hook(func(ev *selection.PeeringEvent) {
+				if !ev.Status {
+					return
+				}
+
+				addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
+				if err != nil {
+					Plugin.LogWarnf("unable to convert outgoing selection autopeering peer to addr info: %s", err)
+
+					return
+				}
+
+				Plugin.LogInfof("[outgoing peering] adding autopeering peer %s", addrInfo.ID.ShortString())
+
+				handleSelection(ev, addrInfo, func() {
+					Plugin.LogInfof("connecting to %s", addrInfo.ID.ShortString())
+					if err := deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
+						Plugin.LogWarnf("couldn't add autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
+					}
+				})
+			}).Unhook,
+
+			deps.AutopeeringManager.Selection().Events().IncomingPeering.Hook(func(ev *selection.PeeringEvent) {
+				if !ev.Status {
+					return
+				}
+
+				addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
+				if err != nil {
+					Plugin.LogWarnf("unable to convert incoming selection autopeering peer to addr info: %s", err)
+
+					return
+				}
+
+				Plugin.LogInfof("[incoming peering] allow autopeering peer %s", addrInfo.ID.ShortString())
+
+				handleSelection(ev, addrInfo, func() {
+					if err := deps.PeeringManager.AllowPeer(addrInfo.ID); err != nil {
+						Plugin.LogWarnf("couldn't allow autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
+					}
+				})
+			}).Unhook,
+
+			deps.AutopeeringManager.Selection().Events().Dropped.Hook(func(ev *selection.DroppedEvent) {
+				peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
+				if err != nil {
+					Plugin.LogWarnf("unable to convert dropped autopeering peer to peerID: %s", err)
+
+					return
+				}
+
+				Plugin.LogInfof("[dropped event] disconnecting %s / %s", ev.Peer.Address(), peerID.ShortString())
+
+				if err := deps.PeeringManager.DisallowPeer(peerID); err != nil {
+					Plugin.LogWarnf("couldn't disallow autopeering peer %s: %s", peerID.ShortString(), err)
+				}
+
+				var peerRelation p2p.PeerRelation
+				deps.PeeringManager.Call(peerID, func(p *p2p.Peer) {
+					peerRelation = p.Relation
+				})
+
+				if len(peerRelation) == 0 {
+					Plugin.LogWarnf("didn't find autopeered peer %s for disconnecting", peerID.ShortString())
+
+					return
+				}
+
+				if peerRelation != p2p.PeerRelationAutopeered {
+					Plugin.LogWarnf("won't disconnect %s as its relation is not '%s' but '%s'", peerID.ShortString(), p2p.PeerRelationAutopeered, peerRelation)
+
+					return
+				}
+
+				if err := deps.PeeringManager.DisconnectPeer(peerID, errors.New("removed via autopeering selection")); err != nil {
+					Plugin.LogWarnf("couldn't disconnect selection dropped autopeer %s: %s", peerID.ShortString(), err)
+				}
+			}).Unhook,
+		)
 	}
 
-	if deps.AutopeeringManager.Selection() != nil {
-		deps.PeeringManager.Events.Connected.Detach(onPeerConnected)
-		deps.PeeringManager.Events.Disconnected.Detach(onPeerDisconnected)
-		deps.PeeringManager.Events.RelationUpdated.Detach(onPeeringRelationUpdated)
-		deps.AutopeeringManager.Selection().Events().SaltUpdated.Detach(onSelectionSaltUpdated)
-		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Detach(onSelectionOutgoingPeering)
-		deps.AutopeeringManager.Selection().Events().IncomingPeering.Detach(onSelectionIncomingPeering)
-		deps.AutopeeringManager.Selection().Events().Dropped.Detach(onSelectionDropped)
-	}
+	return lo.Batch(unhookCallbacks...)
 }

@@ -8,11 +8,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/objectstorage"
-	"github.com/iotaledger/hive.go/core/protocol/message"
-	"github.com/iotaledger/hive.go/core/syncutils"
-	"github.com/iotaledger/hive.go/core/workerpool"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
+	"github.com/iotaledger/hive.go/runtime/workerpool"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -21,25 +20,20 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/profile"
 	"github.com/iotaledger/hornet/v2/pkg/protocol"
+	"github.com/iotaledger/hornet/v2/pkg/protocol/protocol/message"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/builder"
 	"github.com/iotaledger/iota.go/v3/pow"
 )
 
 const (
-	WorkerQueueSize = 50000
-	WorkerCount     = 64
+	WorkerCount = 64
 )
 
 var (
 	ErrBlockNotSolid      = errors.New("block is not solid")
 	ErrBlockBelowMaxDepth = errors.New("block is below max depth")
 )
-
-func BlockProcessedCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(block *storage.Block, requests Requests, proto *Protocol))(params[0].(*storage.Block), params[1].(Requests), params[2].(*Protocol))
-}
 
 // Broadcast defines a data which should be broadcasted.
 type Broadcast struct {
@@ -49,17 +43,12 @@ type Broadcast struct {
 	ExcludePeers map[peer.ID]struct{}
 }
 
-func BroadcastCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(b *Broadcast))(params[0].(*Broadcast))
-}
-
 // MessageProcessorEvents are the events fired by the MessageProcessor.
 type MessageProcessorEvents struct {
 	// Fired when a block was fully processed.
-	BlockProcessed *events.Event
+	BlockProcessed *event.Event3[*storage.Block, Requests, *Protocol]
 	// Fired when a block is meant to be broadcasted.
-	BroadcastBlock *events.Event
+	BroadcastBlock *event.Event1[*Broadcast]
 }
 
 // The Options for the MessageProcessor.
@@ -114,10 +103,11 @@ func NewMessageProcessor(
 		peeringManager:  peeringManager,
 		serverMetrics:   serverMetrics,
 		protocolManager: protocolManager,
+		wp:              workerpool.New("MessageProcessor", WorkerCount),
 		opts:            *opts,
 		Events: &MessageProcessorEvents{
-			BlockProcessed: events.NewEvent(BlockProcessedCaller),
-			BroadcastBlock: events.NewEvent(BroadcastCaller),
+			BlockProcessed: event.New3[*storage.Block, Requests, *Protocol](),
+			BroadcastBlock: event.New1[*Broadcast](),
 		},
 	}
 
@@ -151,34 +141,6 @@ func NewMessageProcessor(
 			}),
 	)
 
-	proc.wp = workerpool.New(func(task workerpool.Task) {
-		defer task.Return(nil)
-
-		p, ok := task.Param(0).(*Protocol)
-		if !ok {
-			panic(fmt.Sprintf("invalid type: expected *Protocol, got %T", task.Param(0)))
-		}
-
-		data, ok := task.Param(2).([]byte)
-		if !ok {
-			panic(fmt.Sprintf("invalid type: expected []byte, got %T", task.Param(2)))
-		}
-
-		msgType, ok := task.Param(1).(message.Type)
-		if !ok {
-			panic(fmt.Sprintf("invalid type: expected message.Type, got %T", task.Param(1)))
-		}
-
-		switch msgType {
-		case MessageTypeBlock:
-			proc.processBlockData(p, data)
-		case MessageTypeBlockRequest:
-			proc.processBlockRequest(p, data)
-		case MessageTypeMilestoneRequest:
-			proc.processMilestoneRequest(p, data)
-		}
-	}, workerpool.WorkerCount(WorkerCount), workerpool.QueueSize(WorkerQueueSize))
-
 	return proc, nil
 }
 
@@ -196,13 +158,22 @@ func (proc *MessageProcessor) Shutdown() {
 	defer proc.shutdownMutex.Unlock()
 
 	proc.shutdown = true
-	proc.wp.StopAndWait()
+	proc.wp.Shutdown()
 	proc.workUnits.Shutdown()
 }
 
 // Process submits the given message to the processor for processing.
 func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []byte) {
-	proc.wp.Submit(p, msgType, data)
+	proc.wp.Submit(func() {
+		switch msgType {
+		case MessageTypeBlock:
+			proc.processBlockData(p, data)
+		case MessageTypeBlockRequest:
+			proc.processBlockRequest(p, data)
+		case MessageTypeMilestoneRequest:
+			proc.processMilestoneRequest(p, data)
+		}
+	})
 }
 
 // Emit triggers BlockProcessed and BroadcastBlock events for the given block.

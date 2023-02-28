@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -16,8 +16,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/hive.go/core/configuration"
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/app/configuration"
+	appLogger "github.com/iotaledger/hive.go/app/logger"
 	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
@@ -54,7 +54,7 @@ func TestManager(t *testing.T) {
 	require.NoError(t, err)
 
 	// no need to check the error, since the global logger could already be initialized
-	_ = logger.InitGlobalLogger(cfg)
+	_ = appLogger.InitGlobalLogger(cfg)
 
 	node1 := newNode(t)
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
@@ -80,10 +80,10 @@ func TestManager(t *testing.T) {
 	go node4Manager.Start(ctx)
 	node4AddrInfo := &peer.AddrInfo{ID: node4.ID(), Addrs: node4.Addrs()[:1]}
 
-	//fmt.Println("node 1", node1.ID())
-	//fmt.Println("node 2", node2.ID())
-	//fmt.Println("node 3", node3.ID())
-	//fmt.Println("node 4", node4.ID())
+	// fmt.Println("node 1", node1.ID())
+	// fmt.Println("node 2", node2.ID())
+	// fmt.Println("node 3", node3.ID())
+	// fmt.Println("node 4", node4.ID())
 
 	// can't connect to itself
 	require.True(t, errors.Is(node1Manager.ConnectPeer(node1AddrInfo, p2p.PeerRelationKnown), p2p.ErrCantConnectToItself))
@@ -224,7 +224,7 @@ func TestManagerEvents(t *testing.T) {
 	require.NoError(t, err)
 
 	// no need to check the error, since the global logger could already be initialized
-	_ = logger.InitGlobalLogger(cfg)
+	_ = appLogger.InitGlobalLogger(cfg)
 
 	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 
@@ -242,12 +242,12 @@ func TestManagerEvents(t *testing.T) {
 	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()}
 
 	var connectCalled, connectedCalled bool
-	node1Manager.Events.Connect.Hook(events.NewClosure(func(_ *p2p.Peer) {
+	node1Manager.Events.Connect.Hook(func(_ *p2p.Peer) {
 		connectCalled = true
-	}))
-	node1Manager.Events.Connected.Hook(events.NewClosure(func(_ *p2p.Peer, _ network.Conn) {
+	})
+	node1Manager.Events.Connected.Hook(func(_ *p2p.Peer, _ network.Conn) {
 		connectedCalled = true
-	}))
+	})
 
 	go func() {
 		_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationUnknown)
@@ -260,12 +260,12 @@ func TestManagerEvents(t *testing.T) {
 	}, 4*time.Second, 10*time.Millisecond)
 
 	var disconnectCalled, disconnectedCalled bool
-	node1Manager.Events.Disconnect.Hook(events.NewClosure(func(_ *p2p.Peer) {
+	node1Manager.Events.Disconnect.Hook(func(_ *p2p.Peer) {
 		disconnectCalled = true
-	}))
-	node1Manager.Events.Disconnected.Hook(events.NewClosure(func(_ *p2p.PeerOptError) {
+	})
+	node1Manager.Events.Disconnected.Hook(func(_ *p2p.Peer, _ error) {
 		disconnectedCalled = true
-	}))
+	})
 
 	go func() {
 		_ = node1Manager.DisconnectPeer(node2.ID())
@@ -285,11 +285,11 @@ func TestManagerEvents(t *testing.T) {
 
 	var relationUpdatedCalled bool
 	var updatedRelation, oldRelation p2p.PeerRelation
-	node1Manager.Events.RelationUpdated.Hook(events.NewClosure(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
+	node1Manager.Events.RelationUpdated.Hook(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
 		relationUpdatedCalled = true
 		updatedRelation = peer.Relation
 		oldRelation = oldRel
-	}))
+	})
 
 	_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
 	require.True(t, relationUpdatedCalled)
@@ -297,12 +297,12 @@ func TestManagerEvents(t *testing.T) {
 	require.Equal(t, p2p.PeerRelationUnknown, oldRelation)
 
 	var reconnectingCalled, reconnectedCalled bool
-	node1Manager.Events.Reconnecting.Hook(events.NewClosure(func(_ *p2p.Peer) {
+	node1Manager.Events.Reconnecting.Hook(func(_ *p2p.Peer) {
 		reconnectingCalled = true
-	}))
-	node1Manager.Events.Reconnected.Hook(events.NewClosure(func(_ *p2p.Peer) {
+	})
+	node1Manager.Events.Reconnected.Hook(func(_ *p2p.Peer) {
 		reconnectedCalled = true
-	}))
+	})
 
 	go func() {
 		_ = node2Manager.DisconnectPeer(node1.ID())

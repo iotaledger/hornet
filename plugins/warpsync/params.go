@@ -1,7 +1,7 @@
 package warpsync
 
 import (
-	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/app"
 )
 
 // ParametersWarpSync contains the definition of the parameters used by WarpSync.

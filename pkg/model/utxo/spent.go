@@ -3,8 +3,8 @@ package utxo
 import (
 	"bytes"
 
-	"github.com/iotaledger/hive.go/core/kvstore"
-	"github.com/iotaledger/hive.go/core/marshalutil"
+	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/serializer/v2/marshalutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -29,8 +29,6 @@ func (l LexicalOrderedSpents) Swap(i, j int) {
 
 // Spent are already spent TXOs (transaction outputs).
 type Spent struct {
-	kvStorable
-
 	outputID iotago.OutputID
 	// the ID of the transaction that spent the output
 	transactionIDSpent iotago.TransactionID
@@ -191,3 +189,6 @@ func storeSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(spent.KVStorableKey())
 }
+
+// code guards.
+var _ kvStorable = &Spent{}

@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/kvstore"
-	"github.com/iotaledger/hive.go/core/marshalutil"
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	"github.com/iotaledger/hive.go/serializer/v2/marshalutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -28,8 +28,6 @@ func (l LexicalOrderedOutputs) Swap(i, j int) {
 }
 
 type Output struct {
-	kvStorable
-
 	outputID          iotago.OutputID
 	blockID           iotago.BlockID
 	msIndexBooked     iotago.MilestoneIndex
@@ -141,7 +139,7 @@ func NewOutput(blockID iotago.BlockID, msIndexBooked iotago.MilestoneIndex, msTi
 	return CreateOutput(outputID, blockID, msIndexBooked, msTimestampBooked, output), nil
 }
 
-//- kvStorable
+// - kvStorable
 
 func outputStorageKeyForOutputID(outputID iotago.OutputID) []byte {
 	ms := marshalutil.New(35)
@@ -203,7 +201,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	return nil
 }
 
-//- Helper
+// - Helper
 
 func storeOutput(output *Output, mutations kvstore.BatchedMutations) error {
 	return mutations.Set(output.KVStorableKey(), output.KVStorableValue())
@@ -213,7 +211,7 @@ func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(output.KVStorableKey())
 }
 
-//- Manager
+// - Manager
 
 func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID iotago.OutputID) (*Output, error) {
 	key := outputStorageKeyForOutputID(outputID)
@@ -247,9 +245,11 @@ func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID iotago.Out
 }
 
 func (u *Manager) ReadOutputByOutputID(outputID iotago.OutputID) (*Output, error) {
-
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()
 
 	return u.ReadOutputByOutputIDWithoutLocking(outputID)
 }
+
+// code guards.
+var _ kvStorable = &Output{}

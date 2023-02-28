@@ -3,37 +3,12 @@ package storage
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/core/kvstore"
-	"github.com/iotaledger/hive.go/core/objectstorage"
+	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/profile"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
-
-func BlockCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(cachedBlock *CachedBlock))(params[0].(*CachedBlock).Retain()) // block pass +1
-}
-
-func BlockMetadataCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(cachedBlockMeta *CachedMetadata))(params[0].(*CachedMetadata).Retain()) // block pass +1
-}
-
-func BlockIDCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(blockID iotago.BlockID))(params[0].(iotago.BlockID))
-}
-
-func NewBlockCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(cachedBlock *CachedBlock, latestMilestoneIndex iotago.MilestoneIndex, confirmedMilestoneIndex iotago.MilestoneIndex))(params[0].(*CachedBlock).Retain(), params[1].(iotago.MilestoneIndex), params[2].(iotago.MilestoneIndex)) // block pass +1
-}
-
-func BlockReferencedCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(cachedBlockMeta *CachedMetadata, msIndex iotago.MilestoneIndex, confTime uint32))(params[0].(*CachedMetadata).Retain(), params[1].(iotago.MilestoneIndex), params[2].(uint32)) // block pass +1
-}
 
 // CachedBlock contains two cached objects, one for block and one for metadata.
 type CachedBlock struct {

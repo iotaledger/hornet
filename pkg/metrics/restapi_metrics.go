@@ -5,17 +5,12 @@ import (
 
 	"go.uber.org/atomic"
 
-	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/runtime/event"
 )
 
-func PoWCompletedCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func(blockSize int, duration time.Duration))(params[0].(int), params[1].(time.Duration))
-}
-
 type RestAPIEvents struct {
-	// PoWCompleted is fired when a PoW request is completed.
-	PoWCompleted *events.Event
+	// PoWCompleted is fired when a PoW request is completed. It contains the block size and the duration.
+	PoWCompleted *event.Event2[int, time.Duration]
 }
 
 // RestAPIMetrics defines REST API metrics over the entire runtime of the node.

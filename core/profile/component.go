@@ -7,8 +7,8 @@ import (
 	"github.com/shirou/gopsutil/mem"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/configuration"
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/configuration"
 	"github.com/iotaledger/hornet/v2/pkg/profile"
 )
 
