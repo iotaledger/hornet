@@ -264,7 +264,7 @@ func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip
 	}
 }
 
-// BlockProcessedListener returns a listner that can be used to wait until the block is processed.
+// BlockProcessedListener returns a listener that can be used to wait until the block is processed.
 func (t *Tangle) BlockProcessedListener(blockID iotago.BlockID) *valuenotifier.Listener {
 	return t.blockProcessedNotifier.Listener(blockID)
 }
