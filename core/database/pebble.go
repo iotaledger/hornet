@@ -1,7 +1,7 @@
 package database
 
 import (
-	hivedb "github.com/iotaledger/hive.go/core/database"
+	hivedb "github.com/iotaledger/hive.go/kvstore/database"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"

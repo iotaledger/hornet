@@ -9,8 +9,8 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/app/configuration"
-	"github.com/iotaledger/hive.go/core/certificate"
-	hivep2p "github.com/iotaledger/hive.go/core/p2p"
+	hivep2p "github.com/iotaledger/hive.go/crypto/p2p"
+	"github.com/iotaledger/hive.go/crypto/pem"
 	"github.com/iotaledger/hornet/v2/pkg/jwt"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
@@ -62,7 +62,7 @@ func generateJWTApiToken(args []string) error {
 		return fmt.Errorf("unable to check private key file (%s): %w", privKeyFilePath, err)
 	}
 
-	privKey, err := certificate.ReadEd25519PrivateKeyFromPEMFile(privKeyFilePath)
+	privKey, err := pem.ReadEd25519PrivateKeyFromPEMFile(privKeyFilePath)
 	if err != nil {
 		return fmt.Errorf("reading private key file for peer identity failed: %w", err)
 	}

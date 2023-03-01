@@ -8,8 +8,9 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/app/configuration"
-	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/kvstore"
+	hivedb "github.com/iotaledger/hive.go/kvstore/database"
+	"github.com/iotaledger/hive.go/runtime/ioutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 )
@@ -39,7 +40,7 @@ func databaseHealth(args []string) error {
 
 	checkDatabaseHealth := func(path string, name string, outputJSON bool) error {
 
-		dbExists, err := hivedb.Exists(path)
+		dbExists, err := ioutils.DirExistsAndIsNotEmpty(path)
 		if err != nil {
 			return err
 		}

@@ -15,15 +15,15 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/autopeering/discover"
+	"github.com/iotaledger/hive.go/autopeering/iputils"
+	"github.com/iotaledger/hive.go/autopeering/netutil"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/autopeering/server"
-	"github.com/iotaledger/hive.go/core/crypto/ed25519"
-	"github.com/iotaledger/hive.go/core/identity"
-	"github.com/iotaledger/hive.go/core/iputils"
-	"github.com/iotaledger/hive.go/core/logger"
-	"github.com/iotaledger/hive.go/core/netutil"
+	"github.com/iotaledger/hive.go/crypto/ed25519"
+	"github.com/iotaledger/hive.go/crypto/identity"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 )
 

@@ -17,8 +17,8 @@ import (
 
 	"github.com/iotaledger/hive.go/app/configuration"
 	appLogger "github.com/iotaledger/hive.go/app/logger"
-	"github.com/iotaledger/hive.go/core/logger"
-	hivep2p "github.com/iotaledger/hive.go/core/p2p"
+	hivep2p "github.com/iotaledger/hive.go/crypto/p2p"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"

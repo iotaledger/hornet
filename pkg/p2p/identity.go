@@ -8,8 +8,8 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoreds"
 
 	kvstoreds "github.com/iotaledger/go-ds-kvstore"
-	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/kvstore"
+	hivedb "github.com/iotaledger/hive.go/kvstore/database"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 )
 
