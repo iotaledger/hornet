@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
-	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/lo"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hive.go/runtime/workerpool"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"

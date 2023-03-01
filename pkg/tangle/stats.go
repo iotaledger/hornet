@@ -1,6 +1,6 @@
 package tangle
 
-import "github.com/iotaledger/hive.go/core/math"
+import "github.com/iotaledger/hornet/v2/pkg/math"
 
 func (t *Tangle) LastConfirmedMilestoneMetric() *ConfirmedMilestoneMetric {
 	t.lastConfirmedMilestoneMetricLock.RLock()

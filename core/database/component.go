@@ -10,7 +10,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
-	hivedb "github.com/iotaledger/hive.go/core/database"
+	hivedb "github.com/iotaledger/hive.go/kvstore/database"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"

@@ -13,9 +13,9 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/app/configuration"
-	"github.com/iotaledger/hive.go/core/crypto"
-	hivedb "github.com/iotaledger/hive.go/core/database"
-	"github.com/iotaledger/hive.go/core/ioutils"
+	"github.com/iotaledger/hive.go/crypto"
+	hivedb "github.com/iotaledger/hive.go/kvstore/database"
+	"github.com/iotaledger/hive.go/runtime/ioutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	databasecore "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/core/protocfg"

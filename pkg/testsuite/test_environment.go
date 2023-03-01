@@ -13,7 +13,7 @@ import (
 
 	"github.com/iotaledger/hive.go/app/configuration"
 	appLogger "github.com/iotaledger/hive.go/app/logger"
-	"github.com/iotaledger/hive.go/core/crypto"
+	"github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/serializer/v2"

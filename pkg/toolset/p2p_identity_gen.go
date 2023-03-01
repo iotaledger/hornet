@@ -13,8 +13,8 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/app/configuration"
-	"github.com/iotaledger/hive.go/core/certificate"
-	hivecrypto "github.com/iotaledger/hive.go/core/crypto"
+	hivecrypto "github.com/iotaledger/hive.go/crypto"
+	"github.com/iotaledger/hive.go/crypto/pem"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -85,7 +85,7 @@ func generateP2PIdentity(args []string) error {
 		return fmt.Errorf("unable to convert given private key '%s': %w", iotago.EncodeHex(privKey), err)
 	}
 
-	if err := certificate.WriteEd25519PrivateKeyToPEMFile(privKeyFilePath, privKey); err != nil {
+	if err := pem.WriteEd25519PrivateKeyToPEMFile(privKeyFilePath, privKey); err != nil {
 		return fmt.Errorf("writing private key file for peer identity failed: %w", err)
 	}
 

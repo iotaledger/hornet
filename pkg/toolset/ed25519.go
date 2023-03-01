@@ -13,7 +13,7 @@ import (
 	"github.com/wollac/iota-crypto-demo/pkg/slip10/eddsa"
 
 	"github.com/iotaledger/hive.go/app/configuration"
-	"github.com/iotaledger/hive.go/core/crypto"
+	"github.com/iotaledger/hive.go/crypto"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

@@ -11,8 +11,8 @@ import (
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
-	hivedb "github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/kvstore"
+	hivedb "github.com/iotaledger/hive.go/kvstore/database"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 )
 

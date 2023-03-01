@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/iotaledger/hive.go/core/contextutils"
 	"github.com/iotaledger/hive.go/lo"
+	"github.com/iotaledger/hive.go/runtime/contextutils"
 	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hive.go/runtime/workerpool"
 	"github.com/iotaledger/hive.go/serializer/v2"

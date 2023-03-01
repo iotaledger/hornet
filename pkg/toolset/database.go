@@ -8,7 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	hivedb "github.com/iotaledger/hive.go/core/database"
+	hivedb "github.com/iotaledger/hive.go/kvstore/database"
+	"github.com/iotaledger/hive.go/runtime/ioutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	databasecore "github.com/iotaledger/hornet/v2/core/database"
 	"github.com/iotaledger/hornet/v2/core/protocfg"
@@ -160,7 +161,7 @@ func getTangleStorage(path string,
 	}
 
 	if checkExist {
-		databaseExists, err := hivedb.Exists(path)
+		databaseExists, err := ioutils.DirExistsAndIsNotEmpty(path)
 		if err != nil {
 			return nil, err
 		}

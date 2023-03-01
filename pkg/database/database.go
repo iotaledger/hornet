@@ -7,13 +7,13 @@ import (
 
 	"github.com/pkg/errors"
 
-	hivedb "github.com/iotaledger/hive.go/core/database"
-	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
+	hivedb "github.com/iotaledger/hive.go/kvstore/database"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/ioutils"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 )
 

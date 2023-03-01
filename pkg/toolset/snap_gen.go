@@ -14,7 +14,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/app/configuration"
-	"github.com/iotaledger/hive.go/core/ioutils"
+	"github.com/iotaledger/hive.go/runtime/ioutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/snapshot"

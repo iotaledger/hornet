@@ -11,7 +11,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/app/configuration"
-	hivedb "github.com/iotaledger/hive.go/core/database"
+	hivedb "github.com/iotaledger/hive.go/kvstore/database"
 	"github.com/iotaledger/hornet/v2/pkg/dag"
 	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"

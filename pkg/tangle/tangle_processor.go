@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iotaledger/hive.go/core/contextutils"
 	"github.com/iotaledger/hive.go/lo"
+	"github.com/iotaledger/hive.go/runtime/contextutils"
 	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hive.go/runtime/timeutil"
 	"github.com/iotaledger/hive.go/runtime/valuenotifier"
