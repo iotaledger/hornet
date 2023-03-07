@@ -82,11 +82,7 @@ func TestValue(t *testing.T) {
 
 	// broadcast to a node
 	log.Println("submitting transaction ...")
-	submittedBlock, err := n.Nodes[2].DebugNodeAPIClient.SubmitBlock(context.Background(), block, protoParams)
-	require.NoError(t, err)
-
-	// eventually the block should be confirmed
-	submittedBlockID, err := submittedBlock.ID()
+	submittedBlockID, err := n.Nodes[2].DebugNodeAPIClient.SubmitBlock(context.Background(), block, protoParams)
 	require.NoError(t, err)
 
 	log.Println("checking that the transaction gets confirmed ...")
