@@ -82,11 +82,7 @@ func TestValue(t *testing.T) {
 
 	// broadcast to a node
 	log.Println("submitting transaction ...")
-	submittedBlock, err := n.Nodes[2].DebugNodeAPIClient.SubmitBlock(context.Background(), block, protoParams)
-	require.NoError(t, err)
-
-	// eventually the block should be confirmed
-	submittedBlockID, err := submittedBlock.ID()
+	submittedBlockID, err := n.Nodes[2].DebugNodeAPIClient.SubmitBlock(context.Background(), block, protoParams)
 	require.NoError(t, err)
 
 	log.Println("checking that the transaction gets confirmed ...")
@@ -113,7 +109,7 @@ func TestValue(t *testing.T) {
 	require.EqualValues(t, target2Deposit, balance)
 
 	// the genesis output should be spent
-	outputRes, err := n.Coordinator().DebugNodeAPIClient.OutputByID(context.Background(), genesisInputID.ID())
+	outputMetadata, err := n.Coordinator().DebugNodeAPIClient.OutputMetadataByID(context.Background(), genesisInputID.ID())
 	require.NoError(t, err)
-	require.True(t, outputRes.Metadata.Spent)
+	require.True(t, outputMetadata.Spent)
 }
