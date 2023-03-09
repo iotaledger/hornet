@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-rc.5] - 07.03.2023
+
+_**Warning**: This is a mandatory release for all nodes._
+
+_**Note**: Removed binary and deb releases. Please switch to a Docker setup using [node-docker-setup](https://github.com/iotaledger/node-docker-setup)._
+
+### Fixed
+    - Updated iota.go with latest fixes
+    - Check block before doing PoW in attacher (#1821)
+    - Fix wrong key type in p2pidentity-gen tool (#1831)
+
+### Added
+    - Add resync phase to improve future cone solidification (#1832)
+   
+
 ## [2.0.0-rc.4] - 09.01.2023
 
 ### Fixed

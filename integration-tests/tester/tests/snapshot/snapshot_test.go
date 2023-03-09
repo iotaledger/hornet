@@ -43,11 +43,7 @@ func TestSnapshot(t *testing.T) {
 	// check that on each node, the total supply is on an output with ID 999..
 	for _, node := range n.Nodes {
 		require.Eventually(t, func() bool {
-			res, err := node.DebugNodeAPIClient.OutputByID(context.Background(), targetOutputID)
-			if err != nil {
-				return false
-			}
-			output, err := res.Output()
+			output, err := node.DebugNodeAPIClient.OutputByID(context.Background(), targetOutputID)
 			if err != nil {
 				return false
 			}
