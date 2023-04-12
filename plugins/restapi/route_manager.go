@@ -49,7 +49,7 @@ func (p *RestRouteManager) AddRoute(route string) *echo.Group {
 }
 
 // AddProxyRoute adds a proxy route to the Routes endpoint and configures a remote proxy for this route.
-func (p *RestRouteManager) AddProxyRoute(route string, host string, port uint32) error {
+func (p *RestRouteManager) AddProxyRoute(route string, host string, port uint32, path string) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -66,7 +66,7 @@ func (p *RestRouteManager) AddProxyRoute(route string, host string, port uint32)
 	}
 
 	// existing proxies get overwritten (necessary if last plugin was not cleaned up properly)
-	return p.proxy.AddReverseProxy(route, host, port)
+	return p.proxy.AddReverseProxy(route, host, port, path)
 }
 
 // RemoveRoute removes a route from the Routes endpoint.

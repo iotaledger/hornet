@@ -26,7 +26,7 @@ func (s *Server) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest) (
 	if req.GetPort() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "port can not be zero")
 	}
-	if err := deps.RestRouteManager.AddProxyRoute(req.GetRoute(), req.GetHost(), req.GetPort()); err != nil {
+	if err := deps.RestRouteManager.AddProxyRoute(req.GetRoute(), req.GetHost(), req.GetPort(), req.GetPath()); err != nil {
 		Plugin.LogErrorf("Error registering proxy %s", req.GetRoute())
 
 		return nil, status.Errorf(codes.Internal, "error adding route to proxy: %s", err.Error())

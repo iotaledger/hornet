@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -77,8 +78,12 @@ func (b *balancer) skipper(c echo.Context) bool {
 	return b.Next(c) == nil
 }
 
-func (b *balancer) AddTargetHostAndPort(prefix string, host string, port uint32) error {
-	apiURL, err := url.Parse(fmt.Sprintf("http://%s:%d", host, port))
+func (b *balancer) AddTargetHostAndPort(prefix string, host string, port uint32, path string) error {
+	if path != "" && !strings.HasPrefix(path, "/") {
+		return errors.New("if path is set, it needs to start with \"/\"")
+	}
+
+	apiURL, err := url.Parse(fmt.Sprintf("http://%s:%d%s", host, port, path))
 	if err != nil {
 		return err
 	}
@@ -119,8 +124,8 @@ func (p *DynamicProxy) AddGroup(prefix string) *echo.Group {
 	return p.group.Group("/" + prefix)
 }
 
-func (p *DynamicProxy) AddReverseProxy(prefix string, host string, port uint32) error {
-	if err := p.balancer.AddTargetHostAndPort(prefix, host, port); err != nil {
+func (p *DynamicProxy) AddReverseProxy(prefix string, host string, port uint32, path string) error {
+	if err := p.balancer.AddTargetHostAndPort(prefix, host, port, path); err != nil {
 		return err
 	}
 	p.AddGroup(prefix).Use(p.middleware(prefix))
