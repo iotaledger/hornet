@@ -89,7 +89,6 @@ Add your Hornet neighbor addresses to the `peering.json` file.
 
 :::note
 This step is recommended, but optional if you are using autopeering.
-See [peering](../references/peering.md) for more information.
 :::
 
 
