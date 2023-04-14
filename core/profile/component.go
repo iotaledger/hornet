@@ -26,20 +26,18 @@ var (
 )
 
 func init() {
-	CoreComponent = &app.CoreComponent{
-		Component: &app.Component{
-			Name:      "Profile",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-		},
+	Component = &app.Component{
+		Name:      "Profile",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Params:    params,
+		Provide:   provide,
+		Configure: configure,
 	}
 }
 
 var (
-	CoreComponent *app.CoreComponent
-	deps          dependencies
+	Component *app.Component
+	deps      dependencies
 )
 
 type dependencies struct {
@@ -52,7 +50,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func() string {
 		return ParamsNode.Alias
 	}, dig.Name("nodeAlias")); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type profileDeps struct {
@@ -62,7 +60,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func(d profileDeps) *profile.Profile {
 		return loadProfile(d.ProfilesConfig)
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -71,9 +69,9 @@ func provide(c *dig.Container) error {
 func configure() error {
 
 	if ParamsNode.Profile == AutoProfileName {
-		CoreComponent.LogInfof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
+		Component.LogInfof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
 	} else {
-		CoreComponent.LogInfof("Using profile '%s'", deps.Profile.Name)
+		Component.LogInfof("Using profile '%s'", deps.Profile.Name)
 	}
 
 	return nil
@@ -86,7 +84,7 @@ func loadProfile(profilesConfig *configuration.Configuration) *profile.Profile {
 	if profileName == AutoProfileName {
 		v, err := mem.VirtualMemory()
 		if err != nil {
-			CoreComponent.LogPanic(err)
+			Component.LogPanic(err)
 		}
 
 		if v.Total >= 8000000000*0.95 {
@@ -98,7 +96,7 @@ func loadProfile(profilesConfig *configuration.Configuration) *profile.Profile {
 		} else if v.Total >= 1000000000*0.95 {
 			profileName = ProfileName1GB
 		} else {
-			CoreComponent.LogPanic(ErrNotEnoughMemory)
+			Component.LogPanic(ErrNotEnoughMemory)
 		}
 	}
 
@@ -119,10 +117,10 @@ func loadProfile(profilesConfig *configuration.Configuration) *profile.Profile {
 	default:
 		p = &profile.Profile{}
 		if !profilesConfig.Exists(profileName) {
-			CoreComponent.LogPanicf("profile '%s' is not defined in the config", profileName)
+			Component.LogPanicf("profile '%s' is not defined in the config", profileName)
 		}
 		if err := profilesConfig.Unmarshal(profileName, p); err != nil {
-			CoreComponent.LogPanic(err)
+			Component.LogPanic(err)
 		}
 		p.Name = profileName
 	}

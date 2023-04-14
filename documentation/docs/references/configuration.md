@@ -476,7 +476,7 @@ Example:
 
 | Name        | Description                                       | Type    | Default value    |
 | ----------- | ------------------------------------------------- | ------- | ---------------- |
-| enabled     | Whether the profiling plugin is enabled           | boolean | false            |
+| enabled     | Whether the profiling component is enabled        | boolean | false            |
 | bindAddress | The bind address on which the profiler listens on | string  | "localhost:6060" |
 
 Example:

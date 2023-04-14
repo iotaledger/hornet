@@ -35,7 +35,7 @@ func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsRespon
 		copy(requestedPreviousMilestoneID[:], previousMilestoneIDBytes)
 	}
 
-	mutations, err := deps.Tangle.CheckSolidityAndComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), requestedIndex, requestedTimestamp, requestedParents, requestedPreviousMilestoneID)
+	mutations, err := deps.Tangle.CheckSolidityAndComputeWhiteFlagMutations(Component.Daemon().ContextStopped(), requestedIndex, requestedTimestamp, requestedParents, requestedPreviousMilestoneID)
 	if err != nil {
 		switch {
 		case errors.Is(err, common.ErrNodeNotSynced):

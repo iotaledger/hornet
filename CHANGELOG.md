@@ -378,7 +378,7 @@ _**Note**: due to changes to the internal database structure it is recommended t
     - Fix nil pointer exception in optimalSnapshotType
     - Set missing config default values for mainnet
     - Do not disable plugins for the entry nodes in the integration tests
-    - Fix dependency injection of global config pars if pluggables are disabled by adding a InitConfigPars stage
+    - Fix dependency injection of global config pars if pluggables are disabled by adding a InitConfigParams stage
     - Do not panic in MilestoneRetrieverFromStorage
     - Fix logger init in test cases
 

@@ -10,6 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/runtime/event"
 	"github.com/iotaledger/hornet/v2/core/protocfg"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -25,25 +26,24 @@ import (
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:      "INX",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+	Component = &app.Component{
+		Name:     "INX",
+		DepsFunc: func(cDeps dependencies) { deps = cDeps },
+		Params:   params,
+		IsEnabled: func(c *dig.Container) bool {
+			// do not enable in "autopeering entry node" mode
+			return components.IsAutopeeringEntryNodeDisabled(c) && ParamsINX.Enabled
 		},
-		IsEnabled: func() bool {
-			return ParamsINX.Enabled
-		},
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
 	}
 }
 
 var (
-	Plugin   *app.Plugin
-	deps     dependencies
-	attacher *tangle.BlockAttacher
+	Component *app.Component
+	deps      dependencies
+	attacher  *tangle.BlockAttacher
 
 	blockProcessedTimeout = 1 * time.Second
 )
@@ -77,13 +77,13 @@ func provide(c *dig.Container) error {
 			},
 		}
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	if err := c.Provide(func() *Server {
 		return newServer()
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -106,15 +106,15 @@ func configure() error {
 }
 
 func run() error {
-	if err := Plugin.Daemon().BackgroundWorker("INX", func(ctx context.Context) {
-		Plugin.LogInfo("Starting INX ... done")
+	if err := Component.Daemon().BackgroundWorker("INX", func(ctx context.Context) {
+		Component.LogInfo("Starting INX ... done")
 		deps.INXServer.Start()
 		<-ctx.Done()
-		Plugin.LogInfo("Stopping INX ...")
+		Component.LogInfo("Stopping INX ...")
 		deps.INXServer.Stop()
-		Plugin.LogInfo("Stopping INX ... done")
+		Component.LogInfo("Stopping INX ... done")
 	}, daemon.PriorityIndexer); err != nil {
-		Plugin.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil

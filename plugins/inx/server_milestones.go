@@ -87,7 +87,7 @@ func (s *Server) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*i
 }
 
 func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestonesServer) error {
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	wp := workerpool.New("ListenToLatestMilestones", workerCount).Start()
 	unhook := deps.Tangle.Events.LatestMilestoneChanged.Hook(func(cachedMilestone *storage.CachedMilestone) {
@@ -95,7 +95,7 @@ func (s *Server) ListenToLatestMilestones(_ *inx.NoParams, srv inx.INX_ListenToL
 
 		payload := inxMilestoneForCachedMilestone(cachedMilestone.Retain())
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 			cancel()
 		}
 	}, event.WithWorkerPool(wp)).Unhook
@@ -216,7 +216,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 		err := sendMilestonesRange(start, end)
 		if err != nil {
 			err := fmt.Errorf("sendMilestonesRange error: %w", err)
-			Plugin.LogError(err.Error())
+			Component.LogError(err.Error())
 
 			return err
 		}
@@ -227,7 +227,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	sendFunc := func(_ iotago.MilestoneIndex, payload *inx.MilestoneAndProtocolParameters) error {
 		if err := srv.Send(payload); err != nil {
 			err := fmt.Errorf("send error: %w", err)
-			Plugin.LogError(err.Error())
+			Component.LogError(err.Error())
 
 			return err
 		}
@@ -236,7 +236,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 	}
 
 	var innerErr error
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	wp := workerpool.New("ListenToConfirmedMilestones", 1).Start()
 
@@ -245,7 +245,7 @@ func (s *Server) ListenToConfirmedMilestones(req *inx.MilestoneRangeRequest, srv
 
 		payload, err := createMilestoneAndProtocolParametersPayloadForMilestone(cachedMilestone.Milestone())
 		if err != nil {
-			Plugin.LogErrorf("serialize error: %v", err)
+			Component.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
@@ -317,7 +317,7 @@ func (s *Server) ReadMilestoneCone(req *inx.MilestoneRequest, srv inx.INX_ReadMi
 		}
 		defer cachedBlock.Release(true) // block -1
 
-		meta, err := NewINXBlockMetadata(Plugin.Daemon().ContextStopped(), metadata.BlockID(), metadata)
+		meta, err := NewINXBlockMetadata(Component.Daemon().ContextStopped(), metadata.BlockID(), metadata)
 		if err != nil {
 			return err
 		}
@@ -341,7 +341,7 @@ func (s *Server) ReadMilestoneConeMetadata(req *inx.MilestoneRequest, srv inx.IN
 	defer cachedMilestone.Release(true) // milestone -1
 
 	return milestoneCone(cachedMilestone.Milestone().Index(), cachedMilestone.Milestone().Parents(), func(metadata *storage.BlockMetadata) error {
-		payload, err := NewINXBlockMetadata(Plugin.Daemon().ContextStopped(), metadata.BlockID(), metadata)
+		payload, err := NewINXBlockMetadata(Component.Daemon().ContextStopped(), metadata.BlockID(), metadata)
 		if err != nil {
 			return err
 		}
@@ -360,7 +360,7 @@ func milestoneCone(index iotago.MilestoneIndex, parents iotago.BlockIDs, consume
 	defer memcachedTraverserStorage.Cleanup(true)
 
 	if err := dag.TraverseParents(
-		Plugin.Daemon().ContextStopped(),
+		Component.Daemon().ContextStopped(),
 		memcachedTraverserStorage,
 		parents,
 		// traversal stops if no more blocks pass the given condition

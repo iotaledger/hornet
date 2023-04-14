@@ -9,6 +9,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -37,21 +38,20 @@ const (
 func init() {
 	_ = flag.CommandLine.MarkHidden(CfgSnapshotsForceLoadingSnapshot)
 
-	CoreComponent = &app.CoreComponent{
-		Component: &app.Component{
-			Name:           "Snapshot",
-			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
-			Params:         params,
-			InitConfigPars: initConfigPars,
-			Provide:        provide,
-			Run:            run,
-		},
+	Component = &app.Component{
+		Name:             "Snapshot",
+		DepsFunc:         func(cDeps dependencies) { deps = cDeps },
+		Params:           params,
+		InitConfigParams: initConfigParams,
+		IsEnabled:        components.IsAutopeeringEntryNodeDisabled, // do not enable in "autopeering entry node" mode
+		Provide:          provide,
+		Run:              run,
 	}
 }
 
 var (
-	CoreComponent *app.CoreComponent
-	deps          dependencies
+	Component *app.Component
+	deps      dependencies
 
 	forceLoadingSnapshot = flag.Bool(CfgSnapshotsForceLoadingSnapshot, false, "force loading of a snapshot, even if a database already exists")
 )
@@ -68,7 +68,7 @@ type dependencies struct {
 	StorageMetrics     *metrics.StorageMetrics
 }
 
-func initConfigPars(c *dig.Container) error {
+func initConfigParams(c *dig.Container) error {
 
 	type cfgResult struct {
 		dig.Out
@@ -101,16 +101,16 @@ func provide(c *dig.Container) error {
 		if deps.DeleteAllFlag {
 			// delete old snapshot files
 			if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
-				CoreComponent.LogErrorfAndExit("deleting full snapshot file failed: %s", err)
+				Component.LogErrorfAndExit("deleting full snapshot file failed: %s", err)
 			}
 
 			if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
-				CoreComponent.LogErrorfAndExit("deleting delta snapshot file failed: %s", err)
+				Component.LogErrorfAndExit("deleting delta snapshot file failed: %s", err)
 			}
 		}
 
 		importer := snapshot.NewSnapshotImporter(
-			CoreComponent.Logger(),
+			Component.Logger(),
 			deps.Storage,
 			deps.SnapshotsFullPath,
 			deps.SnapshotsDeltaPath,
@@ -123,8 +123,8 @@ func provide(c *dig.Container) error {
 			// snapshot already exists, no need to load it
 		default:
 			// import the initial snapshot
-			if err := importer.ImportSnapshots(CoreComponent.Daemon().ContextStopped()); err != nil {
-				CoreComponent.LogErrorAndExit(err)
+			if err := importer.ImportSnapshots(Component.Daemon().ContextStopped()); err != nil {
+				Component.LogErrorAndExit(err)
 			}
 		}
 
@@ -149,7 +149,7 @@ func provide(c *dig.Container) error {
 	return c.Provide(func(deps snapshotDeps) *snapshot.Manager {
 		deltaSnapshotSizeThresholdMinSizeBytes, err := bytes.Parse(ParamsSnapshots.DeltaSizeThresholdMinSize)
 		if err != nil {
-			CoreComponent.LogPanicf("parameter %s invalid", CoreComponent.App().Config().GetParameterPath(&(ParamsSnapshots.DeltaSizeThresholdMinSize)))
+			Component.LogPanicf("parameter %s invalid", Component.App().Config().GetParameterPath(&(ParamsSnapshots.DeltaSizeThresholdMinSize)))
 		}
 
 		solidEntryPointCheckThresholdPast := syncmanager.MilestoneIndexDelta(deps.ProtocolManager.Current().BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
@@ -157,12 +157,12 @@ func provide(c *dig.Container) error {
 
 		snapshotDepth := syncmanager.MilestoneIndexDelta(ParamsSnapshots.Depth)
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {
-			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CoreComponent.App().Config().GetParameterPath(&(ParamsSnapshots.Depth)), snapshotDepth, solidEntryPointCheckThresholdFuture)
+			Component.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", Component.App().Config().GetParameterPath(&(ParamsSnapshots.Depth)), snapshotDepth, solidEntryPointCheckThresholdFuture)
 			snapshotDepth = solidEntryPointCheckThresholdFuture
 		}
 
 		return snapshot.NewSnapshotManager(
-			CoreComponent.Logger(),
+			Component.Logger(),
 			deps.Storage,
 			deps.SyncManager,
 			deps.UTXOManager,
@@ -180,8 +180,8 @@ func provide(c *dig.Container) error {
 }
 
 func run() error {
-	if err := CoreComponent.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
-		CoreComponent.LogInfo("Starting snapshot background worker ... done")
+	if err := Component.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
+		Component.LogInfo("Starting snapshot background worker ... done")
 
 		newConfirmedMilestoneSignal := make(chan iotago.MilestoneIndex)
 		unhook := deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Hook(func(msIndex iotago.MilestoneIndex) {
@@ -195,8 +195,8 @@ func run() error {
 		for {
 			select {
 			case <-ctx.Done():
-				CoreComponent.LogInfo("Stopping snapshot background worker ...")
-				CoreComponent.LogInfo("Stopping snapshot background worker ... done")
+				Component.LogInfo("Stopping snapshot background worker ...")
+				Component.LogInfo("Stopping snapshot background worker ... done")
 
 				return
 
@@ -205,7 +205,7 @@ func run() error {
 			}
 		}
 	}, daemon.PrioritySnapshots); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil

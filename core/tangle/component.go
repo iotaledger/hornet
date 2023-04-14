@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hive.go/lo"
 	"github.com/iotaledger/hive.go/runtime/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/migrator"
@@ -38,21 +39,20 @@ const (
 func init() {
 	_ = flag.CommandLine.MarkHidden(CfgTangleSyncedAtStartup)
 
-	CoreComponent = &app.CoreComponent{
-		Component: &app.Component{
-			Name:      "Tangle",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
-		},
+	Component = &app.Component{
+		Name:      "Tangle",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Params:    params,
+		IsEnabled: components.IsAutopeeringEntryNodeDisabled, // do not enable in "autopeering entry node" mode
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
 	}
 }
 
 var (
-	CoreComponent *app.CoreComponent
-	deps          dependencies
+	Component *app.Component
+	deps      dependencies
 
 	syncedAtStartup    = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
 	revalidateDatabase = flag.Bool(CfgTangleRevalidateDatabase, false, "revalidate the database on startup if corrupted")
@@ -81,7 +81,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func() *metrics.ServerMetrics {
 		return &metrics.ServerMetrics{}
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type milestoneManagerDeps struct {
@@ -99,7 +99,7 @@ func provide(c *dig.Container) error {
 			deps.CoordinatorKeyManager,
 			deps.MilestonePublicKeyCount)
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type cfgResult struct {
@@ -114,7 +114,7 @@ func provide(c *dig.Container) error {
 			MaxDeltaBlockOldestConeRootIndexToCMI:   ParamsTangle.MaxDeltaBlockOldestConeRootIndexToCMI,
 		}
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type tipScoreDeps struct {
@@ -128,7 +128,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func(deps tipScoreDeps) *tangle.TipScoreCalculator {
 		return tangle.NewTipScoreCalculator(deps.Storage, deps.MaxDeltaBlockYoungestConeRootIndexToCMI, deps.MaxDeltaBlockOldestConeRootIndexToCMI, int(deps.ProtocolManager.Current().BelowMaxDepth))
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type tangleDeps struct {
@@ -147,9 +147,9 @@ func provide(c *dig.Container) error {
 
 	if err := c.Provide(func(deps tangleDeps) *tangle.Tangle {
 		return tangle.New(
-			CoreComponent.Daemon().ContextStopped(),
-			CoreComponent.Daemon(),
-			CoreComponent.App().NewLogger("Tangle"),
+			Component.Daemon().ContextStopped(),
+			Component.Daemon(),
+			Component.App().NewLogger("Tangle"),
 			deps.Storage,
 			deps.SyncManager,
 			deps.MilestoneManager,
@@ -164,7 +164,7 @@ func provide(c *dig.Container) error {
 			ParamsTangle.WhiteFlagParentsSolidTimeout,
 			*syncedAtStartup)
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -175,17 +175,17 @@ func configure() error {
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
-	if err := CoreComponent.Daemon().BackgroundWorker("Database Health", func(_ context.Context) {
+	if err := Component.Daemon().BackgroundWorker("Database Health", func(_ context.Context) {
 		if err := deps.Storage.MarkStoresCorrupted(); err != nil {
-			CoreComponent.LogPanic(err)
+			Component.LogPanic(err)
 		}
 	}, daemon.PriorityDatabaseHealth); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	databaseCorrupted, err := deps.Storage.AreStoresCorrupted()
 	if err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	if databaseCorrupted && !deps.DatabaseDebug {
@@ -194,7 +194,7 @@ func configure() error {
 		// if it was not deleted before this check.
 		revalidateDatabase := *revalidateDatabase || deps.DatabaseAutoRevalidation
 		if !revalidateDatabase {
-			CoreComponent.LogPanic(`
+			Component.LogPanic(`
 HORNET was not shut down properly, the database may be corrupted.
 Please restart HORNET with one of the following flags or enable "db.autoRevalidation" in the config.
 
@@ -203,16 +203,16 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 --deleteAll:      deletes the database and the snapshot files
 `)
 		}
-		CoreComponent.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation ...")
+		Component.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation ...")
 
 		if err := deps.Tangle.RevalidateDatabase(deps.SnapshotImporter, deps.PruneReceipts); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
-				CoreComponent.LogInfo("database revalidation aborted")
+				Component.LogInfo("database revalidation aborted")
 				os.Exit(0)
 			}
-			CoreComponent.LogPanicf("%s: %s", ErrDatabaseRevalidationFailed, err)
+			Component.LogPanicf("%s: %s", ErrDatabaseRevalidationFailed, err)
 		}
-		CoreComponent.LogInfo("database revalidation successful")
+		Component.LogInfo("database revalidation successful")
 	}
 
 	deps.Tangle.ConfigureTangleProcessor()
@@ -221,34 +221,34 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 }
 
 func run() error {
-	if err := CoreComponent.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(ctx context.Context) {
 		unhook := attachHeartbeatEvents()
 		defer unhook()
 		<-ctx.Done()
 	}, daemon.PriorityHeartbeats); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CoreComponent.Daemon().BackgroundWorker("Cleanup at shutdown", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("Cleanup at shutdown", func(ctx context.Context) {
 		<-ctx.Done()
 		deps.Tangle.AbortMilestoneSolidification()
 
-		CoreComponent.LogInfo("Flushing caches to database ...")
+		Component.LogInfo("Flushing caches to database ...")
 		deps.Storage.ShutdownStorages()
-		CoreComponent.LogInfo("Flushing caches to database ... done")
+		Component.LogInfo("Flushing caches to database ... done")
 
 	}, daemon.PriorityFlushToDatabase); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	deps.Tangle.RunTangleProcessor()
 
 	// create a background worker that prints a status message every second
-	if err := CoreComponent.Daemon().BackgroundWorker("Tangle status reporter", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("Tangle status reporter", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, daemon.PriorityStatusReport); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil

@@ -6,24 +6,24 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/pow"
 	"github.com/iotaledger/hornet/v2/pkg/protocol"
 )
 
 func init() {
-	CoreComponent = &app.CoreComponent{
-		Component: &app.Component{
-			Name:    "PoW",
-			Params:  params,
-			Provide: provide,
-			Run:     run,
-		},
+	Component = &app.Component{
+		Name:      "PoW",
+		Params:    params,
+		IsEnabled: components.IsAutopeeringEntryNodeDisabled, // do not enable in "autopeering entry node" mode
+		Provide:   provide,
+		Run:       run,
 	}
 }
 
 var (
-	CoreComponent *app.CoreComponent
+	Component *app.Component
 )
 
 func provide(c *dig.Container) error {
@@ -37,7 +37,7 @@ func provide(c *dig.Container) error {
 		// init the pow handler with all possible settings
 		return pow.New(ParamsPoW.RefreshTipsInterval)
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -46,13 +46,13 @@ func provide(c *dig.Container) error {
 func run() error {
 
 	// close the PoW handler on shutdown
-	if err := CoreComponent.Daemon().BackgroundWorker("PoW Handler", func(ctx context.Context) {
-		CoreComponent.LogInfo("Starting PoW Handler ... done")
+	if err := Component.Daemon().BackgroundWorker("PoW Handler", func(ctx context.Context) {
+		Component.LogInfo("Starting PoW Handler ... done")
 		<-ctx.Done()
-		CoreComponent.LogInfo("Stopping PoW Handler ...")
-		CoreComponent.LogInfo("Stopping PoW Handler ... done")
+		Component.LogInfo("Stopping PoW Handler ...")
+		Component.LogInfo("Stopping PoW Handler ... done")
 	}, daemon.PriorityPoWHandler); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil

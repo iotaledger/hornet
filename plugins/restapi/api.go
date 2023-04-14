@@ -28,7 +28,7 @@ func compileRoutesAsRegexes(routes []string) []*regexp.Regexp {
 	for i, route := range routes {
 		reg := compileRouteAsRegex(route)
 		if reg == nil {
-			Plugin.LogErrorfAndExit("Invalid route in config: %s", route)
+			Component.LogErrorfAndExit("Invalid route in config: %s", route)
 		}
 		regexes[i] = reg
 	}
@@ -68,7 +68,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 	// configure JWT auth
 	salt := ParamsRestAPI.JWTAuth.Salt
 	if len(salt) == 0 {
-		Plugin.LogErrorfAndExit("'%s' should not be empty", Plugin.App().Config().GetParameterPath(&(ParamsRestAPI.JWTAuth.Salt)))
+		Component.LogErrorfAndExit("'%s' should not be empty", Component.App().Config().GetParameterPath(&(ParamsRestAPI.JWTAuth.Salt)))
 	}
 
 	// API tokens do not expire.
@@ -79,7 +79,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 		deps.NodePrivateKey,
 	)
 	if err != nil {
-		Plugin.LogPanicf("JWT auth initialization failed: %w", err)
+		Component.LogPanicf("JWT auth initialization failed: %w", err)
 	}
 
 	jwtAllow := func(c echo.Context, subject string, claims *jwt.AuthClaims) bool {

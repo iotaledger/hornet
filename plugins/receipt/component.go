@@ -6,6 +6,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/model/migrator"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
@@ -14,22 +15,21 @@ import (
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:      "Receipts",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
+	Component = &app.Component{
+		Name:     "Receipts",
+		DepsFunc: func(cDeps dependencies) { deps = cDeps },
+		Params:   params,
+		IsEnabled: func(c *dig.Container) bool {
+			// do not enable in "autopeering entry node" mode
+			return components.IsAutopeeringEntryNodeDisabled(c) && ParamsReceipts.Enabled
 		},
-		IsEnabled: func() bool {
-			return ParamsReceipts.Enabled
-		},
+		Provide:   provide,
+		Configure: configure,
 	}
 }
 
 var (
-	Plugin *app.Plugin
+	Component *app.Component
 
 	deps dependencies
 )
@@ -49,7 +49,7 @@ func provide(c *dig.Container) error {
 			Client: &http.Client{Timeout: ParamsReceipts.Validator.API.Timeout},
 		})
 		if err != nil {
-			Plugin.LogPanicf("failed to initialize API: %s", err)
+			Component.LogPanicf("failed to initialize API: %s", err)
 		}
 
 		return migrator.NewValidator(
@@ -58,7 +58,7 @@ func provide(c *dig.Container) error {
 			ParamsReceipts.Validator.Coordinator.MerkleTreeDepth,
 		)
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type serviceDeps struct {
@@ -77,7 +77,7 @@ func provide(c *dig.Container) error {
 			ParamsReceipts.Backup.Path,
 		)
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -86,13 +86,13 @@ func provide(c *dig.Container) error {
 func configure() error {
 	deps.Tangle.Events.NewReceipt.Hook(func(r *iotago.ReceiptMilestoneOpt) {
 		if deps.ReceiptService.ValidationEnabled {
-			Plugin.LogInfof("receipt passed validation against %s", ParamsReceipts.Validator.API.Address)
+			Component.LogInfof("receipt passed validation against %s", ParamsReceipts.Validator.API.Address)
 		}
-		Plugin.LogInfof("new receipt processed (migrated_at %d, final %v, entries %d),", r.MigratedAt, r.Final, len(r.Funds))
+		Component.LogInfof("new receipt processed (migrated_at %d, final %v, entries %d),", r.MigratedAt, r.Final, len(r.Funds))
 	})
-	Plugin.LogInfof("storing receipt backups in %s", ParamsReceipts.Backup.Path)
+	Component.LogInfof("storing receipt backups in %s", ParamsReceipts.Backup.Path)
 	if err := deps.ReceiptService.Init(); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil

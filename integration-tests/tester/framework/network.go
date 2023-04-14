@@ -412,6 +412,7 @@ func (n *Network) TakeHeapSnapshots() error {
 			}
 		}(n)
 	}
+	wg.Wait()
 
 	return profErr
 }

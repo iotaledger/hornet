@@ -136,11 +136,11 @@ func (s *Server) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (*in
 	defer cachedBlockMeta.Release(true) // meta -1
 
 	//nolint:contextcheck // we don't care if the client context has ended already (merging contexts would be too expensive here)
-	return NewINXBlockMetadata(Plugin.Daemon().ContextStopped(), cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
+	return NewINXBlockMetadata(Component.Daemon().ContextStopped(), cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
 }
 
 func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServer) error {
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	wp := workerpool.New("ListenToBlocks", workerCount).Start()
 
@@ -149,7 +149,7 @@ func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServe
 
 		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID(), cachedBlock.Block().Data())
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 			cancel()
 		}
 	}, event.WithWorkerPool(wp)).Unhook
@@ -167,7 +167,7 @@ func (s *Server) ListenToBlocks(_ *inx.NoParams, srv inx.INX_ListenToBlocksServe
 }
 
 func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidBlocksServer) error {
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	wp := workerpool.New("ListenToSolidBlocks", workerCount).Start()
 
@@ -176,14 +176,14 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
-			Plugin.LogErrorf("serialize error: %v", err)
+			Component.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 			cancel()
 		}
 	}, event.WithWorkerPool(wp)).Unhook
@@ -201,7 +201,7 @@ func (s *Server) ListenToSolidBlocks(_ *inx.NoParams, srv inx.INX_ListenToSolidB
 }
 
 func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToReferencedBlocksServer) error {
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	wp := workerpool.New("ListenToReferencedBlocks", workerCount).Start()
 
@@ -210,14 +210,14 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
-			Plugin.LogErrorf("serialize error: %v", err)
+			Component.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 			cancel()
 		}
 	}, event.WithWorkerPool(wp)).Unhook
@@ -235,7 +235,7 @@ func (s *Server) ListenToReferencedBlocks(_ *inx.NoParams, srv inx.INX_ListenToR
 }
 
 func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTipScoreUpdatesServer) error {
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	wp := workerpool.New("ListenToTipScoreUpdates", workerCount).Start()
 
@@ -248,13 +248,13 @@ func (s *Server) ListenToTipScoreUpdates(_ *inx.NoParams, srv inx.INX_ListenToTi
 
 		payload, err := NewINXBlockMetadata(ctx, blockMeta.Metadata().BlockID(), blockMeta.Metadata(), tip)
 		if err != nil {
-			Plugin.LogErrorf("serialize error: %v", err)
+			Component.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 			cancel()
 		}
 	}
@@ -283,7 +283,7 @@ func (s *Server) SubmitBlock(ctx context.Context, rawBlock *inx.RawBlock) (*inx.
 		return nil, err
 	}
 
-	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(ctx, Plugin.Daemon().ContextStopped())
+	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(ctx, Component.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
 	blockID, err := attacher.AttachBlock(mergedCtx, block)

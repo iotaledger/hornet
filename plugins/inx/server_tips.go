@@ -32,7 +32,7 @@ func (s *Server) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx.Ti
 
 	if err != nil {
 		err = fmt.Errorf("error selecting tips: %w", err)
-		Plugin.LogError(err.Error())
+		Component.LogError(err.Error())
 
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
@@ -52,7 +52,7 @@ func (s *Server) ListenToTipsMetrics(req *inx.TipsMetricRequest, srv inx.INX_Lis
 	}
 
 	var innerErr error
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 	defer cancel()
 
 	ticker := timeutil.NewTicker(func() {
@@ -64,7 +64,7 @@ func (s *Server) ListenToTipsMetrics(req *inx.TipsMetricRequest, srv inx.INX_Lis
 		}
 
 		if err := srv.Send(metrics); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 			innerErr = err
 			cancel()
 		}

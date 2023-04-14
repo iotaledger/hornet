@@ -9,6 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/app/shutdown"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
@@ -22,20 +23,19 @@ import (
 func init() {
 	_ = flag.CommandLine.MarkHidden(CfgProtocolPublicKeyRangesJSON)
 
-	CoreComponent = &app.CoreComponent{
-		Component: &app.Component{
-			Name:           "ProtoCfg",
-			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
-			Params:         params,
-			InitConfigPars: initConfigPars,
-			Provide:        provide,
-			Configure:      configure,
-		},
+	Component = &app.Component{
+		Name:             "ProtoCfg",
+		DepsFunc:         func(cDeps dependencies) { deps = cDeps },
+		Params:           params,
+		InitConfigParams: initConfigParams,
+		IsEnabled:        components.IsAutopeeringEntryNodeDisabled, // do not enable in "autopeering entry node" mode
+		Provide:          provide,
+		Configure:        configure,
 	}
 }
 
 var (
-	CoreComponent       *app.CoreComponent
+	Component           *app.Component
 	deps                dependencies
 	cooPubKeyRangesFlag = flag.String(CfgProtocolPublicKeyRangesJSON, "", "overwrite public key ranges (JSON)")
 )
@@ -48,11 +48,11 @@ type dependencies struct {
 	ShutdownHandler *shutdown.ShutdownHandler
 }
 
-func initConfigPars(c *dig.Container) error {
+func initConfigParams(c *dig.Container) error {
 	if err := c.Provide(func() string {
 		return ParamsProtocol.TargetNetworkName
 	}, dig.Name("targetNetworkName")); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type cfgDeps struct {
@@ -86,19 +86,19 @@ func initConfigPars(c *dig.Container) error {
 		if *cooPubKeyRangesFlag != "" {
 			// load from special CLI flag
 			if err := json.Unmarshal([]byte(*cooPubKeyRangesFlag), &keyRanges); err != nil {
-				CoreComponent.LogPanic(err)
+				Component.LogPanic(err)
 			}
 		}
 
 		keyManager, err := KeyManagerWithConfigPublicKeyRanges(keyRanges)
 		if err != nil {
-			CoreComponent.LogPanicf("can't load public key ranges: %s", err)
+			Component.LogPanicf("can't load public key ranges: %s", err)
 		}
 		res.KeyManager = keyManager
 
 		return res
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -118,17 +118,17 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func(deps protocolManagerDeps) *protocol.Manager {
 		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
 		if err != nil {
-			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
+			Component.LogPanicf("can't initialize sync manager: %s", err)
 		}
 
 		protocolManager, err := protocol.NewManager(deps.Storage, ledgerIndex)
 		if err != nil {
-			CoreComponent.LogPanic(err)
+			Component.LogPanic(err)
 		}
 
 		return protocolManager
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -143,7 +143,7 @@ func configure() error {
 
 	deps.ProtocolManager.Events.NextMilestoneUnsupported.Hook(func(unsupportedProtoParamsMsOption *iotago.ProtocolParamsMilestoneOpt) {
 		unsupportedVersion := unsupportedProtoParamsMsOption.ProtocolVersion
-		CoreComponent.LogWarnf("next milestone will run under unsupported protocol version %d!", unsupportedVersion)
+		Component.LogWarnf("next milestone will run under unsupported protocol version %d!", unsupportedVersion)
 	})
 
 	deps.ProtocolManager.Events.CriticalErrors.Hook(func(err error) {

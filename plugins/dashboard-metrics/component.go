@@ -9,6 +9,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
@@ -31,23 +32,22 @@ const (
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:      "DashboardMetrics",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Configure: configure,
-			Run:       run,
-		},
-		IsEnabled: func() bool {
+	Component = &app.Component{
+		Name:     "DashboardMetrics",
+		DepsFunc: func(cDeps dependencies) { deps = cDeps },
+		IsEnabled: func(c *dig.Container) bool {
+			// do not enable in "autopeering entry node" mode
 			// the plugin is enabled if the restapi plugin is enabled
-			return restapi.ParamsRestAPI.Enabled
+			return components.IsAutopeeringEntryNodeDisabled(c) && restapi.ParamsRestAPI.Enabled
 		},
+		Configure: configure,
+		Run:       run,
 	}
 }
 
 var (
-	Plugin *app.Plugin
-	deps   dependencies
+	Component *app.Component
+	deps      dependencies
 )
 
 type dependencies struct {
@@ -63,8 +63,8 @@ type dependencies struct {
 
 func configure() error {
 	// check if RestAPI plugin is disabled
-	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
-		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the dashboard metrics plugin")
+	if !Component.App().IsComponentEnabled(restapi.Component.Identifier()) {
+		Component.LogPanic("RestAPI plugin needs to be enabled to use the dashboard metrics plugin")
 	}
 
 	routeGroup := deps.RestRouteManager.AddRoute("dashboard-metrics/v1")
@@ -90,7 +90,7 @@ func configure() error {
 }
 
 func run() error {
-	if err := Plugin.Daemon().BackgroundWorker("DashboardMetricsUpdater", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("DashboardMetricsUpdater", func(ctx context.Context) {
 		unhook := deps.Tangle.Events.BPSMetricsUpdated.Hook(func(gossipMetrics *tangle.BPSMetrics) {
 			lastGossipMetricsLock.Lock()
 			defer lastGossipMetricsLock.Unlock()
@@ -100,7 +100,7 @@ func run() error {
 		defer unhook()
 		<-ctx.Done()
 	}, daemon.PriorityMetricsUpdater); err != nil {
-		Plugin.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil

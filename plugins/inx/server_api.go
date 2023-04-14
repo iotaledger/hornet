@@ -13,7 +13,7 @@ import (
 )
 
 func (s *Server) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest) (*inx.NoParams, error) {
-	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
+	if !Component.App().IsComponentEnabled(restapi.Component.Identifier()) {
 		return nil, status.Error(codes.Unavailable, "RestAPI plugin is not enabled")
 	}
 
@@ -27,17 +27,17 @@ func (s *Server) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest) (
 		return nil, status.Error(codes.InvalidArgument, "port can not be zero")
 	}
 	if err := deps.RestRouteManager.AddProxyRoute(req.GetRoute(), req.GetHost(), req.GetPort(), req.GetPath()); err != nil {
-		Plugin.LogErrorf("Error registering proxy %s", req.GetRoute())
+		Component.LogErrorf("Error registering proxy %s", req.GetRoute())
 
 		return nil, status.Errorf(codes.Internal, "error adding route to proxy: %s", err.Error())
 	}
-	Plugin.LogInfof("Registered proxy %s => %s:%d", req.GetRoute(), req.GetHost(), req.GetPort())
+	Component.LogInfof("Registered proxy %s => %s:%d", req.GetRoute(), req.GetHost(), req.GetPort())
 
 	return &inx.NoParams{}, nil
 }
 
 func (s *Server) UnregisterAPIRoute(_ context.Context, req *inx.APIRouteRequest) (*inx.NoParams, error) {
-	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
+	if !Component.App().IsComponentEnabled(restapi.Component.Identifier()) {
 		return nil, status.Error(codes.Unavailable, "RestAPI plugin is not enabled")
 	}
 
@@ -45,13 +45,13 @@ func (s *Server) UnregisterAPIRoute(_ context.Context, req *inx.APIRouteRequest)
 		return nil, status.Error(codes.InvalidArgument, "route can not be empty")
 	}
 	deps.RestRouteManager.RemoveRoute(req.GetRoute())
-	Plugin.LogInfof("Removed proxy %s", req.GetRoute())
+	Component.LogInfof("Removed proxy %s", req.GetRoute())
 
 	return &inx.NoParams{}, nil
 }
 
 func (s *Server) PerformAPIRequest(_ context.Context, req *inx.APIRequest) (*inx.APIResponse, error) {
-	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
+	if !Component.App().IsComponentEnabled(restapi.Component.Identifier()) {
 		return nil, status.Error(codes.Unavailable, "RestAPI plugin is not enabled")
 	}
 
