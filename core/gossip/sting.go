@@ -28,10 +28,10 @@ func hookGossipProtocolEvents(proto *gossip.Protocol) {
 
 	// attach protocol errors
 	closeConnectionDueToProtocolError := func(err error) {
-		CoreComponent.LogWarnf("closing connection to peer %s because of a protocol error: %s", proto.PeerID.ShortString(), err.Error())
+		Component.LogWarnf("closing connection to peer %s because of a protocol error: %s", proto.PeerID.ShortString(), err.Error())
 
 		if err := deps.GossipService.CloseStream(proto.PeerID); err != nil {
-			CoreComponent.LogWarnf("closing connection to peer %s failed, error: %s", proto.PeerID.ShortString(), err.Error())
+			Component.LogWarnf("closing connection to peer %s failed, error: %s", proto.PeerID.ShortString(), err.Error())
 		}
 	}
 

@@ -34,14 +34,14 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 	var targetIndex iotago.MilestoneIndex
 
 	if request.Index != nil {
-		targetIndex, err = deps.PruningManager.PruneDatabaseByTargetIndex(Plugin.Daemon().ContextStopped(), *request.Index)
+		targetIndex, err = deps.PruningManager.PruneDatabaseByTargetIndex(Component.Daemon().ContextStopped(), *request.Index)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
 	}
 
 	if request.Depth != nil {
-		targetIndex, err = deps.PruningManager.PruneDatabaseByDepth(Plugin.Daemon().ContextStopped(), *request.Depth)
+		targetIndex, err = deps.PruningManager.PruneDatabaseByDepth(Component.Daemon().ContextStopped(), *request.Depth)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
@@ -53,7 +53,7 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
 
-		targetIndex, err = deps.PruningManager.PruneDatabaseBySize(Plugin.Daemon().ContextStopped(), pruningTargetDatabaseSizeBytes)
+		targetIndex, err = deps.PruningManager.PruneDatabaseBySize(Component.Daemon().ContextStopped(), pruningTargetDatabaseSizeBytes)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
@@ -80,7 +80,7 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 	}
 
 	filePath := filepath.Join(filepath.Dir(deps.SnapshotsFullPath), fmt.Sprintf("full_snapshot_%d.bin", request.Index))
-	if err := deps.SnapshotManager.CreateFullSnapshot(Plugin.Daemon().ContextStopped(), request.Index, filePath, false); err != nil {
+	if err := deps.SnapshotManager.CreateFullSnapshot(Component.Daemon().ContextStopped(), request.Index, filePath, false); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating snapshot failed: %s", err)
 	}
 

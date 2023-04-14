@@ -7,6 +7,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -17,21 +18,20 @@ import (
 )
 
 func init() {
-	CoreComponent = &app.CoreComponent{
-		Component: &app.Component{
-			Name:           "Pruning",
-			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
-			Params:         params,
-			InitConfigPars: initConfigPars,
-			Provide:        provide,
-			Run:            run,
-		},
+	Component = &app.Component{
+		Name:             "Pruning",
+		DepsFunc:         func(cDeps dependencies) { deps = cDeps },
+		Params:           params,
+		InitConfigParams: initConfigParams,
+		IsEnabled:        components.IsAutopeeringEntryNodeDisabled, // do not enable in "autopeering entry node" mode
+		Provide:          provide,
+		Run:              run,
 	}
 }
 
 var (
-	CoreComponent *app.CoreComponent
-	deps          dependencies
+	Component *app.Component
+	deps      dependencies
 )
 
 type dependencies struct {
@@ -40,7 +40,7 @@ type dependencies struct {
 	PruningManager  *pruning.Manager
 }
 
-func initConfigPars(c *dig.Container) error {
+func initConfigParams(c *dig.Container) error {
 
 	type cfgResult struct {
 		dig.Out
@@ -72,21 +72,21 @@ func provide(c *dig.Container) error {
 		pruningMilestonesMaxMilestonesToKeep := syncmanager.MilestoneIndexDelta(ParamsPruning.Milestones.MaxMilestonesToKeep)
 
 		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
-			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Milestones.Enabled)))
+			Component.LogPanicf("%s has to be specified if %s is enabled", Component.App().Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), Component.App().Config().GetParameterPath(&(ParamsPruning.Milestones.Enabled)))
 		}
 
 		pruningSizeEnabled := ParamsPruning.Size.Enabled
 		pruningTargetDatabaseSizeBytes, err := bytes.Parse(ParamsPruning.Size.TargetSize)
 		if err != nil {
-			CoreComponent.LogPanicf("parameter %s invalid", CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)))
+			Component.LogPanicf("parameter %s invalid", Component.App().Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)))
 		}
 
 		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
-			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)), CoreComponent.App().Config().GetParameterPath(&(ParamsPruning.Size.Enabled)))
+			Component.LogPanicf("%s has to be specified if %s is enabled", Component.App().Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)), Component.App().Config().GetParameterPath(&(ParamsPruning.Size.Enabled)))
 		}
 
 		return pruning.NewPruningManager(
-			CoreComponent.Logger(),
+			Component.Logger(),
 			deps.Storage,
 			deps.SyncManager,
 			deps.TangleDatabase,
@@ -104,8 +104,8 @@ func provide(c *dig.Container) error {
 }
 
 func run() error {
-	if err := CoreComponent.Daemon().BackgroundWorker("Pruning", func(ctx context.Context) {
-		CoreComponent.LogInfo("Starting pruning background worker ... done")
+	if err := Component.Daemon().BackgroundWorker("Pruning", func(ctx context.Context) {
+		Component.LogInfo("Starting pruning background worker ... done")
 		unhookEvent := deps.SnapshotManager.Events.HandledConfirmedMilestoneIndexChanged.Hook(func(confirmedMilestoneIndex iotago.MilestoneIndex) {
 			deps.PruningManager.HandleNewConfirmedMilestoneEvent(ctx, confirmedMilestoneIndex)
 		}).Unhook
@@ -113,10 +113,10 @@ func run() error {
 
 		<-ctx.Done()
 
-		CoreComponent.LogInfo("Stopping pruning background worker ...")
-		CoreComponent.LogInfo("Stopping pruning background worker ... done")
+		Component.LogInfo("Stopping pruning background worker ...")
+		Component.LogInfo("Stopping pruning background worker ... done")
 	}, daemon.PriorityPruning); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil

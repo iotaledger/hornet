@@ -320,7 +320,7 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 
 	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
 		if err := sendMilestoneDiffsRange(start, end); err != nil {
-			Plugin.LogErrorf("sendMilestoneDiffsRange error: %v", err)
+			Component.LogErrorf("sendMilestoneDiffsRange error: %v", err)
 
 			return err
 		}
@@ -330,7 +330,7 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 
 	sendFunc := func(index iotago.MilestoneIndex, newOutputs utxo.Outputs, newSpents utxo.Spents) error {
 		if err := createLedgerUpdatePayloadAndSend(index, newOutputs, newSpents); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 
 			return err
 		}
@@ -339,7 +339,7 @@ func (s *Server) ListenToLedgerUpdates(req *inx.MilestoneRangeRequest, srv inx.I
 	}
 
 	var innerErr error
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	wp := workerpool.New("ListenToLedgerUpdates", workerCount).Start()
 
@@ -503,7 +503,7 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 	catchUpFunc := func(start iotago.MilestoneIndex, end iotago.MilestoneIndex) error {
 		err := sendTreasuryUpdatesRange(start, end)
 		if err != nil {
-			Plugin.LogErrorf("sendTreasuryUpdatesRange error: %v", err)
+			Component.LogErrorf("sendTreasuryUpdatesRange error: %v", err)
 		}
 
 		return err
@@ -511,7 +511,7 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 
 	sendFunc := func(index iotago.MilestoneIndex, tuple *utxo.TreasuryMutationTuple) error {
 		if err := createTreasuryUpdatePayloadAndSend(index, tuple.NewOutput, tuple.SpentOutput); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 
 			return err
 		}
@@ -520,7 +520,7 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 	}
 
 	var innerErr error
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	wp := workerpool.New("ListenToTreasuryUpdates", workerCount).Start()
 
@@ -549,21 +549,21 @@ func (s *Server) ListenToTreasuryUpdates(req *inx.MilestoneRangeRequest, srv inx
 }
 
 func (s *Server) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenToMigrationReceiptsServer) error {
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	wp := workerpool.New("ListenToMigrationReceipts", workerCount).Start()
 
 	unhook := deps.Tangle.Events.NewReceipt.Hook(func(receipt *iotago.ReceiptMilestoneOpt) {
 		payload, err := inx.WrapReceipt(receipt)
 		if err != nil {
-			Plugin.LogErrorf("serialize error: %v", err)
+			Component.LogErrorf("serialize error: %v", err)
 			cancel()
 
 			return
 		}
 
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 			cancel()
 		}
 	}, event.WithWorkerPool(wp)).Unhook

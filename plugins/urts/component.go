@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/app/shutdown"
 	"github.com/iotaledger/hive.go/lo"
 	"github.com/iotaledger/hornet/v2/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -21,23 +22,22 @@ import (
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:     "URTS",
-			DepsFunc: func(cDeps dependencies) { deps = cDeps },
-			Params:   params,
-			Provide:  provide,
-			Run:      run,
+	Component = &app.Component{
+		Name:     "URTS",
+		DepsFunc: func(cDeps dependencies) { deps = cDeps },
+		Params:   params,
+		IsEnabled: func(c *dig.Container) bool {
+			// do not enable in "autopeering entry node" mode
+			return components.IsAutopeeringEntryNodeDisabled(c) && ParamsTipsel.Enabled
 		},
-		IsEnabled: func() bool {
-			return ParamsTipsel.Enabled
-		},
+		Provide: provide,
+		Run:     run,
 	}
 }
 
 var (
-	Plugin *app.Plugin
-	deps   dependencies
+	Component *app.Component
+	deps      dependencies
 )
 
 type dependencies struct {
@@ -59,7 +59,7 @@ func provide(c *dig.Container) error {
 
 	if err := c.Provide(func(deps tipselDeps) *tipselect.TipSelector {
 		return tipselect.New(
-			Plugin.Daemon().ContextStopped(),
+			Component.Daemon().ContextStopped(),
 			deps.TipScoreCalculator,
 			deps.SyncManager,
 			deps.ServerMetrics,
@@ -73,22 +73,22 @@ func provide(c *dig.Container) error {
 			ParamsTipsel.SemiLazy.MaxChildren,
 		)
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
 }
 
 func run() error {
-	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("Tipselection[Events]", func(ctx context.Context) {
 		unhook := hookEvents()
 		defer unhook()
 		<-ctx.Done()
 	}, daemon.PriorityTipselection); err != nil {
-		Plugin.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
@@ -96,11 +96,11 @@ func run() error {
 			case <-time.After(time.Second):
 				ts := time.Now()
 				removedTipCount := deps.TipSelector.CleanUpReferencedTips()
-				Plugin.LogDebugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+				Component.LogDebugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 			}
 		}
 	}, daemon.PriorityTipselection); err != nil {
-		Plugin.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
@@ -130,7 +130,7 @@ func hookEvents() (unhook func()) {
 			if err != nil && err != common.ErrOperationAborted {
 				deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("urts tipselection plugin hit a critical error while updating scores: %s", err), true)
 			}
-			Plugin.LogDebugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+			Component.LogDebugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 		}).Unhook,
 	)
 }

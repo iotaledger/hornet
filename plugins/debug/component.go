@@ -7,6 +7,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/utxo"
@@ -49,22 +50,22 @@ const (
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:      "Debug",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Configure: configure,
+	Component = &app.Component{
+		Name:     "Debug",
+		DepsFunc: func(cDeps dependencies) { deps = cDeps },
+		Params:   params,
+		IsEnabled: func(c *dig.Container) bool {
+			// do not enable in "autopeering entry node" mode
+			// the plugin is enabled if the restapi plugin is enabled
+			return components.IsAutopeeringEntryNodeDisabled(c) && ParamsDebug.Enabled
 		},
-		IsEnabled: func() bool {
-			return ParamsDebug.Enabled
-		},
+		Configure: configure,
 	}
 }
 
 var (
-	Plugin *app.Plugin
-	deps   dependencies
+	Component *app.Component
+	deps      dependencies
 )
 
 type dependencies struct {
@@ -79,8 +80,8 @@ type dependencies struct {
 
 func configure() error {
 	// check if RestAPI plugin is disabled
-	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
-		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
+	if !Component.App().IsComponentEnabled(restapi.Component.Identifier()) {
+		Component.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
 
 	routeGroup := deps.RestRouteManager.AddRoute("debug/v1")

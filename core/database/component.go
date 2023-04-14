@@ -11,6 +11,7 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	hivedb "github.com/iotaledger/hive.go/kvstore/database"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -34,22 +35,21 @@ const (
 )
 
 func init() {
-	CoreComponent = &app.CoreComponent{
-		Component: &app.Component{
-			Name:           "Database",
-			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
-			Params:         params,
-			InitConfigPars: initConfigPars,
-			Provide:        provide,
-			Configure:      configure,
-			Run:            run,
-		},
+	Component = &app.Component{
+		Name:             "Database",
+		DepsFunc:         func(cDeps dependencies) { deps = cDeps },
+		Params:           params,
+		InitConfigParams: initConfigParams,
+		IsEnabled:        components.IsAutopeeringEntryNodeDisabled, // do not enable in "autopeering entry node" mode
+		Provide:          provide,
+		Configure:        configure,
+		Run:              run,
 	}
 }
 
 var (
-	CoreComponent *app.CoreComponent
-	deps          dependencies
+	Component *app.Component
+	deps      dependencies
 
 	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
 	deleteAll      = flag.Bool(CfgTangleDeleteAll, false, "whether to delete the database and snapshots at startup")
@@ -63,7 +63,7 @@ type dependencies struct {
 	StorageMetrics *metrics.StorageMetrics
 }
 
-func initConfigPars(c *dig.Container) error {
+func initConfigParams(c *dig.Container) error {
 
 	type cfgResult struct {
 		dig.Out
@@ -80,7 +80,7 @@ func initConfigPars(c *dig.Container) error {
 	if err := c.Provide(func() cfgResult {
 		dbEngine, err := hivedb.EngineFromStringAllowed(ParamsDatabase.Engine, database.AllowedEnginesDefault)
 		if err != nil {
-			CoreComponent.LogPanic(err)
+			Component.LogPanic(err)
 		}
 
 		return cfgResult{
@@ -94,7 +94,7 @@ func initConfigPars(c *dig.Container) error {
 			DatabaseAutoRevalidation: ParamsDatabase.AutoRevalidation,
 		}
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -128,7 +128,7 @@ func provide(c *dig.Container) error {
 			if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 				// delete old database folder
 				if err := os.RemoveAll(deps.DatabasePath); err != nil {
-					CoreComponent.LogPanicf("deleting database folder failed: %s", err)
+					Component.LogPanicf("deleting database folder failed: %s", err)
 				}
 			}
 
@@ -136,16 +136,16 @@ func provide(c *dig.Container) error {
 
 			tangleTargetEngine, err := database.CheckEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine, allowedEngines...)
 			if err != nil {
-				CoreComponent.LogPanic(err)
+				Component.LogPanic(err)
 			}
 
 			utxoTargetEngine, err := database.CheckEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine, allowedEngines...)
 			if err != nil {
-				CoreComponent.LogPanic(err)
+				Component.LogPanic(err)
 			}
 
 			if tangleTargetEngine != utxoTargetEngine {
-				CoreComponent.LogPanicf("Tangle database engine does not match UTXO database engine (%s != %s)", tangleTargetEngine, utxoTargetEngine)
+				Component.LogPanicf("Tangle database engine does not match UTXO database engine (%s != %s)", tangleTargetEngine, utxoTargetEngine)
 			}
 
 			return tangleTargetEngine
@@ -183,12 +183,12 @@ func provide(c *dig.Container) error {
 			}
 
 		default:
-			CoreComponent.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", targetEngine)
+			Component.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", targetEngine)
 
 			return databaseOut{}
 		}
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type storageDeps struct {
@@ -208,7 +208,7 @@ func provide(c *dig.Container) error {
 
 		store, err := storage.New(deps.TangleDatabase.KVStore(), deps.UTXODatabase.KVStore(), deps.Profile.Caches)
 		if err != nil {
-			CoreComponent.LogPanicf("can't initialize storage: %s", err)
+			Component.LogPanicf("can't initialize storage: %s", err)
 		}
 
 		store.PrintSnapshotInfo()
@@ -218,7 +218,7 @@ func provide(c *dig.Container) error {
 			UTXOManager: store.UTXOManager(),
 		}
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type syncManagerDeps struct {
@@ -230,17 +230,17 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func(deps syncManagerDeps) *syncmanager.SyncManager {
 		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
 		if err != nil {
-			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
+			Component.LogPanicf("can't initialize sync manager: %s", err)
 		}
 
 		sync, err := syncmanager.New(ledgerIndex, deps.ProtocolManager)
 		if err != nil {
-			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
+			Component.LogPanicf("can't initialize sync manager: %s", err)
 		}
 
 		return sync
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -250,50 +250,50 @@ func configure() error {
 
 	correctDatabasesVersion, err := deps.Storage.CheckCorrectStoresVersion()
 	if err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	if !correctDatabasesVersion {
 		databaseVersionUpdated, err := deps.Storage.UpdateStoresVersion()
 		if err != nil {
-			CoreComponent.LogPanic(err)
+			Component.LogPanic(err)
 		}
 
 		if !databaseVersionUpdated {
-			CoreComponent.LogPanic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
+			Component.LogPanic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 
 	if ParamsDatabase.CheckLedgerStateOnStartup {
-		CoreComponent.LogInfo("Checking ledger state ...")
+		Component.LogInfo("Checking ledger state ...")
 		ledgerStateCheckStart := time.Now()
 		if err := deps.Storage.CheckLedgerState(); err != nil {
-			CoreComponent.LogErrorAndExit(err)
+			Component.LogErrorAndExit(err)
 		}
-		CoreComponent.LogInfof("Checking ledger state ... done. took %v", time.Since(ledgerStateCheckStart).Truncate(time.Millisecond))
+		Component.LogInfof("Checking ledger state ... done. took %v", time.Since(ledgerStateCheckStart).Truncate(time.Millisecond))
 	}
 
-	if err = CoreComponent.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
+	if err = Component.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
 		<-ctx.Done()
 
 		if err = deps.Storage.MarkStoresHealthy(); err != nil {
-			CoreComponent.LogPanic(err)
+			Component.LogPanic(err)
 		}
 
-		CoreComponent.LogInfo("Syncing databases to disk ...")
+		Component.LogInfo("Syncing databases to disk ...")
 		if err = deps.Storage.FlushAndCloseStores(); err != nil {
-			CoreComponent.LogPanicf("Syncing databases to disk ... failed: %s", err)
+			Component.LogPanicf("Syncing databases to disk ... failed: %s", err)
 		}
-		CoreComponent.LogInfo("Syncing databases to disk ... done")
+		Component.LogInfo("Syncing databases to disk ... done")
 	}, daemon.PriorityCloseDatabase); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
 }
 
 func run() error {
-	if err := CoreComponent.Daemon().BackgroundWorker("Database[Events]", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("Database[Events]", func(ctx context.Context) {
 		hook := deps.Storage.Events.PruningStateChanged.Hook(func(running bool) {
 			deps.StorageMetrics.PruningRunning.Store(running)
 			if running {
@@ -303,7 +303,7 @@ func run() error {
 		defer hook.Unhook()
 		<-ctx.Done()
 	}, daemon.PriorityMetricsUpdater); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil

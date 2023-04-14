@@ -14,6 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/lo"
 	"github.com/iotaledger/hive.go/runtime/timeutil"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -39,21 +40,20 @@ const (
 )
 
 func init() {
-	CoreComponent = &app.CoreComponent{
-		Component: &app.Component{
-			Name:      "Gossip",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
-		},
+	Component = &app.Component{
+		Name:      "Gossip",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Params:    params,
+		IsEnabled: components.IsAutopeeringEntryNodeDisabled, // do not enable in "autopeering entry node" mode
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
 	}
 }
 
 var (
-	CoreComponent *app.CoreComponent
-	deps          dependencies
+	Component *app.Component
+	deps      dependencies
 )
 
 type dependencies struct {
@@ -78,7 +78,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func() gossip.RequestQueue {
 		return gossip.NewRequestQueue()
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type msgProcDeps struct {
@@ -104,12 +104,12 @@ func provide(c *dig.Container) error {
 				WorkUnitCacheOpts: deps.Profile.Caches.IncomingBlocksFilter,
 			})
 		if err != nil {
-			CoreComponent.LogPanicf("MessageProcessor initialization failed: %s", err)
+			Component.LogPanicf("MessageProcessor initialization failed: %s", err)
 		}
 
 		return msgProc
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type serviceDeps struct {
@@ -127,13 +127,13 @@ func provide(c *dig.Container) error {
 			deps.Host,
 			deps.PeeringManager,
 			deps.ServerMetrics,
-			gossip.WithLogger(CoreComponent.App().NewLogger("GossipService")),
+			gossip.WithLogger(Component.App().NewLogger("GossipService")),
 			gossip.WithUnknownPeersLimit(ParamsGossip.UnknownPeersLimit),
 			gossip.WithStreamReadTimeout(ParamsGossip.StreamReadTimeout),
 			gossip.WithStreamWriteTimeout(ParamsGossip.StreamWriteTimeout),
 		)
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type requesterDeps struct {
@@ -152,7 +152,7 @@ func provide(c *dig.Container) error {
 			gossip.WithRequesterPendingRequestReEnqueueInterval(ParamsRequests.PendingReEnqueueInterval),
 		)
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type broadcasterDeps struct {
@@ -171,7 +171,7 @@ func provide(c *dig.Container) error {
 			deps.GossipService,
 			1000)
 	}); err != nil {
-		CoreComponent.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -187,53 +187,53 @@ func configure() error {
 }
 
 func run() error {
-	if err := CoreComponent.Daemon().BackgroundWorker("GossipService", func(ctx context.Context) {
-		CoreComponent.LogInfo("Running GossipService")
+	if err := Component.Daemon().BackgroundWorker("GossipService", func(ctx context.Context) {
+		Component.LogInfo("Running GossipService")
 		unhook := hookEventsGossipService()
 		defer unhook()
 
 		deps.GossipService.Start(ctx)
-		CoreComponent.LogInfo("Stopped GossipService")
+		Component.LogInfo("Stopped GossipService")
 	}, daemon.PriorityGossipService); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CoreComponent.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(ctx context.Context) {
 		deps.Requester.RunPendingRequestEnqueuer(ctx)
 	}, daemon.PriorityRequestsProcessor); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CoreComponent.Daemon().BackgroundWorker("RequestQueueDrainer", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("RequestQueueDrainer", func(ctx context.Context) {
 		deps.Requester.RunRequestQueueDrainer(ctx)
 	}, daemon.PriorityRequestsProcessor); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CoreComponent.Daemon().BackgroundWorker("BroadcastQueue", func(ctx context.Context) {
-		CoreComponent.LogInfo("Running BroadcastQueue")
+	if err := Component.Daemon().BackgroundWorker("BroadcastQueue", func(ctx context.Context) {
+		Component.LogInfo("Running BroadcastQueue")
 		unhook := hookEventsBroadcastQueue()
 		defer unhook()
 
 		deps.Broadcaster.RunBroadcastQueueDrainer(ctx)
-		CoreComponent.LogInfo("Stopped BroadcastQueue")
+		Component.LogInfo("Stopped BroadcastQueue")
 	}, daemon.PriorityBroadcastQueue); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CoreComponent.Daemon().BackgroundWorker("MessageProcessor", func(ctx context.Context) {
-		CoreComponent.LogInfo("Running MessageProcessor")
+	if err := Component.Daemon().BackgroundWorker("MessageProcessor", func(ctx context.Context) {
+		Component.LogInfo("Running MessageProcessor")
 		deps.MessageProcessor.Run(ctx)
-		CoreComponent.LogInfo("Stopped MessageProcessor")
+		Component.LogInfo("Stopped MessageProcessor")
 	}, daemon.PriorityMessageProcessor); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CoreComponent.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(ctx context.Context) {
+	if err := Component.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, daemon.PriorityHeartbeats); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
@@ -316,7 +316,7 @@ func checkHeartbeats() {
 
 	// close the connection to the peers to trigger a reconnect
 	for p, reason := range peersToReconnect {
-		CoreComponent.LogWarn(reason.Error())
+		Component.LogWarn(reason.Error())
 
 		conns := deps.Host.Network().ConnsToPeer(p)
 		for _, conn := range conns {
@@ -332,7 +332,7 @@ func hookEventsGossipService() (unhook func()) {
 		unhookAllGossipProtocolEvents,
 
 		deps.GossipService.Events.ProtocolStarted.Hook(func(proto *gossip.Protocol) {
-			if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
+			if err := Component.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
 				buf := make([]byte, readBufSize)
 				// only way to break out is to Reset() the stream
 				for {
@@ -347,10 +347,10 @@ func hookEventsGossipService() (unhook func()) {
 					}
 				}
 			}, daemon.PriorityPeerGossipProtocolRead); err != nil {
-				CoreComponent.LogWarnf("failed to start worker: %s", err)
+				Component.LogWarnf("failed to start worker: %s", err)
 			}
 
-			if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
+			if err := Component.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
 				// send heartbeat and latest milestone request
 				if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
 					syncState := deps.SyncManager.SyncState()
@@ -374,7 +374,7 @@ func hookEventsGossipService() (unhook func()) {
 					}
 				}
 			}, daemon.PriorityPeerGossipProtocolWrite); err != nil {
-				CoreComponent.LogWarnf("failed to start worker: %s", err)
+				Component.LogWarnf("failed to start worker: %s", err)
 			}
 		}).Unhook,
 	)

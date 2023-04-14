@@ -53,12 +53,12 @@ func (s *Server) Start() {
 	go func() {
 		listener, err := net.Listen("tcp", ParamsINX.BindAddress)
 		if err != nil {
-			Plugin.LogFatalfAndExit("failed to listen: %v", err)
+			Component.LogFatalfAndExit("failed to listen: %v", err)
 		}
 		defer listener.Close()
 
 		if err := s.grpcServer.Serve(listener); err != nil {
-			Plugin.LogFatalfAndExit("failed to serve: %v", err)
+			Component.LogFatalfAndExit("failed to serve: %v", err)
 		}
 	}()
 }
@@ -136,12 +136,12 @@ func (s *Server) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus
 }
 
 func (s *Server) ListenToNodeStatus(req *inx.NodeStatusRequest, srv inx.INX_ListenToNodeStatusServer) error {
-	ctx, cancel := context.WithCancel(Plugin.Daemon().ContextStopped())
+	ctx, cancel := context.WithCancel(Component.Daemon().ContextStopped())
 
 	lastSent := time.Time{}
 	sendStatus := func(status *inx.NodeStatus) {
 		if err := srv.Send(status); err != nil {
-			Plugin.LogErrorf("send error: %v", err)
+			Component.LogErrorf("send error: %v", err)
 			cancel()
 
 			return
@@ -156,7 +156,7 @@ func (s *Server) ListenToNodeStatus(req *inx.NodeStatusRequest, srv inx.INX_List
 	onIndexChange := func(_ iotago.MilestoneIndex) {
 		status, err := currentNodeStatus()
 		if err != nil {
-			Plugin.LogErrorf("error creating inx.NodeStatus: %s", err.Error())
+			Component.LogErrorf("error creating inx.NodeStatus: %s", err.Error())
 
 			return
 		}

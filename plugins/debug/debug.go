@@ -268,7 +268,7 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 	tanglePath := []*blockWithParents{}
 
 	if err := dag.TraverseParentsOfBlock(
-		Plugin.Daemon().ContextStopped(),
+		Component.Daemon().ContextStopped(),
 		deps.Storage,
 		blockID,
 		// traversal stops if no more blocks pass the given condition

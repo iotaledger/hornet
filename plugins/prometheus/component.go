@@ -18,6 +18,7 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	coreDatabase "github.com/iotaledger/hornet/v2/core/database"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -40,24 +41,23 @@ const (
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:      "Prometheus",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+	Component = &app.Component{
+		Name:     "Prometheus",
+		DepsFunc: func(cDeps dependencies) { deps = cDeps },
+		Params:   params,
+		IsEnabled: func(c *dig.Container) bool {
+			// do not enable in "autopeering entry node" mode
+			return components.IsAutopeeringEntryNodeDisabled(c) && ParamsPrometheus.Enabled
 		},
-		IsEnabled: func() bool {
-			return ParamsPrometheus.Enabled
-		},
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
 	}
 }
 
 var (
-	Plugin *app.Plugin
-	deps   dependencies
+	Component *app.Component
+	deps      dependencies
 
 	registry = prometheus.NewRegistry()
 	collects []func()
@@ -104,7 +104,7 @@ func provide(c *dig.Container) error {
 			PrometheusEcho: e,
 		}
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -171,7 +171,7 @@ func writeFileServiceDiscoveryFile() {
 	}}
 	j, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
-		Plugin.LogPanic("unable to marshal file service discovery JSON:", err)
+		Component.LogPanic("unable to marshal file service discovery JSON:", err)
 
 		return
 	}
@@ -179,21 +179,21 @@ func writeFileServiceDiscoveryFile() {
 	// this truncates an existing file
 	//nolint:gosec // users should be able to read the file
 	if err := os.WriteFile(path, j, 0o640); err != nil {
-		Plugin.LogPanic("unable to write file service discovery file:", err)
+		Component.LogPanic("unable to write file service discovery file:", err)
 	}
 
-	Plugin.LogInfof("Wrote 'file service discovery' content to %s", path)
+	Component.LogInfof("Wrote 'file service discovery' content to %s", path)
 }
 
 func run() error {
-	Plugin.LogInfo("Starting Prometheus exporter ...")
+	Component.LogInfo("Starting Prometheus exporter ...")
 
 	if ParamsPrometheus.FileServiceDiscovery.Enabled {
 		writeFileServiceDiscoveryFile()
 	}
 
-	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(ctx context.Context) {
-		Plugin.LogInfo("Starting Prometheus exporter ... done")
+	if err := Component.Daemon().BackgroundWorker("Prometheus exporter", func(ctx context.Context) {
+		Component.LogInfo("Starting Prometheus exporter ... done")
 
 		deps.PrometheusEcho.GET(routeMetrics, func(c echo.Context) error {
 			for _, collect := range collects {
@@ -219,14 +219,14 @@ func run() error {
 		bindAddr := ParamsPrometheus.BindAddress
 
 		go func() {
-			Plugin.LogInfof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
+			Component.LogInfof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
 			if err := deps.PrometheusEcho.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				Plugin.LogWarnf("Stopped Prometheus exporter due to an error (%s)", err)
+				Component.LogWarnf("Stopped Prometheus exporter due to an error (%s)", err)
 			}
 		}()
 
 		<-ctx.Done()
-		Plugin.LogInfo("Stopping Prometheus exporter ...")
+		Component.LogInfo("Stopping Prometheus exporter ...")
 
 		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer shutdownCtxCancel()
@@ -234,12 +234,12 @@ func run() error {
 		//nolint:contextcheck // false positive
 		err := deps.PrometheusEcho.Shutdown(shutdownCtx)
 		if err != nil {
-			Plugin.LogWarn(err)
+			Component.LogWarn(err)
 		}
 
-		Plugin.LogInfo("Stopping Prometheus exporter ... done")
+		Component.LogInfo("Stopping Prometheus exporter ... done")
 	}, daemon.PriorityPrometheus); err != nil {
-		Plugin.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil

@@ -10,6 +10,7 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hornet/v2/core/protocfg"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
@@ -129,22 +130,21 @@ const (
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:      "CoreAPIV2",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Configure: configure,
+	Component = &app.Component{
+		Name:     "CoreAPIV2",
+		DepsFunc: func(cDeps dependencies) { deps = cDeps },
+		IsEnabled: func(c *dig.Container) bool {
+			// do not enable in "autopeering entry node" mode
+			return components.IsAutopeeringEntryNodeDisabled(c) && restapi.ParamsRestAPI.Enabled
 		},
-		IsEnabled: func() bool {
-			return restapi.ParamsRestAPI.Enabled
-		},
+		Configure: configure,
 	}
 }
 
 var (
-	Plugin   *app.Plugin
-	features = []string{}
-	attacher *tangle.BlockAttacher
+	Component *app.Component
+	features  = []string{}
+	attacher  *tangle.BlockAttacher
 
 	deps dependencies
 )
@@ -175,8 +175,8 @@ type dependencies struct {
 
 func configure() error {
 	// check if RestAPI plugin is disabled
-	if Plugin.App().IsPluginSkipped(restapi.Plugin) {
-		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the CoreAPIV2 plugin")
+	if !Component.App().IsComponentEnabled(restapi.Component.Identifier()) {
+		Component.LogPanic("RestAPI plugin needs to be enabled to use the CoreAPIV2 plugin")
 	}
 
 	routeGroup := deps.RestRouteManager.AddRoute("core/v2")
@@ -457,7 +457,7 @@ func configure() error {
 	})
 
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
-		resp, err := addPeer(c, Plugin.Logger())
+		resp, err := addPeer(c, Component.Logger())
 		if err != nil {
 			return err
 		}

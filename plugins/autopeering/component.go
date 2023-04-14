@@ -17,46 +17,27 @@ import (
 	"github.com/iotaledger/hive.go/crypto/ed25519"
 	hivedb "github.com/iotaledger/hive.go/kvstore/database"
 	"github.com/iotaledger/hive.go/lo"
-	databaseCore "github.com/iotaledger/hornet/v2/core/database"
-	"github.com/iotaledger/hornet/v2/core/gossip"
-	"github.com/iotaledger/hornet/v2/core/pow"
-	"github.com/iotaledger/hornet/v2/core/protocfg"
-	"github.com/iotaledger/hornet/v2/core/pruning"
-	"github.com/iotaledger/hornet/v2/core/snapshot"
-	"github.com/iotaledger/hornet/v2/core/tangle"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/p2p"
 	"github.com/iotaledger/hornet/v2/pkg/p2p/autopeering"
-	"github.com/iotaledger/hornet/v2/plugins/coreapi"
-	dashboard_metrics "github.com/iotaledger/hornet/v2/plugins/dashboard-metrics"
-	"github.com/iotaledger/hornet/v2/plugins/debug"
-	"github.com/iotaledger/hornet/v2/plugins/inx"
-	"github.com/iotaledger/hornet/v2/plugins/prometheus"
-	"github.com/iotaledger/hornet/v2/plugins/receipt"
-	"github.com/iotaledger/hornet/v2/plugins/urts"
-	"github.com/iotaledger/hornet/v2/plugins/warpsync"
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:       "Autopeering",
-			DepsFunc:   func(cDeps dependencies) { deps = cDeps },
-			Params:     params,
-			PreProvide: preProvide,
-			Provide:    provide,
-			Configure:  configure,
-			Run:        run,
-		},
-		IsEnabled: func() bool {
-			return ParamsAutopeering.Enabled
-		},
+	Component = &app.Component{
+		Name:             "Autopeering",
+		DepsFunc:         func(cDeps dependencies) { deps = cDeps },
+		Params:           params,
+		InitConfigParams: initConfigParams,
+		IsEnabled:        func(_ *dig.Container) bool { return ParamsAutopeering.Enabled },
+		Provide:          provide,
+		Configure:        configure,
+		Run:              run,
 	}
 }
 
 var (
-	Plugin *app.Plugin
-	deps   dependencies
+	Component *app.Component
+	deps      dependencies
 
 	localPeerContainer *autopeering.LocalPeerContainer
 )
@@ -72,39 +53,7 @@ type dependencies struct {
 	AutopeeringManager        *autopeering.Manager
 }
 
-func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error {
-
-	runAsEntryNode := Plugin.IsEnabled() && ParamsAutopeering.RunAsEntryNode
-	if runAsEntryNode {
-		// the following pluggables stay enabled
-		// - profile
-		// - protocfg
-		// - gracefulshutdown
-		// - p2p
-		// - profiling
-		// - versioncheck
-		// - autopeering
-
-		// disable the other plugins if the node runs as an entry node for autopeering
-		initConfig.ForceDisableComponent(databaseCore.CoreComponent.Identifier())
-		initConfig.ForceDisableComponent(pow.CoreComponent.Identifier())
-		initConfig.ForceDisableComponent(gossip.CoreComponent.Identifier())
-		initConfig.ForceDisableComponent(tangle.CoreComponent.Identifier())
-		initConfig.ForceDisableComponent(protocfg.CoreComponent.Identifier())
-		initConfig.ForceDisableComponent(snapshot.CoreComponent.Identifier())
-		initConfig.ForceDisableComponent(pruning.CoreComponent.Identifier())
-		initConfig.ForceDisableComponent(coreapi.Plugin.Identifier())
-		initConfig.ForceDisableComponent(warpsync.Plugin.Identifier())
-		initConfig.ForceDisableComponent(urts.Plugin.Identifier())
-		initConfig.ForceDisableComponent(receipt.Plugin.Identifier())
-		initConfig.ForceDisableComponent(prometheus.Plugin.Identifier())
-		initConfig.ForceDisableComponent(inx.Plugin.Identifier())
-		initConfig.ForceDisableComponent(dashboard_metrics.Plugin.Identifier())
-		initConfig.ForceDisableComponent(debug.Plugin.Identifier())
-	}
-
-	// the parameter has to be provided in the preProvide stage.
-	// this is a special case, since it only should be true if the plugin is enabled
+func initConfigParams(c *dig.Container) error {
 	type cfgResult struct {
 		dig.Out
 		AutopeeringRunAsEntryNode bool `name:"autopeeringRunAsEntryNode"`
@@ -112,10 +61,11 @@ func preProvide(c *dig.Container, _ *app.App, initConfig *app.InitConfig) error 
 
 	if err := c.Provide(func() cfgResult {
 		return cfgResult{
-			AutopeeringRunAsEntryNode: runAsEntryNode,
+			// it only should be true if the plugin is enabled
+			AutopeeringRunAsEntryNode: Component.IsEnabled(c) && ParamsAutopeering.RunAsEntryNode,
 		}
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -130,14 +80,14 @@ func provide(c *dig.Container) error {
 
 	if err := c.Provide(func(deps autopeeringDeps) *autopeering.Manager {
 		return autopeering.NewManager(
-			Plugin.Logger(),
+			Component.Logger(),
 			ParamsAutopeering.BindAddress,
 			ParamsAutopeering.EntryNodes,
 			ParamsAutopeering.EntryNodesPreferIPv6,
 			service.Key(deps.TargetNetworkName),
 		)
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -151,12 +101,12 @@ func configure() error {
 	})
 
 	if err := autopeering.RegisterAutopeeringProtocolInMultiAddresses(); err != nil {
-		Plugin.LogPanicf("unable to register autopeering protocol for multi addresses: %s", err)
+		Component.LogPanicf("unable to register autopeering protocol for multi addresses: %s", err)
 	}
 
 	rawPrvKey, err := deps.NodePrivateKey.Raw()
 	if err != nil {
-		Plugin.LogPanicf("unable to obtain raw private key: %s", err)
+		Component.LogPanicf("unable to obtain raw private key: %s", err)
 	}
 
 	localPeerContainer, err = autopeering.NewLocalPeerContainer(
@@ -169,18 +119,18 @@ func configure() error {
 		deps.AutopeeringRunAsEntryNode,
 	)
 	if err != nil {
-		Plugin.LogPanicf("unable to initialize local peer container: %s", err)
+		Component.LogPanicf("unable to initialize local peer container: %s", err)
 	}
 
-	Plugin.LogInfof("initialized local autopeering: %s@%s", localPeerContainer.Local().PublicKey(), localPeerContainer.Local().Address())
+	Component.LogInfof("initialized local autopeering: %s@%s", localPeerContainer.Local().PublicKey(), localPeerContainer.Local().Address())
 
 	if deps.AutopeeringRunAsEntryNode {
 		entryNodeMultiAddress, err := autopeering.GetEntryNodeMultiAddress(localPeerContainer.Local())
 		if err != nil {
-			Plugin.LogPanicf("unable to parse entry node multiaddress: %s", err)
+			Component.LogPanicf("unable to parse entry node multiaddress: %s", err)
 		}
 
-		Plugin.LogInfof("\n\nentry node multiaddress: %s\n", entryNodeMultiAddress.String())
+		Component.LogInfof("\n\nentry node multiaddress: %s\n", entryNodeMultiAddress.String())
 	}
 
 	// only enable peer selection when the peering plugin is enabled
@@ -192,12 +142,12 @@ func configure() error {
 }
 
 func run() error {
-	if err := Plugin.App().Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
+	if err := Component.App().Daemon().BackgroundWorker(Component.Name, func(ctx context.Context) {
 		detach := hookEvents()
 		defer detach()
 		deps.AutopeeringManager.Run(ctx)
 	}, daemon.PriorityAutopeering); err != nil {
-		Plugin.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
@@ -229,20 +179,20 @@ func handleSelection(ev *selection.PeeringEvent, addrInfo *libp2p.AddrInfo, noRe
 
 // logs a warning about a from the selector seen peer which is already autopeered.
 func handleAlreadyAutopeered(addrInfo *libp2p.AddrInfo) {
-	Plugin.LogWarnf("peer is already autopeered %s", addrInfo.ID.ShortString())
+	Component.LogWarnf("peer is already autopeered %s", addrInfo.ID.ShortString())
 }
 
 // clears an already statically peered from the autopeering selector.
 func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
 	peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 	if err != nil {
-		Plugin.LogWarnf("unable to convert selection autopeering peer to peerID: %s", err)
+		Component.LogWarnf("unable to convert selection autopeering peer to peerID: %s", err)
 
 		return
 	}
 
 	if deps.AutopeeringManager.Selection() != nil {
-		Plugin.LogInfof("peer is statically peered already %s, removing from autopeering selection protocol", peerID.ShortString())
+		Component.LogInfof("peer is statically peered already %s, removing from autopeering selection protocol", peerID.ShortString())
 		deps.AutopeeringManager.Selection().RemoveNeighbor(ev.Peer.ID())
 	}
 }
@@ -254,22 +204,22 @@ func hookEvents() (unhook func()) {
 			deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Hook(func(ev *discover.PeerDiscoveredEvent) {
 				peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 				if err != nil {
-					Plugin.LogWarnf("unable to convert discovered autopeering peer to peerID: %s", err)
+					Component.LogWarnf("unable to convert discovered autopeering peer to peerID: %s", err)
 
 					return
 				}
 
-				Plugin.LogInfof("discovered: %s / %s", ev.Peer.Address(), peerID.ShortString())
+				Component.LogInfof("discovered: %s / %s", ev.Peer.Address(), peerID.ShortString())
 			}).Unhook,
 			deps.AutopeeringManager.Discovery().Events().PeerDeleted.Hook(func(ev *discover.PeerDeletedEvent) {
 				peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 				if err != nil {
-					Plugin.LogWarnf("unable to convert deleted autopeering peer to peerID: %s", err)
+					Component.LogWarnf("unable to convert deleted autopeering peer to peerID: %s", err)
 
 					return
 				}
 
-				Plugin.LogInfof("removed offline: %s / %s", ev.Peer.Address(), peerID.ShortString())
+				Component.LogInfof("removed offline: %s / %s", ev.Peer.Address(), peerID.ShortString())
 			}).Unhook,
 		)
 	}
@@ -283,7 +233,7 @@ func hookEvents() (unhook func()) {
 					return
 				}
 
-				id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf)
+				id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Component.LogWarnf)
 				if id == nil {
 					return
 				}
@@ -301,7 +251,7 @@ func hookEvents() (unhook func()) {
 					return
 				}
 
-				id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peer, Plugin.LogWarnf)
+				id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peer, Component.LogWarnf)
 				if id == nil {
 					return
 				}
@@ -314,7 +264,7 @@ func hookEvents() (unhook func()) {
 					return
 				}
 
-				Plugin.LogDebugf("removing: %s", peer.ID.ShortString())
+				Component.LogDebugf("removing: %s", peer.ID.ShortString())
 				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 			}).Unhook,
 
@@ -323,7 +273,7 @@ func hookEvents() (unhook func()) {
 					return
 				}
 
-				id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf)
+				id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Component.LogWarnf)
 				if id == nil {
 					return
 				}
@@ -342,12 +292,12 @@ func hookEvents() (unhook func()) {
 					return
 				}
 
-				Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID.ShortString())
+				Component.LogInfof("removing %s from autopeering selection protocol", p.ID.ShortString())
 				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 			}).Unhook,
 
 			deps.AutopeeringManager.Selection().Events().SaltUpdated.Hook(func(ev *selection.SaltUpdatedEvent) {
-				Plugin.LogInfof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
+				Component.LogInfof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
 			}).Unhook,
 
 			deps.AutopeeringManager.Selection().Events().OutgoingPeering.Hook(func(ev *selection.PeeringEvent) {
@@ -357,17 +307,17 @@ func hookEvents() (unhook func()) {
 
 				addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
 				if err != nil {
-					Plugin.LogWarnf("unable to convert outgoing selection autopeering peer to addr info: %s", err)
+					Component.LogWarnf("unable to convert outgoing selection autopeering peer to addr info: %s", err)
 
 					return
 				}
 
-				Plugin.LogInfof("[outgoing peering] adding autopeering peer %s", addrInfo.ID.ShortString())
+				Component.LogInfof("[outgoing peering] adding autopeering peer %s", addrInfo.ID.ShortString())
 
 				handleSelection(ev, addrInfo, func() {
-					Plugin.LogInfof("connecting to %s", addrInfo.ID.ShortString())
+					Component.LogInfof("connecting to %s", addrInfo.ID.ShortString())
 					if err := deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
-						Plugin.LogWarnf("couldn't add autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
+						Component.LogWarnf("couldn't add autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
 					}
 				})
 			}).Unhook,
@@ -379,16 +329,16 @@ func hookEvents() (unhook func()) {
 
 				addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
 				if err != nil {
-					Plugin.LogWarnf("unable to convert incoming selection autopeering peer to addr info: %s", err)
+					Component.LogWarnf("unable to convert incoming selection autopeering peer to addr info: %s", err)
 
 					return
 				}
 
-				Plugin.LogInfof("[incoming peering] allow autopeering peer %s", addrInfo.ID.ShortString())
+				Component.LogInfof("[incoming peering] allow autopeering peer %s", addrInfo.ID.ShortString())
 
 				handleSelection(ev, addrInfo, func() {
 					if err := deps.PeeringManager.AllowPeer(addrInfo.ID); err != nil {
-						Plugin.LogWarnf("couldn't allow autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
+						Component.LogWarnf("couldn't allow autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
 					}
 				})
 			}).Unhook,
@@ -396,15 +346,15 @@ func hookEvents() (unhook func()) {
 			deps.AutopeeringManager.Selection().Events().Dropped.Hook(func(ev *selection.DroppedEvent) {
 				peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
 				if err != nil {
-					Plugin.LogWarnf("unable to convert dropped autopeering peer to peerID: %s", err)
+					Component.LogWarnf("unable to convert dropped autopeering peer to peerID: %s", err)
 
 					return
 				}
 
-				Plugin.LogInfof("[dropped event] disconnecting %s / %s", ev.Peer.Address(), peerID.ShortString())
+				Component.LogInfof("[dropped event] disconnecting %s / %s", ev.Peer.Address(), peerID.ShortString())
 
 				if err := deps.PeeringManager.DisallowPeer(peerID); err != nil {
-					Plugin.LogWarnf("couldn't disallow autopeering peer %s: %s", peerID.ShortString(), err)
+					Component.LogWarnf("couldn't disallow autopeering peer %s: %s", peerID.ShortString(), err)
 				}
 
 				var peerRelation p2p.PeerRelation
@@ -413,19 +363,19 @@ func hookEvents() (unhook func()) {
 				})
 
 				if len(peerRelation) == 0 {
-					Plugin.LogWarnf("didn't find autopeered peer %s for disconnecting", peerID.ShortString())
+					Component.LogWarnf("didn't find autopeered peer %s for disconnecting", peerID.ShortString())
 
 					return
 				}
 
 				if peerRelation != p2p.PeerRelationAutopeered {
-					Plugin.LogWarnf("won't disconnect %s as its relation is not '%s' but '%s'", peerID.ShortString(), p2p.PeerRelationAutopeered, peerRelation)
+					Component.LogWarnf("won't disconnect %s as its relation is not '%s' but '%s'", peerID.ShortString(), p2p.PeerRelationAutopeered, peerRelation)
 
 					return
 				}
 
 				if err := deps.PeeringManager.DisconnectPeer(peerID, errors.New("removed via autopeering selection")); err != nil {
-					Plugin.LogWarnf("couldn't disconnect selection dropped autopeer %s: %s", peerID.ShortString(), err)
+					Component.LogWarnf("couldn't disconnect selection dropped autopeer %s: %s", peerID.ShortString(), err)
 				}
 			}).Unhook,
 		)

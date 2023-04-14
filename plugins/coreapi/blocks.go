@@ -68,7 +68,7 @@ func blockMetadataByBlockID(blockID iotago.BlockID) (*blockMetadataResponse, err
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
-		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), cachedBlockMeta.Metadata().BlockID(), cmi)
+		tipScore, err := deps.TipScoreCalculator.TipScore(Component.Daemon().ContextStopped(), cachedBlockMeta.Metadata().BlockID(), cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
@@ -182,7 +182,7 @@ func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 		return nil, echo.ErrUnsupportedMediaType
 	}
 
-	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
+	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(c.Request().Context(), Component.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
 	blockID, err := attacher.AttachBlock(mergedCtx, iotaBlock)

@@ -14,6 +14,7 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/jwt"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -22,26 +23,25 @@ import (
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:           "RestAPI",
-			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
-			Params:         params,
-			InitConfigPars: initConfigPars,
-			Provide:        provide,
-			Configure:      configure,
-			Run:            run,
+	Component = &app.Component{
+		Name:             "RestAPI",
+		DepsFunc:         func(cDeps dependencies) { deps = cDeps },
+		Params:           params,
+		InitConfigParams: initConfigParams,
+		IsEnabled: func(c *dig.Container) bool {
+			// do not enable in "autopeering entry node" mode
+			return components.IsAutopeeringEntryNodeDisabled(c) && ParamsRestAPI.Enabled
 		},
-		IsEnabled: func() bool {
-			return ParamsRestAPI.Enabled
-		},
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
 	}
 }
 
 var (
-	Plugin  *app.Plugin
-	deps    dependencies
-	jwtAuth *jwt.Auth
+	Component *app.Component
+	deps      dependencies
+	jwtAuth   *jwt.Auth
 )
 
 type dependencies struct {
@@ -55,7 +55,7 @@ type dependencies struct {
 	RestRouteManager   *RestRouteManager
 }
 
-func initConfigPars(c *dig.Container) error {
+func initConfigParams(c *dig.Container) error {
 
 	type cfgResult struct {
 		dig.Out
@@ -69,7 +69,7 @@ func initConfigPars(c *dig.Container) error {
 			RestAPILimitsMaxResults: ParamsRestAPI.Limits.MaxResults,
 		}
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -84,13 +84,13 @@ func provide(c *dig.Container) error {
 			},
 		}
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	if err := c.Provide(func() *echo.Echo {
 
 		e := httpserver.NewEcho(
-			Plugin.Logger(),
+			Component.Logger(),
 			func(err error, c echo.Context) {
 				deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
 			},
@@ -102,7 +102,7 @@ func provide(c *dig.Container) error {
 
 		return e
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	type proxyDeps struct {
@@ -113,7 +113,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func(deps proxyDeps) *RestRouteManager {
 		return newRestRouteManager(deps.Echo)
 	}); err != nil {
-		Plugin.LogPanic(err)
+		Component.LogPanic(err)
 	}
 
 	return nil
@@ -128,34 +128,34 @@ func configure() error {
 
 func run() error {
 
-	Plugin.LogInfo("Starting REST-API server ...")
+	Component.LogInfo("Starting REST-API server ...")
 
-	if err := Plugin.Daemon().BackgroundWorker("REST-API server", func(ctx context.Context) {
-		Plugin.LogInfo("Starting REST-API server ... done")
+	if err := Component.Daemon().BackgroundWorker("REST-API server", func(ctx context.Context) {
+		Component.LogInfo("Starting REST-API server ... done")
 
 		bindAddr := deps.RestAPIBindAddress
 
 		go func() {
-			Plugin.LogInfof("You can now access the API using: http://%s", bindAddr)
+			Component.LogInfof("You can now access the API using: http://%s", bindAddr)
 			if err := deps.Echo.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				Plugin.LogWarnf("Stopped REST-API server due to an error (%s)", err)
+				Component.LogWarnf("Stopped REST-API server due to an error (%s)", err)
 			}
 		}()
 
 		<-ctx.Done()
-		Plugin.LogInfo("Stopping REST-API server ...")
+		Component.LogInfo("Stopping REST-API server ...")
 
 		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer shutdownCtxCancel()
 
 		//nolint:contextcheck // false positive
 		if err := deps.Echo.Shutdown(shutdownCtx); err != nil {
-			Plugin.LogWarn(err)
+			Component.LogWarn(err)
 		}
 
-		Plugin.LogInfo("Stopping REST-API server ... done")
+		Component.LogInfo("Stopping REST-API server ... done")
 	}, daemon.PriorityRestAPI); err != nil {
-		Plugin.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
