@@ -360,8 +360,8 @@ github.com/iotaledger/hive.go/stringify v0.0.0-20230417125513-e2e89991217f h1:C2
 github.com/iotaledger/hive.go/stringify v0.0.0-20230417125513-e2e89991217f/go.mod h1:l/F3cA/+67QdNj+sohv2v4HhmsdOcWScoA+sVYoAE4c=
 github.com/iotaledger/hive.go/web v0.0.0-20230417125513-e2e89991217f h1:HbX+c7BOmPeNEZq0CjWB/j+gmIZgC9iqiMc1JN9Xzq0=
 github.com/iotaledger/hive.go/web v0.0.0-20230417125513-e2e89991217f/go.mod h1:A3LLvpa7mREy3eWZf+UsD1A1ujo4YZHK+e2IHvou+HQ=
-github.com/iotaledger/inx-app v1.0.0-rc.3.0.20230417131029-0bfe891d7c4a h1:mVYBXnSSVl9xRxzZReRdRQN43gUz3IMOxb+IEMQFTp4=
-github.com/iotaledger/inx-app v1.0.0-rc.3.0.20230417131029-0bfe891d7c4a/go.mod h1:9AA+oDJv4WGM0YdDm7Lh24XK5O9Jd9SPw3ApMJSSv7k=
+github.com/iotaledger/inx-app v1.0.0-rc.3.0.20230417173151-cde47df5fe79 h1:sQlg8TzT2kPd8zg74KU465A4EgOumEXtqSR98thwo1A=
+github.com/iotaledger/inx-app v1.0.0-rc.3.0.20230417173151-cde47df5fe79/go.mod h1:9AA+oDJv4WGM0YdDm7Lh24XK5O9Jd9SPw3ApMJSSv7k=
 github.com/iotaledger/inx/go v1.0.0-rc.2 h1:SjHGHQ1pEe7/B0bnVIHCa1zQBvcC0QRwcYPzUGarrJU=
 github.com/iotaledger/inx/go v1.0.0-rc.2/go.mod h1:PYijAQs5lgAzLENkpvdSoLM8Iq4KAg+CdU5Smxj01lI=
 github.com/iotaledger/iota.go v1.0.0 h1:tqm1FxJ/zOdzbrAaQ5BQpVF8dUy2eeGlSeWlNG8GoXY=

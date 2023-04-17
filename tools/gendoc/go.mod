@@ -72,7 +72,7 @@ require (
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-rc.1.0.20230417125513-e2e89991217f // indirect
 	github.com/iotaledger/hive.go/stringify v0.0.0-20230417125513-e2e89991217f // indirect
 	github.com/iotaledger/hive.go/web v0.0.0-20230417125513-e2e89991217f // indirect
-	github.com/iotaledger/inx-app v1.0.0-rc.3.0.20230417131029-0bfe891d7c4a // indirect
+	github.com/iotaledger/inx-app v1.0.0-rc.3.0.20230417173151-cde47df5fe79 // indirect
 	github.com/iotaledger/inx/go v1.0.0-rc.2 // indirect
 	github.com/iotaledger/iota.go v1.0.0 // indirect
 	github.com/iotaledger/iota.go/v3 v3.0.0-rc.2 // indirect
