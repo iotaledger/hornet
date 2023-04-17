@@ -11,18 +11,18 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/iotaledger/go-ds-kvstore v1.0.0-rc.1.0.20230222082244-f3010dd0a934
-	github.com/iotaledger/hive.go/app v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/hive.go/autopeering v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/hive.go/crypto v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/hive.go/ds v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/hive.go/kvstore v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/hive.go/lo v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/hive.go/logger v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/hive.go/objectstorage v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/hive.go/runtime v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-rc.1.0.20230414110654-96c760895037
-	github.com/iotaledger/hive.go/web v0.0.0-20230414110654-96c760895037
-	github.com/iotaledger/inx-app v1.0.0-rc.3.0.20230414112003-d6664fecf195
+	github.com/iotaledger/hive.go/app v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/autopeering v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/crypto v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/ds v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/kvstore v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/lo v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/logger v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/objectstorage v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/runtime v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-rc.1.0.20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/web v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/inx-app v1.0.0-rc.3.0.20230417131029-0bfe891d7c4a
 	github.com/iotaledger/inx/go v1.0.0-rc.2
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v3 v3.0.0-rc.2
@@ -48,7 +48,7 @@ require (
 require (
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
-	github.com/Microsoft/go-winio v0.6.0 // indirect
+	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
@@ -91,8 +91,8 @@ require (
 	github.com/huin/goupnp v1.1.0 // indirect
 	github.com/iancoleman/orderedmap v0.2.0 // indirect
 	github.com/iotaledger/grocksdb v1.7.5-0.20230220105546-5162e18885c7 // indirect
-	github.com/iotaledger/hive.go/constraints v0.0.0-20230414110654-96c760895037 // indirect
-	github.com/iotaledger/hive.go/stringify v0.0.0-20230414110654-96c760895037 // indirect
+	github.com/iotaledger/hive.go/constraints v0.0.0-20230417125513-e2e89991217f // indirect
+	github.com/iotaledger/hive.go/stringify v0.0.0-20230417125513-e2e89991217f // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
 	github.com/ipfs/go-datastore v0.6.0 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
@@ -100,7 +100,7 @@ require (
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/jellydator/ttlcache/v2 v2.11.1 // indirect
-	github.com/klauspost/compress v1.16.4 // indirect
+	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/knadh/koanf v1.5.0 // indirect
 	github.com/koron/go-ssdp v0.0.4 // indirect

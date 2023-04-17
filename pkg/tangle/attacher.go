@@ -171,11 +171,10 @@ func (a *BlockAttacher) AttachBlock(ctx context.Context, iotaBlock *iotago.Block
 	}
 
 	listener := a.tangle.BlockProcessedListener(block.BlockID())
+	defer listener.Deregister()
 
 	//nolint:contextcheck // we don't pass a context here to not prevent emitting blocks at shutdown (COO etc).
 	if err := a.tangle.messageProcessor.Emit(block); err != nil {
-		listener.Deregister()
-
 		return iotago.EmptyBlockID(), errors.WithMessage(ErrBlockAttacherInvalidBlock, err.Error())
 	}
 
