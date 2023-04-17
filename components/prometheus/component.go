@@ -17,7 +17,8 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
-	coreDatabase "github.com/iotaledger/hornet/v2/core/database"
+	coreDatabase "github.com/iotaledger/hornet/v2/components/database"
+	"github.com/iotaledger/hornet/v2/components/inx"
 	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/database"
@@ -31,7 +32,6 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	"github.com/iotaledger/hornet/v2/pkg/tipselect"
-	"github.com/iotaledger/hornet/v2/plugins/inx"
 )
 
 // routeMetrics is the route for getting the prometheus metrics.

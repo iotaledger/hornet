@@ -11,7 +11,7 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	"github.com/iotaledger/hive.go/crypto"
-	"github.com/iotaledger/hornet/v2/core/protocfg"
+	"github.com/iotaledger/hornet/v2/components/protocfg"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

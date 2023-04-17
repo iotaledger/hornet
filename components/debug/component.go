@@ -7,6 +7,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hornet/v2/components/restapi"
 	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/model/syncmanager"
@@ -14,7 +15,6 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/protocol/gossip"
 	restapipkg "github.com/iotaledger/hornet/v2/pkg/restapi"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
-	"github.com/iotaledger/hornet/v2/plugins/restapi"
 	"github.com/iotaledger/inx-app/pkg/httpserver"
 )
 

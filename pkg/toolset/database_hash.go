@@ -14,7 +14,7 @@ import (
 
 	"github.com/iotaledger/hive.go/app/configuration"
 	hivedb "github.com/iotaledger/hive.go/kvstore/database"
-	coreDatabase "github.com/iotaledger/hornet/v2/core/database"
+	coreDatabase "github.com/iotaledger/hornet/v2/components/database"
 	"github.com/iotaledger/hornet/v2/pkg/database"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	iotago "github.com/iotaledger/iota.go/v3"

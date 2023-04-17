@@ -9,7 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/hornet/v2/core/protocfg"
+	"github.com/iotaledger/hornet/v2/components/protocfg"
 	"github.com/iotaledger/hornet/v2/pkg/model/milestonemanager"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
 	"github.com/iotaledger/hornet/v2/pkg/testsuite"
