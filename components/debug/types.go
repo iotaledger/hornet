@@ -1,7 +1,7 @@
 package debug
 
 import (
-	"github.com/iotaledger/hornet/v2/plugins/coreapi"
+	"github.com/iotaledger/hornet/v2/components/coreapi"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

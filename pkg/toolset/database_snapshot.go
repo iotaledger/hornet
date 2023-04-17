@@ -9,7 +9,7 @@ import (
 
 	"github.com/iotaledger/hive.go/app/configuration"
 	hivedb "github.com/iotaledger/hive.go/kvstore/database"
-	snapCore "github.com/iotaledger/hornet/v2/core/snapshot"
+	snapCore "github.com/iotaledger/hornet/v2/components/snapshot"
 	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
 )

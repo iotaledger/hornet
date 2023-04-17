@@ -9,7 +9,8 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hornet/v2/core/protocfg"
+	"github.com/iotaledger/hornet/v2/components/protocfg"
+	"github.com/iotaledger/hornet/v2/components/restapi"
 	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
 	"github.com/iotaledger/hornet/v2/pkg/model/storage"
@@ -24,7 +25,6 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/snapshot"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	"github.com/iotaledger/hornet/v2/pkg/tipselect"
-	"github.com/iotaledger/hornet/v2/plugins/restapi"
 	"github.com/iotaledger/inx-app/pkg/httpserver"
 )
 

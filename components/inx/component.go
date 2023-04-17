@@ -9,7 +9,8 @@ import (
 
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/runtime/event"
-	"github.com/iotaledger/hornet/v2/core/protocfg"
+	"github.com/iotaledger/hornet/v2/components/protocfg"
+	"github.com/iotaledger/hornet/v2/components/restapi"
 	"github.com/iotaledger/hornet/v2/pkg/components"
 	"github.com/iotaledger/hornet/v2/pkg/daemon"
 	"github.com/iotaledger/hornet/v2/pkg/metrics"
@@ -21,7 +22,6 @@ import (
 	"github.com/iotaledger/hornet/v2/pkg/pruning"
 	"github.com/iotaledger/hornet/v2/pkg/tangle"
 	"github.com/iotaledger/hornet/v2/pkg/tipselect"
-	"github.com/iotaledger/hornet/v2/plugins/restapi"
 	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
