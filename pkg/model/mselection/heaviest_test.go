@@ -30,10 +30,6 @@ const (
 	MinPowScore      = 1.0
 )
 
-func init() {
-	rand.Seed(0)
-}
-
 func initTest(testInterface testing.TB) (*testsuite.TestEnvironment, *HeaviestSelector) {
 
 	te := testsuite.SetupTestEnvironment(testInterface, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
