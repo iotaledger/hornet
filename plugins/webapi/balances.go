@@ -10,8 +10,8 @@ import (
 
 	"github.com/iotaledger/iota.go/address"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
 )
 
 func init() {

@@ -10,10 +10,10 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/profile"
 )
 
 var (

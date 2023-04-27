@@ -14,5 +14,5 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --org=gohornet
+          args: --org=iotaledger
           command: monitor

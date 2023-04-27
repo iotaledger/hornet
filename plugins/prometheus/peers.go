@@ -3,7 +3,7 @@ package prometheus
 import (
 	"net"
 
-	"github.com/gohornet/hornet/plugins/peering"
+	"github.com/iotaledger/hornet/plugins/peering"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

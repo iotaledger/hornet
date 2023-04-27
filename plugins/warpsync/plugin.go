@@ -3,21 +3,21 @@ package warpsync
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/rqueue"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
-	"github.com/gohornet/hornet/pkg/protocol/warpsync"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/gossip"
-	peeringplugin "github.com/gohornet/hornet/plugins/peering"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/peering/peer"
+	"github.com/iotaledger/hornet/pkg/protocol/rqueue"
+	"github.com/iotaledger/hornet/pkg/protocol/sting"
+	"github.com/iotaledger/hornet/pkg/protocol/warpsync"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/plugins/gossip"
+	peeringplugin "github.com/iotaledger/hornet/plugins/peering"
+	tangleplugin "github.com/iotaledger/hornet/plugins/tangle"
 )
 
 var (

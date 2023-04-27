@@ -3,8 +3,8 @@ package hornet_test
 import (
 	"testing"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/utils"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/stretchr/testify/assert"

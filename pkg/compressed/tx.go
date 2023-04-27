@@ -9,7 +9,7 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/plugins/curl"
+	"github.com/iotaledger/hornet/plugins/curl"
 )
 
 const (
@@ -31,6 +31,7 @@ func TruncateTxTrits(txTrits trinary.Trits) []byte {
 }
 
 // TruncateTx truncates the encoded transaction data.
+//
 //	txBytes the transaction bytes to truncate
 //	return an array containing the truncated transaction data
 func TruncateTx(txBytes []byte) []byte {

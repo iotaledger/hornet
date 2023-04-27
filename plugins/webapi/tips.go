@@ -5,17 +5,18 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/iotaledger/hive.go/node"
-	"github.com/iotaledger/iota.go/guards"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/iota.go/guards"
+
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/plugins/urts"
 )
 
 func init() {

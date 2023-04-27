@@ -11,11 +11,11 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/compressed"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/testsuite/utils"
+	"github.com/iotaledger/hornet/pkg/compressed"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/testsuite/utils"
 )
 
 // storeTransaction adds the transaction to the storage layer.

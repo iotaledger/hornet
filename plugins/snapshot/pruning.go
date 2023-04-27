@@ -5,12 +5,12 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/plugins/database"
-	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/plugins/database"
+	tanglePlugin "github.com/iotaledger/hornet/plugins/tangle"
 )
 
 const (

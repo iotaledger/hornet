@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/mitchellh/mapstructure"
+
+	"github.com/iotaledger/hornet/pkg/model/tangle"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/mitchellh/mapstructure"
 )
 
 func init() {

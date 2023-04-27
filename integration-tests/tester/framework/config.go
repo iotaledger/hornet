@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/gohornet/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/config"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
 )
 
 const (

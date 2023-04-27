@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/plugins/tangle"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/plugins/tangle"
 )
 
 func healthzRoute() {

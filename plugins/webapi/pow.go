@@ -9,13 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/plugins/curl"
+	"github.com/iotaledger/hornet/plugins/pow"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/plugins/curl"
-	"github.com/gohornet/hornet/plugins/pow"
 )
 
 func init() {

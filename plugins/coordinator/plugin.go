@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/pkg/tipselect"
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -19,19 +19,19 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/mselection"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	powpackage "github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/pow"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
-	urtsplugin "github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/coordinator"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/mselection"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	powpackage "github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/plugins/gossip"
+	"github.com/iotaledger/hornet/plugins/pow"
+	tangleplugin "github.com/iotaledger/hornet/plugins/tangle"
+	urtsplugin "github.com/iotaledger/hornet/plugins/urts"
 )
 
 func init() {

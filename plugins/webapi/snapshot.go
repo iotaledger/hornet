@@ -8,9 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/plugins/snapshot"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/plugins/snapshot"
 )
 
 func init() {

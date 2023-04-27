@@ -6,11 +6,11 @@ import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	tanglemodel "github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/tangle"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	tanglemodel "github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/plugins/tangle"
 )
 
 func runLiveFeed() {

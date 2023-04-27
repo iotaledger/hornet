@@ -1,9 +1,9 @@
 package prometheus
 
 import (
-	tanglepkg "github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/plugins/tangle"
 	"github.com/iotaledger/hive.go/events"
+	tanglepkg "github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/plugins/tangle"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

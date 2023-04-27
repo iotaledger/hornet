@@ -5,9 +5,9 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/node"
 
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/tipselect"
+	"github.com/iotaledger/hornet/plugins/urts"
 )
 
 func runTipSelMetricWorker() {

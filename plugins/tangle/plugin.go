@@ -15,17 +15,17 @@ import (
 
 	"github.com/iotaledger/iota.go/address"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/database"
-	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/peering"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/model/coordinator"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/peering/peer"
+	"github.com/iotaledger/hornet/pkg/protocol/sting"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/plugins/database"
+	"github.com/iotaledger/hornet/plugins/gossip"
+	"github.com/iotaledger/hornet/plugins/peering"
 )
 
 const (

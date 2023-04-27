@@ -6,10 +6,10 @@ import (
 
 	"github.com/iotaledger/hive.go/daemon"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 const (
@@ -35,26 +35,26 @@ var (
 // This way HORNET should be able to re-solidify the existing tangle in the database.
 //
 // Object Storages:
-// 		Stored with caching:
-//			- TxRaw (synced)					=> will be removed and added again by requesting the tx at solidification
-//			- TxMetadata (synced)				=> will be removed and added again if missing by receiving the tx (if not => reset)
-//			- BundleTransaction (synced)		=> will be removed and added again if missing by receiving the tx
-//			- Bundle (always)					=> will be removed and added again if missing by receiving the tx
-//			- Approver (synced)					=> will be removed and added again if missing by receiving the tx
 //
-// 		Stored without caching:
-//			- Tag								=> will be removed and added again if missing by receiving the tx
-//			- Address							=> will be removed and added again if missing by receiving the tx
-//			- UnconfirmedTx 					=> will be removed at pruning anyway
-//			- Milestone							=> will be removed and added again by receiving the tx
-//			- SpentAddresses					=> will be removed and added again if missing by receiving the tx
+//	Stored with caching:
+//		- TxRaw (synced)					=> will be removed and added again by requesting the tx at solidification
+//		- TxMetadata (synced)				=> will be removed and added again if missing by receiving the tx (if not => reset)
+//		- BundleTransaction (synced)		=> will be removed and added again if missing by receiving the tx
+//		- Bundle (always)					=> will be removed and added again if missing by receiving the tx
+//		- Approver (synced)					=> will be removed and added again if missing by receiving the tx
+//
+//	Stored without caching:
+//		- Tag								=> will be removed and added again if missing by receiving the tx
+//		- Address							=> will be removed and added again if missing by receiving the tx
+//		- UnconfirmedTx 					=> will be removed at pruning anyway
+//		- Milestone							=> will be removed and added again by receiving the tx
+//		- SpentAddresses					=> will be removed and added again if missing by receiving the tx
 //
 // Database:
-// 		- LedgerState
-//			- Balances of latest solid milestone		=> will be removed and replaced with snapshot milestone
-//			- Balances of snapshot milestone			=> should be consistent (total iotas are checked)
-//			- Balance diffs of every solid milestone	=> will be removed and added again by confirmation
-//
+//   - LedgerState
+//   - Balances of latest solid milestone		=> will be removed and replaced with snapshot milestone
+//   - Balances of snapshot milestone			=> should be consistent (total iotas are checked)
+//   - Balance diffs of every solid milestone	=> will be removed and added again by confirmation
 func revalidateDatabase() error {
 
 	// mark the database as tainted forever.
