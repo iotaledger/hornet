@@ -14,7 +14,6 @@ module.exports = {
         {
             type: "category",
             label: "Hornet",
-            link: {type: 'doc', id: 'welcome'},
             collapsed: false,
             items: [
                 {
