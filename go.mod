@@ -42,7 +42,7 @@ require (
 	go.uber.org/dig v1.16.1
 	golang.org/x/crypto v0.8.0
 	golang.org/x/term v0.7.0
-	google.golang.org/grpc v1.54.0
+	google.golang.org/grpc v1.55.0
 )
 
 require (
