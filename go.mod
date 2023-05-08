@@ -19,7 +19,7 @@ require (
 	github.com/iotaledger/hive.go/lo v0.0.0-20230417125513-e2e89991217f
 	github.com/iotaledger/hive.go/logger v0.0.0-20230417125513-e2e89991217f
 	github.com/iotaledger/hive.go/objectstorage v0.0.0-20230417125513-e2e89991217f
-	github.com/iotaledger/hive.go/runtime v0.0.0-20230417125513-e2e89991217f
+	github.com/iotaledger/hive.go/runtime v0.0.0-20230425142119-6abddaf15db9
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-rc.1.0.20230417125513-e2e89991217f
 	github.com/iotaledger/hive.go/web v0.0.0-20230417125513-e2e89991217f
 	github.com/iotaledger/inx-app v1.0.0-rc.3.0.20230417173151-cde47df5fe79
@@ -42,7 +42,7 @@ require (
 	go.uber.org/dig v1.16.1
 	golang.org/x/crypto v0.8.0
 	golang.org/x/term v0.7.0
-	google.golang.org/grpc v1.54.0
+	google.golang.org/grpc v1.55.0
 )
 
 require (
@@ -166,6 +166,8 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	gitlab.com/powsrv.io/go/api v0.0.0-20210201185010-da1c12ed0e27 // indirect
+	gitlab.com/powsrv.io/go/client v0.0.0-20230508073852-aea2aae7a322 // indirect
 	go.uber.org/fx v1.19.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
@@ -173,7 +175,7 @@ require (
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.8.0 // indirect

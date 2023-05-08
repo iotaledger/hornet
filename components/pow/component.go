@@ -34,6 +34,10 @@ func provide(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func(deps handlerDeps) *pow.Handler {
+		if ParamsPoW.RemotePoWHost != "" {
+			return pow.NewRemote(ParamsPoW.RefreshTipsInterval, ParamsPoW.RemotePoWHost)
+		}
+
 		// init the pow handler with all possible settings
 		return pow.New(ParamsPoW.RefreshTipsInterval)
 	}); err != nil {
