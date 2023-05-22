@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-rc.6] - 22.05.2023
+
+_**Warning**: This is a mandatory release for all nodes._
+
+### Fixed
+    - Updated iota.go with latest fixes
+
+
 ## [2.0.0-rc.5] - 07.03.2023
 
 _**Warning**: This is a mandatory release for all nodes._
