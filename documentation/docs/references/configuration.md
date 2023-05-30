@@ -386,7 +386,7 @@ Example:
     "quorum": {
       "enabled": false,
       "groups": {
-        "hornet": [
+        "hornet1": [
           {
             "alias": "hornet1",
             "baseURL": "http://hornet1.example.com:14265",
@@ -394,10 +394,10 @@ Example:
             "password": ""
           }
         ],
-        "bee": [
+        "hornet2": [
           {
-            "alias": "bee1",
-            "baseURL": "http://bee1.example.com:14265",
+            "alias": "hornet2",
+            "baseURL": "http://hornet2.example.com:14265",
             "userName": "",
             "password": ""
           }
