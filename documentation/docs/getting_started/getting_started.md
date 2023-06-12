@@ -21,10 +21,10 @@ Running a node is an efficient way to use IOTA or Shimmer. By doing so, you have
 connect to and trust someone else's node. Additionally, you help the network to become more distributed and resilient.
 
 The node software is the backbone of the network. For an overview of tasks a node is responsible for, please
-see our [Node 101](https://wiki.iota.org/shimmer/develop/nodes/explanations/nodes_101) section.
+see our [Node 101](https://wiki.iota.org/develop/nodes/explanations/nodes_101/) section.
 
 To make sure that your device meets the minimum security requirements for running a node, please
-see our [Security 101](https://wiki.iota.org/shimmer/develop/nodes/explanations/security_101) section.
+see our [Security 101](https://wiki.iota.org/develop/nodes/explanations/security_101/) section.
 
 :::note
 
@@ -58,7 +58,7 @@ the [`config.json`](../how_tos/post_installation.md) file.
 ## Operating System
 
 HORNET is written in Go and can be deployed on all major platforms.
-The [recommended setup](../how_tos/using_docker.md) uses Docker to run HORNET together with some [INX](https://wiki.iota.org/shimmer/develop/nodes/about-nodes) extensions secured behind a [Traefik](https://traefik.io) SSL reverse proxy.
+The [recommended setup](../how_tos/using_docker.md) uses Docker to run HORNET together with some [INX](https://wiki.iota.org/shimmer/develop/explanations/what-is-shimmer/nodes/about-nodes/) extensions secured behind a [Traefik](https://traefik.io) SSL reverse proxy.
 
 ## Configuration
 
