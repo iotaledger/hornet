@@ -115,11 +115,22 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 
 	parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
 
+	// we need to write lock the ledger in order to ensure consistency,
+	// otherwise a new milestone could be applied during computation of the merkle root.
+	utxoManager := t.storage.UTXOManager()
+	utxoManager.WriteLockLedger()
+	defer utxoManager.WriteUnlockLedger()
+
+	// check again if the requested milestone index would be the next one
+	if index != t.syncManager.ConfirmedMilestoneIndex()+1 {
+		return nil, common.ErrNodeNotSynced
+	}
+
 	// at this point all parents are solid
 	// compute merkle tree root
 	return whiteflag.ComputeWhiteFlagMutations(
 		ctx,
-		t.storage.UTXOManager(),
+		utxoManager,
 		parentsTraverser,
 		blocksMemcache.CachedBlock,
 		index,
