@@ -2,7 +2,7 @@
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/iotaledger/hornet/build_HORNET.yml?style=for-the-badge&branch=develop) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/iotaledger/hornet?style=for-the-badge) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/iotaledger/hornet?style=for-the-badge) ![GitHub](https://img.shields.io/github/license/iotaledger/hornet?style=for-the-badge)
 
-<p align="center"><img src="https://raw.githubusercontent.com/iotaledger/hornet/develop/documentation/static/img/logo/HORNET_logo.svg?sanitize=true" width="600"/></p>
+<p align="center"><img src="https://wiki.iota.org/shimmer/img/logo/HORNET_logo.svg" width="600"/></p>
 
 HORNET is a powerful IOTA fullnode software written in Go.
 It is easy to install and maintain.
