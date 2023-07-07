@@ -1,8 +1,6 @@
 package database
 
 import (
-	"time"
-
 	pebbleDB "github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
 
@@ -16,45 +14,6 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 
 	opts := &pebbleDB.Options{}
 	opts.EnsureDefaults()
-
-	// Per-level options. Options for at least one level must be specified. The
-	// options for the last level are used for all subsequent levels.
-	opts.Levels = make([]pebbleDB.LevelOptions, 1)
-	for i := 0; i < len(opts.Levels); i++ {
-		l := &opts.Levels[i]
-		l.EnsureDefaults()
-
-		// Compression defines the per-block compression to use.
-		//
-		// The default value (DefaultCompression) uses snappy compression.
-		l.Compression = pebbleDB.NoCompression
-
-		// FilterPolicy defines a filter algorithm (such as a Bloom filter) that can
-		// reduce disk reads for Get calls.
-		//
-		// One such implementation is bloom.FilterPolicy(10) from the pebble/bloom
-		// package.
-		//
-		// The default value means to use no filter.
-		if enableFilter {
-			l.FilterPolicy = bloom.FilterPolicy(10)
-		}
-
-		// FilterType defines whether an existing filter policy is applied at a
-		// block-level or table-level. Block-level filters use less memory to create,
-		// but are slower to access as a check for the key in the index must first be
-		// performed to locate the filter block. A table-level filter will require
-		// memory proportional to the number of keys in an sstable to create, but
-		// avoids the index lookup when determining if a key is present. Table-level
-		// filters should be preferred except under constrained memory situations.
-		l.FilterType = pebbleDB.TableFilter
-
-		// The target file size for the level.
-		// The default value is twice as big as the level before.
-		if i > 0 {
-			l.TargetFileSize = opts.Levels[i-1].TargetFileSize * 2
-		}
-	}
 
 	// Sync sstables periodically in order to smooth out writes to disk. This
 	// option does not provide any persistency guarantee, but is used to avoid
@@ -108,19 +67,6 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	// The default value is 1 GB.
 	opts.Experimental.CompactionDebtConcurrency = 10 << 30 // 10 GB
 
-	// MinDeletionRate is the minimum number of bytes per second that would
-	// be deleted. Deletion pacing is used to slow down deletions when
-	// compactions finish up or readers close, and newly-obsolete files need
-	// cleaning up. Deleting lots of files at once can cause disk latency to
-	// go up on some SSDs, which this functionality guards against. This is a
-	// minimum as the maximum is theoretically unlimited; pacing is disabled
-	// when there are too many obsolete files relative to live bytes, or
-	// there isn't enough disk space available. Setting this to 0 disables
-	// deletion pacing, which is also the default.
-	//
-	// The default value is 0.
-	opts.Experimental.MinDeletionRate = 0
-
 	// ReadCompactionRate controls the frequency of read triggered
 	// compactions by adjusting `AllowedSeeks` in manifest.FileMetadata:
 	//
@@ -144,23 +90,30 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	// ```
 	//
 	// The default value is 16000.
-	opts.Experimental.ReadCompactionRate = 1
+	opts.Experimental.ReadCompactionRate = 16000
 
 	// ReadSamplingMultiplier is a multiplier for the readSamplingPeriod in
 	// iterator.maybeSampleRead() to control the frequency of read sampling
 	// to trigger a read triggered compaction. A value of -1 prevents sampling
-	// and disables read triggered compactions.
+	// and disables read triggered compactions. The default is 1 << 4. which
+	// gets multiplied with a constant of 1 << 16 to yield 1 << 20 (1MB).
 	//
-	// The default value is 1.
-	opts.Experimental.ReadSamplingMultiplier = 0
+	// The default value is 1<<4.
+	opts.Experimental.ReadSamplingMultiplier = -1
 
-	// DeleteRangeFlushDelay configures how long the database should wait
-	// before forcing a flush of a memtable that contains a range
-	// deletion. Disk space cannot be reclaimed until the range deletion
-	// is flushed. No automatic flush occurs if zero.
+	// FlushDelayDeleteRange configures how long the database should wait before
+	// forcing a flush of a memtable that contains a range deletion. Disk space
+	// cannot be reclaimed until the range deletion is flushed. No automatic
+	// flush occurs if zero.
 	//
 	// The default value is 0.
-	opts.FlushDelayDeleteRange = 10 * time.Second
+	opts.FlushDelayDeleteRange = 0
+
+	// FlushDelayRangeKey configures how long the database should wait before
+	// forcing a flush of a memtable that contains a range key. Range keys in
+	// the memtable prevent lazy combined iteration, so it's desirable to flush
+	// range keys promptly. No automatic flush occurs if zero.
+	opts.FlushDelayRangeKey = 0
 
 	// FlushSplitBytes denotes the target number of bytes per sublevel in
 	// each flush split interval (i.e. range between two flush split keys)
@@ -176,18 +129,21 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	// The default value is 2 * opts.Levels[0].TargetFileSize.
 	opts.FlushSplitBytes = 2 * opts.Levels[0].TargetFileSize
 
+	// The count of L0 files necessary to trigger an L0 compaction.
+	//
+	// The default value is 500.
+	opts.L0CompactionFileThreshold = 500
+
 	// The amount of L0 read-amplification necessary to trigger an L0 compaction.
 	//
 	// The default value is 4.
 	opts.L0CompactionThreshold = 20
 
-	// Hard limit on L0 read-amplification. Writes are stopped when this
-	// threshold is reached. If Experimental.L0SublevelCompactions is enabled
-	// this threshold is measured against the number of L0 sublevels. Otherwise
-	// it is measured against the number of files in L0.
+	// Hard limit on L0 read-amplification, computed as the number of L0
+	// sublevels. Writes are stopped when this threshold is reached.
 	//
 	// The default value is 12.
-	opts.L0StopWritesThreshold = 200
+	opts.L0StopWritesThreshold = 12
 
 	// The maximum number of bytes for LBase. The base level is the level which
 	// L0 is compacted into. The base level is determined dynamically based on
@@ -197,6 +153,72 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	//
 	// The default value is 64 MB.
 	opts.LBaseMaxBytes = 64 << 20 // 64 MB
+
+	// Per-level options. Options for at least one level must be specified. The
+	// options for the last level are used for all subsequent levels.
+	opts.Levels = make([]pebbleDB.LevelOptions, 1)
+	for i := 0; i < len(opts.Levels); i++ {
+		l := &opts.Levels[i]
+		l.EnsureDefaults()
+
+		// BlockRestartInterval is the number of keys between restart points
+		// for delta encoding of keys.
+		//
+		// The default value is 16.
+		l.BlockRestartInterval = 16
+
+		// BlockSize is the target uncompressed size in bytes of each table block.
+		//
+		// The default value is 4096.
+		l.BlockSize = 4096
+
+		// BlockSizeThreshold finishes a block if the block size is larger than the
+		// specified percentage of the target block size and adding the next entry
+		// would cause the block to be larger than the target block size.
+		//
+		// The default value is 90
+		l.BlockSizeThreshold = 90
+
+		// Compression defines the per-block compression to use.
+		//
+		// The default value (DefaultCompression) uses snappy compression.
+		l.Compression = pebbleDB.NoCompression
+
+		// FilterPolicy defines a filter algorithm (such as a Bloom filter) that can
+		// reduce disk reads for Get calls.
+		//
+		// One such implementation is bloom.FilterPolicy(10) from the pebble/bloom
+		// package.
+		//
+		// The default value means to use no filter.
+		if enableFilter {
+			l.FilterPolicy = bloom.FilterPolicy(10)
+		}
+
+		// FilterType defines whether an existing filter policy is applied at a
+		// block-level or table-level. Block-level filters use less memory to create,
+		// but are slower to access as a check for the key in the index must first be
+		// performed to locate the filter block. A table-level filter will require
+		// memory proportional to the number of keys in an sstable to create, but
+		// avoids the index lookup when determining if a key is present. Table-level
+		// filters should be preferred except under constrained memory situations.
+		l.FilterType = pebbleDB.TableFilter
+
+		// IndexBlockSize is the target uncompressed size in bytes of each index
+		// block. When the index block size is larger than this target, two-level
+		// indexes are automatically enabled. Setting this option to a large value
+		// (such as math.MaxInt32) disables the automatic creation of two-level
+		// indexes.
+		//
+		// The default value is the value of BlockSize.
+		l.IndexBlockSize = 4096
+
+		// The target file size for the level.
+		// The default value is twice as big as the level before.
+		if i > 0 {
+			l.TargetFileSize = opts.Levels[i-1].TargetFileSize * 2
+		}
+	}
 
 	// MaxManifestFileSize is the maximum size the MANIFEST file is allowed to
 	// become. When the MANIFEST exceeds this size it is rolled over and a new
@@ -232,8 +254,11 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	opts.MemTableStopWritesThreshold = 2
 
 	// MaxConcurrentCompactions specifies the maximum number of concurrent
-	// compactions. The default is 1. Concurrent compactions are only performed
-	// when L0 read-amplification passes the L0CompactionConcurrency threshold.
+	// compactions. The default is 1. Concurrent compactions are performed
+	// - when L0 read-amplification passes the L0CompactionConcurrency threshold
+	// - for automatic background compactions
+	// - when a manual compaction for a level is split and parallelized
+	// MaxConcurrentCompactions must be greater than 0.
 	//
 	// The default value is 1.
 	opts.MaxConcurrentCompactions = func() int { return 1 }
