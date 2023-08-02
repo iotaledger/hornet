@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/shutdown"
 )
 
 var PLUGIN = node.NewPlugin("Metrics", node.Enabled, configure, run)

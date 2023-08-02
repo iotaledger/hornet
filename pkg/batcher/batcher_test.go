@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/batcher"
+	"github.com/iotaledger/hornet/pkg/batcher"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/curl"
 	"github.com/iotaledger/iota.go/trinary"

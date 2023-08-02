@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
 )
 
 type ApproveesTraverser struct {

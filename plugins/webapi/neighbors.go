@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/plugins/peering"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/plugins/peering"
 )
 
 func init() {

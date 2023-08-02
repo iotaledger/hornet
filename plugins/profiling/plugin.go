@@ -5,8 +5,8 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"github.com/gohornet/hornet/pkg/config"
 	"github.com/iotaledger/hive.go/node"
+	"github.com/iotaledger/hornet/pkg/config"
 )
 
 var (

@@ -3,7 +3,7 @@ package warpsync_test
 import (
 	"testing"
 
-	"github.com/gohornet/hornet/pkg/protocol/warpsync"
+	"github.com/iotaledger/hornet/pkg/protocol/warpsync"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -17,17 +17,17 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"go.uber.org/atomic"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/spammer"
-	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/plugins/coordinator"
-	"github.com/gohornet/hornet/plugins/gossip"
-	"github.com/gohornet/hornet/plugins/peering"
-	"github.com/gohornet/hornet/plugins/pow"
-	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/spammer"
+	"github.com/iotaledger/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/plugins/coordinator"
+	"github.com/iotaledger/hornet/plugins/gossip"
+	"github.com/iotaledger/hornet/plugins/peering"
+	"github.com/iotaledger/hornet/plugins/pow"
+	"github.com/iotaledger/hornet/plugins/urts"
 )
 
 var (

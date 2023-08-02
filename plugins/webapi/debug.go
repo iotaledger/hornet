@@ -12,11 +12,11 @@ import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/iota.go/guards"
 
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/plugins/gossip"
-	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/plugins/gossip"
+	tanglePlugin "github.com/iotaledger/hornet/plugins/tangle"
 )
 
 func init() {

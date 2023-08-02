@@ -9,7 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
 )
 
 const (

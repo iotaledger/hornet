@@ -6,8 +6,8 @@ import (
 
 	"github.com/iotaledger/iota.go/transaction"
 
-	"github.com/gohornet/hornet/pkg/compressed"
 	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hornet/pkg/compressed"
 )
 
 type Transaction struct {

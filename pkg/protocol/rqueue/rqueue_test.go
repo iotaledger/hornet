@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/protocol/rqueue"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/protocol/rqueue"
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	"github.com/stretchr/testify/assert"
 )

@@ -8,7 +8,7 @@ import (
 
 	"github.com/shirou/gopsutil/mem"
 
-	"github.com/gohornet/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/config"
 )
 
 var (

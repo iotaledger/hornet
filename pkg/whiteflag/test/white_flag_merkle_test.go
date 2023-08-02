@@ -12,8 +12,8 @@ import (
 
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/whiteflag"
 )
 
 func TestWhiteFlagMerkleTreeHash(t *testing.T) {

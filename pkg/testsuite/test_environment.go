@@ -16,12 +16,12 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/iota.go/consts"
 
-	"github.com/gohornet/hornet/pkg/model/coordinator"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/pkg/model/coordinator"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/profile"
 )
 
 var (

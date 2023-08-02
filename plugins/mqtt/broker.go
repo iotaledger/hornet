@@ -5,7 +5,7 @@ import (
 
 	"github.com/eclipse/paho.mqtt.golang/packets"
 	"github.com/fhmq/hmq/broker"
-	"github.com/gohornet/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/config"
 )
 
 // Simple mqtt publisher abstraction

@@ -9,12 +9,12 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/plugins/curl"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/plugins/curl"
 
 	"go.uber.org/atomic"
 )

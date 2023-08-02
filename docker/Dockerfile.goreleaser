@@ -2,10 +2,10 @@ FROM alpine:latest
 WORKDIR /app
 
 LABEL org.label-schema.description="HORNET - The IOTA community node"
-LABEL org.label-schema.name="gohornet/hornet"
+LABEL org.label-schema.name="iotaledger/hornet"
 LABEL org.label-schema.schema-version="1.0"
-LABEL org.label-schema.vcs-url="https://github.com/gohornet/hornet"
-LABEL org.label-schema.usage="https://github.com/gohornet/hornet/blob/master/DOCKER.md"
+LABEL org.label-schema.vcs-url="https://github.com/iotaledger/hornet"
+LABEL org.label-schema.usage="https://github.com/iotaledger/hornet/blob/master/DOCKER.md"
 
 COPY ["hornet-legacy", "/app/"]
 RUN apk --no-cache add ca-certificates gnupg wget tini\

@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/gohornet/hornet/plugins/snapshot"
+	"github.com/iotaledger/hornet/plugins/snapshot"
 )
 
 func init() {

@@ -6,7 +6,7 @@ on:
     branches: [legacy, develop-legacy]
 jobs:
   security:
-    # Only run on push events or PRs from gohornet/hornet, skip on PRs from forks
+    # Only run on push events or PRs from iotaledger/hornet, skip on PRs from forks
     # Secret variables cannot be exposed to PRs from forks
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
@@ -18,4 +18,4 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --org=gohornet
+          args: --org=iotaledger

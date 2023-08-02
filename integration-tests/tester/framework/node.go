@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/peering/peer"
 	"github.com/iotaledger/hive.go/identity"
+	"github.com/iotaledger/hornet/pkg/peering/peer"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/bundle"
 	"github.com/iotaledger/iota.go/checksum"

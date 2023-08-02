@@ -12,11 +12,11 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/plugins/curl"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/pow"
+	"github.com/iotaledger/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/plugins/curl"
 )
 
 // tagForIndex creates a tag for a specific index.
