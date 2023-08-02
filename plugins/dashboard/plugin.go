@@ -182,8 +182,6 @@ func run(_ *node.Plugin) {
 	runTipSelMetricWorker()
 	// run the database size collector
 	runDatabaseSizeCollector()
-	// run the spammer feed
-	runSpammerMetricWorker()
 }
 
 func getMilestoneTailHash(index milestone.Index) hornet.Hash {

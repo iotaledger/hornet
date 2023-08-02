@@ -19,7 +19,6 @@ import (
 	"github.com/iotaledger/hornet/pkg/config"
 	"github.com/iotaledger/hornet/pkg/model/tangle"
 	"github.com/iotaledger/hornet/pkg/shutdown"
-	"github.com/iotaledger/hornet/plugins/spammer"
 )
 
 const (
@@ -163,11 +162,6 @@ func configure(plugin *node.Plugin) {
 
 	if !config.NodeConfig.GetBool(config.CfgNetAutopeeringRunAsEntryNode) {
 		webAPIRoute()
-
-		// only handle spammer api calls if the spammer plugin is enabled
-		if !node.IsSkipped(spammer.PLUGIN) {
-			spammerRoute()
-		}
 	}
 
 	// return error, if route is not there
