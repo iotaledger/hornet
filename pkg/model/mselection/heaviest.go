@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/willf/bitset"
+	"github.com/bits-and-blooms/bitset"
 
 	"github.com/iotaledger/iota.go/trinary"
 

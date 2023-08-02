@@ -1,14 +1,20 @@
 {
   "useProfile": "auto",
   "httpAPI": {
-    "basicAuth": {
-      "enabled": false,
-      "username": "",
-      "passwordHash": "",
-      "passwordSalt": ""
-    },
-    "excludeHealthCheckFromAuth": false,
-    "permitRemoteAccess": [
+    "publicRoutes": [
+      "/",
+      "/healthz",
+      "/api/core/v0/info",
+      "/api/core/v0/milestones*",
+      "/api/core/v0/transactions*",
+      "/api/core/v0/addresses*",
+      "/api/core/v0/ledger/diff/by-index*",
+      "/api/core/v0/ledger/diff-extended/by-index*"
+    ],
+    "protectedRoutes": [
+      "/api/*"
+    ],
+    "publicRPCEndpoints": [
       "getNodeInfo",
       "getBalances",
       "checkConsistency",
@@ -23,12 +29,13 @@
       "getTrytes",
       "getWhiteFlagConfirmation"
     ],
-    "permittedRoutes": [
-      "healthz"
-    ],
-    "whitelistedAddresses": [],
+    "jwtAuth": {
+      "privateKeyPath": "jwt/private.key",
+      "salt": "HORNET"
+    },    
     "bindAddress": "0.0.0.0:14266",
     "limits": {
+      "maxResults": 1000,
       "bodyLengthBytes": 1000000,
       "findTransactions": 1000,
       "getTrytes": 1000,

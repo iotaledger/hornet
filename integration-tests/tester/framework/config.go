@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/docker/go-connections/nat"
+
 	"github.com/iotaledger/hornet/pkg/config"
 )
 
@@ -160,7 +161,7 @@ type WebAPIConfig struct {
 func (webAPIConfig *WebAPIConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", config.CfgWebAPIBindAddress, webAPIConfig.BindAddress),
-		fmt.Sprintf("--%s=%s", config.CfgWebAPIPermitRemoteAccess, strings.Join(webAPIConfig.PermittedAPICalls, ",")),
+		fmt.Sprintf("--%s=%s", config.CfgWebAPIPublicRPCEndpoints, strings.Join(webAPIConfig.PermittedAPICalls, ",")),
 	}
 }
 

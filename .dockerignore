@@ -13,3 +13,4 @@ docker-compose.yml
 layer*.csv
 coordinator.state
 coordinator.tree
+jwt/

@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"io"
@@ -67,7 +68,7 @@ func isSolidEntryPoint(txHash hornet.Hash, targetIndex milestone.Index) bool {
 }
 
 // getMilestoneApprovees traverses a milestone and collects all tx that were confirmed by that milestone or higher
-func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.Hash, abortSignal <-chan struct{}) (hornet.Hashes, error) {
+func getMilestoneApprovees(ctx context.Context, milestoneIndex milestone.Index, msTailTxHash hornet.Hash) (hornet.Hashes, error) {
 
 	ts := time.Now()
 
@@ -84,7 +85,7 @@ func getMilestoneApprovees(milestoneIndex milestone.Index, msTailTxHash hornet.H
 			delete(txsToTraverse, txHash)
 
 			select {
-			case <-abortSignal:
+			case <-ctx.Done():
 				return nil, ErrSnapshotCreationWasAborted
 			default:
 			}
@@ -173,7 +174,7 @@ func shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
 	return solidMilestoneIndex-(snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
-func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[string]milestone.Index, error) {
+func getSolidEntryPoints(ctx context.Context, targetIndex milestone.Index) (map[string]milestone.Index, error) {
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
@@ -184,7 +185,7 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
 	for milestoneIndex := targetIndex - SolidEntryPointCheckThresholdPast; milestoneIndex <= targetIndex; milestoneIndex++ {
 		select {
-		case <-abortSignal:
+		case <-ctx.Done():
 			return nil, ErrSnapshotCreationWasAborted
 		default:
 		}
@@ -198,14 +199,14 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 		msTailTxHash := cachedMs.GetBundle().GetTailHash()
 		cachedMs.Release(true) // bundle -1
 
-		approvees, err := getMilestoneApprovees(milestoneIndex, msTailTxHash, abortSignal)
+		approvees, err := getMilestoneApprovees(ctx, milestoneIndex, msTailTxHash)
 		if err != nil {
 			return nil, err
 		}
 
 		for _, approvee := range approvees {
 			select {
-			case <-abortSignal:
+			case <-ctx.Done():
 				return nil, ErrSnapshotCreationWasAborted
 			default:
 			}
@@ -239,14 +240,14 @@ func getSolidEntryPoints(targetIndex milestone.Index, abortSignal <-chan struct{
 	return solidEntryPoints, nil
 }
 
-func getSeenMilestones(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[string]milestone.Index, error) {
+func getSeenMilestones(ctx context.Context, targetIndex milestone.Index) (map[string]milestone.Index, error) {
 
 	// Fill the list with seen milestones
 	seenMilestones := make(map[string]milestone.Index)
 	lastestMilestone := tangle.GetLatestMilestoneIndex()
 	for milestoneIndex := targetIndex + 1; milestoneIndex <= lastestMilestone; milestoneIndex++ {
 		select {
-		case <-abortSignal:
+		case <-ctx.Done():
 			return nil, ErrSnapshotCreationWasAborted
 		default:
 		}
@@ -295,7 +296,7 @@ func checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *tangle.Snaps
 	return nil
 }
 
-func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <-chan struct{}) ([]byte, error) {
+func createSnapshotFile(ctx context.Context, filePath string, lsh *localSnapshotHeader) ([]byte, error) {
 
 	if _, fileErr := os.Stat(filePath); os.IsNotExist(fileErr) {
 		// create dir if it not exists
@@ -314,7 +315,7 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 
 	// write header, SEPs, seen milestones and ledger
 	// with a WRONG spent addresses count
-	if err := lsh.WriteToBuffer(fileBufWriter, abortSignal); err != nil {
+	if err := lsh.WriteToBuffer(ctx, fileBufWriter); err != nil {
 		return nil, err
 	}
 
@@ -327,7 +328,7 @@ func createSnapshotFile(filePath string, lsh *localSnapshotHeader, abortSignal <
 		config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled) {
 
 		// stream spent addresses into the file
-		spentAddressesCount, err := tangle.StreamSpentAddressesToWriter(fileBufWriter, abortSignal)
+		spentAddressesCount, err := tangle.StreamSpentAddressesToWriter(ctx, fileBufWriter)
 		if err != nil {
 			return nil, err
 		}
@@ -377,7 +378,7 @@ func setIsSnapshotting(value bool) {
 	statusLock.Unlock()
 }
 
-func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
+func createLocalSnapshotWithoutLocking(ctx context.Context, targetIndex milestone.Index, filePath string, writeToDatabase bool) error {
 
 	log.Infof("creating local snapshot for targetIndex %d", targetIndex)
 
@@ -401,7 +402,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 	}
 	defer cachedTargetMs.Release(true) // bundle -1
 
-	newBalances, ledgerIndex, err := tangle.GetLedgerStateForMilestone(targetIndex, abortSignal)
+	newBalances, ledgerIndex, err := tangle.GetLedgerStateForMilestone(ctx, targetIndex)
 	if err != nil {
 		if err == tangle.ErrOperationAborted {
 			return err
@@ -413,12 +414,12 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 		return errors.Wrapf(ErrCritical, "ledger index wrong! %d/%d", ledgerIndex, targetIndex)
 	}
 
-	newSolidEntryPoints, err := getSolidEntryPoints(targetIndex, abortSignal)
+	newSolidEntryPoints, err := getSolidEntryPoints(ctx, targetIndex)
 	if err != nil {
 		return err
 	}
 
-	seenMilestones, err := getSeenMilestones(targetIndex, abortSignal)
+	seenMilestones, err := getSeenMilestones(ctx, targetIndex)
 	if err != nil {
 		return err
 	}
@@ -440,7 +441,7 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 	// Remove old temp file
 	os.Remove(filePathTmp)
 
-	hash, err := createSnapshotFile(filePathTmp, lsh, abortSignal)
+	hash, err := createSnapshotFile(ctx, filePathTmp, lsh)
 	if err != nil {
 		return err
 	}
@@ -471,10 +472,10 @@ func createLocalSnapshotWithoutLocking(targetIndex milestone.Index, filePath str
 	return nil
 }
 
-func CreateLocalSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
+func CreateLocalSnapshot(ctx context.Context, targetIndex milestone.Index, filePath string, writeToDatabase bool) error {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
-	return createLocalSnapshotWithoutLocking(targetIndex, filePath, writeToDatabase, abortSignal)
+	return createLocalSnapshotWithoutLocking(ctx, targetIndex, filePath, writeToDatabase)
 }
 
 type localSnapshotHeader struct {
@@ -487,7 +488,7 @@ type localSnapshotHeader struct {
 	spentAddressesCount int32
 }
 
-func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan struct{}) error {
+func (ls *localSnapshotHeader) WriteToBuffer(ctx context.Context, buf io.Writer) error {
 	var err error
 
 	if err = binary.Write(buf, binary.LittleEndian, SupportedLocalSnapshotFileVersions[0]); err != nil {
@@ -524,7 +525,7 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 
 	for hash, val := range ls.solidEntryPoints {
 		select {
-		case <-abortSignal:
+		case <-ctx.Done():
 			return ErrSnapshotCreationWasAborted
 		default:
 		}
@@ -540,7 +541,7 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 
 	for hash, val := range ls.seenMilestones {
 		select {
-		case <-abortSignal:
+		case <-ctx.Done():
 			return ErrSnapshotCreationWasAborted
 		default:
 		}
@@ -556,7 +557,7 @@ func (ls *localSnapshotHeader) WriteToBuffer(buf io.Writer, abortSignal <-chan s
 
 	for addr, val := range ls.balances {
 		select {
-		case <-abortSignal:
+		case <-ctx.Done():
 			return ErrSnapshotCreationWasAborted
 		default:
 		}

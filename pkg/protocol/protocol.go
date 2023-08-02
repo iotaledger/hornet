@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/willf/bitset"
+	"github.com/bits-and-blooms/bitset"
 
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/events"

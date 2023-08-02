@@ -1,11 +1,8 @@
 package webapi
 
 import (
-	"fmt"
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/iota.go/guards"
@@ -19,60 +16,37 @@ import (
 	"github.com/iotaledger/hornet/plugins/urts"
 )
 
-func init() {
-	addEndpoint("getTipInfo", getTipInfo, implementedAPIcalls)
-	addEndpoint("getTransactionsToApprove", getTransactionsToApprove, implementedAPIcalls)
-	addEndpoint("getSpammerTips", getSpammerTips, implementedAPIcalls)
-}
-
-func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-
+func (s *WebAPIServer) rpcGetTipInfo(c echo.Context) (interface{}, error) {
 	// do not reply if URTS is disabled
 	if node.IsSkipped(urts.PLUGIN) {
-		e.Error = "tipselection plugin disabled in this node"
-		c.JSON(http.StatusServiceUnavailable, e)
-		return
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "tipselection plugin disabled in this node")
 	}
 
 	if !tangle.IsNodeSyncedWithThreshold() {
-		e.Error = "node is not synced"
-		c.JSON(http.StatusBadRequest, e)
-		return
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	query := &GetTipInfo{}
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+	request := &GetTipInfo{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if !guards.IsTransactionHash(query.TailTransaction) {
-		e.Error = "invalid tail hash supplied"
-		c.JSON(http.StatusBadRequest, e)
-		return
+	if !guards.IsTransactionHash(request.TailTransaction) {
+		return nil, errors.WithMessage(echo.ErrBadRequest, "invalid tail hash supplied")
 	}
 
-	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(query.TailTransaction)) // meta +1
+	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(request.TailTransaction)) // meta +1
 	if cachedTxMeta == nil {
-		e.Error = "unknown tail transaction"
-		c.JSON(http.StatusBadRequest, e)
-		return
+		return nil, errors.WithMessage(echo.ErrBadRequest, "unknown tail transaction")
 	}
 	defer cachedTxMeta.Release(true)
 
 	if !cachedTxMeta.GetMetadata().IsTail() {
-		e.Error = "transaction is not a tail"
-		c.JSON(http.StatusBadRequest, e)
-		return
+		return nil, errors.WithMessage(echo.ErrBadRequest, "transaction is not a tail")
 	}
 
 	if !cachedTxMeta.GetMetadata().IsSolid() {
-		e.Error = "transaction is not solid"
-		c.JSON(http.StatusBadRequest, e)
-		return
+		return nil, errors.WithMessage(echo.ErrBadRequest, "transaction is not solid")
 	}
 
 	conflicting := cachedTxMeta.GetMetadata().IsConflicting()
@@ -81,13 +55,12 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	confirmed := cachedTxMeta.GetMetadata().IsConfirmed() && !conflicting
 
 	if confirmed || conflicting {
-		c.JSON(http.StatusOK, GetTipInfoReturn{
+		return &GetTipInfoResponse{
 			Confirmed:      confirmed,
 			Conflicting:    conflicting,
 			ShouldPromote:  false,
 			ShouldReattach: false,
-		})
-		return
+		}, nil
 	}
 
 	lsmi := tangle.GetSolidMilestoneIndex()
@@ -95,110 +68,87 @@ func getTipInfo(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	// if the OTRSI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 	if (lsmi - ortsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelBelowMaxDepth)) {
-		c.JSON(http.StatusOK, GetTipInfoReturn{
+		return &GetTipInfoResponse{
 			Confirmed:      false,
 			Conflicting:    false,
 			ShouldPromote:  false,
 			ShouldReattach: true,
-		})
-		return
+		}, nil
 	}
 
 	// if the LSMI to YTRSI delta is over MaxDeltaTxYoungestRootSnapshotIndexToLSMI, then the tip is lazy and should be promoted
 	if (lsmi - ytrsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxYoungestRootSnapshotIndexToLSMI)) {
-		c.JSON(http.StatusOK, GetTipInfoReturn{
+		return &GetTipInfoResponse{
 			Confirmed:      false,
 			Conflicting:    false,
 			ShouldPromote:  true,
 			ShouldReattach: false,
-		})
-		return
+		}, nil
 	}
 
 	// if the OTRSI to LSMI delta is over MaxDeltaTxOldestRootSnapshotIndexToLSMI, the tip is semi-lazy and should be promoted
 	if (lsmi - ortsi) > milestone.Index(config.NodeConfig.GetInt(config.CfgTipSelMaxDeltaTxOldestRootSnapshotIndexToLSMI)) {
-		c.JSON(http.StatusOK, GetTipInfoReturn{
+		return &GetTipInfoResponse{
 			Confirmed:      false,
 			Conflicting:    false,
 			ShouldPromote:  true,
 			ShouldReattach: false,
-		})
-		return
+		}, nil
 	}
 
 	// tip is non-lazy, no need to promote or reattach
-	c.JSON(http.StatusOK, GetTipInfoReturn{
+	return &GetTipInfoResponse{
 		Confirmed:      false,
 		Conflicting:    false,
 		ShouldPromote:  false,
 		ShouldReattach: false,
-	})
+	}, nil
 }
 
-func getTransactionsToApprove(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-
+func (s *WebAPIServer) rpcGetTransactionsToApprove(c echo.Context) (interface{}, error) {
 	// do not reply if URTS is disabled
 	if node.IsSkipped(urts.PLUGIN) {
-		e.Error = "tipselection plugin disabled in this node"
-		c.JSON(http.StatusServiceUnavailable, e)
-		return
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "tipselection plugin disabled in this node")
 	}
 
-	query := &GetTransactionsToApprove{}
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+	request := &GetTransactionsToApprove{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
 	tips, err := urts.TipSelector.SelectNonLazyTips()
 	if err != nil {
 		if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
-			e.Error = err.Error()
-			c.JSON(http.StatusServiceUnavailable, e)
-			return
+			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 		}
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+
+		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
-	if len(query.Reference) > 0 {
-		if !guards.IsTransactionHash(query.Reference) {
-			e.Error = "invalid reference hash supplied"
-			c.JSON(http.StatusBadRequest, e)
-			return
+	if len(request.Reference) > 0 {
+		if !guards.IsTransactionHash(request.Reference) {
+			return nil, errors.WithMessage(echo.ErrBadRequest, "invalid reference hash supplied")
 		}
-		c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Trytes(), BranchTransaction: query.Reference})
-		return
+		return &GetTransactionsToApproveResponse{TrunkTransaction: tips[0].Trytes(), BranchTransaction: request.Reference}, nil
 	}
 
-	c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Trytes(), BranchTransaction: tips[1].Trytes()})
+	return &GetTransactionsToApproveResponse{TrunkTransaction: tips[0].Trytes(), BranchTransaction: tips[1].Trytes()}, nil
 }
 
-func getSpammerTips(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-
+func (s *WebAPIServer) rpcGetSpammerTips(c echo.Context) (interface{}, error) {
 	// do not reply if URTS is disabled
 	if node.IsSkipped(urts.PLUGIN) {
-		e.Error = "tipselection plugin disabled in this node"
-		c.JSON(http.StatusServiceUnavailable, e)
-		return
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "tipselection plugin disabled in this node")
 	}
 
 	_, tips, err := urts.TipSelector.SelectSpammerTips()
 	if err != nil {
 		if err == tangle.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
-			e.Error = err.Error()
-			c.JSON(http.StatusServiceUnavailable, e)
-			return
+			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 		}
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+
+		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
-	c.JSON(http.StatusOK, GetTransactionsToApproveReturn{TrunkTransaction: tips[0].Trytes(), BranchTransaction: tips[1].Trytes()})
+	return &GetTransactionsToApproveResponse{TrunkTransaction: tips[0].Trytes(), BranchTransaction: tips[1].Trytes()}, nil
 }

@@ -1,13 +1,11 @@
 package webapi
 
 import (
-	"fmt"
-	"net/http"
 	"sort"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hornet/pkg/config"
 	"github.com/iotaledger/hornet/plugins/curl"
@@ -17,53 +15,37 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-func init() {
-	addEndpoint("attachToTangle", attachToTangle, implementedAPIcalls)
-}
-
-func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &AttachToTangle{}
+func (s *WebAPIServer) rpcAttachToTangle(c echo.Context) (interface{}, error) {
+	request := &AttachToTangle{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
+	}
 
 	mwm := config.NodeConfig.GetInt(config.CfgCoordinatorMWM)
 
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
-
 	// mwm is an optional parameter
-	if query.MinWeightMagnitude == 0 {
-		query.MinWeightMagnitude = mwm
+	if request.MinWeightMagnitude == 0 {
+		request.MinWeightMagnitude = mwm
 	}
 
 	// Reject wrong MWM
-	if query.MinWeightMagnitude != mwm {
-		e.Error = fmt.Sprintf("Wrong MinWeightMagnitude. requested: %d, expected: %d", query.MinWeightMagnitude, mwm)
-		c.JSON(http.StatusBadRequest, e)
-		return
+	if request.MinWeightMagnitude != mwm {
+		return nil, errors.WithMessagef(echo.ErrBadRequest, "Wrong MinWeightMagnitude. requested: %d, expected: %d", request.MinWeightMagnitude, mwm)
 	}
 
 	// Reject empty requests
-	if len(query.Trytes) == 0 {
-		e.Error = "No trytes given."
-		c.JSON(http.StatusBadRequest, e)
-		return
+	if len(request.Trytes) == 0 {
+		return nil, errors.WithMessage(echo.ErrBadRequest, "No trytes given.")
 	}
 
-	txs, err := transaction.AsTransactionObjects(query.Trytes, nil)
+	txs, err := transaction.AsTransactionObjects(request.Trytes, nil)
 	if err != nil {
-		e.Error = err.Error()
-		c.JSON(http.StatusInternalServerError, e)
-		return
+		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
 	// Reject bundles with invalid tx amount
 	if uint64(len(txs)) != txs[0].LastIndex+1 {
-		e.Error = fmt.Sprintf("Invalid bundle length. Received txs: %v, Bundle requires: %v", len(txs), txs[0].LastIndex+1)
-		c.JSON(http.StatusBadRequest, e)
-		return
+		return nil, errors.WithMessagef(echo.ErrBadRequest, "Invalid bundle length. Received txs: %v, Bundle requires: %v", len(txs), txs[0].LastIndex+1)
 	}
 
 	// Sort transactions (highest to lowest index)
@@ -74,9 +56,7 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	// Check transaction indexes
 	for i, j := uint64(0), uint64(len(txs)-1); j > 0; i, j = i+1, j-1 {
 		if txs[i].CurrentIndex != j {
-			e.Error = fmt.Sprintf("Invalid transaction index. Got: %d, expected: %d", txs[i].CurrentIndex, j)
-			c.JSON(http.StatusBadRequest, e)
-			return
+			return nil, errors.WithMessagef(echo.ErrBadRequest, "Invalid transaction index. Got: %d, expected: %d", txs[i].CurrentIndex, j)
 		}
 	}
 
@@ -85,11 +65,11 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 		switch {
 		case i == 0:
-			txs[i].TrunkTransaction = query.TrunkTransaction
-			txs[i].BranchTransaction = query.BranchTransaction
+			txs[i].TrunkTransaction = request.TrunkTransaction
+			txs[i].BranchTransaction = request.BranchTransaction
 		default:
 			txs[i].TrunkTransaction = prev
-			txs[i].BranchTransaction = query.TrunkTransaction
+			txs[i].BranchTransaction = request.TrunkTransaction
 		}
 
 		txs[i].AttachmentTimestamp = time.Now().UnixNano() / int64(time.Millisecond)
@@ -99,35 +79,27 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		// Convert tx to trytes
 		trytes, err := transaction.TransactionToTrytes(&txs[i])
 		if err != nil {
-			e.Error = err.Error()
-			c.JSON(http.StatusInternalServerError, e)
-			return
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
 		// Do the PoW
 		ts := time.Now()
-		txs[i].Nonce, err = pow.Handler().DoPoW(trytes, query.MinWeightMagnitude)
+		txs[i].Nonce, err = pow.Handler().DoPoW(trytes, request.MinWeightMagnitude)
 		if err != nil {
-			e.Error = err.Error()
-			c.JSON(http.StatusInternalServerError, e)
-			return
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
-		log.Debugf("PoW method: \"%s\", MWM: %d, took %v", pow.Handler().GetPoWType(), mwm, time.Since(ts).Truncate(time.Millisecond))
+		s.logger.Debugf("PoW method: \"%s\", MWM: %d, took %v", pow.Handler().GetPoWType(), mwm, time.Since(ts).Truncate(time.Millisecond))
 
 		// Convert tx to trits
 		txTrits, err := transaction.TransactionToTrits(&txs[i])
 		if err != nil {
-			e.Error = err.Error()
-			c.JSON(http.StatusInternalServerError, e)
-			return
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
 		// Calculate the transaction hash with the batched hasher
 		hashTrits, err := curl.Hasher().Hash(txTrits)
 		if err != nil {
-			e.Error = err.Error()
-			c.JSON(http.StatusInternalServerError, e)
-			return
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
 		txs[i].Hash = trinary.MustTritsToTrytes(hashTrits)
@@ -135,10 +107,8 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		prev = txs[i].Hash
 
 		// Check tx
-		if !transaction.HasValidNonce(&txs[i], uint64(query.MinWeightMagnitude)) {
-			e.Error = err.Error()
-			c.JSON(http.StatusInternalServerError, e)
-			return
+		if !transaction.HasValidNonce(&txs[i], uint64(request.MinWeightMagnitude)) {
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "invalid nonce: %s", prev)
 		}
 	}
 
@@ -149,5 +119,5 @@ func attachToTangle(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	powedTxTrytes := transaction.MustTransactionsToTrytes(txs)
 
-	c.JSON(http.StatusOK, AttachToTangleReturn{Trytes: powedTxTrytes})
+	return &AttachToTangleResponse{Trytes: powedTxTrytes}, nil
 }

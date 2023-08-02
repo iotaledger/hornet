@@ -6,8 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/iotaledger/hive.go/logger"
 	flag "github.com/spf13/pflag"
+
+	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/iotaledger/hive.go/node"
 
@@ -49,7 +50,7 @@ func ParseConfig() {
 }
 
 func PrintConfig() {
-	config.PrintConfig([]string{config.CfgWebAPIBasicAuthPasswordHash, config.CfgWebAPIBasicAuthPasswordSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
+	config.PrintConfig([]string{config.CfgWebAPIJWTAuthSalt, config.CfgDashboardBasicAuthPasswordHash, config.CfgDashboardBasicAuthPasswordSalt})
 
 	enablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeEnablePlugins)
 	disablePlugins := config.NodeConfig.GetStringSlice(config.CfgNodeDisablePlugins)

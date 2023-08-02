@@ -213,6 +213,23 @@ func ForEachBundleHash(consumer BundleHashConsumer, skipCache bool) {
 	}, skipCache)
 }
 
+// ForEachBundle loops over all existing bundle instances for that bundle hash.
+func ForEachBundle(bundleHash hornet.Hash, consumer func(*Bundle) bool, maxFind ...int) {
+	ForEachBundleTailTransactionHash(bundleHash, func(txTailHash hornet.Hash) bool {
+		bndl := GetCachedBundleOrNil(txTailHash) // bundle +1
+		if bndl == nil {
+			return true
+		}
+
+		var result bool
+		bndl.Consume(func(object objectstorage.StorableObject) {
+			result = consumer(object.(*Bundle))
+		}, true)
+
+		return result
+	}, maxFind...)
+}
+
 // bundle +-0
 func ContainsBundle(tailTxHash hornet.Hash) bool {
 	return bundleStorage.Contains(databaseKeyForBundle(tailTxHash))

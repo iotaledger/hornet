@@ -1,74 +1,99 @@
 package webapi
 
 import (
-	"fmt"
-	"net/http"
-	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/guards"
 	"github.com/iotaledger/iota.go/transaction"
 
-	"github.com/iotaledger/hornet/pkg/config"
 	"github.com/iotaledger/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hornet/pkg/model/tangle"
 )
 
-func init() {
-	addEndpoint("getTrytes", getTrytes, implementedAPIcalls)
-}
-
-func getTrytes(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &GetTrytes{}
-
-	maxGetTrytes := config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes)
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+func (s *WebAPIServer) rpcGetTrytes(c echo.Context) (interface{}, error) {
+	request := &GetTrytes{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if len(query.Hashes) > maxGetTrytes {
-		e.Error = "Too many hashes. Max. allowed: " + strconv.Itoa(maxGetTrytes)
-		c.JSON(http.StatusBadRequest, e)
-		return
+	maxResults := s.limitsMaxResults
+	if len(request.Hashes) > maxResults {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "too many hashes. maximum allowed: %d", maxResults)
 	}
 
 	trytes := []string{}
 
-	for _, hash := range query.Hashes {
+	for _, hash := range request.Hashes {
 		if !guards.IsTransactionHash(hash) {
-			e.Error = fmt.Sprintf("Invalid hash supplied: %s", hash)
-			c.JSON(http.StatusBadRequest, e)
-			return
+			return nil, errors.WithMessagef(ErrInvalidParameter, "invalid hash provided: %s", hash)
 		}
 	}
 
-	for _, hash := range query.Hashes {
-
-		cachedTx := tangle.GetCachedTransactionOrNil(hornet.HashFromHashTrytes(hash)) // tx +1
-
+	getTrytes := func(hash string) error {
+		cachedTx := tangle.GetCachedTransactionOrNil(hornet.HashFromHashTrytes(hash))
 		if cachedTx == nil {
 			trytes = append(trytes, strings.Repeat("9", 2673))
-			continue
+			return nil
 		}
+		defer cachedTx.Release(true)
 
-		tx, err := transaction.TransactionToTrytes(cachedTx.GetTransaction().Tx)
+		txTrytes, err := transaction.TransactionToTrytes(cachedTx.GetTransaction().Tx)
 		if err != nil {
-			e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-			c.JSON(http.StatusInternalServerError, e)
-			cachedTx.Release(true) // tx -1
-			return
+			return err
 		}
 
-		trytes = append(trytes, tx)
-		cachedTx.Release(true) // tx -1
+		trytes = append(trytes, txTrytes)
+		return nil
 	}
 
-	c.JSON(http.StatusOK, GetTrytesReturn{Trytes: trytes})
+	for _, hash := range request.Hashes {
+		if err := getTrytes(hash); err != nil {
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+		}
+	}
+
+	return &GetTrytesResponse{
+		Trytes: trytes,
+	}, nil
+}
+
+func (s *WebAPIServer) transaction(c echo.Context) (interface{}, error) {
+	txHash, err := parseTransactionHashParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cachedTx := tangle.GetCachedTransactionOrNil(txHash)
+	if cachedTx == nil {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", txHash.Trytes())
+	}
+	defer cachedTx.Release(true)
+
+	return cachedTx.GetTransaction().Tx, nil
+}
+
+func (s *WebAPIServer) transactionTrytes(c echo.Context) (interface{}, error) {
+	txHash, err := parseTransactionHashParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cachedTx := tangle.GetCachedTransactionOrNil(txHash)
+	if cachedTx == nil {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", txHash.Trytes())
+	}
+	defer cachedTx.Release(true)
+
+	txTrytes, err := transaction.TransactionToTrytes(cachedTx.GetTransaction().Tx)
+	if err != nil {
+		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+	}
+
+	return &transactionTrytesResponse{
+		TxHash: txHash.Trytes(),
+		Trytes: txTrytes,
+	}, nil
 }

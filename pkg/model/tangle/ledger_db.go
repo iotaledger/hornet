@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"sync"
@@ -136,7 +137,7 @@ func DeleteLedgerDiffForMilestone(index milestone.Index) error {
 
 // GetLedgerDiffForMilestoneWithoutLocking returns the ledger changes of that specific milestone.
 // ReadLockLedger must be held while entering this function.
-func GetLedgerDiffForMilestoneWithoutLocking(index milestone.Index, abortSignal <-chan struct{}) (map[string]int64, error) {
+func GetLedgerDiffForMilestoneWithoutLocking(ctx context.Context, index milestone.Index) (map[string]int64, error) {
 
 	diff := make(map[string]int64)
 
@@ -145,7 +146,7 @@ func GetLedgerDiffForMilestoneWithoutLocking(index milestone.Index, abortSignal 
 	aborted := false
 	err := ledgerDiffStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		select {
-		case <-abortSignal:
+		case <-ctx.Done():
 			aborted = true
 			return false
 		default:
@@ -185,15 +186,15 @@ func ForEachLedgerDiffHash(consumer LedgerDiffHashConsumer, skipCache bool) {
 	})
 }
 
-func GetLedgerDiffForMilestone(index milestone.Index, abortSignal <-chan struct{}) (map[string]int64, error) {
+func GetLedgerDiffForMilestone(ctx context.Context, index milestone.Index) (map[string]int64, error) {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	return GetLedgerDiffForMilestoneWithoutLocking(index, abortSignal)
+	return GetLedgerDiffForMilestoneWithoutLocking(ctx, index)
 }
 
-func GetLedgerStateForMilestoneWithoutLocking(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[string]uint64, milestone.Index, error) {
+func GetLedgerStateForMilestoneWithoutLocking(ctx context.Context, targetIndex milestone.Index) (map[string]uint64, milestone.Index, error) {
 
 	solidMilestoneIndex := GetSolidMilestoneIndex()
 	if targetIndex == 0 {
@@ -208,7 +209,7 @@ func GetLedgerStateForMilestoneWithoutLocking(targetIndex milestone.Index, abort
 		return nil, 0, fmt.Errorf("target index is too old. minimum: %d, actual: %d", snapshot.PruningIndex+1, targetIndex)
 	}
 
-	balances, ledgerMilestone, err := GetLedgerStateForLSMIWithoutLocking(abortSignal)
+	balances, ledgerMilestone, err := GetLedgerStateForLSMIWithoutLocking(ctx)
 	if err != nil {
 		if err == ErrOperationAborted {
 			return nil, 0, err
@@ -222,7 +223,7 @@ func GetLedgerStateForMilestoneWithoutLocking(targetIndex milestone.Index, abort
 
 	// Calculate balances for targetIndex
 	for milestoneIndex := solidMilestoneIndex; milestoneIndex > targetIndex; milestoneIndex-- {
-		diff, err := GetLedgerDiffForMilestoneWithoutLocking(milestoneIndex, abortSignal)
+		diff, err := GetLedgerDiffForMilestoneWithoutLocking(ctx, milestoneIndex)
 		if err != nil {
 			if err == ErrOperationAborted {
 				return nil, 0, err
@@ -232,7 +233,7 @@ func GetLedgerStateForMilestoneWithoutLocking(targetIndex milestone.Index, abort
 
 		for address, change := range diff {
 			select {
-			case <-abortSignal:
+			case <-ctx.Done():
 				return nil, 0, ErrOperationAborted
 			default:
 			}
@@ -251,12 +252,12 @@ func GetLedgerStateForMilestoneWithoutLocking(targetIndex milestone.Index, abort
 	return balances, targetIndex, nil
 }
 
-func GetLedgerStateForMilestone(targetIndex milestone.Index, abortSignal <-chan struct{}) (map[string]uint64, milestone.Index, error) {
+func GetLedgerStateForMilestone(ctx context.Context, targetIndex milestone.Index) (map[string]uint64, milestone.Index, error) {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	return GetLedgerStateForMilestoneWithoutLocking(targetIndex, abortSignal)
+	return GetLedgerStateForMilestoneWithoutLocking(ctx, targetIndex)
 }
 
 // ApplyLedgerDiffWithoutLocking applies the changes to the ledger.
@@ -347,14 +348,14 @@ func StoreLedgerBalancesInDatabase(balances map[string]uint64, index milestone.I
 
 // GetLedgerStateForLSMIWithoutLocking returns all balances for the current solid milestone.
 // ReadLockLedger must be held while entering this function.
-func GetLedgerStateForLSMIWithoutLocking(abortSignal <-chan struct{}) (map[string]uint64, milestone.Index, error) {
+func GetLedgerStateForLSMIWithoutLocking(ctx context.Context) (map[string]uint64, milestone.Index, error) {
 
 	balances := make(map[string]uint64)
 
 	aborted := false
 	err := ledgerBalanceStore.Iterate(kvstore.EmptyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		select {
-		case <-abortSignal:
+		case <-ctx.Done():
 			aborted = true
 			return false
 		default:
@@ -384,10 +385,10 @@ func GetLedgerStateForLSMIWithoutLocking(abortSignal <-chan struct{}) (map[strin
 }
 
 // GetLedgerStateForLSMI returns all balances for the current solid milestone.
-func GetLedgerStateForLSMI(abortSignal <-chan struct{}) (map[string]uint64, milestone.Index, error) {
+func GetLedgerStateForLSMI(ctx context.Context) (map[string]uint64, milestone.Index, error) {
 
 	ReadLockLedger()
 	defer ReadUnlockLedger()
 
-	return GetLedgerStateForLSMIWithoutLocking(abortSignal)
+	return GetLedgerStateForLSMIWithoutLocking(ctx)
 }

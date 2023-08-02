@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -177,6 +178,12 @@ func run(_ *node.Plugin) {
 		tanglePlugin.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
 		defer tanglePlugin.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
 
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			<-shutdownSignal
+			cancel()
+		}()
+
 		for {
 			select {
 			case <-shutdownSignal:
@@ -189,7 +196,7 @@ func run(_ *node.Plugin) {
 
 				if shouldTakeSnapshot(solidMilestoneIndex) {
 					localSnapshotPath := config.NodeConfig.GetString(config.CfgLocalSnapshotsPath)
-					if err := createLocalSnapshotWithoutLocking(solidMilestoneIndex-snapshotDepth, localSnapshotPath, true, shutdownSignal); err != nil {
+					if err := createLocalSnapshotWithoutLocking(ctx, solidMilestoneIndex-snapshotDepth, localSnapshotPath, true); err != nil {
 						if errors.Is(err, ErrCritical) {
 							log.Panic(errors.Wrap(ErrSnapshotCreationFailed, err.Error()))
 						}
@@ -204,7 +211,7 @@ func run(_ *node.Plugin) {
 						continue
 					}
 
-					if err := pruneDatabase(solidMilestoneIndex-pruningDelay, shutdownSignal); err != nil {
+					if err := pruneDatabase(ctx, solidMilestoneIndex-pruningDelay); err != nil {
 						log.Debugf("pruning aborted: %v", err.Error())
 					}
 				}
@@ -215,7 +222,7 @@ func run(_ *node.Plugin) {
 	}, shutdown.PriorityLocalSnapshots)
 }
 
-func PruneDatabaseByDepth(depth milestone.Index) error {
+func PruneDatabaseByDepth(ctx context.Context, depth milestone.Index) error {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
 
@@ -226,12 +233,12 @@ func PruneDatabaseByDepth(depth milestone.Index) error {
 		return ErrNotEnoughHistory
 	}
 
-	return pruneDatabase(solidMilestoneIndex-depth, nil)
+	return pruneDatabase(ctx, solidMilestoneIndex-depth)
 }
 
-func PruneDatabaseByTargetIndex(targetIndex milestone.Index) error {
+func PruneDatabaseByTargetIndex(ctx context.Context, targetIndex milestone.Index) error {
 	localSnapshotLock.Lock()
 	defer localSnapshotLock.Unlock()
 
-	return pruneDatabase(targetIndex, nil)
+	return pruneDatabase(ctx, targetIndex)
 }

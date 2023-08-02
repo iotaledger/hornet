@@ -106,7 +106,7 @@ func (d *DockerContainer) CreateContainer(name string, containerConfig *containe
 		hostConfig = hostConfigs[0]
 	}
 
-	resp, err := d.client.ContainerCreate(context.Background(), containerConfig, hostConfig, nil, name)
+	resp, err := d.client.ContainerCreate(context.Background(), containerConfig, hostConfig, nil, nil, name)
 	if err != nil {
 		return err
 	}
