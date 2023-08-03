@@ -46,7 +46,7 @@ func (s *WebAPIServer) rpcGetBalances(c echo.Context) (interface{}, error) {
 
 	for _, addr := range request.Addresses {
 
-		balance, _, err := tangle.GetBalanceForAddress(hornet.HashFromAddressTrytes(addr))
+		balance, _, err := tangle.GetBalanceForAddressWithoutLocking(hornet.HashFromAddressTrytes(addr))
 		if err != nil {
 			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
@@ -75,7 +75,7 @@ func (s *WebAPIServer) addressBalance(c echo.Context) (interface{}, error) {
 	tangle.ReadLockLedger()
 	defer tangle.ReadUnlockLedger()
 
-	balance, _, err := tangle.GetBalanceForAddress(addr)
+	balance, _, err := tangle.GetBalanceForAddressWithoutLocking(addr)
 	if err != nil {
 		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
