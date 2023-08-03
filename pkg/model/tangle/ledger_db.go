@@ -205,7 +205,7 @@ func GetLedgerStateForMilestoneWithoutLocking(ctx context.Context, targetIndex m
 		return nil, 0, fmt.Errorf("target index is too new. maximum: %d, actual: %d", solidMilestoneIndex, targetIndex)
 	}
 
-	if targetIndex <= snapshot.PruningIndex {
+	if targetIndex < snapshot.PruningIndex {
 		return nil, 0, fmt.Errorf("target index is too old. minimum: %d, actual: %d", snapshot.PruningIndex+1, targetIndex)
 	}
 
