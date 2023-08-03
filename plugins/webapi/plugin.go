@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/bytes"
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -38,6 +39,7 @@ func configure(plugin *node.Plugin) {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 	e.Use(middleware.Gzip())
+	e.Use(middleware.BodyLimit(bytes.Format(int64(config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxBodyLengthBytes)))))
 	e.Use(apiMiddleware())
 
 	healthzRoute()

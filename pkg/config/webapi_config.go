@@ -19,12 +19,6 @@ const (
 	CfgWebAPILimitsMaxResults = "httpAPI.limits.maxResults"
 	// the maximum number of characters that the body of an API call may contain
 	CfgWebAPILimitsMaxBodyLengthBytes = "httpAPI.limits.bodyLengthBytes"
-	// the maximum number of transactions that may be returned by the findTransactions endpoint
-	CfgWebAPILimitsMaxFindTransactions = "httpAPI.limits.findTransactions"
-	// the maximum number of trytes that may be returned by the getTrytes endpoint
-	CfgWebAPILimitsMaxGetTrytes = "httpAPI.limits.getTrytes"
-	// the maximum number of parameters in an API call
-	CfgWebAPILimitsMaxRequestsList = "httpAPI.limits.requestsList"
 	// whether to disable the check whether a to broadcast bundle is a migration bundle
 	CfgWebAPIDisableMigrationBundleCheckOnBroadcast = "httpAPI.debug.disableMigrationBundleCheckOnBroadcast"
 )
@@ -67,8 +61,5 @@ func init() {
 	configFlagSet.String(CfgWebAPIJWTAuthSalt, "HORNET", "salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value")
 	configFlagSet.Int(CfgWebAPILimitsMaxResults, 1000, "the maximum number of results that may be returned by an endpoint")
 	configFlagSet.Int(CfgWebAPILimitsMaxBodyLengthBytes, 1000000, "the maximum number of characters that the body of an API call may contain")
-	configFlagSet.Int(CfgWebAPILimitsMaxFindTransactions, 1000, "the maximum number of transactions that may be returned by the findTransactions endpoint")
-	configFlagSet.Int(CfgWebAPILimitsMaxGetTrytes, 1000, "the maximum number of trytes that may be returned by the getTrytes endpoint")
-	configFlagSet.Int(CfgWebAPILimitsMaxRequestsList, 1000, "the maximum number of parameters in an API call")
 	configFlagSet.Bool(CfgWebAPIDisableMigrationBundleCheckOnBroadcast, false, "whether to disable migration bundle check on broadcast")
 }

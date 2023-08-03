@@ -85,9 +85,9 @@ func (s *WebAPIServer) rpcGetNodeInfo(_ echo.Context) (any, error) {
 
 func (s *WebAPIServer) rpcGetNodeAPIConfiguration(_ echo.Context) (any, error) {
 	result := &GetNodeAPIConfigurationResponse{
-		MaxFindTransactions: config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxFindTransactions),
-		MaxRequestsList:     config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxRequestsList),
-		MaxGetTrytes:        config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxGetTrytes),
+		MaxFindTransactions: config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxResults),
+		MaxRequestsList:     config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxResults),
+		MaxGetTrytes:        config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxResults),
 		MaxBodyLength:       config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxBodyLengthBytes),
 	}
 

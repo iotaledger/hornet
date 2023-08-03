@@ -36,10 +36,7 @@
     "bindAddress": "0.0.0.0:14266",
     "limits": {
       "maxResults": 1000,
-      "bodyLengthBytes": 1000000,
-      "findTransactions": 1000,
-      "getTrytes": 1000,
-      "requestsList": 1000
+      "bodyLengthBytes": 1000000
     }
   },
   "dashboard": {
