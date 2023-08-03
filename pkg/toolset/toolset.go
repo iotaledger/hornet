@@ -12,6 +12,7 @@ var (
 		"seedgen": seedGen,
 		"list":    listTools,
 		"merkle":  merkleTreeCreate,
+		"jwt-api": generateJWTApiToken,
 	}
 )
 
@@ -21,7 +22,7 @@ func HandleTools() {
 
 	toolFound := false
 	for i, arg := range args {
-		if strings.ToLower(arg) == "tool" {
+		if strings.ToLower(arg) == "tool" || strings.ToLower(arg) == "tools" {
 			args = args[i:]
 			toolFound = true
 			break
@@ -58,6 +59,7 @@ func listTools(args []string) error {
 	fmt.Println("pwdhash: generates a sha265 sum from your password and salt")
 	fmt.Println("seedgen: generates an autopeering seed")
 	fmt.Println("merkle: generates a Merkle tree for coordinator plugin")
+	fmt.Println("jwt-api: generates a JWT token for API access")
 
 	return nil
 }

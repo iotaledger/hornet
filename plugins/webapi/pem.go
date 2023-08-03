@@ -184,9 +184,9 @@ func writeEd25519PrivateKeyToPEMFile(filepath string, privateKey ed25519.Private
 	return nil
 }
 
-// loadOrCreateIdentityPrivateKey loads an existing Ed25519 based identity private key
+// LoadOrCreateIdentityPrivateKey loads an existing Ed25519 based identity private key
 // or creates a new one and stores it as a PEM file in the p2p store folder.
-func loadOrCreateIdentityPrivateKey(privKeyFilePath string, identityPrivKey string) (libp2pcrypto.PrivKey, bool, error) {
+func LoadOrCreateIdentityPrivateKey(privKeyFilePath string, identityPrivKey string) (libp2pcrypto.PrivKey, bool, error) {
 
 	privKeyFromConfig, err := parseLibp2pEd25519PrivateKeyFromString(identityPrivKey)
 	if err != nil {

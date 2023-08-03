@@ -77,7 +77,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 	privKeyFilePath := config.NodeConfig.GetString(config.CfgWebAPIJWTAuthPrivateKeyPath)
 
 	// load up the previously generated identity or create a new one
-	jwtPrivateKey, _, err := loadOrCreateIdentityPrivateKey(privKeyFilePath, privKey)
+	jwtPrivateKey, _, err := LoadOrCreateIdentityPrivateKey(privKeyFilePath, privKey)
 	if err != nil {
 		log.Panic(err)
 	}
