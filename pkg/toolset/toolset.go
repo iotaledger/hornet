@@ -33,6 +33,7 @@ const (
 	FlagToolSnapshotPathFull   = "fullSnapshotPath"
 	FlagToolSnapshotPathDelta  = "deltaSnapshotPath"
 	FlagToolSnapshotPathTarget = "targetSnapshotPath"
+	FlagToolSnapshotGlobal     = "global"
 
 	FlagToolOutputPath = "outputPath"
 
