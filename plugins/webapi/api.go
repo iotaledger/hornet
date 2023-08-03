@@ -12,6 +12,10 @@ import (
 	"github.com/iotaledger/hornet/pkg/jwt"
 )
 
+const (
+	MIMETextCSV = "text/csv"
+)
+
 func compileRouteAsRegex(route string) *regexp.Regexp {
 
 	r := regexp.QuoteMeta(route)
@@ -131,4 +135,15 @@ func apiMiddleware() echo.MiddlewareFunc {
 			return echo.ErrForbidden
 		}
 	}
+}
+
+func getAcceptHeaderContentType(c echo.Context, supportedContentTypes ...string) (string, error) {
+	ctype := c.Request().Header.Get(echo.HeaderAccept)
+	for _, supportedContentType := range supportedContentTypes {
+		if strings.HasPrefix(ctype, supportedContentType) {
+			return supportedContentType, nil
+		}
+	}
+
+	return "", ErrNotAcceptable
 }

@@ -1,12 +1,19 @@
 package webapi
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	iotagoaddress "github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/trinary"
 
 	"github.com/iotaledger/hornet/pkg/model/hornet"
@@ -243,25 +250,68 @@ func (s *WebAPIServer) rpcGetLedgerDiffExt(c echo.Context) (interface{}, error) 
 	return result, nil
 }
 
-func (s *WebAPIServer) ledgerState(c echo.Context, targetIndex milestone.Index) (interface{}, error) {
+func (s *WebAPIServer) ledgerState(c echo.Context, targetIndex milestone.Index, onlyNonMigratedAddresses bool) (interface{}, error) {
 	balances, index, err := tangle.GetLedgerStateForMilestone(c.Request().Context(), targetIndex)
 	if err != nil {
 		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
+	// compute the sha256 hash of the whole ledger state including the ledger index for easy comparison
+	ledgerHash := sha256.New()
+	if err := binary.Write(ledgerHash, binary.LittleEndian, index); err != nil {
+		return nil, fmt.Errorf("failed to write ledger index to ledger hash: %w", err)
+	}
+
+	var addresses []string
 	addressesWithBalances := make(map[trinary.Trytes]string)
 	for address, balance := range balances {
-		addressesWithBalances[hornet.Hash(address).Trytes()] = strconv.FormatUint(balance, 10)
+		addressTrytes := hornet.Hash(address).Trytes()
+
+		if onlyNonMigratedAddresses {
+			if _, err := iotagoaddress.ParseMigrationAddress(addressTrytes); err == nil {
+				// we ignore all migration addresses, because those were already migrated
+				continue
+			}
+		}
+
+		if _, exists := addressesWithBalances[addressTrytes]; exists {
+			return nil, fmt.Errorf("address duplicate found: %s", addressTrytes)
+		}
+
+		addressesWithBalances[addressTrytes] = strconv.FormatUint(balance, 10)
+		addresses = append(addresses, addressTrytes)
+	}
+
+	// sort the addresses to have a deterministic ledger hash
+	sort.Strings(addresses)
+	for _, addressTrytes := range addresses {
+		balance, exists := addressesWithBalances[addressTrytes]
+		if !exists {
+			return nil, fmt.Errorf("address not found in result set: %s", addressTrytes)
+		}
+
+		if _, err := ledgerHash.Write([]byte(addressTrytes)); err != nil {
+			return nil, fmt.Errorf("failed to write address to ledger hash, address: %s, error: %w", addressTrytes, err)
+		}
+
+		if _, err := ledgerHash.Write([]byte(balance)); err != nil {
+			return nil, fmt.Errorf("failed to write balance to ledger hash, address: %s, error: %w", addressTrytes, err)
+		}
 	}
 
 	return &ledgerStateResponse{
 		Balances:    addressesWithBalances,
 		LedgerIndex: index,
+		Checksum:    hex.EncodeToString(ledgerHash.Sum(nil)),
 	}, nil
 }
 
 func (s *WebAPIServer) ledgerStateByLatestSolidIndex(c echo.Context) (interface{}, error) {
-	return s.ledgerState(c, 0)
+	return s.ledgerState(c, 0, false)
+}
+
+func (s *WebAPIServer) ledgerStateNonMigratedByLatestSolidIndex(c echo.Context) (interface{}, error) {
+	return s.ledgerState(c, 0, true)
 }
 
 func (s *WebAPIServer) ledgerStateByIndex(c echo.Context) (interface{}, error) {
@@ -270,7 +320,36 @@ func (s *WebAPIServer) ledgerStateByIndex(c echo.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return s.ledgerState(c, milestone.Index(msIndex))
+	response, err := s.ledgerState(c, milestone.Index(msIndex), false)
+	if err != nil {
+		return nil, err
+	}
+
+	ledgerIndex := response.(ledgerStateResponse).LedgerIndex
+	if ledgerIndex != milestone.Index(msIndex) {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "wrong milestone index: requested: %d, actual: %d", msIndex, ledgerIndex)
+	}
+
+	return response, nil
+}
+
+func (s *WebAPIServer) ledgerStateNonMigratedByIndex(c echo.Context) (interface{}, error) {
+	msIndex, err := ParseMilestoneIndexParam(c, ParameterMilestoneIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := s.ledgerState(c, milestone.Index(msIndex), true)
+	if err != nil {
+		return nil, err
+	}
+
+	ledgerIndex := response.(ledgerStateResponse).LedgerIndex
+	if ledgerIndex != milestone.Index(msIndex) {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "wrong milestone index: requested: %d, actual: %d", msIndex, ledgerIndex)
+	}
+
+	return response, nil
 }
 
 func (s *WebAPIServer) ledgerDiff(c echo.Context) (interface{}, error) {
@@ -357,4 +436,43 @@ func (s *WebAPIServer) ledgerDiffExtended(c echo.Context) (interface{}, error) {
 		AddressDiffs:              addressesWithDiffs,
 		LedgerIndex:               msIndex,
 	}, nil
+}
+
+func ledgerStateCSV(resp *ledgerStateResponse) string {
+	var csvBuilder strings.Builder
+
+	var addresses []string
+	for address := range resp.Balances {
+		addresses = append(addresses, address)
+	}
+
+	// sort the addresses to have a deterministic CSV file
+	sort.Strings(addresses)
+
+	for _, address := range addresses {
+		balance, exists := resp.Balances[address]
+		if !exists {
+			panic(fmt.Errorf("address not found in result set: %s", address))
+		}
+
+		csvBuilder.WriteString(address + ";" + balance + "\n")
+	}
+
+	return csvBuilder.String()
+}
+
+func ledgerStateResponseByMimeType(c echo.Context, resp *ledgerStateResponse) error {
+	mimeType, err := getAcceptHeaderContentType(c, MIMETextCSV, echo.MIMEApplicationJSON)
+	if err != nil && err != ErrNotAcceptable {
+		return err
+	}
+
+	switch mimeType {
+	case MIMETextCSV:
+		return c.Blob(http.StatusOK, MIMETextCSV, []byte(ledgerStateCSV(resp)))
+
+	// default to echo.MIMEApplicationJSON
+	default:
+		return JSONResponse(c, http.StatusOK, resp)
+	}
 }

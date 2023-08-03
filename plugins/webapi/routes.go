@@ -63,9 +63,17 @@ const (
 	// GET will return all addresses with their balances.
 	RouteLedgerState = "/ledger/state" // former getLedgerState
 
+	// RouteLedgerStateNonMigrated is the route to return the current non-migrated ledger state.
+	// GET will return all non-migrated addresses with their balances.
+	RouteLedgerStateNonMigrated = "/ledger/state/non-migrated"
+
 	// RouteLedgerStateByIndex is the route to return the ledger state of a given ledger index.
 	// GET will return all addresses with their balances.
 	RouteLedgerStateByIndex = "/ledger/state/by-index/:" + ParameterMilestoneIndex // former getLedgerState
+
+	// RouteLedgerStateNonMigratedByIndex is the route to return the non-migrated ledger state of a given ledger index.
+	// GET will return all non-migrated addresses with their balances.
+	RouteLedgerStateNonMigratedByIndex = "/ledger/state/by-index/:" + ParameterMilestoneIndex + "/non-migrated"
 
 	// RouteLedgerDiffByIndex is the route to return the ledger diff of a given ledger index.
 	// GET will return all addresses with their diffs.
@@ -182,7 +190,16 @@ func (s *WebAPIServer) configureRestRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return JSONResponse(c, http.StatusOK, resp)
+		return ledgerStateResponseByMimeType(c, resp.(*ledgerStateResponse))
+	})
+
+	routeGroup.GET(RouteLedgerStateNonMigrated, func(c echo.Context) error {
+		resp, err := s.ledgerStateNonMigratedByLatestSolidIndex(c)
+		if err != nil {
+			return err
+		}
+
+		return ledgerStateResponseByMimeType(c, resp.(*ledgerStateResponse))
 	})
 
 	routeGroup.GET(RouteLedgerStateByIndex, func(c echo.Context) error {
@@ -191,7 +208,16 @@ func (s *WebAPIServer) configureRestRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return JSONResponse(c, http.StatusOK, resp)
+		return ledgerStateResponseByMimeType(c, resp.(*ledgerStateResponse))
+	})
+
+	routeGroup.GET(RouteLedgerStateNonMigratedByIndex, func(c echo.Context) error {
+		resp, err := s.ledgerStateNonMigratedByIndex(c)
+		if err != nil {
+			return err
+		}
+
+		return ledgerStateResponseByMimeType(c, resp.(*ledgerStateResponse))
 	})
 
 	routeGroup.GET(RouteLedgerDiffByIndex, func(c echo.Context) error {

@@ -80,6 +80,8 @@ type balanceResponse struct {
 type ledgerStateResponse struct {
 	Balances    map[trinary.Hash]string `json:"balances"`
 	LedgerIndex milestone.Index         `json:"ledgerIndex"`
+	// Checksum is the SHA256 checksum of the ledger state for this MilestoneIndex.
+	Checksum string `json:"checksum"`
 }
 
 // ledgerDiffResponse struct.
