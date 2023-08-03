@@ -27,7 +27,7 @@ RUN GOOS=linux GOARCH=amd64 go build -tags="pow_avx" \
 ############################
 # https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md
 # using distroless base image, contains: glibc, libssl and openssl
-FROM gcr.io/distroless/base@sha256:5e0cc69445ed1d8a17198250a7249d56dd4b6966bb6b2118e60ae9194c310647
+FROM gcr.io/distroless/base@sha256:73deaaf6a207c1a33850257ba74e0f196bc418636cada9943a03d7abea980d6d
 
 EXPOSE 8081/tcp
 EXPOSE 14265/tcp
