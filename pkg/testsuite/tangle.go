@@ -2,6 +2,7 @@ package testsuite
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/stretchr/testify/require"
@@ -124,7 +125,7 @@ func (te *TestEnvironment) AssertAddressBalance(seed trinary.Trytes, index uint6
 
 // AssertTotalSupplyStillValid checks if the total supply in the database is still correct.
 func (te *TestEnvironment) AssertTotalSupplyStillValid() {
-	_, _, err := tangle.GetLedgerStateForLSMI(nil)
+	_, _, err := tangle.GetLedgerStateForLSMI(context.Background())
 	require.NoError(te.testState, err)
 }
 

@@ -104,7 +104,7 @@ func configure(plugin *node.Plugin) {
 		if !*forceGlobalSnapshot {
 			// If we don't enforce loading of a global snapshot,
 			// we can check the ledger state of current database and start the node.
-			tangle.GetLedgerStateForLSMI(nil)
+			tangle.GetLedgerStateForLSMI(context.Background())
 			return
 		}
 	}
