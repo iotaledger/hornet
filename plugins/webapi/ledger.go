@@ -61,9 +61,8 @@ func getMilestoneStateDiff[T Container, H Container, B Container](milestoneIndex
 			if cachedTxMeta == nil {
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: transaction not found: %v", hornet.Hash(txHash).Trytes())
 			}
-			defer cachedTxMeta.Release(true)
-
 			txMeta := cachedTxMeta.GetMetadata()
+			cachedTxMeta.Release(true)
 
 			confirmed, at := txMeta.GetConfirmed()
 			if confirmed {
@@ -89,9 +88,8 @@ func getMilestoneStateDiff[T Container, H Container, B Container](milestoneIndex
 
 				return nil, nil, nil, fmt.Errorf("getMilestoneStateDiff: Tx: %v, bundle not found: %v", hornet.Hash(txHash).Trytes(), txBundle.Trytes())
 			}
-			defer cachedBndl.Release(true)
-
 			bndl := cachedBndl.GetBundle()
+			cachedBndl.Release(true)
 
 			if !bndl.IsValid() {
 				txBundle := txMeta.GetBundleHash()
@@ -118,9 +116,8 @@ func getMilestoneStateDiff[T Container, H Container, B Container](milestoneIndex
 				}
 
 				cachedBundleHeadTx := bndl.GetHead()
-				defer cachedBundleHeadTx.Release(true)
-
 				bndlHeadTx := cachedBundleHeadTx.GetTransaction()
+				cachedBundleHeadTx.Release(true)
 
 				confirmedBundlesWithValue = append(confirmedBundlesWithValue, newBundleWithValue(txMeta.GetBundleHash().Trytes(), bndl.GetTailHash().Trytes(), txsWithValue, bndlHeadTx.Tx.CurrentIndex))
 			}
