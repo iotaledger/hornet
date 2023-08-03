@@ -204,8 +204,13 @@ func (s *WebAPIServer) rpcFindTransactions(c echo.Context) (interface{}, error) 
 		maxResults = request.MaxResults
 	}
 
+	// should return an error in a sane API but unfortunately we need to keep backwards compatibility
 	if len(request.Bundles) == 0 && len(request.Addresses) == 0 && len(request.Approvees) == 0 && len(request.Tags) == 0 {
-		return nil, errors.WithMessage(ErrInvalidParameter, "no search criteria was given")
+		return &FindTransactionsResponse{Hashes: []string{}}, nil
+	}
+
+	if (len(request.Bundles) + len(request.Addresses) + len(request.Approvees) + len(request.Tags)) > maxResults {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: too many bundle, address, approvee or tag hashes. max. allowed: %d", maxResults)
 	}
 
 	queryBundleHashes := make(map[string]struct{})
