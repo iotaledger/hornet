@@ -82,7 +82,7 @@ func (s *WebAPIServer) rpcBroadcastTransactions(c echo.Context) (interface{}, er
 		}
 	}
 
-	return &BradcastTransactionsResponse{}, nil
+	return &BroadcastTransactionsResponse{}, nil
 }
 
 func (s *WebAPIServer) findTransactions(maxResults int, valueOnly bool, queryBundleHashes, queryApproveeHashes, queryAddressHashes, queryTagHashes map[string]struct{}) []string {

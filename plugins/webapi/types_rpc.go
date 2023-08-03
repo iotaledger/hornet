@@ -26,7 +26,7 @@ type GetBalances struct {
 
 // GetBalancesResponse struct.
 type GetBalancesResponse struct {
-	Balances       []uint64        `json:"balances"`
+	Balances       []string        `json:"balances"`
 	References     []trinary.Hash  `json:"references"`
 	MilestoneIndex milestone.Index `json:"milestoneIndex"`
 	Duration       int             `json:"duration"`
@@ -112,7 +112,7 @@ type GetFundsOnSpentAddressesResponse struct {
 
 type AddressWithBalance struct {
 	Address trinary.Hash `json:"address"`
-	Balance uint64       `json:"balance"`
+	Balance string       `json:"balance"`
 }
 
 /////////////////// getInclusionStates ////////////////////////////
@@ -173,9 +173,9 @@ type GetLedgerDiff struct {
 
 // GetLedgerDiffResponse struct.
 type GetLedgerDiffResponse struct {
-	Diff           map[trinary.Hash]int64 `json:"diff"`
-	MilestoneIndex milestone.Index        `json:"milestoneIndex"`
-	Duration       int                    `json:"duration"`
+	Diff           map[trinary.Hash]string `json:"diff"`
+	MilestoneIndex milestone.Index         `json:"milestoneIndex"`
+	Duration       int                     `json:"duration"`
 }
 
 /////////////////// getLedgerDiffExt ////////////////////////
@@ -191,7 +191,7 @@ type TxHashWithValue struct {
 	TailTxHash trinary.Hash `json:"tailTxHash"`
 	BundleHash trinary.Hash `json:"bundleHash"`
 	Address    trinary.Hash `json:"address"`
-	Value      int64        `json:"value"`
+	Value      string       `json:"value"`
 }
 
 func (tx *TxHashWithValue) Item() Container {
@@ -203,7 +203,7 @@ type TxWithValue struct {
 	TxHash  trinary.Hash `json:"txHash"`
 	Address trinary.Hash `json:"address"`
 	Index   uint64       `json:"index"`
-	Value   int64        `json:"value"`
+	Value   string       `json:"value"`
 }
 
 func (tx *TxWithValue) Item() Container {
@@ -224,11 +224,11 @@ func (b *BundleWithValue) Item() Container {
 
 // GetLedgerDiffExtResponse struct.
 type GetLedgerDiffExtResponse struct {
-	ConfirmedTxWithValue      []*TxHashWithValue     `json:"confirmedTxWithValue"`
-	ConfirmedBundlesWithValue []*BundleWithValue     `json:"confirmedBundlesWithValue"`
-	Diff                      map[trinary.Hash]int64 `json:"diff"`
-	MilestoneIndex            milestone.Index        `json:"milestoneIndex"`
-	Duration                  int                    `json:"duration"`
+	ConfirmedTxWithValue      []*TxHashWithValue      `json:"confirmedTxWithValue"`
+	ConfirmedBundlesWithValue []*BundleWithValue      `json:"confirmedBundlesWithValue"`
+	Diff                      map[trinary.Hash]string `json:"diff"`
+	MilestoneIndex            milestone.Index         `json:"milestoneIndex"`
+	Duration                  int                     `json:"duration"`
 }
 
 /////////////////// getLedgerState ////////////////////////
@@ -240,7 +240,7 @@ type GetLedgerState struct {
 
 // GetLedgerStateResponse struct.
 type GetLedgerStateResponse struct {
-	Balances       map[trinary.Hash]uint64 `json:"balances"`
+	Balances       map[trinary.Hash]string `json:"balances"`
 	MilestoneIndex milestone.Index         `json:"milestoneIndex"`
 	Duration       int                     `json:"duration"`
 }
@@ -383,8 +383,8 @@ type BroadcastTransactions struct {
 	Trytes []trinary.Trytes `json:"trytes"`
 }
 
-// BradcastTransactionsResponse struct.
-type BradcastTransactionsResponse struct {
+// BroadcastTransactionsResponse struct.
+type BroadcastTransactionsResponse struct {
 	Duration int `json:"duration"`
 }
 

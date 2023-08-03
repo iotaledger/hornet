@@ -3,6 +3,7 @@ package webapi
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -260,7 +261,7 @@ func (s *WebAPIServer) rpcGetFundsOnSpentAddresses(c echo.Context) (interface{},
 
 	for address := range balances {
 		if tangle.WasAddressSpentFrom(hornet.Hash(address)) {
-			result.Addresses = append(result.Addresses, &AddressWithBalance{Address: hornet.Hash(address).Trytes(), Balance: balances[address]})
+			result.Addresses = append(result.Addresses, &AddressWithBalance{Address: hornet.Hash(address).Trytes(), Balance: strconv.FormatUint(balances[address], 10)})
 		}
 	}
 

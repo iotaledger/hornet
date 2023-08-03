@@ -52,7 +52,7 @@ func (s *WebAPIServer) rpcGetBalances(c echo.Context) (interface{}, error) {
 		}
 
 		// Address balance
-		result.Balances = append(result.Balances, balance)
+		result.Balances = append(result.Balances, strconv.FormatUint(balance, 10))
 	}
 
 	// The index of the milestone that confirmed the most recent balance

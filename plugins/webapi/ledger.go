@@ -152,9 +152,9 @@ func (s *WebAPIServer) rpcGetLedgerState(c echo.Context) (interface{}, error) {
 		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
-	balancesTrytes := make(map[trinary.Trytes]uint64)
+	balancesTrytes := make(map[trinary.Trytes]string)
 	for address, balance := range balances {
-		balancesTrytes[hornet.Hash(address).Trytes()] = balance
+		balancesTrytes[hornet.Hash(address).Trytes()] = strconv.FormatUint(balance, 10)
 	}
 
 	return &GetLedgerStateResponse{
@@ -180,9 +180,9 @@ func (s *WebAPIServer) rpcGetLedgerDiff(c echo.Context) (interface{}, error) {
 		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
-	diffTrytes := make(map[trinary.Trytes]int64)
+	diffTrytes := make(map[trinary.Trytes]string)
 	for address, balance := range diff {
-		diffTrytes[hornet.Hash(address).Trytes()] = balance
+		diffTrytes[hornet.Hash(address).Trytes()] = strconv.FormatInt(balance, 10)
 	}
 
 	return &GetLedgerDiffResponse{
@@ -208,7 +208,7 @@ func (s *WebAPIServer) rpcGetLedgerDiffExt(c echo.Context) (interface{}, error) 
 			TxHash:  txHash,
 			Address: address,
 			Index:   index,
-			Value:   value,
+			Value:   strconv.FormatInt(value, 10),
 		}
 	}
 
@@ -218,7 +218,7 @@ func (s *WebAPIServer) rpcGetLedgerDiffExt(c echo.Context) (interface{}, error) 
 			TailTxHash: tailTxHash,
 			BundleHash: bundleHash,
 			Address:    address,
-			Value:      value,
+			Value:      strconv.FormatInt(value, 10),
 		}
 	}
 
@@ -236,9 +236,9 @@ func (s *WebAPIServer) rpcGetLedgerDiffExt(c echo.Context) (interface{}, error) 
 		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
-	ledgerChangesTrytes := make(map[trinary.Trytes]int64)
+	ledgerChangesTrytes := make(map[trinary.Trytes]string)
 	for address, balance := range ledgerChanges {
-		ledgerChangesTrytes[hornet.Hash(address).Trytes()] = balance
+		ledgerChangesTrytes[hornet.Hash(address).Trytes()] = strconv.FormatInt(balance, 10)
 	}
 
 	result := &GetLedgerDiffExtResponse{}
