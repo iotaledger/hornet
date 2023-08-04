@@ -10,10 +10,10 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/profile"
 )
 
 var (
@@ -211,6 +211,23 @@ func ForEachBundleHash(consumer BundleHashConsumer, skipCache bool) {
 	bundleStorage.ForEachKeyOnly(func(tailTxHash []byte) bool {
 		return consumer(tailTxHash)
 	}, skipCache)
+}
+
+// ForEachBundle loops over all existing bundle instances for that bundle hash.
+func ForEachBundle(bundleHash hornet.Hash, consumer func(*Bundle) bool, maxFind ...int) {
+	ForEachBundleTailTransactionHash(bundleHash, func(txTailHash hornet.Hash) bool {
+		bndl := GetCachedBundleOrNil(txTailHash) // bundle +1
+		if bndl == nil {
+			return true
+		}
+
+		var result bool
+		bndl.Consume(func(object objectstorage.StorableObject) {
+			result = consumer(object.(*Bundle))
+		}, true)
+
+		return result
+	}, maxFind...)
 }
 
 // bundle +-0

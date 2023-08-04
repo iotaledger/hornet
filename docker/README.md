@@ -29,7 +29,7 @@ _Table of contents_
 Clone the repository
 
 ```sh
-git clone https://github.com/gohornet/hornet && cd hornet
+git clone https://github.com/iotaledger/hornet && cd hornet
 ```
 
 The rest of the document assumes you are executing commands from the root directory of the repository.
@@ -81,7 +81,7 @@ docker build -f docker/Dockerfile -t hornet:latest .
 Or pull it from dockerhub (only available for amd64/x86_64):
 
 ```sh
-docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:latest
+docker pull iotaledger/hornet:latest && docker tag iotaledger/hornet:latest hornet:latest
 ```
 
 Note: for architectures other than amd64/x86_64 pass the corresponding Dockerfile, e.g.:

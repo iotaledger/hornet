@@ -10,14 +10,14 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
 
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/pkg/whiteflag"
-	"github.com/gohornet/hornet/plugins/gossip"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hornet/plugins/gossip"
 )
 
 const (

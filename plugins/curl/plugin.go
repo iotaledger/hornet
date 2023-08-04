@@ -9,8 +9,8 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/iota.go/consts"
 
-	"github.com/gohornet/hornet/pkg/batcher"
-	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/batcher"
+	"github.com/iotaledger/hornet/pkg/shutdown"
 )
 
 const (

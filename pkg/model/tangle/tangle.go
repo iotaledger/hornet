@@ -10,7 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 
-	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/pkg/profile"
 )
 
 const (

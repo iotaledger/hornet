@@ -4,11 +4,11 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/bqueue"
-	"github.com/gohornet/hornet/plugins/peering"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/peering/peer"
+	"github.com/iotaledger/hornet/pkg/protocol/bqueue"
+	"github.com/iotaledger/hornet/plugins/peering"
 )
 
 // WorkUnitState defines the state which a WorkUnit is in.

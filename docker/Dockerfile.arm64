@@ -1,15 +1,15 @@
 FROM alpine:latest
 
-ARG REPO="gohornet/hornet"
+ARG REPO="iotaledger/hornet"
 ARG TAG=latest
 ARG ARCH=ARM64
 ARG OS=Linux
 
 LABEL org.label-schema.description="HORNET - The IOTA community node"
-LABEL org.label-schema.name="gohornet/hornet"
+LABEL org.label-schema.name="iotaledger/hornet"
 LABEL org.label-schema.schema-version="1.0"
-LABEL org.label-schema.vcs-url="https://github.com/gohornet/hornet"
-LABEL org.label-schema.usage="https://github.com/gohornet/hornet/blob/master/DOCKER.md"
+LABEL org.label-schema.vcs-url="https://github.com/iotaledger/hornet"
+LABEL org.label-schema.usage="https://github.com/iotaledger/hornet/blob/master/DOCKER.md"
 
 WORKDIR /app
 
@@ -27,9 +27,9 @@ RUN apk --no-cache add ca-certificates curl jq tini tar\
   && if [ "$ARCH" = "x86_64" ];\
   then\
   curl -f -L --retry 3 -o /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub;\
-  curl -f -L --retry 3 -o glibc-2.30-r0.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.30-r0/glibc-2.30-r0.apk;\
-  apk add glibc-2.30-r0.apk;\
-  rm glibc-2.30-r0.apk;\
+  curl -f -L --retry 3 -o glibc-2.35-r1.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-2.35-r1.apk;\
+  apk add glibc-2.35-r1.apk;\
+  rm glibc-2.35-r1.apk;\
   fi\
   && addgroup --gid 39999 hornet\
   && adduser -h /app -s /bin/sh -G hornet -u 39999 -D hornet\

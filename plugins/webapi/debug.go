@@ -3,31 +3,22 @@ package webapi
 import (
 	"bytes"
 	"fmt"
-	"net/http"
+	"strconv"
 
-	"github.com/gin-gonic/gin"
-
-	"github.com/mitchellh/mapstructure"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/iota.go/guards"
 
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/plugins/gossip"
-	tanglePlugin "github.com/gohornet/hornet/plugins/tangle"
+	"github.com/iotaledger/hornet/pkg/dag"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/plugins/gossip"
+	tanglePlugin "github.com/iotaledger/hornet/plugins/tangle"
 )
 
-func init() {
-	addEndpoint("getRequests", getRequests, implementedAPIcalls)
-	addEndpoint("searchConfirmedApprover", searchConfirmedApprover, implementedAPIcalls)
-	addEndpoint("searchEntryPoints", searchEntryPoints, implementedAPIcalls)
-	addEndpoint("triggerSolidifier", triggerSolidifier, implementedAPIcalls)
-	addEndpoint("getFundsOnSpentAddresses", getFundsOnSpentAddresses, implementedAPIcalls)
-}
-
-func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
+func (s *WebAPIServer) rpcGetRequests(c echo.Context) (interface{}, error) {
 	queued, pending, processing := gossip.RequestQueue().Requests()
 	debugReqs := make([]*DebugRequest, len(queued)+len(pending))
 
@@ -64,11 +55,11 @@ func getRequests(_ interface{}, c *gin.Context, _ <-chan struct{}) {
 			EnqueueTimestamp: req.EnqueueTime.Unix(),
 		}
 	}
-	c.JSON(http.StatusOK, GetRequestsReturn{Requests: debugReqs})
+
+	return &GetRequestsResponse{Requests: debugReqs}, nil
 }
 
 func createConfirmedApproverResult(confirmedTxHash hornet.Hash, path []bool) ([]*ApproverStruct, error) {
-
 	tanglePath := make([]*ApproverStruct, 0)
 
 	txHash := confirmedTxHash
@@ -96,25 +87,20 @@ func createConfirmedApproverResult(confirmedTxHash hornet.Hash, path []bool) ([]
 	return tanglePath, nil
 }
 
-func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &SearchConfirmedApprover{}
-	result := SearchConfirmedApproverReturn{}
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+func (s *WebAPIServer) rpcSearchConfirmedApprover(c echo.Context) (interface{}, error) {
+	request := &SearchConfirmedApprover{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if !guards.IsTransactionHash(query.TxHash) {
-		e.Error = fmt.Sprintf("Invalid hash supplied: %s", query.TxHash)
-		c.JSON(http.StatusBadRequest, e)
-		return
+	result := SearchConfirmedApproverResponse{}
+
+	if !guards.IsTransactionHash(request.TxHash) {
+		return nil, errors.WithMessagef(echo.ErrBadRequest, "Invalid hash supplied: %s", request.TxHash)
 	}
 
 	txsToTraverse := make(map[string][]bool)
-	txsToTraverse[string(hornet.HashFromHashTrytes(query.TxHash))] = make([]bool, 0)
+	txsToTraverse[string(hornet.HashFromHashTrytes(request.TxHash))] = make([]bool, 0)
 
 	// Collect all tx to check by traversing the tangle
 	// Loop as long as new transactions are added in every loop cycle
@@ -122,15 +108,13 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		for txHash := range txsToTraverse {
 
 			if daemon.IsStopped() {
-				e.Error = "operation aborted"
-				c.JSON(http.StatusInternalServerError, e)
-				return
+				return nil, errors.WithMessage(echo.ErrInternalServerError, "operation aborted")
 			}
 
 			cachedTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.Hash(txHash)) // meta +1
 			if cachedTxMeta == nil {
 				delete(txsToTraverse, txHash)
-				log.Warnf("searchConfirmedApprover: Transaction not found: %v", hornet.Hash(txHash).Trytes())
+				s.logger.Warnf("searchConfirmedApprover: Transaction not found: %v", hornet.Hash(txHash).Trytes())
 				continue
 			}
 
@@ -142,7 +126,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 			if confirmed {
 				resultFound := false
 
-				if query.SearchMilestone {
+				if request.SearchMilestone {
 					if isTailTx {
 						// Check if the bundle is a milestone, otherwise go on
 						cachedBndl := tangle.GetCachedBundleOrNil(hornet.Hash(txHash))
@@ -160,9 +144,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				if resultFound {
 					approversResult, err := createConfirmedApproverResult(hornet.Hash(txHash), txsToTraverse[txHash])
 					if err != nil {
-						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-						c.JSON(http.StatusInternalServerError, e)
-						return
+						return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 					}
 
 					result.ConfirmedTxHash = hornet.Hash(txHash).Trytes()
@@ -170,8 +152,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 					result.TanglePath = approversResult
 					result.TanglePathLength = len(approversResult)
 
-					c.JSON(http.StatusOK, result)
-					return
+					return result, nil
 				}
 			}
 
@@ -180,7 +161,7 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 				approverTxMeta := tangle.GetCachedTxMetadataOrNil(approverHash) // meta +1
 				if approverTxMeta == nil {
-					log.Warnf("searchConfirmedApprover: Approver not found: %v", approverHash.Trytes())
+					s.logger.Warnf("searchConfirmedApprover: Approver not found: %v", approverHash.Trytes())
 					continue
 				}
 
@@ -192,32 +173,24 @@ func searchConfirmedApprover(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 	}
 
-	e.Error = fmt.Sprintf("No confirmed approver found: %s", query.TxHash)
-	c.JSON(http.StatusInternalServerError, e)
+	return nil, errors.WithMessagef(echo.ErrInternalServerError, "No confirmed approver found: %s", request.TxHash)
 }
 
-func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &SearchEntryPoint{}
-	result := &SearchEntryPointReturn{}
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+func (s *WebAPIServer) rpcSearchEntryPoints(c echo.Context) (interface{}, error) {
+	request := &SearchEntryPoint{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if !guards.IsTransactionHash(query.TxHash) {
-		e.Error = fmt.Sprintf("Invalid hash supplied: %s", query.TxHash)
-		c.JSON(http.StatusBadRequest, e)
-		return
+	result := &SearchEntryPointResponse{}
+
+	if !guards.IsTransactionHash(request.TxHash) {
+		return nil, errors.WithMessagef(echo.ErrBadRequest, "Invalid hash supplied: %s", request.TxHash)
 	}
 
-	cachedStartTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(query.TxHash)) // meta +1
+	cachedStartTxMeta := tangle.GetCachedTxMetadataOrNil(hornet.HashFromHashTrytes(request.TxHash)) // meta +1
 	if cachedStartTxMeta == nil {
-		e.Error = fmt.Sprintf("Start transaction not found: %v", query.TxHash)
-		c.JSON(http.StatusBadRequest, e)
-		return
+		return nil, errors.WithMessagef(echo.ErrBadRequest, "Start transaction not found: %v", request.TxHash)
 	}
 	_, startTxConfirmedAt := cachedStartTxMeta.GetMetadata().GetConfirmed()
 	defer cachedStartTxMeta.Release(true)
@@ -263,40 +236,34 @@ func searchEntryPoints(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	result.TanglePathLength = len(result.TanglePath)
 
 	if len(result.EntryPoints) == 0 {
-		e.Error = fmt.Sprintf("No confirmed approvee found: %s", query.TxHash)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "No confirmed approvee found: %s", request.TxHash)
 	}
-	c.JSON(http.StatusOK, result)
+
+	return result, nil
 }
 
-func triggerSolidifier(i interface{}, c *gin.Context, _ <-chan struct{}) {
+func (s *WebAPIServer) rpcTriggerSolidifier(c echo.Context) (interface{}, error) {
 	tanglePlugin.TriggerSolidifier()
-	c.Status(http.StatusAccepted)
+	return nil, nil
 }
 
-func getFundsOnSpentAddresses(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	result := &GetFundsOnSpentAddressesReturn{}
+func (s *WebAPIServer) rpcGetFundsOnSpentAddresses(c echo.Context) (interface{}, error) {
+	result := &GetFundsOnSpentAddressesResponse{}
 
 	if !tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
-		e.Error = "getFundsOnSpentAddresses not available in this node"
-		c.JSON(http.StatusBadRequest, e)
-		return
+		return nil, errors.WithMessage(echo.ErrBadRequest, "getFundsOnSpentAddresses not available in this node")
 	}
 
-	balances, _, err := tangle.GetLedgerStateForLSMI(nil)
+	balances, _, err := tangle.GetLedgerStateForLSMI(c.Request().Context())
 	if err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
 	for address := range balances {
 		if tangle.WasAddressSpentFrom(hornet.Hash(address)) {
-			result.Addresses = append(result.Addresses, &AddressWithBalance{Address: hornet.Hash(address).Trytes(), Balance: balances[address]})
+			result.Addresses = append(result.Addresses, &AddressWithBalance{Address: hornet.Hash(address).Trytes(), Balance: strconv.FormatUint(balances[address], 10)})
 		}
 	}
 
-	c.JSON(http.StatusOK, result)
+	return result, nil
 }

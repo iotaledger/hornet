@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/testsuite"
-	"github.com/gohornet/hornet/pkg/testsuite/utils"
+	"github.com/iotaledger/hornet/pkg/testsuite"
+	"github.com/iotaledger/hornet/pkg/testsuite/utils"
 )
 
 const (

@@ -1,5 +1,4 @@
-# golang 1.14.6-buster
-FROM golang@sha256:ebe7f5d1a2a6b884bc1a45b8c1ff7e26b7b95938a3e8847ea96fc6761fdc2b77 AS build
+FROM golang:1.20-bullseye AS build
 
 # Ensure ca-certficates are up to date
 RUN update-ca-certificates
@@ -12,7 +11,6 @@ WORKDIR /app
 COPY go.mod .
 COPY go.sum .
 
-ENV GO111MODULE=on
 RUN go mod download
 RUN go mod verify
 
@@ -29,7 +27,7 @@ RUN GOOS=linux GOARCH=amd64 go build -tags="pow_avx" \
 ############################
 # https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md
 # using distroless base image, contains: glibc, libssl and openssl
-FROM gcr.io/distroless/base@sha256:5e0cc69445ed1d8a17198250a7249d56dd4b6966bb6b2118e60ae9194c310647
+FROM gcr.io/distroless/base@sha256:73deaaf6a207c1a33850257ba74e0f196bc418636cada9943a03d7abea980d6d
 
 EXPOSE 8081/tcp
 EXPOSE 14265/tcp

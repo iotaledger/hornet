@@ -1,48 +1,31 @@
 package webapi
 
 import (
-	"fmt"
-	"net/http"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
-	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
-
-	"github.com/gohornet/hornet/plugins/snapshot"
+	"github.com/iotaledger/hornet/plugins/snapshot"
 )
 
-func init() {
-	addEndpoint("pruneDatabase", pruneDatabase, implementedAPIcalls)
-}
-
-func pruneDatabase(i interface{}, c *gin.Context, abortSignal <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &PruneDatabase{}
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+func (s *WebAPIServer) rpcPruneDatabase(c echo.Context) (interface{}, error) {
+	request := &PruneDatabase{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if (query.Depth != 0 && query.TargetIndex != 0) || (query.Depth == 0 && query.TargetIndex == 0) {
-		e.Error = "Either depth or targetIndex has to be specified"
-		c.JSON(http.StatusBadRequest, e)
-		return
+	if (request.Depth != 0 && request.TargetIndex != 0) || (request.Depth == 0 && request.TargetIndex == 0) {
+		return nil, errors.WithMessage(echo.ErrBadRequest, "Either depth or targetIndex has to be specified")
 	}
 
-	if query.Depth != 0 {
-		if err := snapshot.PruneDatabaseByDepth(query.Depth); err != nil {
-			e.Error = err.Error()
-			c.JSON(http.StatusInternalServerError, e)
-			return
+	if request.Depth != 0 {
+		if err := snapshot.PruneDatabaseByDepth(c.Request().Context(), request.Depth); err != nil {
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 	} else {
-		if err := snapshot.PruneDatabaseByTargetIndex(query.TargetIndex); err != nil {
-			e.Error = err.Error()
-			c.JSON(http.StatusInternalServerError, e)
-			return
+		if err := snapshot.PruneDatabaseByTargetIndex(c.Request().Context(), request.TargetIndex); err != nil {
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 	}
 
-	c.JSON(http.StatusOK, PruneDatabaseReturn{})
+	return &PruneDatabaseResponse{}, nil
 }

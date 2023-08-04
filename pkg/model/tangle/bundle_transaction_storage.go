@@ -8,8 +8,8 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/profile"
 )
 
 const (
@@ -192,6 +192,18 @@ func GetBundleTailTransactionHashes(bundleHash hornet.Hash, forceRelease bool, m
 	}, false, append(databaseKeyPrefixForBundleHash(bundleHash), BundleTxIsTail))
 
 	return bundleTransactionHashes
+}
+
+func ForEachBundleTailTransactionHash(bundleHash hornet.Hash, consumer func(txTailHash hornet.Hash) bool, maxFind ...int) {
+	i := 0
+	bundleTransactionsStorage.ForEachKeyOnly(func(key []byte) bool {
+		i++
+		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			return false
+		}
+
+		return consumer(key[50:99])
+	}, false, append(databaseKeyPrefixForBundleHash(bundleHash), BundleTxIsTail))
 }
 
 // BundleTransactionConsumer consumes the given bundle transaction during looping through all bundle transactions in the persistence layer.

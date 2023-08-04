@@ -1,62 +1,59 @@
 package webapi
 
 import (
-	"fmt"
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/address"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
 )
 
-func init() {
-	addEndpoint("wereAddressesSpentFrom", wereAddressesSpentFrom, implementedAPIcalls)
-}
-
-func wereAddressesSpentFrom(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &WereAddressesSpentFrom{}
-
-	if !tangle.GetSnapshotInfo().IsSpentAddressesEnabled() {
-		e.Error = "wereAddressesSpentFrom not available in this node"
-		c.JSON(http.StatusBadRequest, e)
-		return
+func (s *WebAPIServer) rpcWereAddressesSpentFrom(c echo.Context) (interface{}, error) {
+	request := &WereAddressesSpentFrom{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+	if len(request.Addresses) == 0 {
+		return nil, errors.WithMessage(ErrInvalidParameter, "invalid request, error: no addresses provided")
 	}
 
 	if !tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		e.Error = ErrNodeNotSync.Error()
-		c.JSON(http.StatusBadRequest, e)
-		return
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, tangle.ErrNodeNotSynced.Error())
 	}
 
-	if len(query.Addresses) == 0 {
-		e.Error = "No addresses provided"
-		c.JSON(http.StatusBadRequest, e)
-		return
-	}
+	result := &WereAddressesSpentFromResponse{}
 
-	result := WereAddressesSpentFromReturn{}
-
-	for _, addr := range query.Addresses {
+	for _, addr := range request.Addresses {
 		if err := address.ValidAddress(addr); err != nil {
-			e.Error = fmt.Sprintf("Provided address invalid: %s", addr)
-			c.JSON(http.StatusBadRequest, e)
-			return
+			return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address hash provided: %s", addr)
 		}
 
 		// State
 		result.States = append(result.States, tangle.WasAddressSpentFrom(hornet.HashFromAddressTrytes(addr)))
 	}
 
-	c.JSON(http.StatusOK, result)
+	return result, nil
+}
+
+func (s *WebAPIServer) addressWasSpent(c echo.Context) (interface{}, error) {
+	addr, err := parseAddressParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if !tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, tangle.ErrNodeNotSynced.Error())
+	}
+
+	tangle.ReadLockLedger()
+	defer tangle.ReadUnlockLedger()
+
+	return &addressWasSpentResponse{
+		Address:     addr.Trytes(),
+		WasSpent:    tangle.WasAddressSpentFrom(addr),
+		LedgerIndex: tangle.GetSolidMilestoneIndex(),
+	}, nil
 }

@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/willf/bitset"
+	"github.com/bits-and-blooms/bitset"
 
 	"github.com/iotaledger/iota.go/trinary"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 var (

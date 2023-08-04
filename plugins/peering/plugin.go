@@ -13,13 +13,13 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/peering"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol"
-	"github.com/gohornet/hornet/pkg/protocol/handshake"
-	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/peering"
+	"github.com/iotaledger/hornet/pkg/peering/peer"
+	"github.com/iotaledger/hornet/pkg/protocol"
+	"github.com/iotaledger/hornet/pkg/protocol/handshake"
+	"github.com/iotaledger/hornet/pkg/shutdown"
 )
 
 const (

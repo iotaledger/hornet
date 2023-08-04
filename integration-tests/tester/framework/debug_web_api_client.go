@@ -9,8 +9,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/plugins/webapi"
+	"github.com/iotaledger/hornet/pkg/peering/peer"
+	"github.com/iotaledger/hornet/plugins/webapi"
 )
 
 var (
@@ -127,7 +127,7 @@ func (api *WebAPI) do(method string, reqObj interface{}, resObj interface{}) err
 
 // Neighbors returns the neighbors to which the node is connected to.
 func (api *WebAPI) Neighbors() ([]*peer.Info, error) {
-	res := &webapi.GetNeighborsReturn{}
+	res := &webapi.GetNeighborsResponse{}
 	if err := api.do(http.MethodPost, struct {
 		Command string `json:"command"`
 	}{Command: "getNeighbors"}, res); err != nil {
@@ -136,8 +136,8 @@ func (api *WebAPI) Neighbors() ([]*peer.Info, error) {
 	return res.Neighbors, nil
 }
 
-func (api *WebAPI) Info() (*webapi.GetNodeInfoReturn, error) {
-	res := &webapi.GetNodeInfoReturn{}
+func (api *WebAPI) Info() (*webapi.GetNodeInfoResponse, error) {
+	res := &webapi.GetNodeInfoResponse{}
 	if err := api.do(http.MethodPost, struct {
 		Command string `json:"command"`
 	}{Command: "getNodeInfo"}, res); err != nil {

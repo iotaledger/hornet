@@ -15,21 +15,21 @@ import (
 	"github.com/iotaledger/hive.go/node"
 	"github.com/iotaledger/hive.go/websockethub"
 
-	"github.com/gohornet/hornet/pkg/basicauth"
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/tangle"
-	"github.com/gohornet/hornet/pkg/peering/peer"
-	"github.com/gohornet/hornet/pkg/protocol/sting"
-	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/plugins/autopeering"
-	"github.com/gohornet/hornet/plugins/cli"
-	"github.com/gohornet/hornet/plugins/gossip"
-	metricsplugin "github.com/gohornet/hornet/plugins/metrics"
-	"github.com/gohornet/hornet/plugins/peering"
-	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
+	"github.com/iotaledger/hornet/pkg/basicauth"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/tangle"
+	"github.com/iotaledger/hornet/pkg/peering/peer"
+	"github.com/iotaledger/hornet/pkg/protocol/sting"
+	"github.com/iotaledger/hornet/pkg/shutdown"
+	"github.com/iotaledger/hornet/plugins/autopeering"
+	"github.com/iotaledger/hornet/plugins/cli"
+	"github.com/iotaledger/hornet/plugins/gossip"
+	metricsplugin "github.com/iotaledger/hornet/plugins/metrics"
+	"github.com/iotaledger/hornet/plugins/peering"
+	tangleplugin "github.com/iotaledger/hornet/plugins/tangle"
 )
 
 const (
@@ -182,8 +182,6 @@ func run(_ *node.Plugin) {
 	runTipSelMetricWorker()
 	// run the database size collector
 	runDatabaseSizeCollector()
-	// run the spammer feed
-	runSpammerMetricWorker()
 }
 
 func getMilestoneTailHash(index milestone.Index) hornet.Hash {

@@ -1,8 +1,8 @@
 package metrics
 
 import (
-	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hornet/pkg/metrics"
+	"github.com/iotaledger/hornet/pkg/utils"
 )
 
 var (

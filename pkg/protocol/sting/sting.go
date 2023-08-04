@@ -5,11 +5,11 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/gohornet/hornet/pkg/consts"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/protocol/message"
-	"github.com/gohornet/hornet/pkg/protocol/tlv"
+	"github.com/iotaledger/hornet/pkg/consts"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/protocol/message"
+	"github.com/iotaledger/hornet/pkg/protocol/tlv"
 )
 
 var (

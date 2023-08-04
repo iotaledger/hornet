@@ -1,54 +1,59 @@
 package webapi
 
 import (
-	"fmt"
-	"net/http"
+	"io"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/config"
-	"github.com/gohornet/hornet/plugins/peering"
+	"github.com/iotaledger/hornet/pkg/config"
+	"github.com/iotaledger/hornet/plugins/peering"
 )
 
-func init() {
-	addEndpoint("addNeighbors", addNeighbors, implementedAPIcalls)
-	addEndpoint("removeNeighbors", removeNeighbors, implementedAPIcalls)
-	addEndpoint("getNeighbors", getNeighbors, implementedAPIcalls)
-}
+func (s *WebAPIServer) rpcAddNeighbors(c echo.Context) (interface{}, error) {
 
-func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
-
-	// Check if HORNET style addNeighbors call was made
-	queryHornet := &AddNeighborsHornet{}
-	if err := mapstructure.Decode(i, queryHornet); err == nil {
-		if len(queryHornet.Neighbors) != 0 {
-			addNeighborsWithAlias(queryHornet, c)
-			return
+	// Read the content of the body
+	var bodyBytes []byte
+	if c.Request().Body != nil {
+		var err error
+		bodyBytes, err = io.ReadAll(c.Request().Body)
+		if err != nil {
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 	}
 
-	e := ErrorReturn{}
-	query := &AddNeighbors{}
+	// we need to restore the body after reading it
+	restoreBody(c, bodyBytes)
+
+	// Check if HORNET style addNeighbors call was made
+	requestHornet := &AddNeighborsHornet{}
+	if err := c.Bind(requestHornet); err == nil {
+		if len(requestHornet.Neighbors) != 0 {
+			return s.rpcAddNeighborsWithAlias(c, requestHornet)
+		}
+	}
+
+	// we need to restore the body after reading it
+	restoreBody(c, bodyBytes)
+
+	request := &AddNeighbors{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
+	}
+
 	addedPeers := 0
 
 	preferIPv6 := config.NodeConfig.GetBool(config.CfgNetPreferIPv6)
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
-	}
 
 	added := false
 
 	var configPeers []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
-		log.Warn(err)
+		s.logger.Warn(err)
 	}
 
-	for _, uri := range query.Uris {
+	for _, uri := range request.Uris {
 
 		if strings.Contains(uri, "tcp://") {
 			uri = uri[6:]
@@ -74,7 +79,7 @@ func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 
 		if err := peering.Manager().Add(uri, preferIPv6, uri); err != nil {
-			log.Warnf("can't add peer %s, Error: %s", uri, err)
+			s.logger.Warnf("can't add peer %s, Error: %s", uri, err)
 			continue
 		}
 		addedPeers++
@@ -87,20 +92,20 @@ func addNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		config.AllowPeeringConfigHotReload()
 	}
 
-	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedPeers})
+	return &AddNeighborsResponse{AddedNeighbors: addedPeers}, nil
 }
 
-func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
+func (s *WebAPIServer) rpcAddNeighborsWithAlias(c echo.Context, request *AddNeighborsHornet) (interface{}, error) {
 	addedPeers := 0
 
 	added := false
 
 	var configPeers []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configPeers); err != nil {
-		log.Warn(err)
+		s.logger.Warn(err)
 	}
 
-	for _, peer := range s.Neighbors {
+	for _, peer := range request.Neighbors {
 
 		if strings.Contains(peer.Identity, "tcp://") {
 			peer.Identity = peer.Identity[6:]
@@ -126,7 +131,7 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 		}
 
 		if err := peering.Manager().Add(peer.Identity, peer.PreferIPv6, peer.Alias); err != nil {
-			log.Warnf("Can't add peer %s, Error: %s", peer.Identity, err)
+			s.logger.Warnf("Can't add peer %s, Error: %s", peer.Identity, err)
 			continue
 		}
 		addedPeers++
@@ -139,30 +144,25 @@ func addNeighborsWithAlias(s *AddNeighborsHornet, c *gin.Context) {
 		config.AllowPeeringConfigHotReload()
 	}
 
-	c.JSON(http.StatusOK, AddNeighborsResponse{AddedNeighbors: addedPeers})
+	return &AddNeighborsResponse{AddedNeighbors: addedPeers}, nil
 }
 
-func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &RemoveNeighbors{}
-
-	removedNeighbors := 0
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+func (s *WebAPIServer) rpcRemoveNeighbors(c echo.Context) (interface{}, error) {
+	request := &RemoveNeighbors{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
+	removedNeighbors := 0
 	removed := false
 
 	var configNeighbors []config.PeerConfig
 	if err := config.PeeringConfig.UnmarshalKey(config.CfgPeers, &configNeighbors); err != nil {
-		log.Warn(err)
+		s.logger.Warn(err)
 	}
 
 	peers := peering.Manager().PeerInfos()
-	for _, uri := range query.Uris {
+	for _, uri := range request.Uris {
 		if strings.Contains(uri, "tcp://") {
 			uri = uri[6:]
 		}
@@ -184,9 +184,7 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				if strings.EqualFold(p.Peer.ID, uri) || strings.EqualFold(p.DomainWithPort, uri) {
 					err := peering.Manager().Remove(uri)
 					if err != nil {
-						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-						c.JSON(http.StatusInternalServerError, e)
-						return
+						return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 					}
 					removedNeighbors++
 				}
@@ -195,9 +193,7 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 				if strings.EqualFold(p.Address, uri) {
 					err := peering.Manager().Remove(uri)
 					if err != nil {
-						e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-						c.JSON(http.StatusInternalServerError, e)
-						return
+						return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 					}
 					removedNeighbors++
 				}
@@ -212,9 +208,9 @@ func removeNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		config.AllowPeeringConfigHotReload()
 	}
 
-	c.JSON(http.StatusOK, RemoveNeighborsReturn{RemovedNeighbors: uint(removedNeighbors)})
+	return &RemoveNeighborsResponse{RemovedNeighbors: uint(removedNeighbors)}, nil
 }
 
-func getNeighbors(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	c.JSON(http.StatusOK, GetNeighborsReturn{Neighbors: peering.Manager().PeerInfos()})
+func (s *WebAPIServer) rpcGetNeighbors(c echo.Context) (interface{}, error) {
+	return &GetNeighborsResponse{Neighbors: peering.Manager().PeerInfos()}, nil
 }
