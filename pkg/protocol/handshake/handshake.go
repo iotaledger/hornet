@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/willf/bitset"
+	"github.com/bits-and-blooms/bitset"
 
 	"github.com/iotaledger/hornet/pkg/protocol/message"
 	"github.com/iotaledger/hornet/pkg/protocol/tlv"

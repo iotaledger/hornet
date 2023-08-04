@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"context"
 	"time"
 
 	"github.com/pkg/errors"
@@ -128,7 +129,7 @@ func setIsPruning(value bool) {
 	statusLock.Unlock()
 }
 
-func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) error {
+func pruneDatabase(ctx context.Context, targetIndex milestone.Index) error {
 
 	snapshotInfo := tangle.GetSnapshotInfo()
 	if snapshotInfo == nil {
@@ -159,7 +160,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 	defer setIsPruning(false)
 
 	// calculate solid entry points for the new end of the tangle history
-	newSolidEntryPoints, err := getSolidEntryPoints(targetIndex, abortSignal)
+	newSolidEntryPoints, err := getSolidEntryPoints(ctx, targetIndex)
 	if err != nil {
 		return err
 	}
@@ -183,7 +184,7 @@ func pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) err
 	// Iterate through all milestones that have to be pruned
 	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
 		select {
-		case <-abortSignal:
+		case <-ctx.Done():
 			// Stop pruning the next milestone
 			return ErrPruningAborted
 		default:

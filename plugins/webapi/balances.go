@@ -1,12 +1,10 @@
 package webapi
 
 import (
-	"fmt"
-	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/iota.go/address"
 
@@ -14,39 +12,25 @@ import (
 	"github.com/iotaledger/hornet/pkg/model/tangle"
 )
 
-func init() {
-	addEndpoint("getBalances", getBalances, implementedAPIcalls)
-}
-
-func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	e := ErrorReturn{}
-	query := &GetBalances{}
-
-	if err := mapstructure.Decode(i, query); err != nil {
-		e.Error = fmt.Sprintf("%v: %v", ErrInternalError, err)
-		c.JSON(http.StatusInternalServerError, e)
-		return
+func (s *WebAPIServer) rpcGetBalances(c echo.Context) (interface{}, error) {
+	request := &GetBalances{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if len(query.Addresses) == 0 {
-		e.Error = "No addresses provided"
-		c.JSON(http.StatusBadRequest, e)
-		return
+	if len(request.Addresses) == 0 {
+		return nil, errors.WithMessage(ErrInvalidParameter, "invalid request, error: no addresses provided")
 	}
 
-	for _, addr := range query.Addresses {
+	for _, addr := range request.Addresses {
 		// Check if address is valid
 		if err := address.ValidAddress(addr); err != nil {
-			e.Error = fmt.Sprintf("%v: %v", err, addr)
-			c.JSON(http.StatusBadRequest, e)
-			return
+			return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address hash provided: %s", addr)
 		}
 	}
 
 	if !tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		e.Error = ErrNodeNotSync.Error()
-		c.JSON(http.StatusBadRequest, e)
-		return
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, tangle.ErrNodeNotSynced.Error())
 	}
 
 	tangle.ReadLockLedger()
@@ -54,21 +38,17 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 
 	cachedLatestSolidMs := tangle.GetMilestoneOrNil(tangle.GetSolidMilestoneIndex()) // bundle +1
 	if cachedLatestSolidMs == nil {
-		e.Error = "Ledger state invalid - Milestone not found"
-		c.JSON(http.StatusInternalServerError, e)
-		return
+		return nil, errors.WithMessage(echo.ErrInternalServerError, "Ledger state invalid - Milestone not found")
 	}
 	defer cachedLatestSolidMs.Release(true) // bundle -1
 
-	result := GetBalancesReturn{}
+	result := &GetBalancesResponse{}
 
-	for _, addr := range query.Addresses {
+	for _, addr := range request.Addresses {
 
 		balance, _, err := tangle.GetBalanceForAddressWithoutLocking(hornet.HashFromAddressTrytes(addr))
 		if err != nil {
-			e.Error = "Ledger state invalid"
-			c.JSON(http.StatusInternalServerError, e)
-			return
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
 		// Address balance
@@ -78,5 +58,31 @@ func getBalances(i interface{}, c *gin.Context, _ <-chan struct{}) {
 	// The index of the milestone that confirmed the most recent balance
 	result.MilestoneIndex = cachedLatestSolidMs.GetBundle().GetMilestoneIndex()
 	result.References = []string{cachedLatestSolidMs.GetBundle().GetMilestoneHash().Trytes()}
-	c.JSON(http.StatusOK, result)
+
+	return result, nil
+}
+
+func (s *WebAPIServer) addressBalance(c echo.Context) (interface{}, error) {
+	addr, err := parseAddressParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if !tangle.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, tangle.ErrNodeNotSynced.Error())
+	}
+
+	tangle.ReadLockLedger()
+	defer tangle.ReadUnlockLedger()
+
+	balance, _, err := tangle.GetBalanceForAddressWithoutLocking(addr)
+	if err != nil {
+		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+	}
+
+	return &balanceResponse{
+		Address:     addr.Trytes(),
+		Balance:     strconv.FormatUint(balance, 10),
+		LedgerIndex: tangle.GetSolidMilestoneIndex(),
+	}, nil
 }

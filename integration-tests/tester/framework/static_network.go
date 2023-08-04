@@ -15,10 +15,10 @@ type connected bool
 type StaticPeeringLayout map[int]map[int]connected
 
 // Validate validates whether the static peering layout is valid by checking:
-//	- the layout isn't empty
-//	- keys must be continuous numbers reflecting the ID of the node
-//	- a node must hold nodes to peer to and they must exist in the map
-//	- a node doesn't peer to itself
+//   - the layout isn't empty
+//   - keys must be continuous numbers reflecting the ID of the node
+//   - a node must hold nodes to peer to and they must exist in the map
+//   - a node doesn't peer to itself
 func (spl StaticPeeringLayout) Validate() error {
 	if len(spl) == 0 {
 		return ErrLayoutEmpty

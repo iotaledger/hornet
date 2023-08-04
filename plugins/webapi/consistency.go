@@ -1,15 +1,9 @@
 package webapi
 
 import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func init() {
-	addEndpoint("checkConsistency", checkConsistency, implementedAPIcalls)
-}
-
-func checkConsistency(i interface{}, c *gin.Context, _ <-chan struct{}) {
-	c.JSON(http.StatusOK, CheckConsistencyReturn{State: true})
+func (s *WebAPIServer) rpcCheckConsistency(c echo.Context) (interface{}, error) {
+	return &CheckConsistencyResponse{State: true}, nil
 }

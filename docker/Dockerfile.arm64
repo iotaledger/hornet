@@ -27,9 +27,9 @@ RUN apk --no-cache add ca-certificates curl jq tini tar\
   && if [ "$ARCH" = "x86_64" ];\
   then\
   curl -f -L --retry 3 -o /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub;\
-  curl -f -L --retry 3 -o glibc-2.30-r0.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.30-r0/glibc-2.30-r0.apk;\
-  apk add glibc-2.30-r0.apk;\
-  rm glibc-2.30-r0.apk;\
+  curl -f -L --retry 3 -o glibc-2.35-r1.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-2.35-r1.apk;\
+  apk add glibc-2.35-r1.apk;\
+  rm glibc-2.35-r1.apk;\
   fi\
   && addgroup --gid 39999 hornet\
   && adduser -h /app -s /bin/sh -G hornet -u 39999 -D hornet\

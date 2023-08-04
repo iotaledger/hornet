@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.9] - 03.08.2023
+
+### Added
+    - Added API JWT Auth
+    - Added RESTful API
+
+### Removed
+    - Removed API basic auth
+
+### Changed
+    - Updated go version to 1.20
+    - Updated go modules
+
 ## [0.5.8] - 28.04.2021
 
 :warning: **Breaking change:** :warning:

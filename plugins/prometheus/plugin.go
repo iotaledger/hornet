@@ -3,11 +3,13 @@ package prometheus
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -79,9 +81,11 @@ func run(plugin *node.Plugin) {
 	daemon.BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Prometheus exporter ... done")
 
-		engine := gin.New()
-		engine.Use(gin.Recovery())
-		engine.GET("/metrics", func(c *gin.Context) {
+		e := echo.New()
+		e.HideBanner = true
+		e.Use(middleware.Recover())
+
+		e.GET("/metrics", func(c echo.Context) error {
 			for _, collect := range collects {
 				collect()
 			}
@@ -94,30 +98,33 @@ func run(plugin *node.Plugin) {
 			if config.NodeConfig.GetBool(config.CfgPrometheusPromhttpMetrics) {
 				handler = promhttp.InstrumentMetricHandler(registry, handler)
 			}
-			handler.ServeHTTP(c.Writer, c.Request)
+
+			handler.ServeHTTP(c.Response().Writer, c.Request())
+
+			return nil
 		})
 
 		bindAddr := config.NodeConfig.GetString(config.CfgPrometheusBindAddress)
-		server = &http.Server{Addr: bindAddr, Handler: engine}
 
 		go func() {
 			log.Infof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Warn("Stopping Prometheus exporter due to an error ... done")
+			if err := e.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				log.Warnf("Stopped Prometheus exporter due to an error (%s)", err)
 			}
 		}()
 
 		<-shutdownSignal
 		log.Info("Stopping Prometheus exporter ...")
 
-		if server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			err := server.Shutdown(ctx)
-			if err != nil {
-				log.Warn(err.Error())
-			}
-			cancel()
+		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCtxCancel()
+
+		//nolint:contextcheck // false positive
+		err := e.Shutdown(shutdownCtx)
+		if err != nil {
+			log.Warn(err)
 		}
+
 		log.Info("Stopping Prometheus exporter ... done")
 	}, shutdown.PriorityPrometheus)
 }

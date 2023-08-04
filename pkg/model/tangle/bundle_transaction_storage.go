@@ -194,6 +194,18 @@ func GetBundleTailTransactionHashes(bundleHash hornet.Hash, forceRelease bool, m
 	return bundleTransactionHashes
 }
 
+func ForEachBundleTailTransactionHash(bundleHash hornet.Hash, consumer func(txTailHash hornet.Hash) bool, maxFind ...int) {
+	i := 0
+	bundleTransactionsStorage.ForEachKeyOnly(func(key []byte) bool {
+		i++
+		if (len(maxFind) > 0) && (i > maxFind[0]) {
+			return false
+		}
+
+		return consumer(key[50:99])
+	}, false, append(databaseKeyPrefixForBundleHash(bundleHash), BundleTxIsTail))
+}
+
 // BundleTransactionConsumer consumes the given bundle transaction during looping through all bundle transactions in the persistence layer.
 type BundleTransactionConsumer func(bundleHash hornet.Hash, txHash hornet.Hash, isTail bool) bool
 

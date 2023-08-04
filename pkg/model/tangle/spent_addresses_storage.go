@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"context"
 	"encoding/binary"
 	"io"
 	"sync"
@@ -95,7 +96,7 @@ func MarkAddressAsSpentWithoutLocking(address hornet.Hash) bool {
 }
 
 // StreamSpentAddressesToWriter streams all spent addresses directly to an io.Writer.
-func StreamSpentAddressesToWriter(buf io.Writer, abortSignal <-chan struct{}) (int32, error) {
+func StreamSpentAddressesToWriter(ctx context.Context, buf io.Writer) (int32, error) {
 
 	ReadLockSpentAddresses()
 	defer ReadUnlockSpentAddresses()
@@ -105,7 +106,7 @@ func StreamSpentAddressesToWriter(buf io.Writer, abortSignal <-chan struct{}) (i
 	wasAborted := false
 	spentAddressesStorage.ForEachKeyOnly(func(key []byte) bool {
 		select {
-		case <-abortSignal:
+		case <-ctx.Done():
 			wasAborted = true
 			return false
 		default:
