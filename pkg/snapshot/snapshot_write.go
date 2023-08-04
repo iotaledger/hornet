@@ -100,6 +100,36 @@ func newSEPsProducer(
 	}
 }
 
+// newSEPsProducerFromMilestone returns a producer which produces messageID of a milestone as solid entry points.
+func newSEPsProducerFromMilestone(storage *storage.Storage, index milestone.Index) SEPProducerFunc {
+
+	prodChan := make(chan interface{})
+	errChan := make(chan error)
+
+	go func() {
+		cachedMsgMilestone := storage.MilestoneCachedMessageOrNil(index) // message +1
+		if cachedMsgMilestone == nil {
+			errChan <- fmt.Errorf("milestone (%d) not found", index)
+		} else {
+			// use the messageID of the milestone as solid entry point.
+			prodChan <- cachedMsgMilestone.Message().MessageID()
+			cachedMsgMilestone.Release(true) // message -1
+		}
+
+		close(prodChan)
+		close(errChan)
+	}()
+
+	binder := producerFromChannels(prodChan, errChan)
+	return func() (hornet.MessageID, error) {
+		obj, err := binder()
+		if obj == nil || err != nil {
+			return nil, err
+		}
+		return obj.(hornet.MessageID), nil
+	}
+}
+
 // returns a producer which produces unspent outputs which exist for the current confirmed milestone.
 func newCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	prodChan := make(chan interface{})
@@ -426,6 +456,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 		snapshotInfo,
 		s.syncManager.ConfirmedMilestoneIndex(),
 		targetIndex,
+		false,
 		s.solidEntryPointCheckThresholdPast,
 		s.solidEntryPointCheckThresholdFuture,
 		// if we write the snapshot state to the database, the newly generated snapshot index must be greater than the last snapshot index
@@ -674,6 +705,7 @@ func CreateSnapshotFromStorage(
 	utxoManager *utxo.Manager,
 	filePath string,
 	targetIndex milestone.Index,
+	globalSnapshot bool,
 	solidEntryPointCheckThresholdPast milestone.Index,
 	solidEntryPointCheckThresholdFuture milestone.Index,
 ) (*ReadFileHeader, error) {
@@ -694,6 +726,7 @@ func CreateSnapshotFromStorage(
 		snapshotInfo,
 		ledgerIndex,
 		targetIndex,
+		globalSnapshot,
 		solidEntryPointCheckThresholdPast,
 		solidEntryPointCheckThresholdFuture,
 		false); err != nil {
@@ -762,9 +795,17 @@ func CreateSnapshotFromStorage(
 		return nil, fmt.Errorf("read target milestone timestamp failed: %w", err)
 	}
 
+	var sepProducer SEPProducerFunc
+	if globalSnapshot {
+		// if we create a global snapshot, we do not need to calculate the SEP.
+		// we can simply take the milestone messageID of the target milestone.
+		sepProducer = newSEPsProducerFromMilestone(dbStorage, targetIndex)
+	} else {
+		sepProducer = newSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
+	}
+
 	// create a prepped solid entry point producer which counts how many went through
 	sepsCount := 0
-	sepProducer := newSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
 	countingSepProducer := func() (hornet.MessageID, error) {
 		sep, err := sepProducer()
 		if sep != nil {

@@ -327,24 +327,36 @@ func checkSnapshotLimits(
 	snapshotInfo *storage.SnapshotInfo,
 	confirmedMilestoneIndex milestone.Index,
 	targetIndex milestone.Index,
+	globalSnapshot bool,
 	solidEntryPointCheckThresholdPast milestone.Index,
 	solidEntryPointCheckThresholdFuture milestone.Index,
 	checkIncreasingSnapshotIndex bool) error {
 
-	if confirmedMilestoneIndex < solidEntryPointCheckThresholdFuture {
-		return errors.Wrapf(ErrNotEnoughHistory, "minimum confirmed index: %d, actual confirmed index: %d", solidEntryPointCheckThresholdFuture+1, confirmedMilestoneIndex)
-	}
+	var minimumIndex milestone.Index
+	var maximumIndex milestone.Index
 
-	minimumIndex := solidEntryPointCheckThresholdPast + 1
-	maximumIndex := confirmedMilestoneIndex - solidEntryPointCheckThresholdFuture
+	if globalSnapshot {
+		// if we create a global snapshot, we do not need to calculate the SEP.
+		// we can simply take the milestone messageID of the target milestone.
+		minimumIndex = snapshotInfo.PruningIndex + 1
+		maximumIndex = confirmedMilestoneIndex
 
-	if checkIncreasingSnapshotIndex && minimumIndex < snapshotInfo.SnapshotIndex+1 {
-		minimumIndex = snapshotInfo.SnapshotIndex + 1
-	}
+	} else {
+		if confirmedMilestoneIndex < solidEntryPointCheckThresholdFuture {
+			return errors.Wrapf(ErrNotEnoughHistory, "minimum confirmed index: %d, actual confirmed index: %d", solidEntryPointCheckThresholdFuture+1, confirmedMilestoneIndex)
+		}
 
-	if minimumIndex < snapshotInfo.PruningIndex+1+solidEntryPointCheckThresholdPast {
-		// since we always generate new solid entry points, we need enough history
-		minimumIndex = snapshotInfo.PruningIndex + 1 + solidEntryPointCheckThresholdPast
+		minimumIndex = solidEntryPointCheckThresholdPast + 1
+		maximumIndex = confirmedMilestoneIndex - solidEntryPointCheckThresholdFuture
+
+		if checkIncreasingSnapshotIndex && minimumIndex < snapshotInfo.SnapshotIndex+1 {
+			minimumIndex = snapshotInfo.SnapshotIndex + 1
+		}
+
+		if minimumIndex < snapshotInfo.PruningIndex+1+solidEntryPointCheckThresholdPast {
+			// since we always generate new solid entry points, we need enough history
+			minimumIndex = snapshotInfo.PruningIndex + 1 + solidEntryPointCheckThresholdPast
+		}
 	}
 
 	switch {

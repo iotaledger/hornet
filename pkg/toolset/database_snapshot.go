@@ -24,9 +24,10 @@ func databaseSnapshot(args []string) error {
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
 	targetIndexFlag := fs.Uint32(FlagToolDatabaseTargetIndex, 0, "the target index")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+	globalSnapshotFlag := fs.Bool(FlagToolSnapshotGlobal, false, "create a global snapshot (SEP equal to milestone parents)")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseSnapshot)
+		_, _ = fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseSnapshot)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s",
 			ToolDatabaseSnapshot,
@@ -50,20 +51,23 @@ func databaseSnapshot(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolDatabasePathSource)
 	}
 
-	solidEntryPointCheckThresholdPast := milestone.Index(belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdPast)
-	solidEntryPointCheckThresholdFuture := milestone.Index(belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdFuture)
+	solidEntryPointCheckThresholdPast := belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdPast
+	solidEntryPointCheckThresholdFuture := belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdFuture
 
 	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, true, true, true, true)
 	if err != nil {
 		return err
 	}
 	defer func() {
+		println("\nshutdown source storage ...")
 		tangleStoreSource.ShutdownStorages()
-		tangleStoreSource.FlushAndCloseStores()
+		if err := tangleStoreSource.FlushAndCloseStores(); err != nil {
+			panic(err)
+		}
 	}()
 
 	if !*outputJSONFlag {
-		fmt.Println("creating full snapshot file...")
+		fmt.Println("creating full snapshot file ...")
 	}
 
 	ts := time.Now()
@@ -74,6 +78,7 @@ func databaseSnapshot(args []string) error {
 		tangleStoreSource.UTXOManager(),
 		*snapshotPathTargetFlag,
 		milestone.Index(*targetIndexFlag),
+		*globalSnapshotFlag,
 		solidEntryPointCheckThresholdPast,
 		solidEntryPointCheckThresholdFuture,
 	)

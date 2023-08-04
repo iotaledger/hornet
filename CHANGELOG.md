@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## [1.2.5] - 03.08.2023
+
+### Added
+    - Add global flag to db-snapshot tool (#1901)
+    - Update modules and go version to 1.20 (#1872, #1896)
+
+### Fixed
+    - Use default rate limiter error handlers to fix responses (#1846)
+
+
 ## [1.2.4] - 10.01.2023
 
 ### Added
