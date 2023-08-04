@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-rc.7] - 04.08.2023
+
+# Added
+    - Add path to RegisterAPIRoute (#1854) 
+
+# Fixed
+    - Port iota.go fixes from v2.0.0-rc.5 (#1853) 
+    - Port iota.go fixes from v2.0.0-rc.6
+    - Fixed windows build (#1856) 
+    - Fix race condition in whiteflag API call (REST+INX) (#1894) 
+    - Update modules to fix potential listener leak (#1868) 
+    
+### Chore
+    - Update modules (#1843, #1848, #1895, #1902)
+    - Adapt to app module changes in hive.go (#1867) 
+    - Move core and plugins to components folder (#1869) 
+    - Update inx-app
+
+
 ## [2.0.0-rc.6] - 22.05.2023
 
 _**Warning**: This is a mandatory release for all nodes._
