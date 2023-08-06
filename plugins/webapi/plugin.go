@@ -34,9 +34,7 @@ var (
 func configure(plugin *node.Plugin) {
 	log = logger.NewLogger(plugin.Name)
 
-	e = echo.New()
-	e.HideBanner = true
-	e.Use(middleware.Recover())
+	e = NewEcho(log, nil, false)
 	e.Use(middleware.CORS())
 	e.Use(middleware.Gzip())
 	e.Use(middleware.BodyLimit(bytes.Format(int64(config.NodeConfig.GetInt(config.CfgWebAPILimitsMaxBodyLengthBytes)))))
