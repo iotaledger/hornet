@@ -55,15 +55,7 @@ func (s *WebAPIServer) transactionMetadata(c echo.Context) (interface{}, error) 
 	// get tx data
 	cachedTxMeta := tangle.GetCachedTxMetadataOrNil(txHash) // meta +1
 	if cachedTxMeta == nil {
-		// if tx is unknown, return false
-		return &transactionMetadataResponse{
-			TxHash:      txHash.Trytes(),
-			Solid:       false,
-			Included:    false,
-			Confirmed:   false,
-			Conflicting: false,
-			LedgerIndex: tangle.GetSolidMilestoneIndex(),
-		}, nil
+		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", txHash.Trytes())
 	}
 	defer cachedTxMeta.Release(true)
 
