@@ -34,6 +34,9 @@ const (
 
 	// ParameterPeerID is used to identify a peer.
 	ParameterPeerID = "peerID"
+
+	// QueryParameterPageSize is used to define the page size for the results.
+	QueryParameterPageSize = "pageSize"
 )
 
 var (
@@ -159,6 +162,26 @@ func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {
 	}
 
 	return milestone.Index(msIndex), nil
+}
+
+func ParseUint32QueryParam(c echo.Context, paramName string, maxValue ...uint32) (uint32, error) {
+	intString := strings.ToLower(c.QueryParam(paramName))
+	if intString == "" {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
+	}
+
+	value, err := strconv.ParseUint(intString, 10, 32)
+	if err != nil {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid value: %s, error: %s", intString, err)
+	}
+
+	if len(maxValue) > 0 {
+		if uint32(value) > maxValue[0] {
+			return 0, errors.WithMessagef(ErrInvalidParameter, "invalid value: %s, higher than the max number %d", intString, maxValue)
+		}
+	}
+
+	return uint32(value), nil
 }
 
 func ParsePeerIDParam(c echo.Context) (peer.ID, error) {

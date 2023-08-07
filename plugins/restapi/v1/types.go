@@ -180,6 +180,44 @@ type treasuryResponse struct {
 	Amount      uint64 `json:"amount"`
 }
 
+// transactionHistoryItem is an item of the transactionHistoryResponse.
+type transactionHistoryItem struct {
+	// The hex encoded message ID of the message in which the transaction payload was included.
+	MessageID string `json:"messageId"`
+	// The hex encoded transaction id.
+	TransactionID string `json:"transactionId"`
+	// The milestone index that references this message.
+	ReferencedByMilestoneIndex milestone.Index `json:"referencedByMilestoneIndex"`
+	// The milestone timestamp that references this message.
+	MilestoneTimestampReferenced int64 `json:"milestoneTimestampReferenced"`
+	// The ledger inclusion state of the transaction payload.
+	LedgerInclusionState string `json:"ledgerInclusionState"`
+	// The reason why this message is marked as conflicting.
+	ConflictReason *storage.Conflict `json:"conflictReason,omitempty"`
+	// The amount of inputs in the transaction payload.
+	InputsCount int `json:"inputsCount"`
+	// The amount of outputs in the transaction payload.
+	OutputsCount int `json:"outputsCount"`
+	// The balance change of the address the history was queried for.
+	AddressBalanceChange int64 `json:"addressBalanceChange"`
+}
+
+// transactionHistoryResponse defines the response of a GET address transaction history REST API call.
+type transactionHistoryResponse struct {
+	// The type of the address (0=Ed25519).
+	AddressType byte `json:"addressType"`
+	// The hex encoded address.
+	Address string `json:"address"`
+	// The maximum count of results that are returned by the node.
+	MaxResults uint32 `json:"maxResults"`
+	// The actual count of results that are returned.
+	Count uint32 `json:"count"`
+	// The transaction history of this address.
+	History []*transactionHistoryItem `json:"history"`
+	// The ledger index at which the history was queried at.
+	LedgerIndex milestone.Index `json:"ledgerIndex"`
+}
+
 // addPeerRequest defines the request for a POST peer REST API call.
 type addPeerRequest struct {
 	// The libp2p multi address of the peer.
