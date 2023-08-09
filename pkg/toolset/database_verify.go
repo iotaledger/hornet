@@ -377,7 +377,7 @@ func compareLedgerState(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.M
 	if err != nil {
 		return err
 	}
-	ledgerStateTemp, err := utxoManagerSource.LedgerStateSHA256Sum()
+	ledgerStateTemp, err := utxoManagerTemp.LedgerStateSHA256Sum()
 	if err != nil {
 		return err
 	}
