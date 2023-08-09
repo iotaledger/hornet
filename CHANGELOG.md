@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.6] - 09.08.2023
+
+### Added
+    - Add transaction history endpoints (#1904)
+
+### Changed
+    - Update workflows and goreleaser
+
 
 ## [1.2.5] - 03.08.2023
 
