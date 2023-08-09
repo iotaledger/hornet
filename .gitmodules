@@ -1,3 +1,0 @@
-[submodule "plugins/dashboard/frontend"]
-	path = plugins/dashboard/frontend
-	url = git@github.com:iotaledger/node-dashboard.git
