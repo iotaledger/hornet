@@ -7,20 +7,21 @@ LABEL org.label-schema.description="HORNET - The IOTA node"
 LABEL org.label-schema.name="iotaledger/hornet"
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.vcs-url="https://github.com/iotaledger/hornet"
-LABEL org.label-schema.usage="https://github.com/iotaledger/hornet/blob/main/documentation/docs/getting_started/using_docker.md"
 
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates
 
 # Set the current Working Directory inside the container
+RUN mkdir /scratch
+WORKDIR /scratch
+
+# Prepare the folder where we are putting all the files
 RUN mkdir /app
-WORKDIR /app
 
-# Use Go Modules
-COPY go.mod .
-COPY go.sum .
+# Make sure that modules only get pulled when the module file has changed
+COPY go.mod go.sum ./
 
-ENV GO111MODULE=on
+# Download go modules
 RUN go mod download
 RUN go mod verify
 
@@ -28,10 +29,13 @@ RUN go mod verify
 COPY . .
 
 # Build the binary
-RUN go build \
-      -tags="$BUILD_TAGS" \
-      -ldflags='-w -s' -a \
-      -o /go/bin/hornet
+RUN go build -o /app/hornet -a -tags="$BUILD_TAGS" -ldflags='-w -s'
+
+# Copy the assets
+COPY ./config.json /app/config.json
+COPY ./config_devnet.json /app/config_devnet.json
+COPY ./peering.json /app/peering.json
+COPY ./profiles.json /app/profiles.json
 
 ############################
 # Image
@@ -46,15 +50,10 @@ EXPOSE 14265/tcp
 EXPOSE 8081/tcp
 EXPOSE 8091/tcp
 EXPOSE 1883/tcp
+EXPOSE 9311/tcp
 
-# Copy the binary into distroless image
-COPY --chown=nonroot:nonroot --from=build /go/bin/hornet /app/hornet
-
-# Copy the assets
-COPY ./config.json /app/config.json
-COPY ./config_devnet.json /app/config_devnet.json
-COPY ./peering.json /app/peering.json
-COPY ./profiles.json /app/profiles.json
+# Copy the app dir into distroless image
+COPY --chown=nonroot:nonroot --from=build /app /app
 
 WORKDIR /app
 USER nonroot

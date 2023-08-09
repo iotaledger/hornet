@@ -20,6 +20,7 @@ services:
     #  - "8081:8081/tcp"
     #  - "8091:8091/tcp"
     #  - "1883:1883/tcp"
+    #  - "9311:9311/tcp"
     cap_drop:
       - ALL
     volumes:

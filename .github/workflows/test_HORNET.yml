@@ -1,6 +1,9 @@
 name: Test HORNET
 
 on:
+  push:
+    branches:
+      - production
   pull_request:
     paths-ignore:
       - 'documentation/**'

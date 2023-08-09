@@ -10,4 +10,4 @@ GORELEASER_IMAGE=iotaledger/goreleaser-cgo-cross-compiler:1.20.2
 REPO_PATH="/build"
 
 docker pull "${GORELEASER_IMAGE}"
-docker run --rm --privileged -v "${PWD}":"${REPO_PATH}" -w "${REPO_PATH}" "${GORELEASER_IMAGE}" goreleaser --rm-dist --snapshot --skip-publish
+docker run --rm --privileged -v "${PWD}":"${REPO_PATH}" -w "${REPO_PATH}" "${GORELEASER_IMAGE}" goreleaser --snapshot --skip-publish --clean

@@ -1,6 +1,9 @@
 name: Build Docker
 
 on:
+  push:
+    branches:
+      - production
   pull_request:
     paths:
       - "docker/Dockerfile"
