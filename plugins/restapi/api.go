@@ -11,10 +11,14 @@ import (
 )
 
 func compileRouteAsRegex(route string) *regexp.Regexp {
+	r := route
 
-	r := regexp.QuoteMeta(route)
-	r = strings.Replace(r, `\*`, "(.*?)", -1)
-	r = r + "$"
+	// interpret the string as raw regex if it starts with "^"
+	if !strings.HasPrefix(route, "^") {
+		r = regexp.QuoteMeta(route)
+		r = strings.Replace(r, `\*`, "(.*?)", -1)
+		r = r + "$"
+	}
 
 	reg, err := regexp.Compile(r)
 	if err != nil {

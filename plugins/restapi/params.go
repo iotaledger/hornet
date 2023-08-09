@@ -41,7 +41,7 @@ var params = &node.PluginParams{
 					"/api/v1/transactions*",
 					"/api/v1/milestones*",
 					"/api/v1/outputs*",
-					"/api/v1/addresses*",
+					"^/api/v1/addresses/(ed25519/)?[^/]+(/outputs)?$",
 					"/api/v1/treasury",
 					"/api/v1/receipts*",
 					"/api/plugins/participation/events*",

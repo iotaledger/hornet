@@ -108,6 +108,16 @@ const (
 	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
 	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + restapipkg.ParameterAddress + "/outputs"
 
+	// RouteAddressBech32History is the route for getting the transaction history of an address.
+	// The address must be encoded in bech32.
+	// GET returns the tx-history of this address.
+	RouteAddressBech32History = "/addresses/:" + restapipkg.ParameterAddress + "/tx-history"
+
+	// RouteAddressEd25519History is the route for getting the transaction history of an ed25519 address.
+	// The ed25519 address must be encoded in hex.
+	// GET returns the tx-history of this address.
+	RouteAddressEd25519History = "/addresses/ed25519/:" + restapipkg.ParameterAddress + "/tx-history"
+
 	// RouteTreasury is the route for getting the current treasury output.
 	RouteTreasury = "/treasury"
 
@@ -420,6 +430,34 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	routeGroup.GET(RouteAddressBech32History, func(c echo.Context) error {
+		address, err := restapipkg.ParseBech32AddressParam(c, deps.Bech32HRP)
+		if err != nil {
+			return err
+		}
+
+		resp, err := transactionHistoryByAddress(c, address)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAddressEd25519History, func(c echo.Context) error {
+		address, err := restapipkg.ParseEd25519AddressParam(c)
+		if err != nil {
+			return err
+		}
+
+		resp, err := transactionHistoryByAddress(c, address)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
 	routeGroup.GET(RouteTreasury, func(c echo.Context) error {
 		resp, err := treasury(c)
 		if err != nil {
@@ -504,4 +542,21 @@ func configure() {
 // AddFeature adds a feature for the RouteInfo endpoint.
 func AddFeature(feature string) {
 	features = append(features, feature)
+}
+
+func maxResultsFromContext(c echo.Context) int {
+	maxPageSize := uint32(deps.RestAPILimitsMaxResults)
+	if len(c.QueryParam(restapipkg.QueryParameterPageSize)) > 0 {
+		pageSizeQueryParam, err := restapipkg.ParseUint32QueryParam(c, restapipkg.QueryParameterPageSize, maxPageSize)
+		if err != nil {
+			return int(maxPageSize)
+		}
+
+		if pageSizeQueryParam < maxPageSize {
+			// use the smaller page size given by the request context
+			maxPageSize = pageSizeQueryParam
+		}
+	}
+
+	return int(maxPageSize)
 }
