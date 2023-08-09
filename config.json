@@ -86,8 +86,7 @@
       "bindAddress": "0.0.0.0:14627",
       "runAsEntryNode": false,
       "entryNodes": [
-        "FvfwJuCMoWJvcJLSYww7whPxouZ9WFJ55uyxTxKxJ1ez@enter.hornet.zone:14626",
-        "31Tz9meznQMm7qSDUgyMmYVeHUCGA7za5Suvbom5hpE9@bender.iota.autopeering.com:14626"
+        "EagUoEdsY4QUTLAZa8xdFgYEPfrExwdY9MS2k9ugJ5Pi@entry-legacy.iotaledger.net:14626"
       ],
       "seed": ""
     }

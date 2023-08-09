@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.10] - 09.08.2023
+
+### Changed
+    - Updated entry nodes
+    - Updated workflows and goreleaser
+    - Adapt dockerfile to stardust version
+    - Allow raw regex in public/protected routes
+
+### Fixed
+    - Fix transaction metadata endpoint if tx unknown
+    - Fix REST-API error handling
+    - Remove dashboard frontend git submodule
+
 ## [0.5.9] - 03.08.2023
 
 ### Added
