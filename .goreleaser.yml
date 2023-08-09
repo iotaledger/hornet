@@ -14,85 +14,40 @@ builds:
     binary: hornet-legacy
     ldflags:
       - -s -w -X github.com/iotaledger/hornet/plugins/cli.AppVersion={{.Version}}
-    flags:
-      - -tags=pow_avx
     main: main.go
     goos:
       - linux
     goarch:
       - amd64
-  # Linux ARM64 statically linked
+  # Linux ARM64
   - id: hornet-legacy-linux-arm64
     binary: hornet-legacy
     env:
       - CGO_ENABLED=1
-      - CC=aarch64-linux-musl-gcc
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
     ldflags:
       - -s -w -X github.com/iotaledger/hornet/plugins/cli.AppVersion={{.Version}}
-      - -w -extldflags "-static"
-    flags:
-      - -tags=pow_arm_c128
     main: main.go
     goos:
       - linux
     goarch:
       - arm64
-  # Windows AMD64
-  - id: hornet-legacy-windows-amd64
-    binary: hornet-legacy
-    env:
-      - CGO_ENABLED=1
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-    ldflags:
-      - -s -w -X github.com/iotaledger/hornet/plugins/cli.AppVersion={{.Version}}
-    flags:
-      - -tags=pow_avx
-    main: main.go
-    goos:
-      - windows
-    goarch:
-      - amd64
-  # macOS AMD64
-  - id: hornet-legacy-macOS-amd64
-    binary: hornet-legacy
-    env:
-      - CGO_ENABLED=0
-    ldflags:
-      - -s -w -X github.com/iotaledger/hornet/plugins/cli.AppVersion={{.Version}}
-    main: main.go
-    goos:
-      - darwin
-    goarch:
-      - amd64
-
-# Docker
-dockers:
-  # Docker AMD64
-  - goos: linux
-    goarch: amd64
-    image_templates:
-      - "iotaledger/hornet:legacy-latest"
-      - "iotaledger/hornet:legacy-{{ .Tag }}"
-    binaries:
-      - hornet-legacy
-    dockerfile: docker/Dockerfile.goreleaser
-    skip_push: auto
 
 # Archives
 archives:
   - format: tar.gz
     wrap_in_directory: true
-    format_overrides:
-      - goos: windows
-        format: zip
-    name_template: "{{.ProjectName}}-{{.Version}}_{{.Os}}_{{.Arch}}"
-    replacements:
-      amd64: x86_64
-      arm64: ARM64
-      darwin: macOS
-      linux: Linux
-      windows: Windows
+    name_template: >- 
+      {{ .ProjectName }}-{{ .Version }}_
+      {{- if eq .Os "darwin" }}macOS_
+      {{- else if eq .Os "linux" }}Linux_
+      {{- else if eq .Os "windows" }}Windows_
+      {{- else }}{{ .Os }}_{{ end }}
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}ARM64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
     files:
       - README.md
       - LICENSE
@@ -101,28 +56,48 @@ archives:
       - profiles.json
       - mqtt_config.json
 
-# DEB and RPM packages
+# DEB packages
 nfpms:
   - id: nfpm
     package_name: hornet-legacy
-    file_name_template: '{{ tolower .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Arch }}'
+    file_name_template: >- 
+      {{ tolower .ProjectName }}_{{ replace .Version "v" "" }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}ARM64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
     vendor: GoReleaser
     license: Apache 2.0
     maintainer: GoHORNET
     homepage: https://github.com/iotaledger/hornet
-    description: HORNET is a powerful IOTA fullnode software. This is the legacy veriosn.
+    description: HORNET is a powerful IOTA fullnode software. This is the legacy version.
     formats:
       - deb
-      - rpm
     bindir: /usr/bin
-    files:
-      "nfpm/shared_files/hornet-legacy.service": "/lib/systemd/system/hornet-legacy.service"
-    config_files:
-      "config.json": "/var/lib/hornet-legacy/config.json"
-      "mqtt_config.json": "/var/lib/hornet-legacy/mqtt_config.json"
-      "peering.json": "/var/lib/hornet-legacy/peering.json"
-      "profiles.json": "/var/lib/hornet-legacy/profiles.json"
-      "nfpm/shared_files/hornet-legacy.env": "/etc/default/hornet-legacy"
+    contents:
+      - src: "nfpm/shared_files/hornet-legacy.service"
+        dst: "/lib/systemd/system/hornet-legacy.service"
+
+      - src: "config.json"
+        dst: "/var/lib/hornet-legacy/config.json"
+        type: config
+
+      - src: "peering.json"
+        dst: "/var/lib/hornet-legacy/peering.json"
+        type: config
+
+      - src: "profiles.json"
+        dst: "/var/lib/hornet-legacy/profiles.json"
+        type: config
+
+      - src: "mqtt_config.json"
+        dst: "/var/lib/hornet-legacy/mqtt_config.json"
+        type: config
+
+      - src: "nfpm/shared_files/hornet-legacy.env"
+        dst: "/etc/default/hornet-legacy"
+        type: config
+
     dependencies:
       - systemd
       - wget
@@ -132,16 +107,6 @@ nfpms:
       postremove: "nfpm/deb_files/postrm"
       preinstall: "nfpm/deb_files/preinst"
       postinstall: "nfpm/deb_files/postinst"
-    overrides:
-      rpm:
-        replacements:
-          amd64: x86_64
-        file_name_template: "{{ tolower .ProjectName }}-{{ .Version }}-{{ .Arch }}"
-        scripts:
-          preinstall: "nfpm/rpm_files/preinst"
-          postinstall: "nfpm/rpm_files/postinst"
-          preremove: "nfpm/rpm_files/prerm"
-          postremove: "nfpm/rpm_files/postrm"
 
 # Checksum
 checksum:

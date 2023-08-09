@@ -1,7 +1,17 @@
 name: Integration Tests
 
 on:
+  push:
+    branches:
+      - legacy
   pull_request:
+    paths-ignore:
+      - 'documentation/**'
+      - 'docker/**'
+      - 'nfpm/**'
+      - 'private_tangle/**'
+      - 'scripts/**'
+      - 'tools/**'
 
 jobs:
 
@@ -12,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile.dev -t hornet:dev .
@@ -23,16 +33,17 @@ jobs:
           docker pull gaiadocker/iproute2:latest
 
       - name: Run integration tests
-        run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
+        run: docker compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
 
       - name: Create logs from tester
         if: always()
         run: |
+          sudo chmod 777 integration-tests/logs
           docker logs tester &> integration-tests/logs/tester.log
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -44,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile.dev -t hornet:dev .
@@ -55,16 +66,17 @@ jobs:
           docker pull gaiadocker/iproute2:latest
 
       - name: Run integration tests
-        run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
+        run: docker compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
 
       - name: Create logs from tester
         if: always()
         run: |
+          sudo chmod 777 integration-tests/logs
           docker logs tester &> integration-tests/logs/tester.log
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs

@@ -1,9 +1,9 @@
 name: Build Docker
+
 on:
   push:
-    paths:
-      - "docker/Dockerfile"
-      - "docker-compose.yml"
+    branches:
+      - legacy
   pull_request:
     paths:
       - "docker/Dockerfile"
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build HORNET Docker image
         run: docker build . --file docker/Dockerfile --tag hornet:latest
