@@ -6,7 +6,7 @@
 # make script executable independent of path
 cd $(dirname "$0")/../
 
-GORELEASER_IMAGE=iotaledger/goreleaser-cgo-cross-compiler:1.20.2
+GORELEASER_IMAGE=iotaledger/goreleaser-cgo-cross-compiler:1.21.0
 REPO_PATH="/build"
 
 docker pull "${GORELEASER_IMAGE}"
