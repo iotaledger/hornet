@@ -46,7 +46,7 @@ func init() {
 
 	// gossip
 	configFlagSet.Bool(CfgNetPreferIPv6, false, "defines if IPv6 is preferred for peers added through the API")
-	configFlagSet.String(CfgNetGossipBindAddress, "0.0.0.0:15600", "the bind address of the gossip TCP server")
+	configFlagSet.String(CfgNetGossipBindAddress, "0.0.0.0:15601", "the bind address of the gossip TCP server")
 	configFlagSet.Int(CfgNetGossipReconnectAttemptIntervalSeconds, 60, "the number of seconds to wait before trying to reconnect to a disconnected peer")
 
 	// peering
@@ -64,7 +64,7 @@ func init() {
 		"2GHfjJhTqRaKCGBJJvS5RWty61XhjX7FtbVDhg7s8J1x@entrynode.tanglebay.org:14626",
 		"iotaMk9Rg8wWo1DDeG7fwV9iJ41hvkwFX8w6MyTQgDu@enter.thetangle.org:14627",
 	}, "list of autopeering entry nodes to use")
-	configFlagSet.String(CfgNetAutopeeringBindAddr, "0.0.0.0:14626", "bind address for global services such as autopeering and gossip")
+	configFlagSet.String(CfgNetAutopeeringBindAddr, "0.0.0.0:14627", "bind address for global services such as autopeering and gossip")
 	configFlagSet.String(CfgNetAutopeeringSeed, "", "private key seed used to derive the node identity; optional Base64 encoded 256-bit string")
 	configFlagSet.Bool(CfgNetAutopeeringRunAsEntryNode, false, "whether the node should act as an autopeering entry node")
 	configFlagSet.Int(CfgNetAutopeeringInboundPeers, 2, "the number of inbound autopeers")

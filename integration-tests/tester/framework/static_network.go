@@ -81,7 +81,7 @@ func (n *StaticNetwork) ConnectNodes() error {
 			if alreadyPeered := n.layout[peerIndex][i]; alreadyPeered {
 				continue
 			}
-			uri := fmt.Sprintf("tcp://%s:15600", peer.IP)
+			uri := fmt.Sprintf("tcp://%s:15601", peer.IP)
 			n.layout[i][peerIndex] = true
 			n.layout[peerIndex][i] = true
 			if _, err := node.WebAPI.AddNeighbors(uri); err != nil {
@@ -119,7 +119,7 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 			for layoutNeighbor := range layoutNeighbors {
 				layoutNode := n.Nodes[layoutNeighbor]
 				for _, neighbor := range neighbors {
-					if neighbor.Address == fmt.Sprintf("%s:15600", layoutNode.IP) {
+					if neighbor.Address == fmt.Sprintf("%s:15601", layoutNode.IP) {
 						peered++
 					}
 				}

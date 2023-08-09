@@ -16,7 +16,7 @@ const (
 	GenesisAddress = "9QJKPJPYTNPF9AFCLGLMAGXOR9ZIPYTRISKOGJPM9ZKKDXGRXWFJZMQTETDJJOGYEVRMLAOECBPWTUZ9B"
 
 	// The default web API port of every node.
-	WebAPIPort = 14265
+	WebAPIPort = 14266
 
 	autopeeringMaxTries = 50
 
@@ -60,8 +60,8 @@ func DefaultConfig() *NodeConfig {
 	}
 	cfg.ExposedPorts = nat.PortSet{
 		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.WebAPI.BindAddress, ":")[1])): {},
-		"6060/tcp": {},
-		"8081/tcp": {},
+		"6061/tcp": {},
+		"8082/tcp": {},
 	}
 	return cfg
 }
@@ -168,7 +168,7 @@ func (webAPIConfig *WebAPIConfig) CLIFlags() []string {
 // DefaultWebAPIConfig returns the default web API config.
 func DefaultWebAPIConfig() WebAPIConfig {
 	return WebAPIConfig{
-		BindAddress: "0.0.0.0:14265",
+		BindAddress: "0.0.0.0:14266",
 		PermittedAPICalls: []string{
 			"getNodeInfo",
 			"attachToTangle",
@@ -326,7 +326,7 @@ func (profilingConfig *ProfilingConfig) CLIFlags() []string {
 // DefaultProfilingConfig returns the default profiling config.
 func DefaultProfilingConfig() ProfilingConfig {
 	return ProfilingConfig{
-		BindAddress: "0.0.0.0:6060",
+		BindAddress: "0.0.0.0:6061",
 	}
 }
 
@@ -346,6 +346,6 @@ func (dashboardConfig *DashboardConfig) CLIFlags() []string {
 // DefaultDashboardConfig returns the default profiling config.
 func DefaultDashboardConfig() DashboardConfig {
 	return DashboardConfig{
-		BindAddress: "0.0.0.0:8081",
+		BindAddress: "0.0.0.0:8082",
 	}
 }

@@ -103,7 +103,7 @@ func (n *AutopeeredNetwork) CreatePeer(cfg *NodeConfig) (*Node, error) {
 		return nil, err
 	}
 	cfg.Network.EntryNodes = []string{
-		fmt.Sprintf("%s@%s:14626", n.entryNodePublicKey(), ip),
+		fmt.Sprintf("%s@%s:14627", n.entryNodePublicKey(), ip),
 	}
 	return n.Network.CreateNode(cfg)
 }

@@ -24,7 +24,7 @@ const (
 )
 
 func init() {
-	configFlagSet.String(CfgWebAPIBindAddress, "0.0.0.0:14265", "the bind address on which the HTTP API listens on")
+	configFlagSet.String(CfgWebAPIBindAddress, "0.0.0.0:14266", "the bind address on which the HTTP API listens on")
 	configFlagSet.StringSlice(CfgWebAPIPublicRoutes,
 		[]string{
 			"/",

@@ -57,8 +57,8 @@ func newNode(name string, identity *identity.Identity, cfg *NodeConfig, dockerCo
 	return &Node{
 		Name: name,
 		Profiler: Profiler{
-			pprofURI:     fmt.Sprintf("http://%s:6060", ip),
-			websocketURI: fmt.Sprintf("ws://%s:8081/ws", ip),
+			pprofURI:     fmt.Sprintf("http://%s:6061", ip),
+			websocketURI: fmt.Sprintf("ws://%s:8082/ws", ip),
 			targetName:   name,
 			Client: http.Client{
 				Timeout: 2 * time.Minute,

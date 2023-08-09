@@ -18,11 +18,11 @@ const (
 )
 
 func init() {
-	configFlagSet.String(CfgPrometheusBindAddress, "localhost:9311", "the bind address on which the Prometheus exporter listens on")
+	configFlagSet.String(CfgPrometheusBindAddress, "localhost:9312", "the bind address on which the Prometheus exporter listens on")
 	configFlagSet.Bool(CfgPrometheusGoMetrics, false, "include go metrics")
 	configFlagSet.Bool(CfgPrometheusProcessMetrics, false, "include process metrics")
 	configFlagSet.Bool(CfgPrometheusPromhttpMetrics, false, "include promhttp metrics")
 	configFlagSet.Bool(CfgPrometheusFileServiceDiscoveryEnabled, false, "whether the plugin should write a Prometheus 'file SD' file")
 	configFlagSet.String(CfgPrometheusFileServiceDiscoveryPath, "target.json", "the path where to write the 'file SD' file to")
-	configFlagSet.String(CfgPrometheusFileServiceDiscoveryTarget, "localhost:9311", "the target to write into the 'file SD' file")
+	configFlagSet.String(CfgPrometheusFileServiceDiscoveryTarget, "localhost:9312", "the target to write into the 'file SD' file")
 }

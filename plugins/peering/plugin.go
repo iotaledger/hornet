@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	ExamplePeerURI = "example.neighbor.com:15600"
+	ExamplePeerURI = "example.neighbor.com:15601"
 )
 
 var (

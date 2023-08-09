@@ -83,7 +83,7 @@
       "reconnectAttemptIntervalSeconds": 60
     },
     "autopeering": {
-      "bindAddress": "0.0.0.0:14626",
+      "bindAddress": "0.0.0.0:14627",
       "runAsEntryNode": false,
       "entryNodes": [
         "FvfwJuCMoWJvcJLSYww7whPxouZ9WFJ55uyxTxKxJ1ez@enter.hornet.zone:14626",

@@ -1,24 +1,32 @@
-version: "3"
+version: '3'
 services:
   hornet:
     build:
       context: .
-      # For aarch64/arm64 use Dockerfile.arm64
       dockerfile: docker/Dockerfile
-    image: hornet:latest
+    image: hornet:legacy
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 8192
+    stop_grace_period: 5m
     # Best performance via host network:
     network_mode: host
     # Else:
     #ports:
-    #  - "14265:14265"
-    #  - "15600:15600"
+    #  - "15601:15601/tcp"
+    #  - "14627:14627/udp"
+    #  - "14266:14266/tcp"
+    #  - "8082:8082/tcp"
+    #  - "5556:5556/tcp"
+    #  - "1883:1883/tcp"
+    #  - "9312:9312/tcp"
     cap_drop:
       - ALL
-
     volumes:
       - ./config.json:/app/config.json:ro
-      - ./mqtt_config.json:/app/mqtt_config.json
-      - ./profiles.json:/app/profiles.json
       - ./peering.json:/app/peering.json
-      - ./snapshots/mainnet:/app/snapshots/mainnet
+      - ./profiles.json:/app/profiles.json
+      - ./mqtt_config.json:/app/mqtt_config.json
       - ./mainnetdb:/app/mainnetdb
+      - ./snapshots/mainnet:/app/snapshots/mainnet

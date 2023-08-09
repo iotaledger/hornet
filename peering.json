@@ -3,7 +3,7 @@
   "maxPeers": 5,
   "peers": [
     {
-      "identity": "example.neighbor.com:15600",
+      "identity": "example.neighbor.com:15601",
       "alias": "Example Peer",
       "preferIPv6": false
     }
