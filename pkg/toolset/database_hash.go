@@ -92,6 +92,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		return fmt.Errorf("unable to serialize ledger index: %w", err)
 	}
 
+	var ledgerTokenSupply uint64
 	if treasuryOutput != nil {
 		// write current treasury output
 		if _, err := lsHash.Write(treasuryOutput.MilestoneID[:]); err != nil {
@@ -100,9 +101,9 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		if err := binary.Write(lsHash, binary.LittleEndian, treasuryOutput.Amount); err != nil {
 			return fmt.Errorf("unable to serialize treasury output amount: %w", err)
 		}
+		ledgerTokenSupply += treasuryOutput.Amount
 	}
 
-	var ledgerTokenSupply uint64
 	// write all unspent outputs in lexicographical order
 	for _, output := range outputs {
 		ledgerTokenSupply += output.Amount

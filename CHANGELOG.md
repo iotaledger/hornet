@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.7] - 10.08.2023
+
+### Fix
+    - Fix missing treasury balance in db-hash tool (#1906)
+
+
 ## [1.2.6] - 09.08.2023
 
 ### Added
