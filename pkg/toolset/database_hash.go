@@ -65,6 +65,8 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		return fmt.Errorf("unable to serialize ledger index: %w", err)
 	}
 
+	var ledgerTokenSupply uint64
+
 	// read out treasury tx
 	treasuryOutput, err := dbStorage.UTXOManager().UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
@@ -79,6 +81,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		if err := binary.Write(lsHash, binary.LittleEndian, treasuryOutput.Amount); err != nil {
 			return fmt.Errorf("unable to serialize treasury output amount: %w", err)
 		}
+		ledgerTokenSupply += treasuryOutput.Amount
 	}
 
 	// get all UTXOs
@@ -87,7 +90,6 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		return err
 	}
 
-	var ledgerTokenSupply uint64
 	// write all unspent outputs in lexicographical order
 	for _, outputID := range outputIDs.RemoveDupsAndSort() {
 		output, err := dbStorage.UTXOManager().ReadOutputByOutputID(outputID)
