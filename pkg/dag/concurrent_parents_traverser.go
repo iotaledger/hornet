@@ -261,11 +261,7 @@ func (t *ConcurrentParentsTraverser) processStack(wg *sync.WaitGroup, doneChan c
 			}
 
 			// stop processing the stack if the caller returns an error
-			if err := t.onMissingParent(currentBlockID); err != nil {
-				return err
-			}
-
-			return nil
+			return t.onMissingParent(currentBlockID)
 		}
 		defer cachedBlockMeta.Release(true) // meta -1
 

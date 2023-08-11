@@ -60,11 +60,8 @@ func (rs *ReceiptService) Init() error {
 	if !rs.BackupEnabled {
 		return nil
 	}
-	if err := os.MkdirAll(rs.backupFolder, os.ModePerm); err != nil {
-		return err
-	}
 
-	return nil
+	return os.MkdirAll(rs.backupFolder, os.ModePerm)
 }
 
 // Backup backups the given receipt to disk.

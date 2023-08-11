@@ -623,9 +623,6 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 		return err
 	}
 
-	timeSetSnapshotInfo := timeStreamSnapshotData
-	timeSnapshotMilestoneIndexChanged := timeStreamSnapshotData
-
 	// since we write to the database, the targetIndex should exist
 	targetMsTimestamp, err := s.storage.MilestoneTimestampByIndex(targetIndex)
 	if err != nil {
@@ -636,9 +633,9 @@ func (s *Manager) createDeltaSnapshotWithoutLocking(ctx context.Context, targetI
 		s.LogPanic(err)
 	}
 
-	timeSetSnapshotInfo = time.Now()
+	timeSetSnapshotInfo := time.Now()
 	s.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
-	timeSnapshotMilestoneIndexChanged = time.Now()
+	timeSnapshotMilestoneIndexChanged := time.Now()
 
 	snapshotMetrics.DurationInit = timeInit.Sub(timeStart)
 	snapshotMetrics.DurationSetSnapshotInfo = timeSetSnapshotInfo.Sub(timeStreamSnapshotData)

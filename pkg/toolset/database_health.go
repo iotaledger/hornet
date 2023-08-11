@@ -111,9 +111,5 @@ func databaseHealth(args []string) error {
 	dbPath := *databasePathFlag
 	dbName := path.Base(dbPath)
 
-	if err := checkDatabaseHealth(dbPath, dbName, *outputJSONFlag); err != nil {
-		return err
-	}
-
-	return nil
+	return checkDatabaseHealth(dbPath, dbName, *outputJSONFlag)
 }
