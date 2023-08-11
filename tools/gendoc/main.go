@@ -80,7 +80,7 @@ func main() {
 	createMarkdownFile(
 		application,
 		"configuration_header.md",
-		"../../documentation/docs/references/configuration.md",
+		"../../configuration.md",
 		ignoreFlags,
 		replaceTopicNames,
 	)
