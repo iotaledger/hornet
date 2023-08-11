@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.8] - 11.08.2023
+
+### Fix
+    - Fix error while opening pebble databases "L0StopWritesThreshold"
+
+
 ## [1.2.7] - 10.08.2023
 
 ### Fix
