@@ -45,11 +45,7 @@ func (n *AutopeeredNetwork) createEntryNode(privKey ed25519.PrivateKey) error {
 		return err
 	}
 
-	if err := n.entryNode.Start(); err != nil {
-		return err
-	}
-
-	return nil
+	return n.entryNode.Start()
 }
 
 // AwaitPeering waits until all peers have reached the minimum amount of peers.

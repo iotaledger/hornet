@@ -61,15 +61,11 @@ func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputUnspent}); err != nil {
 		return err
 	}
-
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixMilestoneDiffs}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {
-		return err
-	}
 
-	return nil
+	return u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput})
 }
 
 func (u *Manager) ReadLockLedger() {

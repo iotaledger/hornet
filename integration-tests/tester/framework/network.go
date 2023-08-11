@@ -117,11 +117,7 @@ func (n *Network) CreateWhiteFlagMockServer(cfg *WhiteFlagMockServerConfig) erro
 		return err
 	}
 
-	if err := container.Start(); err != nil {
-		return err
-	}
-
-	return nil
+	return container.Start()
 }
 
 // generates a new private key or returns the one from the opt parameter.

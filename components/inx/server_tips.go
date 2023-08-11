@@ -13,7 +13,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func (s *Server) RequestTips(ctx context.Context, req *inx.TipsRequest) (*inx.TipsResponse, error) {
+func (s *Server) RequestTips(_ context.Context, req *inx.TipsRequest) (*inx.TipsResponse, error) {
 	if deps.TipSelector == nil {
 		return nil, status.Error(codes.Unavailable, "no tipselector available")
 	}

@@ -394,11 +394,7 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 		return err
 	}
 
-	if err := s.configureProtocolStore(tangleStore); err != nil {
-		return err
-	}
-
-	return nil
+	return s.configureProtocolStore(tangleStore)
 }
 
 func (s *Storage) FlushAndCloseStores() error {
@@ -475,9 +471,5 @@ func (s *Storage) CheckLedgerState() error {
 		return err
 	}
 
-	if err = s.UTXOManager().CheckLedgerState(protoParams.TokenSupply); err != nil {
-		return err
-	}
-
-	return nil
+	return s.UTXOManager().CheckLedgerState(protoParams.TokenSupply)
 }

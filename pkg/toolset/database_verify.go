@@ -308,11 +308,7 @@ func verifyDatabase(
 		}
 
 		// cleanup the state changes from the temporary UTXOManager to save memory
-		if err := cleanupMilestoneFromUTXOManager(utxoManagerTemp, milestonePayload, msIndex); err != nil {
-			return err
-		}
-
-		return nil
+		return cleanupMilestoneFromUTXOManager(utxoManagerTemp, milestonePayload, msIndex)
 	}
 
 	// we start to verify the cone with the first index after the solid entry point index of the genesis snapshot
@@ -343,11 +339,8 @@ func verifyDatabase(
 	}
 
 	println("verifying final ledger state ...")
-	if err := compareLedgerState(tangleStoreSource.UTXOManager(), tangleStoreTemp.UTXOManager()); err != nil {
-		return err
-	}
 
-	return nil
+	return compareLedgerState(tangleStoreSource.UTXOManager(), tangleStoreTemp.UTXOManager())
 }
 
 func getSolidEntryPointsSHA256Sum(dbStorage *storage.Storage) ([]byte, error) {
@@ -431,9 +424,5 @@ func cleanupMilestoneFromUTXOManager(utxoManager *utxo.Manager, milestonePayload
 		}
 	}
 
-	if err := utxoManager.PruneMilestoneIndexWithoutLocking(msIndex, true, receiptMigratedAtIndex...); err != nil {
-		return err
-	}
-
-	return nil
+	return utxoManager.PruneMilestoneIndexWithoutLocking(msIndex, true, receiptMigratedAtIndex...)
 }

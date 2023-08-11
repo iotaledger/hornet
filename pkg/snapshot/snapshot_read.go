@@ -66,11 +66,7 @@ func newFullHeaderConsumer(targetFullHeader *FullSnapshotHeader, utxoManager *ut
 
 		*targetFullHeader = *header
 
-		if err := utxoManager.StoreLedgerIndex(header.LedgerMilestoneIndex); err != nil {
-			return err
-		}
-
-		return nil
+		return utxoManager.StoreLedgerIndex(header.LedgerMilestoneIndex)
 	}
 }
 
