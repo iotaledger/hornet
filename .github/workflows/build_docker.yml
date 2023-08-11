@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build Docker
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3

@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     name: Build HORNET
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Set up Go
         uses: actions/setup-go@v3
