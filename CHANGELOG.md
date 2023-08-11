@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-rc.8] - 11.08.2023
+
+# Fixed
+    - Fix missing treasury balance in db-hash tool (#1907)
+    - Fix error while opening pebble databases "L0StopWritesThreshold"
+
 ## [2.0.0-rc.7] - 04.08.2023
 
 # Added
