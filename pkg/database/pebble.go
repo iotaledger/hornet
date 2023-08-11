@@ -143,7 +143,7 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	// sublevels. Writes are stopped when this threshold is reached.
 	//
 	// The default value is 12.
-	opts.L0StopWritesThreshold = 12
+	opts.L0StopWritesThreshold = 30
 
 	// The maximum number of bytes for LBase. The base level is the level which
 	// L0 is compacted into. The base level is determined dynamically based on
