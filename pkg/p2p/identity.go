@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/peerstore"
+	//nolint:staticcheck // we want to keep the peerstore for now
 	"github.com/libp2p/go-libp2p/p2p/host/peerstore/pstoreds"
 
 	kvstoreds "github.com/iotaledger/go-ds-kvstore"
