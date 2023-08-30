@@ -104,7 +104,7 @@ jobs:
           password: ${{ secrets.IOTALEDGER_DOCKER_PASSWORD }}
 
       - name: Build and push to Dockerhub
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: ./hornet-nest
           platforms: linux/amd64,linux/arm64
