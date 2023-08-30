@@ -89,6 +89,7 @@ func (s *Storage) UnreferencedBlockIDs(msIndex iotago.MilestoneIndex, iteratorOp
 
 	s.unreferencedBlocksStorage.ForEachKeyOnly(func(key []byte) bool {
 		blockID := iotago.BlockID{}
+		//nolint:gosec
 		copy(blockID[:], key[4:36])
 		unreferencedBlockIDs = append(unreferencedBlockIDs, blockID)
 
