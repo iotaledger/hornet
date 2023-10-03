@@ -34,7 +34,7 @@ var (
 	Name = "HORNET"
 
 	// Version of the app.
-	Version = "2.0.0-rc.8"
+	Version = "2.0.0"
 )
 
 func App() *app.App {

@@ -1,0 +1,91 @@
+{
+  "protocol": {
+    "targetNetworkName": "shimmer",
+    "milestonePublicKeyCount": 7,
+    "baseToken": {
+      "name": "Shimmer",
+      "tickerSymbol": "SMR",
+      "unit": "SMR",
+      "subunit": "glow",
+      "decimals": 6,
+      "useMetricPrefix": false
+    },
+    "publicKeyRanges": [
+      {
+        "key": "a507d2a592a5f0424ed8530603c08acebe088ae26211e90b79bfec0970a2397f",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "71a09774449a081450a51e0245a1e9850190f93508fd8f21bb9b9ca169765f30",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "a375515bfe5adf7fedb64ef4cebe1e621e85a056b0ccd5db72bc0d474325bf38",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "1df26178a7914126fd8cb934c7a7437073794c1c8ce99319172436b1d4973eba",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "45432d7c767e16586403262331a725c7eaa0b2dd79ea442f373c845ae3443aa9",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "9d87b4d2538b10799b582e25ace4726d92d7798ddfb696ff08e450db7917c9ad",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "a921841628d64c3f08bd344118b8106ade072e68c774beff30135e036194493a",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "16ee3356c21e410a0aaab42896021b1a857eb8d97a14a66fed9b13d634c21317",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "99c7d9752c295cb56b550191015ab5a40226fb632e8b02ec15cfe574ea17cf67",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "4af647910ba47000108b87c63abe0545643f9b203eacee2b713729b0450983fe",
+        "start": 0,
+        "end": 0
+      }
+    ]
+  },
+  "db": {
+    "path": "shimmer/database"
+  },
+  "p2p": {
+    "db": {
+      "path": "shimmer/p2pstore"
+    },
+    "autopeering": {
+      "enabled": true,
+      "entryNodes": [
+        "/dns/entry-hornet-0.h.shimmer.network/udp/14626/autopeering/HK6EKbNtjwve9HMbL6PH6R3uLXZYQoBoqNPD5LsoWuA6",
+        "/dns/entry-hornet-1.h.shimmer.network/udp/14626/autopeering/BT8EiSRXTixnH2wMoy4ecNpVtiAXxfXKfYsJ2KvU3WLx"
+      ]
+    }
+  },
+  "snapshots": {
+    "fullPath": "/shimmer/snapshots/full_snapshot.bin",
+    "deltaPath": "/shimmer/snapshots/delta_snapshot.bin",
+    "downloadURLs": [
+      {
+        "full": "https://files.shimmer.network/snapshots/latest-full_snapshot.bin",
+        "delta": "https://files.shimmer.network/snapshots/latest-delta_snapshot.bin"
+      }
+    ]
+  }
+}

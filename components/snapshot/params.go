@@ -14,9 +14,9 @@ type ParametersSnapshots struct {
 	// Interval defines the interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)
 	Interval int `default:"200" usage:"interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)"`
 	// FullPath defines the path to the full snapshot file
-	FullPath string `default:"shimmer/snapshots/full_snapshot.bin" usage:"path to the full snapshot file"`
+	FullPath string `default:"mainnet/snapshots/full_snapshot.bin" usage:"path to the full snapshot file"`
 	// DeltaPath defines the path to the delta snapshot file
-	DeltaPath string `default:"shimmer/snapshots/delta_snapshot.bin" usage:"path to the delta snapshot file"`
+	DeltaPath string `default:"mainnet/snapshots/delta_snapshot.bin" usage:"path to the delta snapshot file"`
 	// DeltaSizeThresholdPercentage defines whether to create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot
 	// (0.0 = always create delta snapshot to keep ms diff history)
 	DeltaSizeThresholdPercentage float64 `default:"50.0" usage:"create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history)"`
@@ -30,8 +30,8 @@ type ParametersSnapshots struct {
 var ParamsSnapshots = &ParametersSnapshots{
 	DownloadURLs: []*snapshot.DownloadTarget{
 		{
-			Full:  "https://files.shimmer.network/snapshots/latest-full_snapshot.bin",
-			Delta: "https://files.shimmer.network/snapshots/latest-delta_snapshot.bin",
+			Full:  "https://files.stardust-mainnet.iotaledger.net/snapshots/latest-full_snapshot.bin",
+			Delta: "https://files.stardust-mainnet.iotaledger.net/snapshots/latest-delta_snapshot.bin",
 		},
 	},
 }

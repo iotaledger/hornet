@@ -122,7 +122,7 @@ Example:
 
 | Name                                         | Description                                             | Type   | Default value     |
 | -------------------------------------------- | ------------------------------------------------------- | ------ | ----------------- |
-| targetNetworkName                            | The initial network name on which this node operates on | string | "shimmer"         |
+| targetNetworkName                            | The initial network name on which this node operates on | string | "iota-mainnet"    |
 | milestonePublicKeyCount                      | The amount of public keys in a milestone                | int    | 7                 |
 | [baseToken](#protocol_basetoken)             | Configuration for baseToken                             | object |                   |
 | [publicKeyRanges](#protocol_publickeyranges) | Configuration for publicKeyRanges                       | array  | see example below |
@@ -131,10 +131,10 @@ Example:
 
 | Name            | Description                           | Type    | Default value |
 | --------------- | ------------------------------------- | ------- | ------------- |
-| name            | The base token name                   | string  | "Shimmer"     |
-| tickerSymbol    | The base token ticker symbol          | string  | "SMR"         |
-| unit            | The base token unit                   | string  | "SMR"         |
-| subunit         | The base token subunit                | string  | "glow"        |
+| name            | The base token name                   | string  | "IOTA"        |
+| tickerSymbol    | The base token ticker symbol          | string  | "IOTA"        |
+| unit            | The base token unit                   | string  | "IOTA"        |
+| subunit         | The base token subunit                | string  | "micro"       |
 | decimals        | The base token amount of decimals     | uint    | 6             |
 | useMetricPrefix | The base token uses the metric prefix | boolean | false         |
 
@@ -151,64 +151,64 @@ Example:
 ```json
   {
     "protocol": {
-      "targetNetworkName": "shimmer",
+      "targetNetworkName": "iota-mainnet",
       "milestonePublicKeyCount": 7,
       "baseToken": {
-        "name": "Shimmer",
-        "tickerSymbol": "SMR",
-        "unit": "SMR",
-        "subunit": "glow",
+        "name": "IOTA",
+        "tickerSymbol": "IOTA",
+        "unit": "IOTA",
+        "subunit": "micro",
         "decimals": 6,
         "useMetricPrefix": false
       },
       "publicKeyRanges": [
         {
-          "key": "a507d2a592a5f0424ed8530603c08acebe088ae26211e90b79bfec0970a2397f",
+          "key": "2fb1d7ec714adf365eefa343b66c0c459a9930276aff08cde482cb8050028624",
           "start": 0,
           "end": 0
         },
         {
-          "key": "71a09774449a081450a51e0245a1e9850190f93508fd8f21bb9b9ca169765f30",
+          "key": "8845cd560d66d50070c6e251d7a0a19f8de217fabf53a78ee15b41d85a489cc6",
           "start": 0,
           "end": 0
         },
         {
-          "key": "a375515bfe5adf7fedb64ef4cebe1e621e85a056b0ccd5db72bc0d474325bf38",
+          "key": "1d61aab6f7e52129b78fcdf9568def0baa9c71112964f5b4d86ffc406866a986",
           "start": 0,
           "end": 0
         },
         {
-          "key": "1df26178a7914126fd8cb934c7a7437073794c1c8ce99319172436b1d4973eba",
+          "key": "fa94be504dfb10876a449db5272f19393ded922cbe3b023b4e57b62a53835721",
           "start": 0,
           "end": 0
         },
         {
-          "key": "45432d7c767e16586403262331a725c7eaa0b2dd79ea442f373c845ae3443aa9",
+          "key": "5fadfabe6944f5f0166ada11452c642010339f916e28187ecf8b4a207c8dba47",
           "start": 0,
           "end": 0
         },
         {
-          "key": "9d87b4d2538b10799b582e25ace4726d92d7798ddfb696ff08e450db7917c9ad",
+          "key": "347e6892d72b71e0423bd14daaf61d2ac35e91852fa5b155b92ddda0e064f55f",
           "start": 0,
           "end": 0
         },
         {
-          "key": "a921841628d64c3f08bd344118b8106ade072e68c774beff30135e036194493a",
+          "key": "0e403f526a66b4c0b18e8b0257671b07892a419e4b6e4540707d9a4793d1e3be",
           "start": 0,
           "end": 0
         },
         {
-          "key": "16ee3356c21e410a0aaab42896021b1a857eb8d97a14a66fed9b13d634c21317",
+          "key": "3af73a609696ff6fe63c36d060455cd83ec23edea2d2b87d5317004849cc0e9a",
           "start": 0,
           "end": 0
         },
         {
-          "key": "99c7d9752c295cb56b550191015ab5a40226fb632e8b02ec15cfe574ea17cf67",
+          "key": "ee1bfa9e791a9f57ea72c6192b000d906f21479ba8f40bb20cdd8badb7ddcb78",
           "start": 0,
           "end": 0
         },
         {
-          "key": "4af647910ba47000108b87c63abe0545643f9b203eacee2b713729b0450983fe",
+          "key": "083d7af99250a06d086b07bdd5bccd2bff406ee17e19332ccdb08d8be72218ce",
           "start": 0,
           "end": 0
         }
@@ -222,7 +222,7 @@ Example:
 | Name                      | Description                                                                         | Type    | Default value      |
 | ------------------------- | ----------------------------------------------------------------------------------- | ------- | ------------------ |
 | engine                    | The used database engine (pebble/rocksdb/mapdb)                                     | string  | "rocksdb"          |
-| path                      | The path to the database folder                                                     | string  | "shimmer/database" |
+| path                      | The path to the database folder                                                     | string  | "mainnet/database" |
 | autoRevalidation          | Whether to automatically start revalidation on startup if the database is corrupted | boolean | false              |
 | checkLedgerStateOnStartup | Whether to check if the ledger state matches the total supply on startup            | boolean | false              |
 
@@ -232,7 +232,7 @@ Example:
   {
     "db": {
       "engine": "rocksdb",
-      "path": "shimmer/database",
+      "path": "mainnet/database",
       "autoRevalidation": false,
       "checkLedgerStateOnStartup": false
     }
@@ -278,7 +278,7 @@ Example:
 
 | Name | Description                  | Type   | Default value      |
 | ---- | ---------------------------- | ------ | ------------------ |
-| path | The path to the p2p database | string | "shimmer/p2pstore" |
+| path | The path to the p2p database | string | "mainnet/p2pstore" |
 
 ### <a id="p2p_gossip"></a> Gossip
 
@@ -290,13 +290,13 @@ Example:
 
 ### <a id="p2p_autopeering"></a> Autopeering
 
-| Name                 | Description                                                  | Type    | Default value                                                                                                                                                                                                         |
-| -------------------- | ------------------------------------------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| enabled              | Whether the autopeering plugin is enabled                    | boolean | false                                                                                                                                                                                                                 |
-| bindAddress          | Bind address for autopeering                                 | string  | "0.0.0.0:14626"                                                                                                                                                                                                       |
-| entryNodes           | List of autopeering entry nodes to use                       | array   | /dns/entry-hornet-0.h.shimmer.network/udp/14626/autopeering/HK6EKbNtjwve9HMbL6PH6R3uLXZYQoBoqNPD5LsoWuA6<br/>/dns/entry-hornet-1.h.shimmer.network/udp/14626/autopeering/BT8EiSRXTixnH2wMoy4ecNpVtiAXxfXKfYsJ2KvU3WLx |
-| entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes | boolean | false                                                                                                                                                                                                                 |
-| runAsEntryNode       | Whether the node should act as an autopeering entry node     | boolean | false                                                                                                                                                                                                                 |
+| Name                 | Description                                                  | Type    | Default value                                                                                                                                                                                                                                        |
+| -------------------- | ------------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| enabled              | Whether the autopeering plugin is enabled                    | boolean | false                                                                                                                                                                                                                                                |
+| bindAddress          | Bind address for autopeering                                 | string  | "0.0.0.0:14626"                                                                                                                                                                                                                                      |
+| entryNodes           | List of autopeering entry nodes to use                       | array   | /dns/entry-hornet-0.h.stardust-mainnet.iotaledger.net/udp/14626/autopeering/K4cHM64KxzYJ5ZB2a9P3stJUHjvQDh4bzhCw49xDowi<br/>/dns/entry-hornet-1.h.stardust-mainnet.iotaledger.net/udp/14626/autopeering/8UbVu5MjRZH2c9fnEdpfPvd7qqDgrVFsNsvc933FuMTm |
+| entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes | boolean | false                                                                                                                                                                                                                                                |
+| runAsEntryNode       | Whether the node should act as an autopeering entry node     | boolean | false                                                                                                                                                                                                                                                |
 
 Example:
 
@@ -313,7 +313,7 @@ Example:
       },
       "identityPrivateKey": "",
       "db": {
-        "path": "shimmer/p2pstore"
+        "path": "mainnet/p2pstore"
       },
       "reconnectInterval": "30s",
       "gossip": {
@@ -325,8 +325,8 @@ Example:
         "enabled": false,
         "bindAddress": "0.0.0.0:14626",
         "entryNodes": [
-          "/dns/entry-hornet-0.h.shimmer.network/udp/14626/autopeering/HK6EKbNtjwve9HMbL6PH6R3uLXZYQoBoqNPD5LsoWuA6",
-          "/dns/entry-hornet-1.h.shimmer.network/udp/14626/autopeering/BT8EiSRXTixnH2wMoy4ecNpVtiAXxfXKfYsJ2KvU3WLx"
+          "/dns/entry-hornet-0.h.stardust-mainnet.iotaledger.net/udp/14626/autopeering/K4cHM64KxzYJ5ZB2a9P3stJUHjvQDh4bzhCw49xDowi",
+          "/dns/entry-hornet-1.h.stardust-mainnet.iotaledger.net/udp/14626/autopeering/8UbVu5MjRZH2c9fnEdpfPvd7qqDgrVFsNsvc933FuMTm"
         ],
         "entryNodesPreferIPv6": false,
         "runAsEntryNode": false
@@ -382,8 +382,8 @@ Example:
 | enabled                                 | Whether to generate snapshot files                                                                                                                                    | boolean | false                                  |
 | depth                                   | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                            | int     | 50                                     |
 | interval                                | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                       | int     | 200                                    |
-| fullPath                                | Path to the full snapshot file                                                                                                                                        | string  | "shimmer/snapshots/full_snapshot.bin"  |
-| deltaPath                               | Path to the delta snapshot file                                                                                                                                       | string  | "shimmer/snapshots/delta_snapshot.bin" |
+| fullPath                                | Path to the full snapshot file                                                                                                                                        | string  | "mainnet/snapshots/full_snapshot.bin"  |
+| deltaPath                               | Path to the delta snapshot file                                                                                                                                       | string  | "mainnet/snapshots/delta_snapshot.bin" |
 | deltaSizeThresholdPercentage            | Create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history) | float   | 50.0                                   |
 | deltaSizeThresholdMinSize               | The minimum size of the delta snapshot file before the threshold percentage condition is checked (below that size the delta snapshot is always created)               | string  | "50M"                                  |
 | [downloadURLs](#snapshots_downloadurls) | Configuration for downloadURLs                                                                                                                                        | array   | see example below                      |
@@ -403,14 +403,14 @@ Example:
       "enabled": false,
       "depth": 50,
       "interval": 200,
-      "fullPath": "shimmer/snapshots/full_snapshot.bin",
-      "deltaPath": "shimmer/snapshots/delta_snapshot.bin",
+      "fullPath": "mainnet/snapshots/full_snapshot.bin",
+      "deltaPath": "mainnet/snapshots/delta_snapshot.bin",
       "deltaSizeThresholdPercentage": 50,
       "deltaSizeThresholdMinSize": "50M",
       "downloadURLs": [
         {
-          "full": "https://files.shimmer.network/snapshots/latest-full_snapshot.bin",
-          "delta": "https://files.shimmer.network/snapshots/latest-delta_snapshot.bin"
+          "full": "https://files.stardust-mainnet.iotaledger.net/snapshots/latest-full_snapshot.bin",
+          "delta": "https://files.stardust-mainnet.iotaledger.net/snapshots/latest-delta_snapshot.bin"
         }
       ]
     }

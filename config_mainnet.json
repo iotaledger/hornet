@@ -1,0 +1,91 @@
+{
+  "protocol": {
+    "targetNetworkName": "iota-mainnet",
+    "milestonePublicKeyCount": 7,
+    "baseToken": {
+      "name": "IOTA",
+      "tickerSymbol": "IOTA",
+      "unit": "IOTA",
+      "subunit": "micro",
+      "decimals": 6,
+      "useMetricPrefix": false
+    },
+    "publicKeyRanges": [
+      {
+        "key": "2fb1d7ec714adf365eefa343b66c0c459a9930276aff08cde482cb8050028624",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "8845cd560d66d50070c6e251d7a0a19f8de217fabf53a78ee15b41d85a489cc6",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "1d61aab6f7e52129b78fcdf9568def0baa9c71112964f5b4d86ffc406866a986",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "fa94be504dfb10876a449db5272f19393ded922cbe3b023b4e57b62a53835721",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "5fadfabe6944f5f0166ada11452c642010339f916e28187ecf8b4a207c8dba47",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "347e6892d72b71e0423bd14daaf61d2ac35e91852fa5b155b92ddda0e064f55f",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "0e403f526a66b4c0b18e8b0257671b07892a419e4b6e4540707d9a4793d1e3be",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "3af73a609696ff6fe63c36d060455cd83ec23edea2d2b87d5317004849cc0e9a",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "ee1bfa9e791a9f57ea72c6192b000d906f21479ba8f40bb20cdd8badb7ddcb78",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "083d7af99250a06d086b07bdd5bccd2bff406ee17e19332ccdb08d8be72218ce",
+        "start": 0,
+        "end": 0
+      }
+    ]
+  },
+  "db": {
+    "path": "mainnet/database"
+  },
+  "p2p": {
+    "db": {
+      "path": "mainnet/p2pstore"
+    },
+    "autopeering": {
+      "enabled": true,
+      "entryNodes": [
+        "/dns/entry-hornet-0.h.stardust-mainnet.iotaledger.net/udp/14626/autopeering/K4cHM64KxzYJ5ZB2a9P3stJUHjvQDh4bzhCw49xDowi",
+        "/dns/entry-hornet-1.h.stardust-mainnet.iotaledger.net/udp/14626/autopeering/8UbVu5MjRZH2c9fnEdpfPvd7qqDgrVFsNsvc933FuMTm"
+      ]
+    }
+  },
+  "snapshots": {
+    "fullPath": "/mainnet/snapshots/full_snapshot.bin",
+    "deltaPath": "/mainnet/snapshots/delta_snapshot.bin",
+    "downloadURLs": [
+      {
+        "full": "https://files.stardust-mainnet.iotaledger.net/snapshots/latest-full_snapshot.bin",
+        "delta": "https://files.stardust-mainnet.iotaledger.net/snapshots/latest-delta_snapshot.bin"
+      }
+    ]
+  }
+}
