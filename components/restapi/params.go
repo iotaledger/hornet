@@ -55,6 +55,8 @@ var ParamsRestAPI = &ParametersRestAPI{
 		"/api/participation/v1/events*",
 		"/api/participation/v1/outputs*",
 		"/api/participation/v1/addresses*",
+		"/api/core/v0/*",
+		"/api/core/v1/*",
 	},
 	ProtectedRoutes: []string{
 		"/api/*",
