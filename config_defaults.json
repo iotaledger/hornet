@@ -198,6 +198,7 @@
     "protectedRoutes": [
       "/api/*"
     ],
+    "useGZIP": true,
     "debugRequestLoggerEnabled": false,
     "jwtAuth": {
       "salt": "HORNET"

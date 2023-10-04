@@ -14,6 +14,8 @@ type ParametersRestAPI struct {
 	PublicRoutes []string `usage:"the HTTP REST routes which can be called without authorization. Wildcards using * are allowed"`
 	// the HTTP REST routes which need to be called with authorization. Wildcards using * are allowed
 	ProtectedRoutes []string `usage:"the HTTP REST routes which need to be called with authorization. Wildcards using * are allowed"`
+	// UseGZIP defines whether to use the gzip middleware to compress HTTP responses
+	UseGZIP bool `default:"true" usage:"use the gzip middleware to compress HTTP responses"`
 	// whether the debug logging for requests should be enabled
 	DebugRequestLoggerEnabled bool `default:"false" usage:"whether the debug logging for requests should be enabled"`
 
