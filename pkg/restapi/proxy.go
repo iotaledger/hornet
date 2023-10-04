@@ -3,6 +3,7 @@ package restapi
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -110,6 +111,10 @@ func NewDynamicProxy(e *echo.Echo, prefix string) *DynamicProxy {
 }
 
 func (p *DynamicProxy) middleware(prefix string) echo.MiddlewareFunc {
+	hasAcceptEncodingGZIP := func(header http.Header) bool {
+		return strings.Contains(header.Get(echo.HeaderAcceptEncoding), "gzip")
+	}
+
 	config := middleware.DefaultProxyConfig
 	config.Skipper = p.balancer.skipper
 	config.Balancer = p.balancer
@@ -117,7 +122,33 @@ func (p *DynamicProxy) middleware(prefix string) echo.MiddlewareFunc {
 		fmt.Sprintf("^%s/%s/*", p.balancer.prefix, prefix): "/$1",
 	}
 
-	return middleware.ProxyWithConfig(config)
+	configUncompressed := middleware.DefaultProxyConfig
+	configUncompressed.Skipper = p.balancer.skipper
+	configUncompressed.Balancer = p.balancer
+	configUncompressed.Rewrite = map[string]string{
+		fmt.Sprintf("^%s/%s/*", p.balancer.prefix, prefix): "/$1",
+	}
+	//nolint:forcetypeassert // we can safely assume that the DefaultTransport is a http.Transport
+	transportUncompressed := http.DefaultTransport.(*http.Transport).Clone()
+	transportUncompressed.DisableCompression = true
+	configUncompressed.Transport = transportUncompressed
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// we forward compressed requests if the client also supports compressed responses
+			compressed := hasAcceptEncodingGZIP(c.Request().Header)
+
+			// we need to remove "Accept-Encoding" headers in the request,
+			// because the transport handles this automatically if not set
+			c.Request().Header.Del(echo.HeaderAcceptEncoding)
+
+			if !compressed {
+				return middleware.ProxyWithConfig(configUncompressed)(next)(c)
+			}
+
+			return middleware.ProxyWithConfig(config)(next)(c)
+		}
+	}
 }
 
 func (p *DynamicProxy) AddGroup(prefix string) *echo.Group {
