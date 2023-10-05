@@ -97,7 +97,9 @@ func provide(c *dig.Container) error {
 			ParamsRestAPI.DebugRequestLoggerEnabled,
 		)
 		e.Use(middleware.CORS())
-		e.Use(middleware.Gzip())
+		if ParamsRestAPI.UseGZIP {
+			e.Use(middleware.Gzip())
+		}
 		e.Use(middleware.BodyLimit(ParamsRestAPI.Limits.MaxBodyLength))
 
 		return e
