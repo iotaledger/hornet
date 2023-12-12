@@ -5,7 +5,7 @@ on:
     paths-ignore:
       - 'documentation/**'
       - 'nfpm/**'
-      - 'private_tangle/**'
+      - 'integration_network/**'
       - 'scripts/**'
       - 'tools/**'
 

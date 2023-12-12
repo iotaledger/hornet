@@ -34,8 +34,8 @@ alphanet/
 testnet/
 shimmer/
 
-# private tangle
-private_tangle/
+# integration network
+integration_network/
 
 # log files
 hornet.log

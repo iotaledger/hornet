@@ -4,10 +4,10 @@
     "stopGracePeriod": "5m"
   },
   "node": {
-    "alias": "HORNET private-tangle node"
+    "alias": "HORNET integration-network node"
   },
   "protocol": {
-    "targetNetworkName": "private_tangle1",
+    "targetNetworkName": "integration_network1",
     "milestonePublicKeyCount": 2,
     "baseToken": {
       "name": "TestCoin",
