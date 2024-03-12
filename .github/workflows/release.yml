@@ -7,6 +7,7 @@ on:
 jobs:
   release-docker:
     name: Release Docker
+    environment: release
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
