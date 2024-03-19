@@ -88,6 +88,7 @@ const (
 	//nolint:gosec
 	ToolBootstrapPrivateTangle = "bootstrap-private-tangle"
 	ToolNodeInfo               = "node-info"
+	ToolAnalyze                = "analyze"
 )
 
 const (
@@ -147,6 +148,7 @@ func HandleTools() {
 		ToolDatabaseVerify:         databaseVerify,
 		ToolBootstrapPrivateTangle: networkBootstrap,
 		ToolNodeInfo:               nodeInfo,
+		ToolAnalyze:                databaseAnalyze,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -190,6 +192,7 @@ func listTools() {
 	fmt.Printf("%-20s verifies a valid ledger state and the existence of all blocks\n", fmt.Sprintf("%s:", ToolDatabaseVerify))
 	fmt.Printf("%-20s bootstraps a private tangle by creating a snapshot, database and coordinator state file\n", fmt.Sprintf("%s:", ToolBootstrapPrivateTangle))
 	fmt.Printf("%-20s queries the info endpoint of a node\n", fmt.Sprintf("%s:", ToolNodeInfo))
+	fmt.Printf("%-20s analyzes the ledger of a node\n", fmt.Sprintf("%s:", ToolAnalyze))
 }
 
 func yesOrNo(value bool) string {
