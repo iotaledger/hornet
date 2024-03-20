@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "networkName": "private_tangle1",
+  "networkName": "integration_network1",
   "bech32HRP": "tst",
   "minPoWScore": 0,
   "belowMaxDepth": 15,

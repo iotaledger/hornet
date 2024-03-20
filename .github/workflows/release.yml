@@ -46,31 +46,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
 
-      - name: Prepare private_tangle files
-        run: |
-          yq -i 'del(.services.create-snapshots.build)' private_tangle/docker-compose.yml
-          yq -i 'del(.services.bootstrap-network.build)' private_tangle/docker-compose.yml
-          yq -i 'del(.services.hornet-1.build)' private_tangle/docker-compose.yml
-          yq -i '.services.create-snapshots.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.bootstrap-network.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-1.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-2.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-3.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-          yq -i '.services.hornet-4.image = "iotaledger/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
-
-      - name: Create private_tangle.tar.gz file
-        uses: ihiroky/archive-action@v1
-        with:
-          root_dir: private_tangle
-          file_path: private_tangle.tar.gz
-
-      - name: Upload private_tangle.tar.gz file
-        uses: Shopify/upload-to-release@v1.0.1
-        with:
-          name: HORNET-${{ steps.meta.outputs.version }}-private_tangle.tar.gz
-          path: private_tangle.tar.gz
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
   release-docker-nest:
     needs: release-docker
     name: Release Docker Nest

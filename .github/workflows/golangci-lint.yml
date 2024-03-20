@@ -6,7 +6,7 @@ on:
       - 'documentation/**'
       - 'docker/**'
       - 'nfpm/**'
-      - 'private_tangle/**'
+      - 'integration_network/**'
       - 'scripts/**'
       - 'tools/**'
 

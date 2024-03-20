@@ -1,6 +1,6 @@
-# Private Tangle
+# Integration Network
 
-This folder contains a Docker-based setup to run your own development private Tangle. The steps to run a private tangle
+This folder contains a Docker-based setup to run your own development integration network. The steps to run a integration network
 are:
 
 ## Requirements
@@ -9,7 +9,7 @@ are:
 
 ## Steps
 
-1. `./bootstrap.sh` this will bootstrap your own private tangle by creating the genesis snapshot and required files.
+1. `./bootstrap.sh` this will bootstrap your own integration network by creating the genesis snapshot and required files.
    - _**Note:** If you are running this from inside the repository, you should run `./bootstrap.sh build` to re-build the docker images after any updates to the HORNET codebase (e.g. changing files or pulling git changes)_ 
 2. Run:
    - `./run.sh` to run 2 nodes + COO.
