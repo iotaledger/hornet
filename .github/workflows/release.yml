@@ -11,17 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: iotaledger/hornet
           tags: |
@@ -33,13 +33,13 @@ jobs:
             type=match,pattern=v(\d+.\d+),suffix=-rc,group=1,enable=${{ contains(github.ref, '-rc') }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.IOTALEDGER_DOCKER_USERNAME }}
           password: ${{ secrets.IOTALEDGER_DOCKER_PASSWORD }}
 
       - name: Build and push to Dockerhub
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
@@ -65,7 +65,7 @@ jobs:
           file_path: private_tangle.tar.gz
 
       - name: Upload private_tangle.tar.gz file
-        uses: Shopify/upload-to-release@v1.0.1
+        uses: Shopify/upload-to-release@v2
         with:
           name: HORNET-${{ steps.meta.outputs.version }}-private_tangle.tar.gz
           path: private_tangle.tar.gz
@@ -77,17 +77,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: iotaledger/hornet-nest
           tags: |
@@ -99,13 +99,13 @@ jobs:
             type=match,pattern=v(\d+.\d+),suffix=-rc,group=1,enable=${{ contains(github.ref, '-rc') }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.IOTALEDGER_DOCKER_USERNAME }}
           password: ${{ secrets.IOTALEDGER_DOCKER_PASSWORD }}
 
       - name: Build and push to Dockerhub
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./hornet-nest
           platforms: linux/amd64,linux/arm64

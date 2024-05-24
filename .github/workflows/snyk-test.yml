@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: develop
 
@@ -23,7 +23,7 @@ jobs:
         run: docker build . --file Dockerfile --tag hornet:latest
 
       - name: Run Snyk to check for Golang vulnerabilities
-        uses: snyk/actions/golang@0.3.0
+        uses: snyk/actions/golang@0.4.0
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -31,7 +31,7 @@ jobs:
           args: --org=gohornet --sarif-file-output=snyk-golang.sarif
 
       - name: Run Snyk to check for Docker image vulnerabilities
-        uses: snyk/actions/docker@0.3.0
+        uses: snyk/actions/docker@0.4.0
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

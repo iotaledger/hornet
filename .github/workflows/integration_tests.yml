@@ -19,7 +19,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build HORNET image
         run: docker build -f Dockerfile -t hornet:dev .
@@ -40,7 +40,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -52,7 +52,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build HORNET image
         run: docker build -f Dockerfile -t hornet:dev .
@@ -73,7 +73,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -85,7 +85,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build HORNET image
         run: docker build -f Dockerfile -t hornet:dev .
@@ -107,7 +107,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -119,7 +119,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build HORNET image
         run: docker build -f Dockerfile -t hornet:dev .
@@ -140,7 +140,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -152,7 +152,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build HORNET image
         run: docker build -f Dockerfile -t hornet:dev .
@@ -173,7 +173,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
