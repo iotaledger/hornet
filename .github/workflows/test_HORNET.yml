@@ -14,6 +14,9 @@ jobs:
     name: Test HORNET
     runs-on: self-hosted
     steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -25,9 +28,6 @@ jobs:
 
       - name: Install Build Essential
         run: sudo apt update && sudo apt install build-essential -y
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
 
       - name: Test HORNET
         uses: nick-invision/retry@v3
