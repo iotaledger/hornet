@@ -140,7 +140,25 @@ func hashPasswordAndSalt(args []string) error {
 		return printJSON(result)
 	}
 
-	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %x\n", passwordKey, passwordSalt)
+	fmt.Printf(`
+Success!
+
+Please add the following lines to your inx-dashboard "config.json" file:
+
+{
+  "auth": {
+    "passwordHash": "%x",
+    "passwordSalt": "%x"
+  }
+}
+
+
+You can also set the following environment variables in your node-docker-setup ".env" file:
+
+DASHBOARD_PASSWORD=%x
+DASHBOARD_SALT=%x
+
+`, passwordKey, passwordSalt, passwordKey, passwordSalt)
 
 	return nil
 }
